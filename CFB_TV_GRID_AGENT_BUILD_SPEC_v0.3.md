@@ -832,7 +832,7 @@ Renderer stress facts for the Phase 3B contract:
 
 ### 8.7 Canonical outlet-normalization table (v1, from live Week 1 data)
 
-Every outlet label observed in the 2026 Week 1 media feed, with its canonical mapping and access classification under the §3.2 profile:
+Every outlet label observed in the 2026 Week 1 and Week 8 media feeds, with its canonical mapping and access classification under the §3.2 profile:
 
 | CFBD raw label(s) | Canonical service | Type | Access |
 | --- | --- | --- | --- |
@@ -842,6 +842,7 @@ Every outlet label observed in the 2026 Week 1 media feed, with its canonical ma
 | NBC | NBC | linear_broadcast | available |
 | CW, The CW Network | The CW | linear_broadcast | available |
 | ESPN | ESPN | linear_cable | available |
+| ESPN2 | ESPN2 | linear_cable | available |
 | ESPNU | ESPNU | linear_cable | available |
 | FS1 | FS1 | linear_cable | available |
 | TNT | TNT | linear_cable | available |
@@ -1333,6 +1334,8 @@ x = grid_start_x + minutes_since_grid_start * pixels_per_minute
 ```
 
 Do not snap to a 30-minute boundary.
+
+**TBD gating rule (normative).** When `startTimeTBD` is true, the kickoff timestamp must not be used for grid placement at all — CFBD encodes time-TBD as midnight ET on the game date (§20.7) — and the game routes to the §11.6 TBD section. The date component may still assign the game to a calendar day. The flag gates placement; it is never merely an annotation.
 
 ---
 
@@ -1950,9 +1953,16 @@ Continue to catalog:
 
 These do not block the renderer prototype.
 
-### 20.7 Mid-season TBD probe — REQUIRED before Milestone 2 acceptance
+### 20.7 Mid-season TBD probe — COMPLETE (2026-08-31, Week 8)
 
-Week 1 contained zero TBD games, so the §3.6 TBD states remain unexercised against live data. Run `scripts/validate_cfbd_week1.py --week 8` (three API calls) to capture games still awaiting 12-day/6-day selections, and confirm that `startTimeTBD` flags and absent/partial network rows behave as modeled.
+56 FBS-involving games. Findings:
+
+- **Time-TBD and network-TBD are independent axes**, exactly as §3.6 models. All four combinations occur live: 17 games fully assigned with media, 35 time-TBD with no media row, 1 time-TBD **with** a media row (Hawai'i @ Northern Illinois: `web:MW+`, `isStartTimeTBD: true`), and 3 games with confirmed kickoffs but no media row at all (e.g., LSU @ Auburn, 12:00 PM ET, network unassigned → `time_known_network_tbd`).
+- **CFBD's TBD encoding:** `startDate` is set to midnight ET on the game date with `startTimeTBD = true`. The **date half remains authoritative** for day placement; the time half is a placeholder.
+- **Renderer hazard confirmed:** consuming `startDate` without gating on `startTimeTBD` would silently place 35 games in a midnight column. The gating rule is now normative in §11.2.
+- Unknown labels (MW+, The CW Network, USA Net) were a subset of Week 1's; ESPN2 was newly observed and added to §8.7. The `CW`/`The CW Network` duplication reproduces mid-season.
+
+Fixture saved at `artifacts/validation/cfbd_2026_week8_fixture.json` — the reconciliation and TBD-transition tests (§19) should use Week 8 as the TBD-state fixture and Week 1 as the fully-assigned fixture.
 
 ---
 
@@ -2111,12 +2121,11 @@ The first production-ready version is successful when:
 
 Immediate sequence:
 
-1. run the §20.7 mid-season TBD probe;
-2. design and prototype the SVG rendering contract using Saturday 2026-09-05 as the stress day (68 games, 18 on ESPN+, nine simultaneous 7:00 PM kickoffs);
-3. prototype official-source adapters for Big Ten, ESPN, FOX, and NBC;
-4. freeze authority rules as `authority_rules_v1`;
-5. finalize the deployment contract — candidate providers already connected to Joe's Claude workspace: Supabase (PostgreSQL), Cloudflare R2 (object storage), Vercel (hosting);
-6. update this specification to v1.0 for the Claude Code build handoff.
+1. design and prototype the SVG rendering contract using Saturday 2026-09-05 as the stress day (68 games, 18 on ESPN+, nine simultaneous 7:00 PM kickoffs);
+2. prototype official-source adapters for Big Ten, ESPN, FOX, and NBC;
+3. freeze authority rules as `authority_rules_v1`;
+4. finalize the deployment contract — candidate providers already connected to Joe's Claude workspace: Supabase (PostgreSQL), Cloudflare R2 (object storage), Vercel (hosting);
+5. update this specification to v1.0 for the Claude Code build handoff.
 
 ### Claude Code readiness after Phase 3
 
