@@ -49,9 +49,13 @@ select b.game_id, b.service_id, b.delivery_surface::text, b.feed_side::text, b.a
        b.blackout_rule::text, b.active, n.canonical_name
 from game_broadcasts b left join networks_services n on n.id = b.service_id {where} order by b.game_id, b.id"""
 
+# Default mode selects games whose evidence CHANGED since their last decision: a new claim (observed_at) or a
+# withdrawn/superseded claim (valid_to). last_seen_at is deliberately excluded - a repeat sighting of the same
+# value bumps it on every load but cannot change any decision (found live 2026-09-01: including it made the
+# default mode evaluate all 237 games after every load, same cost as --all).
 CHANGED_WHERE = """where not exists (select 1 from canonical_decisions d where d.game_id = g.id)
    or exists (select 1 from source_observations o where o.game_id = g.id
-              and greatest(o.observed_at, o.last_seen_at, coalesce(o.valid_to, o.observed_at)) >
+              and greatest(o.observed_at, coalesce(o.valid_to, o.observed_at)) >
                   (select max(d.decided_at) from canonical_decisions d where d.game_id = g.id))"""
 
 
