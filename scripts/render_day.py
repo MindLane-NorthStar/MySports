@@ -219,8 +219,27 @@ def svg_chip_mark(path, slug):
     body = re.sub(r'\bid="([^"]+)"', lambda mm: f'id="{pre}_{mm.group(1)}"', body)
     body = re.sub(r'url\(#([^)]+)\)', lambda mm: f'url(#{pre}_{mm.group(1)})', body)
     body = re.sub(r'href="#([^"]+)"', lambda mm: f'href="#{pre}_{mm.group(1)}"', body)
+    body = re.sub(r'\.([a-zA-Z]\w*)\{', lambda mm: f'.{pre}_{mm.group(1)}{{', body)          # scope <style> classes
+    body = re.sub(r'class="([^"]+)"', lambda mm: 'class="' + " ".join(f"{pre}_{c}" for c in mm.group(1).split()) + '"', body)
     tmpl = '<svg x="__X__" y="__Y__" width="__W__" height="__H__" viewBox="' + vbv + '" preserveAspectRatio="xMidYMid meet"' + fill + '>' + body
     return tmpl, asp
+RAIL_SVG = {"sec-network"}   # rail marks that ship as self-contained vector lockups (own plate colors; no recolor)
+def svg_rail_mark(path, slug):
+    """Inline-nest an SVG as-is for the rail (ids prefixed). Returns (template, aspect)."""
+    txt = path.read_text(encoding="utf-8")
+    txt = re.sub(r"<\?xml.*?\?>", "", txt, flags=re.S); txt = re.sub(r"<!DOCTYPE[^>]*>", "", txt); txt = re.sub(r"<!--.*?-->", "", txt, flags=re.S)
+    m = re.search(r'<svg\b[^>]*>', txt); root = m.group(0)
+    vb = re.search(r'viewBox="([^"]+)"', root)
+    vbv = vb.group(1) if vb else "0 0 300 100"
+    nums = [float(v) for v in re.split(r"[ ,]+", vbv.strip())]
+    pre = "rail_" + slug.replace("-", "_")
+    body = txt[m.end():]
+    body = re.sub(r'\bid="([^"]+)"', lambda mm: f'id="{pre}_{mm.group(1)}"', body)
+    body = re.sub(r'url\(#([^)]+)\)', lambda mm: f'url(#{pre}_{mm.group(1)})', body)
+    body = re.sub(r'\.([a-zA-Z]\w*)\{', lambda mm: f'.{pre}_{mm.group(1)}{{', body)          # scope <style> classes
+    body = re.sub(r'class="([^"]+)"', lambda mm: 'class="' + " ".join(f"{pre}_{c}" for c in mm.group(1).split()) + '"', body)
+    tmpl = '<svg x="__X__" y="__Y__" width="__W__" height="__H__" viewBox="' + vbv + '" preserveAspectRatio="xMidYMid meet">' + body
+    return tmpl, nums[2]/nums[3]
 NLOGO = {}
 def net_logo(name, dark=False, chip=False):
     slug = NET_SLUG.get(name)
@@ -232,6 +251,9 @@ def net_logo(name, dark=False, chip=False):
         if chip and psvg.exists():          # v1.3: vector wordmarks for chips when available (inline nested <svg>)
             tmpl, asp = svg_chip_mark(psvg, slug)
             NLOGO[key] = ("svg:" + tmpl, asp, "" if slug in ("espn-plus",) else NET_SUFFIX.get(slug, ""))
+        elif (not chip) and slug in RAIL_SVG and psvg.exists():   # v1.4: vector rail lockup, as designed
+            tmpl, asp = svg_rail_mark(psvg, slug)
+            NLOGO[key] = ("svg:" + tmpl, asp, NET_SUFFIX.get(slug, ""))
         elif p.exists():
             im = _Img.open(p).convert("RGBA")
             if chip: im = derive_chip_mark(im)
@@ -401,7 +423,7 @@ TBD_COLS = max(1, int((W - 2*PAD_X + TBD_GAP) // (TBD_CARD_W + TBD_GAP)))
 TBD_H = 0
 if tbd_groups:
     TBD_H = TBD_HEAD + sum(TBD_GROUP_HEAD + math.ceil(len(gs)/TBD_COLS)*TBD_ROW + 12 for _,_,gs in tbd_groups)
-FOOT_H = 26
+FOOT_H = 34
 H = PAD_T + GRID_H + TBD_H + FOOT_H + PAD_B
 xof = lambda dt: LABEL_W + (dt-t0).total_seconds()/60*PX
 
@@ -510,25 +532,39 @@ for k,l,lx,ly in positions:
     svg.append(f'<text x="{lx+gw+8}" y="{ly+4}" font-size="{LEG_FS}" font-weight="600" fill="#9aa2a8" letter-spacing="0.3">{E(l)}</text>')
 
 # ----------------------------------------------------------------------------- time grid
+event_min = sorted({int((g["dt"]-t0).total_seconds()//60) for g in day} | {int((g["dt"]-t0).total_seconds()//60)+g["end_min"] for g in day})
+kick_min = {int((g["dt"]-t0).total_seconds()//60) for g in day}
+AX_FS = 14
+# Place axis labels on up to two lines: a label that would collide on line 0 drops to line 1 (v1.4 staggering)
+# instead of being skipped; kickoffs still outrank block ends when even line 1 is taken.
+placed = []   # (m, x, lbl, line)
+last_right = {0: -1e9, 1: -1e9}
+for m in event_min:
+    t = t0+timedelta(minutes=m); x = LABEL_W+m*PX
+    lbl = clock(t); wdt = tw("inter-bold", lbl, AX_FS, 0.6)
+    for line in (0, 1):
+        if x - wdt/2 >= last_right[line] + 10:
+            placed.append((m, x, lbl, line)); last_right[line] = x + wdt/2; break
+    else:
+        if m in kick_min:   # displace the most recent block-end label on line 1, if any
+            for i in range(len(placed)-1, -1, -1):
+                if placed[i][3] == 1 and placed[i][0] not in kick_min:
+                    placed.pop(i); placed.append((m, x, lbl, 1)); last_right[1] = x + wdt/2; break
+STAGGER = any(pl[3] == 1 for pl in placed)
+if STAGGER:                       # second label line needs 16px more header
+    PAD_T += 16; H += 16
+    svg[0] = f'<svg xmlns="http://www.w3.org/2000/svg" width="{W:.0f}" height="{H:.0f}" font-family="Inter, DejaVu Sans, sans-serif">'
+    svg[2] = f'<rect width="{W:.0f}" height="{H:.0f}" fill="url(#spot)"/>'
 GRID_BOTTOM = PAD_T + GRID_H
 for m in range(0, total, 30):
     if (m//30) % 2 == 0:
         svg.append(f'<rect x="{LABEL_W+m*PX}" y="{PAD_T-18}" width="{30*PX}" height="{GRID_H+18}" fill="#FFFFFF" fill-opacity="0.035"/>')
-event_min = sorted({int((g["dt"]-t0).total_seconds()//60) for g in day} | {int((g["dt"]-t0).total_seconds()//60)+g["end_min"] for g in day})
-kick_min = {int((g["dt"]-t0).total_seconds()//60) for g in day}
 for m in range(0, total+1, 30):
     x = LABEL_W+m*PX
     svg.append(f'<line x1="{x}" y1="{PAD_T-18}" x2="{x}" y2="{GRID_BOTTOM}" stroke="#FFFFFF" stroke-opacity="{"0.10" if m % 60 == 0 else "0.045"}"/>')
-AX_FS = 14; last_right = -1e9; last_was_end = False
-for m in event_min:                       # kickoffs and block ends only (Joe, 2026-08-31)
-    t = t0+timedelta(minutes=m); x = LABEL_W+m*PX
-    lbl = clock(t); wdt = tw("inter-bold", lbl, AX_FS, 0.6)
-    if x - wdt/2 < last_right + 10:       # would collide with the previous label: kickoffs win over block ends
-        if m in kick_min and last_was_end: svg.pop(); svg.pop()
-        else: continue
+for m, x, lbl, line in placed:
     svg.append(f'<line x1="{x}" y1="{PAD_T-18}" x2="{x}" y2="{GRID_BOTTOM}" stroke="#FFFFFF" stroke-opacity="0.16"/>')
-    svg.append(f'<text x="{x}" y="{PAD_T-25}" font-size="{AX_FS}" font-weight="700" fill="#E8EAEC" text-anchor="middle">{E(lbl)}</text>')
-    last_right = x + wdt/2; last_was_end = m not in kick_min
+    svg.append(f'<text x="{x}" y="{PAD_T-25-(16 if line == 1 else 0)}" font-size="{AX_FS}" font-weight="700" fill="#E8EAEC" text-anchor="middle">{E(lbl)}</text>')
 
 # ----------------------------------------------------------------------------- shared card pieces
 def mini_card(x, y, w, g, tray_text, tray_right=None, ranks=True):
@@ -829,7 +865,10 @@ for row in rows:
         if lw2 + sufw > LABEL_W-30:
             lw2 = LABEL_W-30-sufw; lh2 = lw2/asp
         cx0 = (LABEL_W - lw2 - sufw)/2
-        svg.append(f'<image x="{cx0}" y="{ry-lh2/2}" width="{lw2}" height="{lh2}" href="{uri}" preserveAspectRatio="xMidYMid meet"/>')
+        if uri.startswith("svg:"):
+            svg.append(uri[4:].replace("__X__", f"{cx0}").replace("__Y__", f"{ry-lh2/2}").replace("__W__", f"{lw2}").replace("__H__", f"{lh2}"))
+        else:
+            svg.append(f'<image x="{cx0}" y="{ry-lh2/2}" width="{lw2}" height="{lh2}" href="{uri}" preserveAspectRatio="xMidYMid meet"/>')
         if suf: svg.append(f'<text x="{cx0+lw2+3}" y="{ry+7}" font-size="{19 if suf=="+" else 12}" font-weight="700" fill="#F2F3F4">{E(suf)}</text>')
     else:
         svg.append(f'<text x="{LABEL_W/2}" y="{ry+6}" font-size="17" font-weight="700" fill="#F2F3F4" text-anchor="middle">{E(NET_ABBR.get(row["name"], row["name"]))}</text>')
@@ -865,15 +904,26 @@ if tbd_groups:
             draw_card(g, cx-1, cy-4, TBD_CARD_W, TBD_ROW, prim_text=txt)
         y += math.ceil(len(gs)/TBD_COLS)*TBD_ROW + 12
 
-# ----------------------------------------------------------------------------- footer
-y += 8
-foot = f"{len(day)} games on the grid"
-if tbd: foot += f" · {len(tbd)} awaiting kickoff/network"
+# ----------------------------------------------------------------------------- footer (v1.4 status bar)
+y += 10
+fx = PAD_X
+def foot_pill(txt, ink="#C9CED3", plate="#2E333A", stroke_o=0.16, glyph=None):
+    global fx
+    fs_ = 10.5; tw_ = tw_inter(txt, fs_)*1.02 + 16 + (16 if glyph else 0)
+    svg.append(f'<rect x="{fx}" y="{y}" width="{tw_:.1f}" height="20" rx="4" fill="{plate}" stroke="#FFFFFF" stroke-opacity="{stroke_o}"/>')
+    tx = fx + 8
+    if glyph == "tba":
+        svg.append(f'<rect x="{tx}" y="{y+4}" width="12" height="12" rx="2.5" fill="url(#tile)" stroke="#FFFFFF" stroke-opacity="0.35"/>'); tx += 16
+    elif glyph == "omit":
+        svg.append(f'<rect x="{tx}" y="{y+4}" width="12" height="12" rx="2.5" fill="url(#tile)" stroke="#848C93" stroke-opacity="0.6"/><line x1="{tx+2.5}" y1="{y+13.5}" x2="{tx+9.5}" y2="{y+6.5}" stroke="#848C93" stroke-width="1.4"/>'); tx += 16
+    svg.append(f'<text x="{tx}" y="{y+14}" font-size="{fs_}" font-weight="600" fill="{ink}">{E(txt)}</text>')
+    fx += tw_ + 8
+foot_pill(f"{len(day)} ON THE GRID", ink="#F2F3F4")
+if tbd: foot_pill(f"{len(tbd)} KICKOFF / NETWORK TBA", glyph="tba")
 if omitted:
     outs = sorted({o for g in omitted for o in g["outlets"]})
-    foot += f" · {len(omitted)} not on your services and omitted ({', '.join(outs)})"
-foot += " · kept in the database; nothing is deleted"
-svg.append(f'<text x="{PAD_X}" y="{y+12}" font-size="11" fill="#848C93">{E(foot)}</text>')
+    foot_pill(f"{len(omitted)} NOT ON YOUR SERVICES · {', '.join(outs)}", ink="#9aa2a8", glyph="omit")
+svg.append(f'<text x="{fx+6}" y="{y+14}" font-size="10.5" fill="#6F767D">every game is kept in the database — nothing is deleted · {E(sub.split(" · data: ")[1]) if " · data: " in sub else ""}</text>')
 svg.append('</svg>')
 
 # ----------------------------------------------------------------------------- output
@@ -881,7 +931,7 @@ out_dir = Path(ARGS.out); out_dir.mkdir(parents=True, exist_ok=True)
 svg_path = out_dir / f"grid_{TARGET}.svg"
 svg_path.write_text("\n".join(svg), encoding="utf-8")
 for gname, dropped in DROP_LOG: print(f"  tray drop: {gname}: {dropped}")
-print(f"v1.3: {len(day)} on grid · {len(tbd)} TBA · {len(omitted)} omitted · {W:.0f}x{H:.0f} -> {svg_path}"
+print(f"v1.4: {len(day)} on grid · {len(tbd)} TBA · {len(omitted)} omitted · {W:.0f}x{H:.0f} -> {svg_path}"
       + (" · enrichment loaded" if ENR else " · NO enrichment") + (" · MOCK" if USE_MOCK else ""))
 if ARGS.png or ARGS.export:
     try:

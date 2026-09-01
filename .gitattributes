@@ -1,0 +1,9 @@
+# Cowork writes files with LF; keep them LF in the working tree on Windows too, so git stops
+# warning "LF will be replaced by CRLF" and diffs stay clean across the Linux/Windows boundary.
+*.py    text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+*.svg   text eol=lf
+*.txt   text eol=lf
+.gitignore     text eol=lf
+.gitattributes text eol=lf

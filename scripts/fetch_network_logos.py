@@ -47,6 +47,7 @@ VECTOR_MARKS = {
     "peacock":        "https://upload.wikimedia.org/wikipedia/commons/2/20/NBCUniversal_Peacock_Logo_%282026%29.svg",
     "disney-plus":    "https://upload.wikimedia.org/wikipedia/commons/6/64/Disney%2B_2024.svg",
     "espn-plus":      "https://upload.wikimedia.org/wikipedia/commons/8/80/ESPN_Plus.svg",
+    "sec-network":    "https://upload.wikimedia.org/wikipedia/commons/f/fd/SEC_Network_%282024%29.svg",   # v1.4: rail lockup (2024 logo)
 }
 
 class Throttled(Exception): pass

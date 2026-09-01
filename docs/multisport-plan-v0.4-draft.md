@@ -2,7 +2,7 @@
 
 **Written:** 2026-08-31 (evening), immediately after the Tier 1 checks in `research/research-changelog.md`.
 **Inputs:** `research/research-summary.md` §1–§5, the four league docs, the Tier 1 fetch results, and `rendering-contract.md` v1.0.
-**Status:** recommendation for Joe. Nothing here is in the spec until v0.4 is cut. Items marked **DECISION** need Joe's answer; everything else is a recommendation he can accept by silence.
+**Status:** all six decisions in §4 are made (Joe, 2026-08-31). This document is now the input to spec v0.4; nothing here is in the spec until v0.4 is cut.
 
 ---
 
@@ -97,14 +97,18 @@ The table already models one game → many outlets. It needs to carry linear TV 
 
 Add `staleness_horizon_days` per field class: local carriage = **14**, national windows = 60, schedules = season. Re-verify local carriage at every season boundary regardless of source rank. This is the rule the Cavaliers error earned.
 
-## 4. Decisions needed from Joe (with recommendations)
+## 4. Decisions — DECIDED by Joe, 2026-08-31 (late night)
 
-1. **Market-of-one vs. general DMA** (§3.3) — recommend market-of-one.
-2. **Betting lines in scope** (§3.6) — recommend yes, with a display switch; it is already on the grid.
-3. **Out-of-market games: collapsed strip or hidden** (§3.7) — recommend the strip.
-4. **Apple TV for Friday Night Baseball, $12.99/mo** — the only national gap; modeled as not held until you say otherwise.
-5. **Build order** — NFL + NHL in parallel, then NBA, then MLB (§2).
-6. **Tier 3 confirmations, five minutes total:** is TBS in your DIRECTV lineup; is NFL Network on channel 212 or inside your ESPN app; does ESPN+ content appear in your ESPN Unlimited account; confirm WKYC 3 / WJW 8 / WBNX 55 as your local NBC / FOX / CW.
+| # | Question | Decision | Consequence for spec v0.4 |
+|---|---|---|---|
+| 1 | Coverage-map fidelity | **Market-of-one: Cleveland (DMA 510)** | One `markets` row; `market_coverage` hand-entered weekly for NFL from 506sports; `team_territories` from NHL `postal-lookup`. Schema wide enough to add markets later. |
+| 2 | Betting lines | **In scope, with a display switch** | Strike "betting lines" from §21; add `game_odds (game_id, provider, spread, total, home_moneyline, away_moneyline, fetched_at)`; `show_odds` per render; primary line spread (CFB/NFL/NBA), moneyline (MLB/NHL). Already live in the CFB tray (v1.3 pills). |
+| 3 | Non-accessible games | **Collapsed "Around the League" strip** below the grid | One component for all four leagues; muted register, no grid geometry, expandable in the web app. Replaces the CFB-era "omitted" footer count as the primary honesty surface. |
+| 4 | Apple TV (Friday Night Baseball) | **Joe will subscribe — model as AVAILABLE** | Apple TV joins `viewer_services`; Friday MLB games render on an Apple TV streaming row. No national gap remains across the four pro leagues. |
+| 5 | Build order | **NFL + NHL in parallel → NBA → MLB** | NFL forces `market_coverage`; NHL (CBJ opener Oct 1) forces `carriage_certainty = TBA` and late-binding local rows. Acceptance tests: an NFL Sunday in November; the Oct 1 CBJ opener with a TBA local row. |
+| 6 | Tier 3 confirmations | **TBS: in DIRECTV lineup. NFL Network: available (DIRECTV 212 / ESPN app). ESPN+ content: inside ESPN Unlimited.** Call signs confirmed by the rail order (WKYC 3, WEWS 5, WJW 8, WOIO 19, WBNX 55). | Add TBS and NFL Network as `available` in §3.2; treat ESPN+ exclusives as covered by ESPN Unlimited + Disney+; affiliate call signs seeded in `data/row_order.json`. |
+
+Earlier the same evening, from rendered option boards: contract v1.3 (one full-size card for every game, pills tray, vector streamer wordmarks, 28px tray, gold-plate marquee, Cleveland dial order in the rail) — see `rendering-contract.md` §12.
 
 ## 5. Recommended next session
 
