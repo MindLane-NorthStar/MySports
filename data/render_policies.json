@@ -1,0 +1,8 @@
+{
+  "_about": "Per-sport render policy (spec 7.19 / 11.9). block_minutes drives card width; lane_policy alt_lane = overlapping games on one network stack into lanes (CFB), market_filter = the market decides which regional game is on the row; primary_line spread|moneyline. title is the header lockup; week_label true = 'WEEK N' from the fixture week. local_row_label is the rail text for a synthesized local row whose carrier is TBA.",
+  "cfb": {"title": "COLLEGE FOOTBALL", "block_minutes": 210, "lane_policy": "alt_lane", "primary_line": "spread", "open_ended": false, "cutover": "03:00", "week_label": true, "data_label": "CFBD"},
+  "nfl": {"title": "NFL", "block_minutes": 210, "lane_policy": "market_filter", "primary_line": "spread", "open_ended": false, "cutover": "03:00", "week_label": true, "data_label": "ESPN"},
+  "nhl": {"title": "NHL", "block_minutes": 150, "lane_policy": "market_filter", "primary_line": "moneyline", "open_ended": "playoffs", "cutover": "03:00", "week_label": false, "data_label": "NHL", "local_row_label": "CARRIER TBA"},
+  "nba": {"title": "NBA", "block_minutes": 150, "lane_policy": "market_filter", "primary_line": "spread", "open_ended": false, "cutover": "03:00", "week_label": false, "data_label": "NBA", "local_row_label": "CARRIER TBA"},
+  "mlb": {"title": "MLB", "block_minutes": 180, "lane_policy": "market_filter", "primary_line": "moneyline", "open_ended": true, "cutover": "03:00", "week_label": false, "data_label": "MLB"}
+}

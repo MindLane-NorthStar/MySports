@@ -1,0 +1,9 @@
+{
+  "_about": "Local-rights status per team for the late-binding local row (spec 3.12). TBA_NO_RIGHTS_HOLDER = the club holds its local rights and has announced no distributor; UNANNOUNCED = a distributor exists but this game's local row is not yet in the league file. Either renders as 'local broadcast - carrier TBA'. Update when a carrier is announced (Tier 1 research task, docs/research/research-changelog.md).",
+  "nhl": {
+    "CBJ": {"status": "TBA_NO_RIGHTS_HOLDER", "label": "CBJ LOCAL", "asOf": "2026-08-31", "note": "Blue Jackets local carrier for 2026-27 not announced as of the research brief"}
+  },
+  "nba": {
+    "CLE": {"status": "TBA_NO_RIGHTS_HOLDER", "label": "CAVS LOCAL", "asOf": "2026-08-31", "note": "Cavaliers local carrier for 2026-27 not announced as of the research brief"}
+  }
+}

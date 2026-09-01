@@ -1,15 +1,116 @@
 {
-  "_about": "Grid row order per sport (rendering contract §2). Rows render top-to-bottom: broadcast, cable, conference, then streaming groups. `station`/`channel` are the viewer's local over-the-air affiliates (Cleveland DMA) and render as call letters above the network mark in the rail. Rows with no eligible game are omitted at render time. Edit here; the renderer reads this file directly.",
-  "cfb": {
-    "broadcast": [
-      {"network": "NBC", "station": "WKYC", "channel": 3},
-      {"network": "ABC", "station": "WEWS", "channel": 5},
-      {"network": "FOX", "station": "WJW", "channel": 8},
-      {"network": "CBS", "station": "WOIO", "channel": 19},
-      {"network": "The CW", "station": "WBNX", "channel": 55}
-    ],
-    "cable": ["ESPN", "ESPN2", "ESPNU", "FS1", "TNT", "USA Network"],
-    "conference": ["Big Ten Network", "ACC Network", "SEC Network"],
-    "streaming": ["ESPN+", "ESPN Unlimited", "SEC Network+", "Peacock", "HBO Max"]
-  }
+ "_about": "Grid row order per sport (rendering contract §2). Rows render top-to-bottom: broadcast, cable, conference, then streaming groups. `station`/`channel` are the viewer's local over-the-air affiliates (Cleveland DMA) and render as call letters above the network mark in the rail. Rows with no eligible game are omitted at render time. Edit here; the renderer reads this file directly. Pro leagues (v1.5): `local` rows are the market team's local feed; when the carrier is unannounced the adapter synthesizes a local row and the rail prints the local_row_label from data/render_policies.json.",
+ "cfb": {
+  "broadcast": [
+   {
+    "network": "NBC",
+    "station": "WKYC",
+    "channel": 3
+   },
+   {
+    "network": "ABC",
+    "station": "WEWS",
+    "channel": 5
+   },
+   {
+    "network": "FOX",
+    "station": "WJW",
+    "channel": 8
+   },
+   {
+    "network": "CBS",
+    "station": "WOIO",
+    "channel": 19
+   },
+   {
+    "network": "The CW",
+    "station": "WBNX",
+    "channel": 55
+   }
+  ],
+  "cable": [
+   "ESPN",
+   "ESPN2",
+   "ESPNU",
+   "FS1",
+   "TNT",
+   "USA Network"
+  ],
+  "conference": [
+   "Big Ten Network",
+   "ACC Network",
+   "SEC Network"
+  ],
+  "streaming": [
+   "ESPN+",
+   "ESPN Unlimited",
+   "SEC Network+",
+   "Peacock",
+   "HBO Max"
+  ]
+ },
+ "nfl": {
+  "broadcast": [
+   {
+    "network": "CBS",
+    "station": "WOIO",
+    "channel": 19
+   },
+   {
+    "network": "FOX",
+    "station": "WJW",
+    "channel": 8
+   },
+   {
+    "network": "NBC",
+    "station": "WKYC",
+    "channel": 3
+   },
+   {
+    "network": "ABC",
+    "station": "WEWS",
+    "channel": 5
+   }
+  ],
+  "cable": [
+   "ESPN",
+   "ESPN2",
+   "NFL Network"
+  ],
+  "conference": [],
+  "streaming": [
+   "Prime Video",
+   "Peacock",
+   "Netflix",
+   "ESPN+",
+   "Paramount+",
+   "YouTube"
+  ]
+ },
+ "nhl": {
+  "broadcast": [
+   {
+    "network": "ABC",
+    "station": "WEWS",
+    "channel": 5
+   }
+  ],
+  "cable": [
+   "ESPN",
+   "ESPN2",
+   "TNT",
+   "TBS",
+   "truTV"
+  ],
+  "conference": [],
+  "local": [
+   "CBJ LOCAL"
+  ],
+  "streaming": [
+   "ESPN+",
+   "Disney+",
+   "Hulu",
+   "HBO Max"
+  ]
+ }
 }

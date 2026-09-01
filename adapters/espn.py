@@ -1,0 +1,277 @@
+#!/usr/bin/env python3
+"""MySports adapter — ESPN site API (NFL schedule backbone + shared enrichment layer, spec §3.12).
+
+Unauthenticated. Two jobs:
+
+1. NFL schedule for one viewing day / week -> renderer fixture.
+       python -m adapters.espn --league nfl --date 2026-09-13
+       python -m adapters.espn --league nfl --week 1 --season 2026
+   Writes artifacts/validation/nfl_2026_week1_fixture.json (+ _raw.json, _report.md),
+   artifacts/validation/nfl_2026_teams.json, assets/logos/nfl-{id}.png for teams in the fixture.
+
+2. Team metadata for any ESPN league (colors, PNG logo URLs) used by the other pro adapters, written as
+   {league}_espn_teams.json (adapters/nhl.py fetches this itself when online):
+       python -m adapters.espn --league nhl --teams-only
+
+Market-of-one (spec §3.12): ESPN marks nearly every CBS/FOX Sunday game "National", which is not the
+truth for a viewer in Cleveland. Regional windows are resolved by data/market_coverage_nfl.json —
+hand-entered weekly from 506sports. A regional game with no entry is written access=UNVERIFIED and the
+renderer keeps it OFF the grid (honesty rule, §11.8) until the entry exists. The local team's games are
+always AVAILABLE in their market.
+
+Verified against the live payload 2026-09-01 (events[].competitions[0].{date,timeValid,neutralSite,
+competitors[].{homeAway,team{id,abbreviation,displayName,color,alternateColor,logo}},broadcasts[{market,names}],
+geoBroadcasts[{type.shortName,market.type,media.shortName}],status.isTBDFlex,odds[{provider.name,details,
+overUnder,spread,moneyline}]}).
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+from adapters.common import (ET, access_lookup, dump_json, et_date, et_display, fetch_logos, fixture_envelope,
+                             hex6, http_json, load_data, load_raw_or_fetch, md_table, media_row, normalize_outlet,
+                             outlet_access, parse_iso, team_record, write_text, now_et_iso, find_repo_root)
+
+SITE = "https://site.api.espn.com/apis/site/v2/sports"
+LEAGUE_PATH = {"nfl": "football/nfl", "nhl": "hockey/nhl", "nba": "basketball/nba", "mlb": "baseball/mlb",
+               "cfb": "football/college-football"}
+# ESPN outlet spellings seen in scoreboard payloads -> canonical names used by data/row_order.json
+ESPN_OUTLETS = {"Prime Video": "Prime Video", "Amazon Prime": "Prime Video", "NFL Net": "NFL Network", "NFLN": "NFL Network",
+                "ESPN/ABC": "ESPN", "ABC/ESPN": "ABC", "CBS/Paramount+": "CBS", "NBC/Peacock": "NBC", "Netflix": "Netflix",
+                "YouTube": "YouTube", "YouTube TV": "YouTube"}
+STREAM_ONLY = {"Prime Video", "Netflix", "YouTube", "Peacock", "ESPN+", "Paramount+", "HBO Max", "Disney+", "Hulu", "Apple TV"}
+# a "Regional" feed in ESPN's vocabulary; treated as needing a market decision
+REGIONAL_NETWORKS = {"CBS", "FOX"}
+
+
+# ----------------------------------------------------------------------------- teams
+def fetch_teams(league: str) -> list[dict[str, Any]]:
+    data = http_json(f"{SITE}/{LEAGUE_PATH[league]}/teams", params={"limit": 100})
+    out = []
+    for t in data["sports"][0]["leagues"][0]["teams"]:
+        team = t["team"]
+        logos = [l.get("href") for l in team.get("logos", []) if l.get("href")]
+        out.append(team_record(
+            f"{league}-{team['id']}", team.get("displayName") or team.get("name"), team.get("abbreviation"),
+            None, league, team.get("color"), team.get("alternateColor"), logos,
+            espnId=str(team["id"]), location=team.get("location"), nickname=team.get("name"),
+            shortDisplayName=team.get("shortDisplayName")))
+    out.sort(key=lambda r: r["school"])
+    return out
+
+
+def teams_by_abbrev(teams: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {t["abbreviation"]: t for t in teams if t.get("abbreviation")}
+
+
+# ----------------------------------------------------------------------------- NFL scoreboard
+def fetch_scoreboard(league: str, *, date: str | None = None, week: int | None = None, season: int | None = None,
+                     season_type: int = 2) -> dict[str, Any]:
+    params: dict[str, Any] = {"limit": 100}
+    if date:
+        params["dates"] = date.replace("-", "")
+    if week is not None:
+        params["week"] = week
+        params["seasontype"] = season_type
+        if season:
+            params["dates"] = season
+    return http_json(f"{SITE}/{LEAGUE_PATH[league]}/scoreboard", params=params)
+
+
+def _odds(comp: dict[str, Any]) -> dict[str, Any] | None:
+    for o in comp.get("odds") or []:
+        prov = (o.get("provider") or {}).get("name") or "unknown"
+        home_fav = ((o.get("homeTeamOdds") or {}).get("favorite"))
+        ml = o.get("moneyline") or {}
+        return {"provider": prov, "details": o.get("details"), "spread": o.get("spread"), "overUnder": o.get("overUnder"),
+                "favorite": "home" if home_fav else ("away" if (o.get("awayTeamOdds") or {}).get("favorite") else None),
+                "moneylineHome": (((ml.get("home") or {}).get("close") or {}).get("odds")),
+                "moneylineAway": (((ml.get("away") or {}).get("close") or {}).get("odds")),
+                "fetchedAt": now_et_iso()}
+    return None
+
+
+def _broadcast_names(comp: dict[str, Any]) -> list[tuple[str, str]]:
+    """[(outlet, espn_market)] — geoBroadcasts first (typed), then the flat broadcasts list."""
+    seen: list[tuple[str, str]] = []
+    for gb in comp.get("geoBroadcasts") or []:
+        if (gb.get("lang") or "en") != "en" or (gb.get("region") or "us") != "us":
+            continue
+        name = normalize_outlet(ESPN_OUTLETS.get((gb.get("media") or {}).get("shortName", ""), (gb.get("media") or {}).get("shortName", "")))
+        mk = ((gb.get("market") or {}).get("type") or "National").lower()
+        if name and (name, mk) not in seen:
+            seen.append((name, mk))
+    for b in comp.get("broadcasts") or []:
+        mk = (b.get("market") or "national").lower()
+        for n in b.get("names") or []:
+            name = normalize_outlet(ESPN_OUTLETS.get(n, n))
+            if name and all(name != s[0] for s in seen):
+                seen.append((name, mk))
+    return seen
+
+
+def build_nfl_fixture(raw: dict[str, Any], root: Path, *, season: int, week: int | None, day_filter: str | None,
+                      teams: list[dict[str, Any]]) -> tuple[dict[str, Any], list[str]]:
+    available, unavailable = access_lookup(root)
+    market = load_data(root, "markets.json", {}).get("nfl", {})
+    local_abbrevs = set(market.get("localTeams", ["CLE"]))
+    coverage = load_data(root, "market_coverage_nfl.json", {})
+    notes: list[str] = []
+    games: list[dict[str, Any]] = []
+    for ev in raw.get("events", []):
+        comp = (ev.get("competitions") or [{}])[0]
+        start = comp.get("date") or ev.get("date")
+        dt = parse_iso(start)
+        if day_filter and (dt is None or et_date(start) != day_filter):
+            continue
+        sides = {c["homeAway"]: c for c in comp.get("competitors", []) if c.get("homeAway")}
+        if "home" not in sides or "away" not in sides:
+            notes.append(f"event {ev.get('id')}: missing home/away, skipped")
+            continue
+
+        def side(c: dict[str, Any]) -> dict[str, Any]:
+            t = c["team"]
+            # card name = nickname (contract cards are two lines of Barlow Condensed; "Cincinnati Bengals" does not fit a 1:00 block)
+            return {"id": f"nfl-{t['id']}", "team": t.get("name") or t.get("shortDisplayName") or t.get("displayName"),
+                    "teamFull": t.get("displayName"), "location": t.get("location"), "abbreviation": t.get("abbreviation"),
+                    "conference": None, "classification": "nfl"}
+
+        home, away = side(sides["home"]), side(sides["away"])
+        time_tbd = not bool(comp.get("timeValid", True))
+        is_local = home["abbreviation"] in local_abbrevs or away["abbreviation"] in local_abbrevs
+        gid = str(ev.get("id"))
+        cov = (coverage.get(str(week)) if week is not None else None) or {}
+        cov_game = cov.get("games", {}).get(gid) or cov.get("games", {}).get(f"{away['abbreviation']}@{home['abbreviation']}")
+
+        media = []
+        for outlet, espn_mkt in _broadcast_names(comp):
+            acc = outlet_access(outlet, available, unavailable)
+            mtype = "web" if outlet in STREAM_ONLY else "tv"
+            mk, cert, src = "national", "CONFIRMED", "espn.scoreboard"
+            if outlet in REGIONAL_NETWORKS and mtype == "tv":
+                # Sunday-afternoon CBS/FOX windows are regional whatever ESPN's market flag says (§3.12)
+                mk = "regional"
+                if is_local:
+                    acc, src = "AVAILABLE", "market: local team"
+                elif cov_game is not None:
+                    acc = "AVAILABLE" if cov_game.get("cleveland") else "OUT_OF_MARKET"
+                    src = f"market_coverage_nfl.json week {week}"
+                else:
+                    acc, src = "UNVERIFIED", "regional feed - Cleveland assignment not entered"
+            media.append(media_row(mtype, outlet, acc, market=mk, certainty=cert, start_time=start, tbd=time_tbd, source=src))
+        if not media:
+            notes.append(f"{away['abbreviation']}@{home['abbreviation']}: no broadcast rows in payload")
+
+        recs = {}
+        for k, c in sides.items():
+            for r in c.get("records") or []:
+                if r.get("type") == "total":
+                    recs[k] = r.get("summary")
+        games.append({
+            "id": f"nfl-{gid}", "sport": "nfl", "season": season,
+            "week": (ev.get("week") or {}).get("number", week),
+            "startDate": start, "startTimeET": et_display(start), "startTimeTBD": time_tbd,
+            "neutralSite": bool(comp.get("neutralSite")),
+            "venue": (comp.get("venue") or {}).get("fullName"),
+            "home": home, "away": away, "media": media,
+            "odds": _odds(comp), "records": recs or None,
+            "flags": {"isTBDFlex": bool((comp.get("status") or {}).get("isTBDFlex")),
+                      "espnBroadcast": comp.get("broadcast")},
+        })
+    games.sort(key=lambda g: (g["startDate"] or "", g["id"]))
+    fixture = fixture_envelope("nfl", season, week, games, source="espn.scoreboard", dayFilter=day_filter,
+                               market="Cleveland (DMA 510)", coverageFile="data/market_coverage_nfl.json")
+    return fixture, notes
+
+
+def report_md(fixture: dict[str, Any], notes: list[str], teams_missing: list[str]) -> str:
+    v = fixture["validation"]
+    rows = []
+    for g in fixture["games"]:
+        outs = ", ".join(f"{m['outlet']}[{m['access'][:4]}{'/'+m['market'][:3] if m['market']!='national' else ''}]" for m in g["media"]) or "-"
+        od = g.get("odds") or {}
+        rows.append([f"{g['away']['abbreviation']} @ {g['home']['abbreviation']}", g["startTimeET"], "YES" if g["startTimeTBD"] else "",
+                     outs, (od.get("details") or "") + (f" / O-U {od['overUnder']}" if od.get("overUnder") else ""),
+                     "flex" if g["flags"].get("isTBDFlex") else ""])
+    lines = [f"# ESPN NFL adapter report - season {v['year']} week {v['week']} (day filter: {v.get('dayFilter') or 'none'})", "",
+             f"- generated {v['generatedAt']}", f"- games in fixture: **{len(fixture['games'])}**",
+             f"- market: {v['market']} - regional CBS/FOX rows resolved by `{v['coverageFile']}`", "",
+             md_table(["Game", "Start (ET)", "Time TBD", "Media rows [access/market]", "Line", "Flex"], rows), ""]
+    unverified = [g for g in fixture["games"] if any(m["access"] == "UNVERIFIED" for m in g["media"])]
+    if unverified:
+        lines += [f"## Regional games awaiting a Cleveland coverage entry ({len(unverified)})", "",
+                  "Add each to `data/market_coverage_nfl.json` under this week (`\"cleveland\": true|false`) after checking 506sports.", ""]
+        lines += [f"- `{g['id'][4:]}` {g['away']['abbreviation']}@{g['home']['abbreviation']} - {g['startTimeET']}" for g in unverified]
+        lines.append("")
+    if teams_missing:
+        lines += ["## Teams without metadata", ""] + [f"- {t}" for t in teams_missing] + [""]
+    if notes:
+        lines += ["## Notes", ""] + [f"- {n}" for n in notes] + [""]
+    return "\n".join(lines)
+
+
+# ----------------------------------------------------------------------------- cli
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--league", default="nfl", choices=sorted(LEAGUE_PATH))
+    ap.add_argument("--date", help="viewing day YYYY-MM-DD (ET); fixture holds only that day's games")
+    ap.add_argument("--week", type=int, help="NFL week (regular season); fixture holds the whole week")
+    ap.add_argument("--season", type=int, default=2026)
+    ap.add_argument("--teams-only", action="store_true", help="only refresh {league}_{season}_teams.json and logos")
+    ap.add_argument("--from-file", help="replay a saved raw scoreboard payload instead of fetching")
+    ap.add_argument("--no-logos", action="store_true")
+    ap.add_argument("--output-dir", default="artifacts/validation")
+    args = ap.parse_args(argv)
+
+    root = find_repo_root()
+    out_dir = root / args.output_dir
+    # NFL teams are keyed nfl-{espnId} and are the renderer's teams file. Other leagues key their own ids
+    # (nhl-{nhlId}); their ESPN colors/logos are a side file joined by abbreviation, and no logo is written here.
+    teams_path = out_dir / (f"nfl_{args.season}_teams.json" if args.league == "nfl" else f"{args.league}_espn_teams.json")
+    if args.from_file and teams_path.exists():   # offline replay: reuse the cached teams file
+        teams = json.loads(teams_path.read_text(encoding="utf-8"))
+    else:
+        teams = fetch_teams(args.league)
+        dump_json(teams_path, teams)
+    print(f"{args.league} teams: {len(teams)} -> {teams_path.relative_to(root)}")
+    if args.teams_only or args.league != "nfl":
+        if not args.no_logos and args.league == "nfl":
+            print("logos:", fetch_logos(teams, root / "assets" / "logos"))
+        return 0
+
+    if not args.date and args.week is None:
+        print("ERROR: --date or --week required for the NFL schedule", file=sys.stderr)
+        return 2
+    week = args.week
+    raw_path = out_dir / (f"nfl_{args.season}_week{week}_raw.json" if week is not None else f"nfl_{args.season}_{args.date}_raw.json")
+    raw = load_raw_or_fetch(args.from_file, lambda: fetch_scoreboard("nfl", date=args.date if week is None else None, week=week,
+                                                                    season=args.season), raw_path)
+    if week is None:
+        wk = None
+        for ev in raw.get("events", []):
+            wk = (ev.get("week") or {}).get("number")
+            if wk is not None:
+                break
+        week = wk
+    fixture, notes = build_nfl_fixture(raw, root, season=args.season, week=week, day_filter=args.date, teams=teams)
+    key = f"week{week}" if args.date is None else args.date
+    fx_path = out_dir / f"nfl_{args.season}_{key}_fixture.json"
+    dump_json(fx_path, fixture)
+    by_id = {t["id"]: t for t in teams}
+    needed = {g[s]["id"] for g in fixture["games"] for s in ("home", "away")}
+    missing = sorted(i for i in needed if i not in by_id)
+    write_text(out_dir / f"nfl_{args.season}_{key}_report.md", report_md(fixture, notes, missing))
+    print(f"fixture: {len(fixture['games'])} games -> {fx_path.relative_to(root)}")
+    if not args.no_logos:
+        print("logos:", fetch_logos(teams, root / "assets" / "logos", needed))
+    for n in notes:
+        print("  note:", n)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

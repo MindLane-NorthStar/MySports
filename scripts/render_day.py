@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MySports — day grid renderer, design v1.1 (Phase 3B).
+"""MySports — day grid renderer, design v1.5 (Phase 4: multi-sport plumbing on the v1.4 contract).
 
 Renders one calendar day of college football as SVG (canonical) and optionally PNG,
 from the CFBD validation fixture + enrichment probe + cached assets. Run from the repo root:
@@ -7,6 +7,8 @@ from the CFBD validation fixture + enrichment probe + cached assets. Run from th
     python scripts/render_day.py --week 1 --date 2026-09-05 --png
     python scripts/render_day.py --week 8 --date 2026-10-24 --png      # TBD-state fixture
     python scripts/render_day.py --week 1 --date 2026-09-05 --export   # 2x PNG for download
+    python scripts/render_day.py --sport nhl --date 2026-10-01           # v1.5: pro-league fixture from adapters/nhl.py
+    python scripts/render_day.py --sport nfl --date 2026-09-13           # v1.5: adapters/espn.py, Cleveland market filter
 
 Inputs (defaults derive from --week; override individually if needed):
   artifacts/validation/cfbd_2026_week{N}_fixture.json      games + media (sanitized)
@@ -41,10 +43,14 @@ from PIL import Image as _Img
 ap = argparse.ArgumentParser()
 ap.add_argument("--date", default="2026-09-05")
 ap.add_argument("--week", type=int, default=1, help="fixture week; sets the default input paths")
+ap.add_argument("--sport", choices=["cfb", "nfl", "nhl", "nba", "mlb"],
+                help="v1.5: selects data/render_policies.json + data/row_order.json[sport] and the default fixture path "
+                     "({sport}_{year}_week{N} or {sport}_{year}_{date}); default = the fixture's validation.sport, else cfb")
+ap.add_argument("--year", type=int, default=2026, help="season year used in default fixture/teams paths")
 ap.add_argument("--fixture")
 ap.add_argument("--games-raw")
 ap.add_argument("--enrichment")
-ap.add_argument("--teams", default="artifacts/validation/cfbd_2026_teams.json")
+ap.add_argument("--teams", help="default: artifacts/validation/cfbd_{year}_teams.json (cfb) or {sport}_{year}_teams.json")
 ap.add_argument("--rivalries", default="data/rivalries.json")
 ap.add_argument("--logos", default="assets/logos")
 ap.add_argument("--network-logos", default="assets/network-logos")
@@ -63,9 +69,29 @@ for kv in ARGS.style:
     k, _, v = kv.partition("="); STYLE[k.strip()] = v.strip()
 TARGET = ARGS.date
 WK = ARGS.week
-ARGS.fixture = ARGS.fixture or f"artifacts/validation/cfbd_2026_week{WK}_fixture.json"
-ARGS.games_raw = ARGS.games_raw or f"artifacts/validation/cfbd_2026_week{WK}_games.json"
-ARGS.enrichment = ARGS.enrichment or f"artifacts/validation/cfbd_2026_week{WK}_enrichment.json"
+YR = ARGS.year
+# ----------------------------------------------------------------------------- v1.5 sport + policy
+# Sport resolution: --sport wins; else an explicit --fixture's validation.sport; else cfb (Phase 3 behavior).
+SPORT = ARGS.sport
+if SPORT is None and ARGS.fixture and Path(ARGS.fixture).exists():
+    SPORT = (json.load(open(ARGS.fixture, encoding="utf-8")).get("validation") or {}).get("sport")
+SPORT = SPORT or "cfb"
+_POL_PATH = Path("data/render_policies.json")
+_POLICIES = json.load(open(_POL_PATH, encoding="utf-8")) if _POL_PATH.exists() else {}
+POLICY = _POLICIES.get(SPORT) or {"title": "COLLEGE FOOTBALL", "block_minutes": 210, "lane_policy": "alt_lane",
+                                  "week_label": True, "data_label": "CFBD"}
+PRO = POLICY.get("lane_policy") == "market_filter"      # pro leagues: no-media games are off-grid, never "network TBA"
+if SPORT == "cfb":
+    _PFX = f"artifacts/validation/cfbd_{YR}_week{WK}"
+    ARGS.teams = ARGS.teams or f"artifacts/validation/cfbd_{YR}_teams.json"
+    ARGS.games_raw = ARGS.games_raw or f"{_PFX}_games.json"
+else:
+    _by_day = f"artifacts/validation/{SPORT}_{YR}_{TARGET}"
+    _PFX = _by_day if (ARGS.fixture is None and Path(_by_day + "_fixture.json").exists()) else f"artifacts/validation/{SPORT}_{YR}_week{WK}"
+    ARGS.teams = ARGS.teams or f"artifacts/validation/{SPORT}_{YR}_teams.json"
+    ARGS.games_raw = ARGS.games_raw or "/nonexistent"     # pro fixtures carry the venue inline
+ARGS.fixture = ARGS.fixture or f"{_PFX}_fixture.json"
+ARGS.enrichment = ARGS.enrichment or f"{_PFX}_enrichment.json"
 CAP_STYLE = "gradient"  # contract: gradient endcaps (solid rejected 2026-08-31)
 EXPORT_SCALE = 2.0      # contract §8: download PNG is @2x of the SVG coordinate space
 ET = ZoneInfo("America/New_York")
@@ -83,21 +109,28 @@ ALIASES = {"CW":"The CW","The CW Network":"The CW","USA Net":"USA Network","BTN"
 UNAVAILABLE = {"CBS Sports Network","FS2","MW+","UConn+"}
 SIMULCAST = {"CBS":"Paramount+","NBC":"Peacock","TNT":"HBO Max","ESPN":"Disney+","ABC":"Disney+"}
 _RO_PATH = Path("data/row_order.json")
-if _RO_PATH.exists():
-    _ro = json.load(open(_RO_PATH, encoding="utf-8"))["cfb"]
-    ROW_ORDER = [b["network"] for b in _ro["broadcast"]] + _ro["cable"] + _ro["conference"]
+LOCAL_ROWS = set()
+if _RO_PATH.exists() and SPORT in json.load(open(_RO_PATH, encoding="utf-8")):
+    _ro = json.load(open(_RO_PATH, encoding="utf-8"))[SPORT]
+    ROW_ORDER = [b["network"] for b in _ro["broadcast"]] + _ro.get("cable", []) + _ro.get("conference", []) + _ro.get("local", [])
+    LOCAL_ROWS = set(_ro.get("local", []))
     STATIONS = {b["network"]: (b.get("station"), b.get("channel")) for b in _ro["broadcast"] if b.get("station")}
     _STREAMS_FROM_FILE = _ro["streaming"]
 else:  # fallback = spec §11.3 order
     ROW_ORDER = ["ABC","CBS","FOX","NBC","The CW","ESPN","ESPN2","ESPNU","FS1","TNT","USA Network",
                  "Big Ten Network","ACC Network","SEC Network"]
     STATIONS = {}; _STREAMS_FROM_FILE = None
+OMIT_ACCESS = {"OUT_OF_MARKET", "UNVERIFIED"}   # v1.5: regional rows Cleveland does not (or is not yet known to) receive
 NET_ABBR = {"ABC":"abc","CBS":"CBS","FOX":"FOX","NBC":"NBC","The CW":"CW","ESPN":"ESPN","ESPN2":"ESPN2",
             "ESPNU":"ESPNU","FS1":"FS1","TNT":"TNT","USA Network":"USA","Big Ten Network":"BTN",
             "ACC Network":"ACCN","SEC Network":"SECN","ESPN+":"ESPN+","ESPN Unlimited":"ESPN UNL",
             "SEC Network+":"SECN+","Peacock":"PCOCK","HBO Max":"MAX"}
 STREAMS = _STREAMS_FROM_FILE or ["ESPN+","ESPN Unlimited","SEC Network+","Peacock","HBO Max"]
-GAME_MIN = 210
+GAME_MIN = int(POLICY.get("block_minutes", 210))
+NET_SLUG_EXTRA = {"NFL Network": "nfl-network", "Prime Video": "prime-video", "Netflix": "netflix", "TBS": "tbs",
+                  "truTV": "trutv", "Hulu": "hulu", "YouTube": "youtube", "Apple TV": "apple-tv"}
+NET_ABBR.update({"NFL Network": "NFL NET", "Prime Video": "PRIME", "Netflix": "NETFLIX", "TBS": "TBS", "truTV": "truTV",
+                 "Hulu": "HULU", "Disney+": "DISNEY+", "Paramount+": "PARA+", "YouTube": "YOUTUBE", "Apple TV": "APPLE TV"})
 
 # ----------------------------------------------------------------------------- enrichment
 ENR = json.load(open(ARGS.enrichment, encoding="utf-8")) if Path(ARGS.enrichment).exists() else None
@@ -185,6 +218,7 @@ NET_SLUG = {"ABC":"abc","CBS":"cbs","FOX":"fox","NBC":"nbc","The CW":"the-cw","E
  "Big Ten Network":"big-ten-network","ACC Network":"acc-network","SEC Network":"sec-network",
  "ESPN+":"espn-plus","ESPN Unlimited":"espn-unlimited","SEC Network+":"sec-network-plus",
  "Peacock":"peacock","HBO Max":"hbo-max","Paramount+":"paramount-plus","Disney+":"disney-plus"}
+NET_SLUG.update(NET_SLUG_EXTRA)   # v1.5 pro-league marks; a missing file falls back to the NET_ABBR text label
 NET_SUFFIX = {"espn-plus":"+","espn-unlimited":"UNL","sec-network-plus":"+"}
 def _lift_hex(hexc, floor=0.80):
     """Chip rule applied to one CSS hex color: grayscale → luminance-inverted; saturated → HLS lightness ≥ floor."""
@@ -331,26 +365,44 @@ def derive_dark_mark(im):
     return im
 
 # ----------------------------------------------------------------------------- day selection
-games = json.load(open(ARGS.fixture, encoding="utf-8"))["games"]
+_FX = json.load(open(ARGS.fixture, encoding="utf-8"))
+games = _FX["games"]
+FX_META = _FX.get("validation") or {}
 day, tbd, omitted = [], [], []   # grid games / TBD-section games / not-on-your-services
 for g in games:
+    if g.get("startDate") is None: continue   # pro leagues: a game with no time at all is not a viewing-day event yet
     dt = datetime.fromisoformat(g["startDate"].replace("Z","+00:00")).astimezone(ET)
     if dt.strftime("%Y-%m-%d") != TARGET: continue
-    seen, tv, web = set(), [], []
+    seen, tv, web, blocked = set(), [], [], []
     for m in g["media"]:
         o = ALIASES.get(m["outlet"], m["outlet"]); k = (m["mediaType"],o)
         if k in seen: continue
-        seen.add(k); (tv if m["mediaType"]=="tv" else web).append(o)
+        seen.add(k)
+        if m.get("access") in OMIT_ACCESS:                      # v1.5 market filter (adapter-stated reason)
+            blocked.append((o, m.get("access"), m.get("market"))); continue
+        (tv if m["mediaType"]=="tv" else web).append(o)
     rec = {"id":str(g["id"]),"a":g["away"],"h":g["home"],"dt":dt,"alt":False,"end_min":GAME_MIN,
-           "outlets": tv+web, "time_tbd": bool(g.get("startTimeTBD"))}
+           "outlets": tv+web+[b[0] for b in blocked], "time_tbd": bool(g.get("startTimeTBD")),
+           "blocked": blocked, "venue": g.get("venue")}
+    # v1.5: pro fixtures carry odds/records inline (spec §3.11) — same shape the CFB enrichment file feeds
+    if PRO and g.get("odds") and g["odds"].get("spread") is not None and str(g["id"]) not in LINES:
+        od = g["odds"]; LINES[str(g["id"])] = {"spread": od["spread"], "overUnder": od.get("overUnder"),
+                                                "display": (od.get("details") or "") + (f" · O/U {od['overUnder']:g}" if od.get("overUnder") is not None else "")}
+    if PRO and g.get("records"):
+        for side_k, side in (("home", g["home"]), ("away", g["away"])):
+            if g["records"].get(side_k) and str(side["id"]) not in RECORDS: RECORDS[str(side["id"])] = {"display": g["records"][side_k]}
     primary = next((r for r in ROW_ORDER if r in tv), None) or next((w for w in web if w not in UNAVAILABLE), None)
     # §11.2 gating: a TBD kickoff never takes a grid position, whatever the media rows say.
     if rec["time_tbd"]:
         rec["state"] = "time_tbd" if (tv or web) else "time_and_network_tbd"; tbd.append(rec); continue
     if not tv and not web:
+        if blocked or PRO:               # pro leagues: nothing receivable is "not on your services", never "network TBA"
+            rec["reason"] = ("regional feed — Cleveland assignment not entered" if any(b[1]=="UNVERIFIED" for b in blocked)
+                             else "out of market" if blocked else "no national telecast · out of market")
+            omitted.append(rec); continue
         rec["state"] = "network_tbd"; tbd.append(rec); continue
     if primary is None or primary in UNAVAILABLE:
-        omitted.append(rec); continue
+        rec["reason"] = "not on your services"; omitted.append(rec); continue
     badges = [w for w in web if w != primary and w not in UNAVAILABLE]
     if primary in SIMULCAST and SIMULCAST[primary] not in badges: badges.append(SIMULCAST[primary]+"*")
     rec.update({"primary":primary,"badges":badges}); day.append(rec)
@@ -442,13 +494,18 @@ def week_label():
                 sats = [a+timedelta(d) for d in range((b-a).days+1) if (a+timedelta(d)).weekday() == 5]
                 if len(sats) >= 2 and tgt <= sats[0] + timedelta(days=1): return 0
     return WK
-WEEK_LABEL = week_label()
-title = f"COLLEGE FOOTBALL WEEK {WEEK_LABEL} — " + longdate(datetime.strptime(TARGET,"%Y-%m-%d")).upper()
+WEEK_LABEL = week_label() if SPORT == "cfb" else (FX_META.get("week") if FX_META.get("week") is not None else WK)
+_wk_txt = f" WEEK {WEEK_LABEL}" if POLICY.get("week_label", True) else ""
+title = f"{POLICY.get('title', 'COLLEGE FOOTBALL')}{_wk_txt} — " + longdate(datetime.strptime(TARGET,"%Y-%m-%d")).upper()
 if USE_MOCK: rank_note = "ranks/spreads/records MOCK — layout only"
 elif RANK_SOURCE: rank_note = f"{RANK_SOURCE} (wk {RANK_WEEK})"
+elif PRO: rank_note = (f"lines: {next((g['odds']['provider'] for g in games if g.get('odds')), '')}" if any(g.get("odds") for g in games) else "no lines in fixture")
 else: rank_note = "no ranking snapshot in enrichment"
 _now = datetime.now(ET); gen = f"{_now.strftime('%b')} {_now.day}, {_now.year} {clock(_now)} ET"
-sub = f"all times ET · {rank_note} · data: CFBD fixture week {WK}" + (f" + enrichment {ENR['generatedAt'][:10]}" if ENR else " · no enrichment file") + f" · rendered {gen}"
+DATA_LABEL = POLICY.get("data_label", "CFBD")
+_fx_desc = f"{DATA_LABEL} fixture week {WK}" if SPORT == "cfb" else f"{DATA_LABEL} fixture {FX_META.get('generatedAt', '')[:10]} ({FX_META.get('source', '')})"
+if FX_META.get("sample"): _fx_desc += " · SAMPLE DATA"
+sub = f"all times ET · {rank_note} · data: {_fx_desc}" + (f" + enrichment {ENR['generatedAt'][:10]}" if ENR else (" · no enrichment file" if SPORT == "cfb" else "")) + f" · rendered {gen}"
 
 svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W:.0f}" height="{H:.0f}" font-family="Inter, DejaVu Sans, sans-serif">',
 f'''<defs>
@@ -492,13 +549,18 @@ f'<text x="{PAD_X}" y="76" font-size="14" fill="{"#F0C850" if USE_MOCK else "#9a
 LEG_FS = 11
 def tw_caps(s, fs): return len(s)*fs*0.65 + len(s)*0.3   # Inter 600 uppercase + letter-spacing
 legend = []   # (glyph_kind, label)
-legend.append(("rank", (f"{RANK_SOURCE.upper()} · WEEK {RANK_WEEK}" if RANK_SOURCE and not USE_MOCK else ("RANKS: MOCK" if USE_MOCK else "RANKS: NONE LOADED"))))
-legend.append(("gold", "MARQUEE · BOTH RANKED OR TIER-1 RIVALRY"))
+if not PRO:   # v1.5: polls and the ranked-marquee rule are college-only; pro legends carry the market line instead
+    legend.append(("rank", (f"{RANK_SOURCE.upper()} · WEEK {RANK_WEEK}" if RANK_SOURCE and not USE_MOCK else ("RANKS: MOCK" if USE_MOCK else "RANKS: NONE LOADED"))))
+    legend.append(("gold", "MARQUEE · BOTH RANKED OR TIER-1 RIVALRY"))
+else:
+    legend.append(("gold", "MARQUEE · TIER-1 RIVALRY"))
+    if LOCAL_ROWS and any(r["name"] in LOCAL_ROWS for r in rows): legend.append(("tba", f"LOCAL ROW · CARRIER TBA ({', '.join(sorted(LOCAL_ROWS))})"))
 legend.append(("star", "STREAMING SIMULCAST BY RULE"))
-legend.append(("alt", "SECOND GAME, SAME NETWORK, SAME SLOT"))
+if not PRO or any(g.get("alt") for g in day): legend.append(("alt", "SECOND GAME, SAME NETWORK, SAME SLOT"))
 if tbd_groups: legend.append(("tbd", f"{len(tbd)} KICKOFF/NETWORK TBA · LISTED BELOW GRID"))
-if omitted: legend.append(("omit", f"{len(omitted)} NOT ON YOUR SERVICES · OMITTED"))
-GLYPH_W = {"rank":22,"gold":30,"star":14,"alt":34,"tbd":34,"omit":22}
+if omitted and not PRO: legend.append(("omit", f"{len(omitted)} NOT ON YOUR SERVICES · OMITTED"))
+elif omitted: legend.append(("omit", f"{len(omitted)} AROUND THE LEAGUE · NOT RECEIVED IN {str(FX_META.get('market', 'CLEVELAND')).split(' (')[0].upper()}"))
+GLYPH_W = {"rank":22,"gold":30,"star":14,"alt":34,"tbd":34,"omit":22,"tba":34}
 ITEM_GAP = 28
 item_w = [GLYPH_W[k] + 8 + tw_caps(l, LEG_FS) for k,l in legend]
 leg_w = sum(item_w) + ITEM_GAP*(len(legend)-1)
@@ -529,6 +591,8 @@ for k,l,lx,ly in positions:
         svg.append(f'<rect x="{lx}" y="{ly-8}" width="{gw}" height="16" rx="4" fill="url(#tile)" stroke="#FFFFFF" stroke-opacity="0.35"/><text x="{lx+gw/2}" y="{ly+4}" font-size="9.5" font-weight="700" fill="#F2F3F4" text-anchor="middle">TBA</text>')
     elif k == "omit":
         svg.append(f'<rect x="{lx}" y="{ly-8}" width="{gw}" height="16" rx="4" fill="url(#tile)" stroke="#848C93" stroke-opacity="0.6"/><line x1="{lx+4}" y1="{ly+5}" x2="{lx+gw-4}" y2="{ly-5}" stroke="#848C93" stroke-width="1.5"/>')
+    elif k == "tba":   # v1.5 local-row glyph mirrors the rail plate
+        svg.append(f'<rect x="{lx}" y="{ly-8}" width="{gw}" height="16" rx="4" fill="url(#tile)" stroke="#FFFFFF" stroke-opacity="0.35"/><text x="{lx+gw/2}" y="{ly+4}" font-size="8" font-weight="700" fill="#C9CED3" text-anchor="middle" letter-spacing="0.6">TBA</text>')
     svg.append(f'<text x="{lx+gw+8}" y="{ly+4}" font-size="{LEG_FS}" font-weight="600" fill="#9aa2a8" letter-spacing="0.3">{E(l)}</text>')
 
 # ----------------------------------------------------------------------------- time grid
@@ -706,7 +770,7 @@ def draw_card(g, x, y, w, lh, prim_text=None):
     SEC_INK = "#F0C850" if (big and MARQ == "plate") else "#B4BAC0"   # v1.2: lighter than #848C93, still below the primary
     svg.append(f'<linearGradient id="tg{id(g)}" x1="0%" x2="100%"><stop offset="0%" stop-color="{ac}"/><stop offset="100%" stop-color="{hc}"/></linearGradient>')
     svg.append(f'<rect x="{bx}" y="{ty-ins}" width="{bw}" height="2.5" fill="{seam_fill}"/>')
-    v = VENUES.get(g["id"])
+    v = VENUES.get(g["id"]) or g.get("venue")
     prim = prim_text if prim_text is not None else clock(g["dt"]) + (f" · {v}" if v else "")
     line_h = TRAY_H                            # tray line height
     seam = 2.5; ty_c = ty + seam + (TRAY_H - seam)/2   # content centerline, below the seam
@@ -870,6 +934,10 @@ for row in rows:
         else:
             svg.append(f'<image x="{cx0}" y="{ry-lh2/2}" width="{lw2}" height="{lh2}" href="{uri}" preserveAspectRatio="xMidYMid meet"/>')
         if suf: svg.append(f'<text x="{cx0+lw2+3}" y="{ry+7}" font-size="{19 if suf=="+" else 12}" font-weight="700" fill="#F2F3F4">{E(suf)}</text>')
+    elif row["name"] in LOCAL_ROWS:                     # v1.5: synthesized local row — carrier not yet announced (spec §3.12)
+        svg.append(f'<text x="{LABEL_W/2}" y="{ry}" font-size="15" font-weight="700" fill="#F2F3F4" text-anchor="middle" letter-spacing="0.6">{E(row["name"])}</text>')
+        svg.append(f'<rect x="{LABEL_W/2-34}" y="{ry+8}" width="68" height="15" rx="3" fill="url(#tile)" stroke="#FFFFFF" stroke-opacity="0.35"/>')
+        svg.append(f'<text x="{LABEL_W/2}" y="{ry+19}" font-size="8.5" font-weight="700" fill="#C9CED3" text-anchor="middle" letter-spacing="1">{E(POLICY.get("local_row_label", "CARRIER TBA"))}</text>')
     else:
         svg.append(f'<text x="{LABEL_W/2}" y="{ry+6}" font-size="17" font-weight="700" fill="#F2F3F4" text-anchor="middle">{E(NET_ABBR.get(row["name"], row["name"]))}</text>')
     svg.append(f'<line x1="0" y1="{y}" x2="{W-PAD_X}" y2="{y}" stroke="#FFFFFF" stroke-opacity="0.24" stroke-width="1.5"/>')
@@ -885,7 +953,7 @@ svg.append(f'<line x1="0" y1="{y}" x2="{W-PAD_X}" y2="{y}" stroke="#FFFFFF" stro
 if tbd_groups:
     y += 30
     svg.append(f'<text x="{PAD_X}" y="{y+8}" font-size="22" font-weight="700" font-family="{BC}" fill="#F2F3F4">{E(f"KICKOFF OR NETWORK TBA — {len(tbd)} GAMES")}</text>')
-    svg.append(f'<text x="{PAD_X}" y="{y+28}" font-size="12" fill="#9aa2a8">date confirmed by CFBD · kickoff and/or television assignment not yet announced · a game moves onto the grid the day it is assigned</text>')
+    svg.append(f'<text x="{PAD_X}" y="{y+28}" font-size="12" fill="#9aa2a8">date confirmed by {E(DATA_LABEL)} · kickoff and/or television assignment not yet announced · a game moves onto the grid the day it is assigned</text>')
     y += TBD_HEAD
     for key, lbl, gs in tbd_groups:
         svg.append(f'<text x="{PAD_X}" y="{y+12}" font-size="11.5" font-weight="600" fill="#9aa2a8" letter-spacing="0.6">{E(lbl)} · {len(gs)}</text>')
@@ -920,9 +988,13 @@ def foot_pill(txt, ink="#C9CED3", plate="#2E333A", stroke_o=0.16, glyph=None):
     fx += tw_ + 8
 foot_pill(f"{len(day)} ON THE GRID", ink="#F2F3F4")
 if tbd: foot_pill(f"{len(tbd)} KICKOFF / NETWORK TBA", glyph="tba")
-if omitted:
+if omitted and not PRO:
     outs = sorted({o for g in omitted for o in g["outlets"]})
     foot_pill(f"{len(omitted)} NOT ON YOUR SERVICES · {', '.join(outs)}", ink="#9aa2a8", glyph="omit")
+elif omitted:   # v1.5 pro leagues: stated reasons, counted — the Around the League strip (§11.8) replaces this pill in v1.6
+    from collections import Counter as _C
+    reasons = _C(g.get("reason", "not on your services") for g in omitted)
+    foot_pill(f"{len(omitted)} AROUND THE LEAGUE · " + " · ".join(f"{n} {r}" for r, n in reasons.most_common()), ink="#9aa2a8", glyph="omit")
 svg.append(f'<text x="{fx+6}" y="{y+14}" font-size="10.5" fill="#6F767D">every game is kept in the database — nothing is deleted · {E(sub.split(" · data: ")[1]) if " · data: " in sub else ""}</text>')
 svg.append('</svg>')
 
@@ -931,7 +1003,7 @@ out_dir = Path(ARGS.out); out_dir.mkdir(parents=True, exist_ok=True)
 svg_path = out_dir / f"grid_{TARGET}.svg"
 svg_path.write_text("\n".join(svg), encoding="utf-8")
 for gname, dropped in DROP_LOG: print(f"  tray drop: {gname}: {dropped}")
-print(f"v1.4: {len(day)} on grid · {len(tbd)} TBA · {len(omitted)} omitted · {W:.0f}x{H:.0f} -> {svg_path}"
+print(f"v1.5 [{SPORT}]: {len(day)} on grid · {len(tbd)} TBA · {len(omitted)} omitted · {W:.0f}x{H:.0f} -> {svg_path}"
       + (" · enrichment loaded" if ENR else " · NO enrichment") + (" · MOCK" if USE_MOCK else ""))
 if ARGS.png or ARGS.export:
     try:
