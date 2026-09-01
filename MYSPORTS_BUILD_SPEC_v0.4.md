@@ -856,6 +856,7 @@ Season-to-date snapshots (CFBD `/records`; ESPN team records for the pro leagues
 | 2026-08-31 | Apple TV (Friday Night Baseball): subscribe, model as available | §3.2 |
 | 2026-08-31 | Build order NFL + NHL in parallel → NBA → MLB | §3.12, §18 Milestone 8 |
 | 2026-08-31 | Tier 3 confirmations: TBS, NFL Network, ESPN+ inside ESPN Unlimited; affiliate call signs | §3.2 |
+| 2026-09-01 | Cavaliers local TV = DAZN (RESN production), decision 7: model DAZN as available (Joe subscribes, Apple TV pattern); 15 OTA simulcasts on WUAB 43 hand-entered as announced; combined RESN·DAZN and 43-over-RESN·DAZN rail marks | §3.2, `data/local_rights.json`, `data/row_order.json`, `docs/research/research-changelog.md` |
 
 ---
 

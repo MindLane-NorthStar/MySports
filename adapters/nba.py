@@ -52,12 +52,35 @@ def build_teams(espn_teams: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(out, key=lambda r: r["school"])
 
 
-def _local_row(side: dict[str, Any], carriage: dict[str, Any], start: str, tbd: bool) -> dict[str, Any]:
+def _local_row(side: dict[str, Any], carriage: dict[str, Any], start: str, tbd: bool,
+               available: set[str] | list[str] = (), unavailable: set[str] | list[str] = ()) -> dict[str, Any]:
     ab = side["abbreviation"]
     cs = carriage.get(ab) or {}
     nick = side.get("team") or ab
+    if cs.get("status") == "CONFIRMED" and cs.get("outlet"):
+        # decision 7 (2026-09-01): Cavaliers on DAZN (RESN production) - a real service row, no CARRIER TBA plate
+        return media_row("web" if cs.get("surface") == "web" else "tv", cs["outlet"],
+                         outlet_access(cs["outlet"], available, unavailable), market="local", certainty="CONFIRMED",
+                         start_time=start, tbd=tbd, source="data/local_rights.json",
+                         label=cs.get("label") or f"{nick} on {cs['outlet']}")
     return media_row("tv", cs.get("label") or f"{ab} LOCAL", "AVAILABLE", market="local", certainty=cs.get("status", "UNANNOUNCED"),
                      start_time=start, tbd=tbd, source="data/local_rights.json", label=f"{nick} local TV - carrier TBA")
+
+
+def _simulcast_row(side: dict[str, Any], carriage: dict[str, Any], other_ab: str, start: str, tbd: bool,
+                   available: set[str] | list[str] = (), unavailable: set[str] | list[str] = ()) -> dict[str, Any] | None:
+    """Hand-entered OTA simulcast (decision 7: 15 Cavs games on WUAB 43, announced in-season). Games are matched by
+    ET date + opponent tricode so the entry works for both the ESPN and league-file sources."""
+    cs = carriage.get(side["abbreviation"]) or {}
+    sim = cs.get("simulcasts") or {}
+    day = et_date(start)
+    for g in sim.get("games", []):
+        if g.get("date") == day and g.get("opponent") == other_ab:
+            return media_row("web" if sim.get("surface") == "web" else "tv", sim["outlet"],
+                             outlet_access(sim["outlet"], available, unavailable), market="local", certainty="CONFIRMED",
+                             start_time=start, tbd=tbd, source="data/local_rights.json simulcasts",
+                             label=f"{sim['outlet']} simulcast")
+    return None
 
 
 # ----------------------------------------------------------------------------- ESPN source (verified)
@@ -96,8 +119,14 @@ def build_from_espn(raw: dict[str, Any], root: Path, *, season: int, day_filter:
             media.append(media_row(mtype, outlet, acc, market=mk, certainty="CONFIRMED", start_time=start, tbd=tbd, source="espn.scoreboard"))
         national_exclusive = any(m["market"] == "national" and m["outlet"] in NATIONAL_EXCLUSIVE for m in media)
         for s in (home, away):
-            if s["abbreviation"] in local_abbrevs and not national_exclusive and not any(m["market"] == "local" and m["access"] == "AVAILABLE" for m in media):
-                media.append(_local_row(s, carriage, start, tbd))
+            if s["abbreviation"] not in local_abbrevs:
+                continue
+            other = away if s is home else home
+            if not national_exclusive and not any(m["market"] == "local" and m["access"] == "AVAILABLE" for m in media):
+                media.append(_local_row(s, carriage, start, tbd, available, unavailable))
+            sim = _simulcast_row(s, carriage, other["abbreviation"], start, tbd, available, unavailable)
+            if sim and not any(m["outlet"] == sim["outlet"] for m in media):
+                media.append(sim)
         recs = {k: r.get("summary") for k, c in sides.items() for r in (c.get("records") or []) if r.get("type") == "total"}
         games.append({"id": f"nba-{ev.get('id')}", "sport": "nba", "season": season, "week": None,
                       "startDate": start, "startTimeET": et_display(start), "startTimeTBD": tbd,
@@ -158,8 +187,14 @@ def build_from_league(raw: dict[str, Any], root: Path, *, season: int, day_filte
                                            source="nba.schedule", label=b.get("broadcasterScope")))
             national_exclusive = any(m["market"] == "national" and m["outlet"] in NATIONAL_EXCLUSIVE for m in media)
             for s in (home, away):
-                if s["abbreviation"] in local_abbrevs and not national_exclusive and not any(m["market"] == "local" and m["access"] == "AVAILABLE" for m in media):
-                    media.append(_local_row(s, carriage, start, tbd))
+                if s["abbreviation"] not in local_abbrevs:
+                    continue
+                other = away if s is home else home
+                if not national_exclusive and not any(m["market"] == "local" and m["access"] == "AVAILABLE" for m in media):
+                    media.append(_local_row(s, carriage, start, tbd, available, unavailable))
+                sim = _simulcast_row(s, carriage, other["abbreviation"], start, tbd, available, unavailable)
+                if sim and not any(m["outlet"] == sim["outlet"] for m in media):
+                    media.append(sim)
             games.append({"id": f"nba-{g.get('gameId')}", "sport": "nba", "season": season, "week": g.get("weekNumber"),
                           "startDate": start, "startTimeET": et_display(start), "startTimeTBD": tbd,
                           "neutralSite": bool(g.get("neutralSite")) if g.get("neutralSite") is not None else False,

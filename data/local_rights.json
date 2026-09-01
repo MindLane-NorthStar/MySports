@@ -1,9 +1,29 @@
 {
-  "_about": "Local-rights status per team for the late-binding local row (spec 3.12). TBA_NO_RIGHTS_HOLDER = the club holds its local rights and has announced no distributor; UNANNOUNCED = a distributor exists but this game's local row is not yet in the league file. Either renders as 'local broadcast - carrier TBA'. Update when a carrier is announced (Tier 1 research task, docs/research/research-changelog.md).",
-  "nhl": {
-    "CBJ": {"status": "TBA_NO_RIGHTS_HOLDER", "label": "CBJ LOCAL", "asOf": "2026-08-31", "note": "Blue Jackets local carrier for 2026-27 not announced as of the research brief"}
-  },
-  "nba": {
-    "CLE": {"status": "TBA_NO_RIGHTS_HOLDER", "label": "CAVS LOCAL", "asOf": "2026-08-31", "note": "Cavaliers local carrier for 2026-27 not announced as of the research brief"}
+ "_about": "Local-rights status per team for the late-binding local row (spec 3.12). TBA_NO_RIGHTS_HOLDER = the club holds its local rights and has announced no distributor; UNANNOUNCED = a distributor exists but this game's local row is not yet in the league file; CONFIRMED = a distributor is announced (outlet/surface/label take effect; the row renders as a normal service, no CARRIER TBA plate). simulcasts lists hand-entered OTA simulcast games (matched by ET date + opponent tricode, source-agnostic). Update when carriers are announced (Tier 1 research task, docs/research/research-changelog.md).",
+ "nhl": {
+  "CBJ": {
+   "status": "TBA_NO_RIGHTS_HOLDER",
+   "label": "CBJ LOCAL",
+   "asOf": "2026-08-31",
+   "note": "Blue Jackets local carrier for 2026-27 not announced as of the research brief"
   }
+ },
+ "nba": {
+  "CLE": {
+   "status": "CONFIRMED",
+   "outlet": "DAZN",
+   "surface": "web",
+   "label": "Cavaliers on DAZN (RESN)",
+   "asOf": "2026-09-01",
+   "source": "Cavaliers press release 2026-09-01 (cavs.com/dazn, dazn.com/cavaliers): multi-year DAZN partnership from the 2026-27 preseason; RESN produces in-house and is the master portal brand; DAZN streams every game not selected exclusively for national broadcast (ESPN/ABC, NBC/Peacock, Prime Video), preseason included; NBA TV games co-exist",
+   "decision": "Joe 2026-09-01: treat DAZN as AVAILABLE (subscribing) - product decision 7, same pattern as Apple TV (decision 4)",
+   "simulcasts": {
+    "outlet": "WUAB 43",
+    "surface": "tv",
+    "expectedCount": 15,
+    "note": "15 games per season free on DAZN and simulcast OTA on WUAB 43; the schedule is announced in-season, possibly piecemeal - the weekly research task watches cavs.com/dazn and RESN/WUAB announcements and Joe hand-enters games here",
+    "games": []
+   }
+  }
+ }
 }

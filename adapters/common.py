@@ -198,6 +198,7 @@ OUTLET_ALIASES = {
     "Prime": "Prime Video", "Amazon": "Prime Video", "HULU": "Hulu", "NFL Net": "NFL Network", "NFLN": "NFL Network",
     "TruTV": "truTV", "SN": "Sportsnet", "SNP": "Sportsnet", "SNO": "Sportsnet", "SNE": "Sportsnet", "SNW": "Sportsnet",
     "TVAS": "TVA Sports", "CBC": "CBC", "ESPN Deportes": "ESPN Deportes",
+    "WUAB": "WUAB 43", "WUAB-43": "WUAB 43", "Cleveland's 43": "WUAB 43", "Cavaliers on DAZN": "DAZN", "DAZN 1": "DAZN",
 }
 
 

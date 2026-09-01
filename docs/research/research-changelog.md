@@ -6,6 +6,14 @@
 
 ---
 
+### 2026-09-01 — Cavaliers: DAZN CONFIRMED (team press release); RESN production; 15 OTA simulcasts on WUAB 43
+- **Doc:** `research-nba.md` §4, §10 Q2 (supersedes the 2026-08-31 "reported, nothing announced" entry)
+- **Old claim:** carrier unannounced; SBJ/Hoops Rumors "linked"/"expected" DAZN.
+- **New claim:** the Cavaliers announced a multi-year partnership with DAZN starting with the 2026-27 season, preseason included: DAZN streams every regular-season game not selected exclusively for national broadcast (ESPN/ABC, NBC/Peacock, Prime Video), production moves in-house to Rock Entertainment Sports Network (RESN, master portal brand), and 15 games per season are free on DAZN and simulcast over the air; the simulcast partner and schedule "will be communicated at a later date" — Joe identifies the OTA partner as WUAB 43. Subscriptions $19.99–$24.99/month or $119.99–$139.99/year. On-air team unchanged (John Michael, Brad Daugherty, Serena Winters, Cayleigh Griffin).
+- **Sources:** team press release 2026-09-01 (cavs.com/dazn, dazn.com/cavaliers), supplied by Joe.
+- **Product decision 7 (Joe, 2026-09-01):** model DAZN as *available* — he is subscribing (Apple TV pattern, decision 4). Encoded in `data/access_profile.json`, `data/local_rights.json` (nba.CLE status CONFIRMED → outlet DAZN, surface web, label "Cavaliers on DAZN (RESN)"; `simulcasts` block for WUAB 43 with hand-entered games matched by ET date + opponent tricode), `data/row_order.json` (nba: DAZN heads the streaming lanes; WUAB 43 joins the broadcast rail without station keys so the call-letters band is suppressed; station order rule WOIO 19 → WUAB 43 → WBNX 55), `adapters/nba.py` (CONFIRMED carrier row + simulcast rows in both sources), rail-tile marks `assets/network-logos/{dazn,wuab-43}.png` composed by `scripts/make_lockups.py` (RESN | DAZN side by side; Cleveland's 43 over an equal-width RESN | DAZN row — layouts approved by Joe against true-size previews).
+- **Standing watch:** the weekly research task must check cavs.com/dazn and RESN/WUAB announcements for newly announced simulcast dates and surface them for hand entry into `local_rights.json → nba.CLE.simulcasts.games` (entries `{"date": "YYYY-MM-DD", "opponent": "TRICODE"}`). CBJ remains TBA_NO_RIGHTS_HOLDER — unchanged.
+
 ## Open items being tracked
 
 These are the things most likely to change. Each one, when it resolves, should get an entry above rather than a silent edit to the source doc.

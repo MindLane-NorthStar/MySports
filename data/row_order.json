@@ -124,6 +124,10 @@
     "network": "NBC",
     "station": "WKYC",
     "channel": 3
+   },
+   {
+    "network": "WUAB 43",
+    "_note": "no station/channel keys on purpose: the Cleveland's 43 mark identifies the station, so the call-letters band is suppressed (Joe, 2026-09-01)"
    }
   ],
   "cable": [
@@ -131,13 +135,13 @@
    "ESPN2"
   ],
   "conference": [],
-  "local": [
-   "CAVS LOCAL"
-  ],
+  "local": [],
   "streaming": [
+   "DAZN",
    "Peacock",
    "Prime Video",
    "ESPN+"
   ]
- }
+ },
+ "_ordering_note": "Station ordering rule (Joe, 2026-09-01): when WOIO 19, WUAB 43 and The CW/WBNX 55 share a grid, the order is WOIO 19 -> WUAB 43 -> WBNX 55 (channel order). WUAB 43 carries the OTA Cavs simulcasts (decision 7)."
 }

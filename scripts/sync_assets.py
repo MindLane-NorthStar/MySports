@@ -15,7 +15,7 @@ Reads R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_ASSETS fr
 the repo-root .env (never printed). Requires boto3 (pip install boto3). Windows-portable.
 
 Layout (contract section 3): assets/logos/*  -> logos/*, assets/network-logos/* -> network-logos/*,
-assets/fonts/* -> fonts/*. Keys are lowercase; comparison is by size + local SHA-256 vs the object's
+assets/fonts/* -> fonts/*, assets/brand/* -> brand/* (lockup source art). Keys are lowercase; comparison is by size + local SHA-256 vs the object's
 `sha256` metadata (set on every upload by this script), so unchanged files are skipped.
 """
 from __future__ import annotations
@@ -29,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from adapters.common import find_repo_root, load_dotenv  # noqa: E402
 
-FOLDERS = ("logos", "network-logos", "fonts")
+FOLDERS = ("logos", "network-logos", "fonts", "brand")   # brand/ = lockup source art (decision 7)
 CONTENT_TYPES = {".png": "image/png", ".svg": "image/svg+xml", ".ttf": "font/ttf", ".jpg": "image/jpeg", ".webp": "image/webp"}
 
 

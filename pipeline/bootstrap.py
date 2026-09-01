@@ -26,7 +26,8 @@ ALIASES = {"CBS": ["CBS Sports"], "The CW": ["CW", "The CW Network"], "USA Netwo
            "ACC Network": ["ACCN"], "SEC Network": ["SECN"], "SEC Network+": ["SECN+"], "ESPN Unlimited": ["ESPN Unlmtd"],
            "CBS Sports Network": ["CBSSN"], "FS1": ["FOX Sports 1"], "FS2": ["FOX Sports 2"], "ESPN+": ["ESPN Plus"],
            "Paramount+": ["Paramount Plus"], "HBO Max": ["Max", "HBO MAX", "MAX"], "Prime Video": ["Amazon Prime Video", "Prime", "Amazon"],
-           "Hulu": ["HULU"], "NFL Network": ["NFL Net", "NFLN"], "truTV": ["TruTV"]}
+           "Hulu": ["HULU"], "NFL Network": ["NFL Net", "NFLN"], "truTV": ["TruTV"],
+           "DAZN": ["Cavaliers on DAZN", "DAZN 1"], "WUAB 43": ["WUAB", "WUAB-43", "Cleveland's 43"]}
 
 
 def load_json(p: Path) -> Any:
