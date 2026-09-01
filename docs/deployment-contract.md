@@ -56,7 +56,7 @@ Milestone 1's DDL (spec §7, 22 tables) is applied as `mysports_0002_*` onward, 
 ### 2.2 Data API
 
 - Joe adds `mysports` to **Project Settings → Data API → Exposed schemas** (§7). The publishable key then reads `mysports.*` subject to RLS.
-- Write traffic never goes through the Data API; the refresh job connects as `mysports_writer` through the shared pooler in session mode (`aws-0-us-east-2.pooler.supabase.com:5432`, username `mysports_writer.ztnppejmdwmhqstqsfks`, SSL required). Direct `db.*.supabase.co` connections are IPv6-only on the Free plan and unreachable from GitHub Actions.
+- Write traffic never goes through the Data API; the refresh job connects as `mysports_writer` through the shared pooler in session mode (host from the Connect dialog, port 5432, username `mysports_writer.ztnppejmdwmhqstqsfks`, SSL required). Direct `db.*.supabase.co` connections are IPv6-only on the Free plan and unreachable from GitHub Actions.
 
 ### 2.3 Quotas shared with BudgetBuddy (monitor, do not exceed)
 
@@ -97,7 +97,7 @@ Rules: object keys are lowercase; PNG logos are the ESPN/CFBD 500 px originals (
 | Variable | Holds | Where it lives | Who sets it |
 |---|---|---|---|
 | `CFBD_API_KEY` | CollegeFootballData bearer token | laptop `.env`; GitHub Actions secret | Joe |
-| `SUPABASE_DB_URL` | `postgresql://mysports_writer.ztnppejmdwmhqstqsfks:<pw>@aws-0-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require` — the shared pooler in session mode; the username carries the project ref after a dot. (Free-plan direct connections are IPv6-only, and GitHub Actions and Vercel are IPv4-only, so the pooler is mandatory, not a preference.) | laptop `.env`; GitHub Actions secret | Joe (§7) |
+| `SUPABASE_DB_URL` | `postgresql://mysports_writer.ztnppejmdwmhqstqsfks:<pw>@<session-pooler-host>:5432/postgres?sslmode=require` — the shared pooler in session mode; the username carries the project ref after a dot. **The host must be copied from Dashboard → Connect → Session pooler** (expected `aws-1-us-east-2.pooler.supabase.com`, confirmed in the dialog; the docs' `aws-0` example is a different cluster and answers `tenant/user not found`). (Free-plan direct connections are IPv6-only, and GitHub Actions and Vercel are IPv4-only, so the pooler is mandatory, not a preference.) | laptop `.env`; GitHub Actions secret | Joe (§7) |
 | `SUPABASE_URL` | `https://ztnppejmdwmhqstqsfks.supabase.co` | `.env`; Actions; Vercel (`NEXT_PUBLIC_SUPABASE_URL`) | Cowork (public value) |
 | `SUPABASE_PUBLISHABLE_KEY` | anon/publishable key | Vercel (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`); `.env` for local web dev | Joe copies from Dashboard → Project Settings → API |
 | `R2_ACCOUNT_ID` | Cloudflare account id | `.env`; Actions | Joe |
@@ -174,5 +174,6 @@ Budget: ~4 runs/week × ~3 min + daily renders ≈ 60–90 minutes/month against
 
 ## 12. Change log
 
+- **v1.0.2 (2026-09-01, ~11:15 ET):** pooler host is no longer hard-coded as `aws-0`; it is whatever Dashboard → Connect → Session pooler shows. Found when the first live load failed with Supavisor `tenant/user … not found` (role verified present via `pg_authid`).
 - **v1.0.1 (2026-09-01, 09:00 ET):** `.env.example` placeholder `PASSWORD` → `<PASSWORD>` after the commit secret gate correctly fired on it (Claude Code stopped, reset, nothing pushed); §4 rule added. `.gitattributes` gains `*.yml`, `*.yaml`, `*.sql`.
 - **v1.0 (2026-09-01):** applied. Migration `mysports_0001_schema_and_roles` needed one line beyond the draft — `grant mysports_owner to postgres` — because Supabase's `postgres` role is not a superuser and `create schema … authorization` requires membership (first attempt failed cleanly with 42501, nothing partially created). Buckets created via the Cloudflare connector. R2 public access is per bucket, hence the second bucket `mysports-data` for private material.

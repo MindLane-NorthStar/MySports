@@ -53,8 +53,8 @@ jobs:
           done
       - name: Push new logos to R2
         run: python scripts/sync_assets.py --push --prefix logos/
-      # Milestone 2: load fixtures into mysports.* through SUPABASE_DB_URL and write mysports.refresh_runs (spec §16).
-      # - run: python -m pipeline.load --run-workflow schedule_refresh
+      - name: Load fixtures into mysports.* (Milestone 1 loader; Milestone 2 adds reconciliation)
+        run: python -m pipeline.load --all --workflow schedule_refresh
       - name: Archive fixtures + raw payloads (private bucket)
         run: python scripts/sync_assets.py --push-data artifacts/validation --prefix fixtures/$(date -u +%Y-%m-%d)/
       - uses: actions/upload-artifact@v4

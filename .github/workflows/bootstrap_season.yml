@@ -36,4 +36,7 @@ jobs:
             esac
           done
       - run: python scripts/sync_assets.py --push
-      # Milestone 1: python -m pipeline.bootstrap --season ${{ github.event.inputs.season }}  (teams, conferences, venues, rivalries -> mysports.*)
+      - name: Reference data -> mysports.* (idempotent)
+        run: python -m pipeline.bootstrap
+      - name: Load every fixture on disk
+        run: python -m pipeline.load --all --workflow bootstrap_season

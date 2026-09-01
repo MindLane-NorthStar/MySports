@@ -84,6 +84,7 @@ def build_teams(raw_weeks: list[dict[str, Any]], espn_teams: list[dict[str, Any]
                     seen[tid] = team_record(tid, name, ab, st.get("division"), "nhl", e.get("color"), e.get("alternateColor"), logos,
                                             nhlId=str(t["id"]), espnId=e.get("espnId"), nhlConference=st.get("conference"),
                                             espnAbbreviation=e.get("abbreviation"),
+                                            location=(t.get("placeName") or {}).get("default"), nickname=(t.get("commonName") or {}).get("default"),
                                             svgLogo=t.get("logo"), svgLogoDark=t.get("darkLogo"))   # league SVG marks for the asset pipeline
     return sorted(seen.values(), key=lambda r: r["school"])
 
@@ -135,7 +136,7 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
                 if ab in local_abbrevs and not any(m["market"] == "local" and m["access"] == "AVAILABLE" for m in media):
                     cs = carriage.get(ab) or {}
                     cert = cs.get("status", "UNANNOUNCED")
-                    nick = (by_id.get(s["id"], {}).get("school") or ab).split(" ")[-1]
+                    nick = by_id.get(s["id"], {}).get("nickname") or s.get("team") or ab
                     media.append(media_row("tv", cs.get("label") or f"{ab} LOCAL", "AVAILABLE", market="local", certainty=cert,
                                            start_time=start, tbd=tbd, source="data/local_rights.json",
                                            label=f"{nick} local TV - carrier TBA"))
