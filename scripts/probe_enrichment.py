@@ -40,6 +40,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
+try:  # Windows consoles default to cp1252; the output lines carry "·" and team names like Hawai'i
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
 
 API_BASE = "https://api.collegefootballdata.com"
 ET = ZoneInfo("America/New_York")
