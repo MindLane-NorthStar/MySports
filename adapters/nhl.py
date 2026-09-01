@@ -50,6 +50,15 @@ def fetch_postal(zip_code: str) -> list[dict[str, Any]]:
     return http_json(f"{API}/postal-lookup/{zip_code}")
 
 
+def fetch_club_season(abbrev: str) -> dict[str, Any]:
+    """One club's full-season schedule (/v1/club-schedule-season/{abbrev}/now): 80+ games whose home/away
+    objects carry every other club's id, abbrev, placeName, commonName and SVG logos — the only offseason-safe
+    way to list all 32 teams with NHL ids on this host (standings/now has names but no ids). Verified 2026-09-01:
+    {clubTimezone, clubUTCOffset, currentSeason, previousSeason, games[{id, ..., homeTeam{id, abbrev, placeName,
+    commonName, logo, darkLogo, ...}, awayTeam{...}}]}."""
+    return http_json(f"{API}/club-schedule-season/{abbrev}/now")
+
+
 def fetch_standings_teams() -> list[dict[str, Any]]:
     """Team list with divisions from standings/now (works in the offseason too)."""
     data = http_json(f"{API}/standings/now")
@@ -185,6 +194,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--from-file", help="replay a saved raw /schedule payload")
     ap.add_argument("--postal", help="ZIP for /postal-lookup territory check (default from data/markets.json)")
     ap.add_argument("--no-logos", action="store_true")
+    ap.add_argument("--all-logos", action="store_true", help="fetch logos for every team, not only this window's (season bootstrap)")
     ap.add_argument("--output-dir", default="artifacts/validation")
     args = ap.parse_args(argv)
 
@@ -206,7 +216,14 @@ def main(argv: list[str] | None = None) -> int:
         dump_json(espn_path, espn_teams)
     standings = None if offline else _safe(fetch_standings_teams)
     prior = json.loads(teams_path.read_text(encoding="utf-8")) if teams_path.exists() else []
-    teams = build_teams([raw], espn_teams, standings)
+    # full team directory from one club's season schedule, so a fresh runner in the offseason (empty
+    # schedule window) still writes all 32 teams; the window's own games are merged on top
+    club = (load_data(root, "markets.json", {}).get("nhl", {}).get("localTeams") or ["CBJ"])[0]
+    season_sched = None if offline else _safe(lambda: fetch_club_season(club))
+    directory = [{"gameWeek": [{"games": season_sched.get("games", [])}]}] if season_sched else []
+    if not offline and not season_sched:
+        print(f"  warn: club-schedule-season/{club} unavailable - teams file limited to this window's games")
+    teams = build_teams(directory + [raw], espn_teams, standings)
     # merge with the prior teams file so ids accumulate across windows
     merged = {t["id"]: t for t in prior}
     merged.update({t["id"]: t for t in teams})
@@ -227,7 +244,7 @@ def main(argv: list[str] | None = None) -> int:
     write_text(out_dir / f"nhl_{args.season}_{args.date}_report.md", report_md(fixture, notes, postal))
     print(f"fixture: {len(fixture['games'])} games ({', '.join(fixture['validation']['window'])}) -> {fx_path.relative_to(root)}")
     if not args.no_logos and not offline:
-        needed = {g[s]["id"] for g in fixture["games"] for s in ("home", "away")}
+        needed = None if args.all_logos else {g[s]["id"] for g in fixture["games"] for s in ("home", "away")}
         print("logos:", fetch_logos(teams, root / "assets" / "logos", needed))
     # console: one line per day; the report keeps every game
     from collections import Counter

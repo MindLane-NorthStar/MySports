@@ -19,8 +19,8 @@ jobs:
       R2_BUCKET_DATA: mysports-data
       PYTHONUTF8: "1"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements.txt
       - name: Teams + logos for every requested sport
@@ -30,8 +30,8 @@ jobs:
             case $S in
               cfb) python -m adapters.cfbd --week 1 --teams ;;
               nfl) python -m adapters.espn --league nfl --teams-only ;;
-              nhl) python -m adapters.nhl --date $(TZ=America/New_York date +%F) ;;
-              nba) python -m adapters.nba --date $(TZ=America/New_York date +%F) ;;
+              nhl) python -m adapters.nhl --date $(TZ=America/New_York date +%F) --all-logos ;;
+              nba) python -m adapters.nba --date $(TZ=America/New_York date +%F) --all-logos ;;
               mlb) echo "mlb adapter: Milestone 8 part 3" ;;
             esac
           done

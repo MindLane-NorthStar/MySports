@@ -72,7 +72,7 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
     market_id = market["market"]["id"]
     order = row_order_for(sport)
     content_hash = hashlib.sha256(path.read_bytes()).hexdigest()
-    counts = {"games": 0, "broadcasts": 0, "odds": 0, "records": 0, "observations": 0, "teams_stubbed": 0, "venues": 0}
+    counts = {"games": 0, "broadcasts": 0, "odds": 0, "records": 0, "observations": 0, "team_refs": 0, "venues": 0}
 
     # snapshot row for this fixture file (id retrieved live; in emit mode observations reference it by subquery)
     db.run("insert into source_snapshots (source_id, source_url, http_status, content_hash, content_type, storage_url, parser_version, parse_status) "
@@ -90,7 +90,7 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
         for side in (home, away):
             db.upsert("teams", [{"id": str(side["id"]), "sport": sport, "canonical_name": side.get("teamFull") or side.get("team"),
                                  "short_name": side.get("team"), "abbreviation": side.get("abbreviation"), "external_ids": {}}], "id", [], tag="teams.stub")
-            counts["teams_stubbed"] += 1
+            counts["team_refs"] += 1   # FK-safety upserts attempted (DO NOTHING when the team exists), not new rows
         venue_id_sub = None
         if g.get("venue"):
             db.upsert("venues", [{"name": g["venue"], "city": ""}], "name, city", [], tag="venues")   # city '' not null: the unique key must not contain nulls

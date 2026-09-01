@@ -194,6 +194,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--source", choices=["espn", "league"], default="espn")
     ap.add_argument("--from-file", help="replay a saved raw payload (ESPN scoreboard or the league scheduleLeagueV2 file)")
     ap.add_argument("--no-logos", action="store_true")
+    ap.add_argument("--all-logos", action="store_true", help="fetch logos for every team, not only this day's (season bootstrap)")
     ap.add_argument("--output-dir", default="artifacts/validation")
     args = ap.parse_args(argv)
     root = find_repo_root(); out_dir = root / args.output_dir
@@ -217,7 +218,7 @@ def main(argv: list[str] | None = None) -> int:
     dump_json(fx_path, fixture); write_text(out_dir / f"nba_{args.season}_{args.date}_report.md", report_md(fixture, notes))
     print(f"fixture: {len(fixture['games'])} games -> {fx_path.relative_to(root)}")
     if not args.no_logos and not offline:
-        needed = {g[s]["id"] for g in fixture["games"] for s in ("home", "away")}
+        needed = None if args.all_logos else {g[s]["id"] for g in fixture["games"] for s in ("home", "away")}
         print("logos:", fetch_logos(teams, root / "assets" / "logos", needed))
     for n in notes:
         print("  note:", n)
