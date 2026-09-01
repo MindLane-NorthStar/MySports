@@ -48,7 +48,7 @@ WEATHER_IS_IMPERIAL = True
 CFP_POLL = "Playoff Committee Rankings"
 AP_POLL = "AP Top 25"
 # Sportsbook preference for the single line shown in the tray. First match wins.
-LINE_PROVIDERS = ["DraftKings", "ESPN Bet", "Bovada", "consensus", "numberfire", "teamrankings"]
+LINE_PROVIDERS = ["DraftKings", "Draft Kings", "ESPN Bet", "Bovada", "consensus", "numberfire", "teamrankings"]  # CFBD emits both DraftKings spellings (seen 2026-08-31)
 
 
 # ----------------------------------------------------------------------------- env / http
@@ -191,19 +191,20 @@ def main() -> int:
         status["/lines"]["providers"] = providers_seen
         status["/lines"]["gamesWithLine"] = len(lines)
 
-    # ---- records (season to date; the renderer suppresses 0-0 · 0-0 for openers)
+    # ---- records (season to date, overall + conference; the renderer suppresses 0-0 before a team's first game)
     code, data = api_get("/records", token, {"year": args.year})
     records: dict[str, dict] = {}
     status["/records"] = {"http": code, "rows": len(data) if isinstance(data, list) else 0,
                           "note": None if isinstance(data, list) else str(data)}
     if isinstance(data, list):
         for t in data:
-            tot = t.get("total") or {}
-            w, l, ti = tot.get("wins", 0) or 0, tot.get("losses", 0) or 0, tot.get("ties", 0) or 0
-            disp = f"{w}-{l}" + (f"-{ti}" if ti else "")
+            def shape(d):
+                d = d or {}
+                w, l, ti = d.get("wins", 0) or 0, d.get("losses", 0) or 0, d.get("ties", 0) or 0
+                return {"wins": w, "losses": l, "ties": ti, "display": f"{w}-{l}" + (f"-{ti}" if ti else "")}
             tid = t.get("teamId")
-            rec = {"team": t.get("team"), "wins": w, "losses": l, "ties": ti, "display": disp,
-                   "abbr": abbr.get(int(tid)) if tid is not None else None}
+            rec = {"team": t.get("team"), "conference": t.get("conference"), **shape(t.get("total")),
+                   "conf": shape(t.get("conferenceGames")), "abbr": abbr.get(int(tid)) if tid is not None else None}
             if tid is not None:
                 records[str(tid)] = rec
             elif t.get("team"):
