@@ -54,9 +54,10 @@ ap.add_argument("--export", action="store_true", help="also rasterize the downlo
 ap.add_argument("--scale", type=float, default=1.0)
 ap.add_argument("--mock", action="store_true", help="layout-only MOCK ranks/tray when no enrichment exists")
 ap.add_argument("--style", action="append", default=[], metavar="KEY=VALUE",
-                help="design variant override (silhouette=outline|bezel|quiet, tray=single|twoline|priority|tokens, marquee=sunburst|halo|tag|plate, weather=on|off, records=name|tray)")
+                help="design variant override (silhouette=outline|bezel|quiet, tray=single|cells|chipsright|pills, marquee=sunburst|halo|tag|plate, weather=on|off, records=name|tray, chipbg=tile|none|light, favlogo=disc|plain|invert)")
 ARGS = ap.parse_args()
-STYLE = {"silhouette": "outline", "tray": "single", "marquee": "plate", "weather": "off", "records": "name"}   # v1.1 defaults (Joe, 2026-08-31)
+STYLE = {"silhouette": "outline", "tray": "pills", "marquee": "plate", "weather": "off", "records": "name",
+         "chipbg": "tile", "favlogo": "disc", "trayh": "28"}   # v1.3 defaults (Joe, 2026-08-31)
 DROP_LOG = []   # (game, dropped items) — reported at the end so density decisions rest on counts, not impressions
 for kv in ARGS.style:
     k, _, v = kv.partition("="); STYLE[k.strip()] = v.strip()
@@ -185,6 +186,41 @@ NET_SLUG = {"ABC":"abc","CBS":"cbs","FOX":"fox","NBC":"nbc","The CW":"the-cw","E
  "ESPN+":"espn-plus","ESPN Unlimited":"espn-unlimited","SEC Network+":"sec-network-plus",
  "Peacock":"peacock","HBO Max":"hbo-max","Paramount+":"paramount-plus","Disney+":"disney-plus"}
 NET_SUFFIX = {"espn-plus":"+","espn-unlimited":"UNL","sec-network-plus":"+"}
+def _lift_hex(hexc, floor=0.80):
+    """Chip rule applied to one CSS hex color: grayscale → luminance-inverted; saturated → HLS lightness ≥ floor."""
+    h = hexc.lstrip("#")
+    if len(h) == 3: h = "".join(c*2 for c in h)
+    r,g,b = (int(h[i:i+2],16) for i in (0,2,4))
+    if max(r,g,b)-min(r,g,b) < 46:
+        l = 255-(r+g+b)//3; return f"#{l:02x}{l:02x}{l:02x}"
+    hh,l,sat = colorsys.rgb_to_hls(r/255,g/255,b/255)
+    if l >= floor: return "#"+h
+    r2,g2,b2 = colorsys.hls_to_rgb(hh,floor,sat)
+    return f"#{int(r2*255):02x}{int(g2*255):02x}{int(b2*255):02x}"
+def svg_chip_mark(path, slug):
+    """Load an SVG wordmark and prepare it for INLINE nesting (a nested <svg> element, not an <image>
+    data URI — cairosvg renders some marks blank through <image>). Recolors every hex color with the
+    chip rule, gives fill-less paths a light default, prefixes ids so several marks can share the
+    document. Returns (template, aspect); template takes x, y, w, h. Pure text — Windows-safe."""
+    txt = path.read_text(encoding="utf-8")
+    txt = re.sub(r"<\?xml.*?\?>", "", txt, flags=re.S); txt = re.sub(r"<!DOCTYPE[^>]*>", "", txt); txt = re.sub(r"<!--.*?-->", "", txt, flags=re.S)
+    txt = re.sub(r"#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b", lambda m: _lift_hex(m.group(0)), txt)
+    m = re.search(r'<svg\b[^>]*>', txt); root = m.group(0)
+    vb = re.search(r'viewBox="([^"]+)"', root)
+    if vb: vbv = vb.group(1)
+    else:
+        w_ = re.search(r'\bwidth="([\d.]+)', root); h_ = re.search(r'\bheight="([\d.]+)', root)
+        vbv = f"0 0 {w_.group(1)} {h_.group(1)}" if w_ and h_ else "0 0 300 100"
+    nums = [float(v) for v in re.split(r"[ ,]+", vbv.strip())]
+    asp = nums[2]/nums[3]
+    fill = "" if " fill=" in root else ' fill="#E8EAEC"'
+    pre = slug.replace("-", "_")
+    body = txt[m.end():]
+    body = re.sub(r'\bid="([^"]+)"', lambda mm: f'id="{pre}_{mm.group(1)}"', body)
+    body = re.sub(r'url\(#([^)]+)\)', lambda mm: f'url(#{pre}_{mm.group(1)})', body)
+    body = re.sub(r'href="#([^"]+)"', lambda mm: f'href="#{pre}_{mm.group(1)}"', body)
+    tmpl = '<svg x="__X__" y="__Y__" width="__W__" height="__H__" viewBox="' + vbv + '" preserveAspectRatio="xMidYMid meet"' + fill + '>' + body
+    return tmpl, asp
 NLOGO = {}
 def net_logo(name, dark=False, chip=False):
     slug = NET_SLUG.get(name)
@@ -192,7 +228,11 @@ def net_logo(name, dark=False, chip=False):
     key = (slug, dark, chip)
     if key not in NLOGO:
         p = Path(ARGS.network_logos) / f"{slug}.png"
-        if p.exists():
+        psvg = Path(ARGS.network_logos) / f"{slug}.svg"
+        if chip and psvg.exists():          # v1.3: vector wordmarks for chips when available (inline nested <svg>)
+            tmpl, asp = svg_chip_mark(psvg, slug)
+            NLOGO[key] = ("svg:" + tmpl, asp, "" if slug in ("espn-plus",) else NET_SUFFIX.get(slug, ""))
+        elif p.exists():
             im = _Img.open(p).convert("RGBA")
             if chip: im = derive_chip_mark(im)
             elif dark: im = derive_dark_mark(im)
@@ -210,6 +250,25 @@ def logo_uri(tid):
             LOGO[tid] = "data:image/png;base64,"+base64.b64encode(buf.getvalue()).decode()
         else: LOGO[tid] = None
     return LOGO[tid]
+
+LOGO_LIGHT = {}
+def logo_uri_light(tid):
+    """Team logo with HLS lightness inverted per pixel (hue kept) — the 'invert for dark backgrounds' idea."""
+    if tid not in LOGO_LIGHT:
+        p = Path(ARGS.logos) / f"{tid}.png"
+        if p.exists():
+            im = _Img.open(p).convert("RGBA"); im.thumbnail((64,64)); px = im.load()
+            for yy in range(im.height):
+                for xx in range(im.width):
+                    r,g,b,a = px[xx,yy]
+                    if a < 16: continue
+                    h,l,sat = colorsys.rgb_to_hls(r/255,g/255,b/255)
+                    r2,g2,b2 = colorsys.hls_to_rgb(h,1-l,sat)
+                    px[xx,yy] = (int(r2*255),int(g2*255),int(b2*255),a)
+            buf = io.BytesIO(); im.save(buf, "PNG")
+            LOGO_LIGHT[tid] = "data:image/png;base64,"+base64.b64encode(buf.getvalue()).decode()
+        else: LOGO_LIGHT[tid] = None
+    return LOGO_LIGHT[tid]
 
 def derive_chip_mark(im, floor=0.80):
     """Tray chips are 14px tall; brand blues (Disney+, Paramount+) vanish on #31363D. Apply the
@@ -296,13 +355,14 @@ rows += [{"name":s,"lanes":lanes([g for g in day if g["primary"]==s],use_end=Fal
 
 # ----------------------------------------------------------------------------- geometry
 PX = 3.2; LABEL_W = 150; PAD_T, PAD_B, PAD_X = 136, 48, 24
-BLOCK_H, TRAY_H, GAP = 74, (36 if STYLE["tray"] == "twoline" else 24), 8
+BLOCK_H, TRAY_H, GAP = 74, int(STYLE["trayh"]), 8
+CHIP_H = 16 if TRAY_H >= 28 else 14          # chip mark height; tile = CHIP_H + 5; pills = CHIP_H + 3 — leaves ≥ 3.5px clear of the seam
 ROW_H = BLOCK_H + TRAY_H + GAP   # 106
 ST_BLOCK, ST_TRAY = 36, 16
 ST_H = ST_BLOCK + ST_TRAY + 6   # 58
 # TBD section (contract §10): streaming-scale cards in a wrapping list below the grid
-TBD_CARD_W, TBD_CARD_H, TBD_GAP = 320, ST_BLOCK + ST_TRAY, 14
-TBD_ROW = TBD_CARD_H + 10
+TBD_CARD_W, TBD_CARD_H, TBD_GAP = GAME_MIN*PX - 4, BLOCK_H + TRAY_H, 14   # = a 3.5 h grid block (668 × 98)
+TBD_ROW = ROW_H
 TBD_HEAD, TBD_GROUP_HEAD = 64, 30
 E = html.escape
 BC = "Barlow Condensed, Inter, sans-serif"
@@ -329,8 +389,8 @@ if day:
 else:  # a TBD-only day still gets a page
     t0 = datetime.strptime(TARGET, "%Y-%m-%d").replace(hour=12, tzinfo=ET); total = 360
 W = LABEL_W + total*PX + PAD_X
-W = max(W, PAD_X*2 + 3*TBD_CARD_W + 2*TBD_GAP + LABEL_W)  # never narrower than the header + 3 TBD columns
-GRID_H = sum(len(r["lanes"])*(ST_H if r["stream"] else ROW_H) for r in rows)
+W = max(W, PAD_X*2 + 2*TBD_CARD_W + TBD_GAP)              # never narrower than two full-size TBD columns
+GRID_H = sum(len(r["lanes"])*ROW_H for r in rows)
 
 TBD_ORDER = [("network_tbd", "KICKOFF SET · NETWORK TBA"), ("time_tbd", "NETWORK SET · KICKOFF TBA"),
              ("time_and_network_tbd", "KICKOFF AND NETWORK TBA")]
@@ -537,10 +597,218 @@ def tray_secondary(g):
     if rv: parts.append(rv[0])
     return " · ".join(parts)
 
+def draw_card(g, x, y, w, lh, prim_text=None):
+    """The one game card (contract §3). Used for linear rows, streaming rows and the TBD section —
+    v1.3: every game renders at the same size (Joe, 2026-08-31)."""
+    cx0, cy0 = x+1, y+4                      # card origin
+    half = BLOCK_H/2
+    (ba, ia), (bh2, ih) = legible(ac), legible(hc)
+    ra, rh_ = rank_of(g["a"]), rank_of(g["h"])
+    rv = rivalry_of(g)
+    big = bool(ra and rh_) or bool(rv and rv[1] == 1) or bool(MOCK_TRAY.get((g["a"]["team"], g["h"]["team"])) and "Showdown" in (MOCK_TRAY[(g["a"]["team"], g["h"]["team"])][2] or ""))
+    SIL, TRAY, MARQ = STYLE["silhouette"], STYLE["tray"], STYLE["marquee"]
+    CARD_H = BLOCK_H + TRAY_H
+    # --- marquee back-layer (behind the card) -------------------------------------
+    lane_clip = f"lane{int(y)}"
+    if big and MARQ == "halo" and f'id="{lane_clip}"' not in "".join(svg[-40:]):
+        svg.append(f'<clipPath id="{lane_clip}"><rect x="0" y="{y+1}" width="{W}" height="{lh-2}"/></clipPath>')
+    if big:
+        if MARQ == "sunburst":
+            svg.append(f'<ellipse cx="{cx0+w/2}" cy="{cy0+CARD_H/2}" rx="{w/2+42}" ry="{CARD_H/2+34}" fill="url(#sunburst)"/>')
+        elif MARQ == "halo":   # gold wash on the row background, extending past both ends of the card
+            svg.append(f'<g clip-path="url(#{lane_clip})"><ellipse cx="{cx0+w/2}" cy="{cy0+CARD_H/2}" rx="{w/2+95}" ry="{lh*0.85}" fill="url(#halo)"/></g>')
+    # --- card plate ---------------------------------------------------------------
+    if big:
+        grp_f = 'url(#glow)' if MARQ == "sunburst" else ('url(#soft)' if MARQ == "tag" else 'url(#glow1)')
+    else:
+        grp_f = 'url(#softer)' if SIL == "quiet" else 'url(#soft)'
+    plate = "#3A3218" if (big and MARQ == "plate") else "#23282E"
+    svg.append(f'<g filter="{grp_f}"><rect x="{cx0}" y="{cy0}" width="{w}" height="{CARD_H}" rx="9" fill="{plate}"/></g>')
+    ins = 3 if SIL == "bezel" else 0          # bezel: bands sit inside a charcoal frame
+    bx, bw, by = cx0+ins, w-2*ins, cy0+ins
+    bh_top = half - ins
+    svg.append(f'<rect x="{bx}" y="{by}" width="{bw}" height="{bh_top}" rx="{9-ins}" fill="{ba}"/><rect x="{bx}" y="{by+bh_top*0.5}" width="{bw}" height="{bh_top*0.5}" fill="{ba}"/>')
+    svg.append(f'<rect x="{bx}" y="{cy0+half}" width="{bw}" height="{half-ins}" fill="{bh2}"/>')
+    CAP = BLOCK_H - ins  # endcap width
+    la, lhm = logo_uri(g["a"]["id"]), logo_uri(g["h"]["id"])
+    for cap_i,(cx, cc, lg) in enumerate(((bx, ac, la), (bx+bw-CAP, hc, lhm))):
+        gid = f"cap{id(g)}_{cap_i}"
+        svg.append(f'<linearGradient id="{gid}" x1="0%" y1="0%" x2="0%" y2="100%">'
+                   f'<stop offset="0%" stop-color="{tint(cc,0.86)}"/>'
+                   f'<stop offset="100%" stop-color="{tint(cc,0.58)}"/></linearGradient>')
+        fill = f"url(#{gid})"
+        cap_h = BLOCK_H - 2*ins
+        inner = f'<rect x="{cx+CAP-8}" y="{by}" width="8" height="{cap_h}" fill="{fill}"/>' if cap_i==0 else f'<rect x="{cx}" y="{by}" width="8" height="{cap_h}" fill="{fill}"/>'
+        svg.append(f'<rect x="{cx}" y="{by}" width="{CAP}" height="{cap_h}" rx="{8-ins}" fill="{fill}"/>{inner}')
+        sep_x = cx+CAP if cap_i==0 else cx
+        svg.append(f'<line x1="{sep_x}" y1="{by}" x2="{sep_x}" y2="{by+cap_h}" stroke="#FFFFFF" stroke-opacity="0.55"/>')
+        if lg: svg.append(f'<image x="{cx+7}" y="{by+7}" width="{CAP-14}" height="{cap_h-14}" href="{lg}"/>')
+    svg.append(f'<line x1="{bx+CAP}" y1="{cy0+half}" x2="{bx+bw-CAP}" y2="{cy0+half}" stroke="#FFFFFF" stroke-opacity="0.7"/>')
+    span_l, span_r = bx+CAP+10, bx+bw-CAP-10
+    mid = (span_l+span_r)/2
+    for i,(side,ink,rk) in enumerate(((g["a"],ia,ra),(g["h"],ih,rh_))):
+        cy = cy0+half*(i+0.5)
+        label = (("" if i==0 else "@ ") + (f"{rk} " if rk else "") + side["team"]).upper()
+        rec = record_label(g, side) if STYLE["records"] == "name" else None
+        rec = rec.upper() if rec else None
+        fs = 26; span = span_r-span_l; GAP_R = 0.32
+        def parts_w(fs, rec):
+            nw = tw_barlow(label, fs); rw = tw_barlow(rec, fs*0.6) if rec else 0
+            return nw, rw, nw + ((fs*GAP_R + rw) if rec else 0)
+        nw, rw, total = parts_w(fs, rec)
+        if rec and total > span:
+            fs = max(18, fs*span/total)                        # shrink a little to keep the record...
+            nw, rw, total = parts_w(fs, rec)
+            if total > span: rec = None; fs = 26; nw, rw, total = parts_w(fs, rec)   # ...then drop it
+        if total > span: fs = max(14, fs*span/total); nw, rw, total = parts_w(fs, rec)
+        x0 = mid - total/2            # centering uses the measured width; adjacency is left to the renderer
+        run = f'<tspan font-size="{fs*0.6:.1f}" fill-opacity="0.82" dx="{fs*GAP_R:.1f}">{E(rec)}</tspan>' if rec else ""
+        svg.append(f'<text x="{x0:.1f}" y="{cy+fs*0.34:.1f}" font-size="{fs:.1f}" font-weight="700" font-family="{BC}" fill="{ink}">{E(label)}{run}</text>')
+    # --- tray ---------------------------------------------------------------------
+    ty = cy0+BLOCK_H
+    seam_fill = "#F0C850" if (big and MARQ in ("tag", "plate")) else f"url(#tg{id(g)})"
+    SEC_INK = "#F0C850" if (big and MARQ == "plate") else "#B4BAC0"   # v1.2: lighter than #848C93, still below the primary
+    svg.append(f'<linearGradient id="tg{id(g)}" x1="0%" x2="100%"><stop offset="0%" stop-color="{ac}"/><stop offset="100%" stop-color="{hc}"/></linearGradient>')
+    svg.append(f'<rect x="{bx}" y="{ty-ins}" width="{bw}" height="2.5" fill="{seam_fill}"/>')
+    v = VENUES.get(g["id"])
+    prim = prim_text if prim_text is not None else clock(g["dt"]) + (f" · {v}" if v else "")
+    line_h = TRAY_H                            # tray line height
+    seam = 2.5; ty_c = ty + seam + (TRAY_H - seam)/2   # content centerline, below the seam
+    fp = 12.5
+    if tw_inter(prim, fp) > w*0.45: fp = max(9.5, (w*0.45)/(len(prim)*0.55))
+    svg.append(f'<text x="{x+15}" y="{ty_c+4.5}" font-size="{fp:.1f}" font-weight="700" fill="#F2F3F4">{E(prim)}</text>')
+    def draw_chips(chx, right_edge=None):
+        """streamer micro-chips; returns x after the last chip. right_edge → right-aligned."""
+        items = []
+        for b in g.get("badges", []):
+            derived = b.endswith("*"); bname = b.rstrip("*"); nl2 = net_logo(bname, chip=True)
+            if nl2:
+                uri2, asp2, suf2 = nl2; lh3 = CHIP_H; lw3 = min(asp2*lh3, 64 if CHIP_H == 14 else 84)
+                sufw2 = (9 if suf2=="+" else 7*len(suf2)+3) if suf2 else 0
+                items.append(("img", lw3 + 12 + sufw2 + (14 if derived else 10), uri2, lw3, suf2, derived))
+            else:
+                items.append(("txt", len(b)*6 + 10, b, 0, "", derived))
+        if right_edge is not None: chx = right_edge - sum(it[1] for it in items)
+        start_x = chx
+        for kind, adv, a1, lw3, suf2, derived in items:
+            if kind == "img":
+                chw = adv - (14 if derived else 10)
+                th = CHIP_H + 5
+                if STYLE["chipbg"] == "tile":
+                    svg.append(f'<rect x="{chx}" y="{ty_c-th/2}" width="{chw}" height="{th}" rx="4" fill="#31363D"/>')
+                elif STYLE["chipbg"] == "light":
+                    svg.append(f'<rect x="{chx}" y="{ty_c-th/2}" width="{chw}" height="{th}" rx="4" fill="#3A4048" stroke="#FFFFFF" stroke-opacity="0.14"/>')
+                if a1.startswith("svg:"):
+                    svg.append(a1[4:].replace("__X__", f"{chx+6}").replace("__Y__", f"{ty_c-CHIP_H/2}").replace("__W__", f"{lw3}").replace("__H__", f"{CHIP_H}"))
+                else:
+                    svg.append(f'<image x="{chx+6}" y="{ty_c-CHIP_H/2}" width="{lw3}" height="{CHIP_H}" href="{a1}" preserveAspectRatio="xMidYMid meet"/>')
+                if suf2: svg.append(f'<text x="{chx+6+lw3+1}" y="{ty_c+4}" font-size="{11 if suf2=="+" else 8}" font-weight="700" fill="#F2F3F4">{E(suf2)}</text>')
+                if derived: svg.append(f'<text x="{chx+chw+2}" y="{ty_c-4}" font-size="9" fill="#848C93">*</text>')
+            else:
+                svg.append(f'<text x="{chx}" y="{ty_c+4.5}" font-size="10" fill="#CFD4D9">{E(a1)}</text>')
+            chx += adv
+        return start_x if right_edge is not None else chx
+    sec_parts = tray_parts(g)               # ordered by display priority (spread first)
+    def fit_parts(parts, fs, avail):
+        parts = list(parts)
+        while parts and tw_inter(" · ".join(parts), fs)*0.95 > avail: parts = parts[:-1]
+        return parts
+    if TRAY == "single":                    # v1.2: kickoff · venue → chips → secondary right
+        chx = draw_chips(x + 15 + len(prim)*fp*0.56 + 12)
+        fs2 = 10; avail = w - (chx - x) - 30; full = list(sec_parts)
+        sec_parts = fit_parts(sec_parts, fs2, avail)
+        if len(sec_parts) < len(full): DROP_LOG.append((f'{g["a"]["team"]} @ {g["h"]["team"]} ({g["end_min"]}m)', full[len(sec_parts):]))
+        if sec_parts:
+            svg.append(f'<text x="{cx0+w-14}" y="{ty_c+4.5}" font-size="{fs2}" font-weight="600" fill="{SEC_INK}" text-anchor="end">{E(" · ".join(sec_parts))}</text>')
+    elif TRAY == "cells":                   # option 1: segmented cells with hairline dividers
+        # cells: kickoff | venue | chips | (flex) | secondary
+        kick = clock(g["dt"]) if prim_text is None else prim
+        ven = v if (prim_text is None and v) else None
+        cxp = x + 15
+        svg.pop()                            # replace the combined primary text drawn above
+        svg.append(f'<text x="{cxp}" y="{ty_c+5}" font-size="12.5" font-weight="700" fill="#F2F3F4">{E(kick)}</text>')
+        cxp += tw("inter-bold", kick, 12.5, 0.6) + 12
+        def divider(xx): svg.append(f'<line x1="{xx}" y1="{ty+6}" x2="{xx}" y2="{ty+line_h-6}" stroke="#FFFFFF" stroke-opacity="0.16"/>')
+        if ven:
+            divider(cxp); cxp += 12
+            fv = 11.5
+            if tw_inter(ven, fv) > w*0.38: fv = max(9.5, w*0.38/(len(ven)*0.55))
+            svg.append(f'<text x="{cxp}" y="{ty_c+4.5}" font-size="{fv:.1f}" font-weight="500" fill="#C9CED3">{E(ven)}</text>')
+            cxp += tw_inter(ven, fv) + 12
+        if g.get("badges"):
+            divider(cxp); cxp = draw_chips(cxp + 12)
+        fs2 = 10.5; avail = w - (cxp - x) - 40
+        sec_parts = fit_parts(sec_parts, fs2, avail)
+        if sec_parts:
+            sec = " · ".join(sec_parts); sw = tw_inter(sec, fs2)
+            divider(cx0 + w - 14 - sw - 12)
+            svg.append(f'<text x="{cx0+w-14}" y="{ty_c+4.5}" font-size="{fs2}" font-weight="600" fill="{SEC_INK}" text-anchor="end">{E(sec)}</text>')
+    elif TRAY == "chipsright":              # option 2: kickoff · venue | secondary … chips pinned right
+        chip_left = draw_chips(0, right_edge=cx0+w-12) if g.get("badges") else cx0+w-12
+        sec_x = x + 15 + tw("inter-bold", prim, fp, 0.6) + 16
+        fs2 = 10.5; avail = chip_left - 14 - sec_x
+        sec_parts = fit_parts(sec_parts, fs2, avail)
+        if sec_parts:
+            svg.append(f'<line x1="{sec_x-8}" y1="{ty+6}" x2="{sec_x-8}" y2="{ty+line_h-6}" stroke="#FFFFFF" stroke-opacity="0.16"/>')
+            svg.append(f'<text x="{sec_x}" y="{ty_c+4.5}" font-size="{fs2}" font-weight="600" fill="{SEC_INK}">{E(" · ".join(sec_parts))}</text>')
+    elif TRAY == "pills":                   # v1.3 tray: kickoff · venue … [rivalry] [O/U] [fav-logo spread] [chips]
+        ln = LINES.get(g["id"]); toks = []
+        if ln and ln.get("spread") is not None:
+            fav = g["h"] if ln["spread"] < 0 else g["a"]
+            toks.append(("spread", f"{-abs(ln['spread']):g}", fav))
+        if ln and ln.get("overUnder") is not None: toks.append(("ou", f"O/U {ln['overUnder']:g}", None))
+        rv = rivalry_of(g)
+        if rv: toks.append(("riv", rv[0], None))
+        right = cx0 + w - 10
+        chips_left = draw_chips(0, right_edge=right) if g.get("badges") else right + 8
+        right = chips_left - 8
+        fs2 = 10 if TRAY_H < 28 else 11; ph = CHIP_H + 3; drawn = []; left_limit = x + 15 + tw("inter-bold", prim, fp, 0.6) + 14
+        for kind, txt, fav in toks:
+            tw_ = tw_inter(txt, fs2) + 12 + ((ph+4) if fav else 0)
+            if right - sum(d[1]+6 for d in drawn) - tw_ < left_limit: break
+            drawn.append(((kind, txt, fav), tw_))
+        px_ = right
+        for (kind, txt, fav), tw_ in drawn:
+            px_ -= tw_
+            gold = kind == "riv"
+            plate_c = "#3A3218" if gold else ("#4A4020" if (big and MARQ == "plate") else "#2E333A")
+            svg.append(f'<rect x="{px_}" y="{ty_c-ph/2}" width="{tw_}" height="{ph}" rx="3.5" fill="{plate_c}" stroke="{"#F0C850" if gold else "#FFFFFF"}" stroke-opacity="{0.9 if gold else 0.16}"/>')
+            tx = px_ + 6
+            if fav:
+                lg = logo_uri(fav["id"]); fc = color(fav["id"]); r_ = (ph-1)/2; li = ph-3
+                if STYLE["favlogo"] == "disc":     # light team-tinted disc behind the logo (the endcap idea, miniature)
+                    did = f"fd{id(g)}{kind}"
+                    svg.append(f'<linearGradient id="{did}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="{tint(fc,0.86)}"/><stop offset="100%" stop-color="{tint(fc,0.58)}"/></linearGradient>')
+                    svg.append(f'<circle cx="{tx+r_}" cy="{ty_c}" r="{r_}" fill="url(#{did})"/>')
+                if lg:
+                    href = logo_uri_light(fav["id"]) if STYLE["favlogo"] == "invert" else lg
+                    svg.append(f'<image x="{tx+r_-li/2}" y="{ty_c-li/2}" width="{li}" height="{li}" href="{href}" preserveAspectRatio="xMidYMid meet"/>')
+                tx += ph + 4
+            svg.append(f'<text x="{tx}" y="{ty_c+fs2*0.36}" font-size="{fs2}" font-weight="600" fill="{"#F0C850" if gold else SEC_INK}">{E(txt)}</text>')
+            px_ -= 6
+    # --- outline (top layer) --------------------------------------------------------
+    if big:
+        svg.append(f'<rect x="{cx0}" y="{cy0}" width="{w}" height="{CARD_H}" rx="9" fill="none" stroke="#F0C850" stroke-width="3.5"/>')
+    elif SIL == "outline":
+        svg.append(f'<rect x="{cx0}" y="{cy0}" width="{w}" height="{CARD_H}" rx="9" fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="2.5"/>')
+    elif SIL == "bezel":
+        svg.append(f'<rect x="{cx0-0.75}" y="{cy0-0.75}" width="{w+1.5}" height="{CARD_H+1.5}" rx="9.5" fill="none" stroke="#05070A" stroke-opacity="0.85" stroke-width="1.5"/>')
+        svg.append(f'<rect x="{cx0+1}" y="{cy0+1}" width="{w-2}" height="{CARD_H-2}" rx="8" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="1"/>')
+    elif SIL == "quiet":
+        svg.append(f'<rect x="{cx0}" y="{cy0}" width="{w}" height="{CARD_H}" rx="9" fill="none" stroke="#FFFFFF" stroke-opacity="0.28" stroke-width="1.5"/>')
+    tag_x = bx+CAP+6
+    if g.get("alt"):
+        svg.append(f'<rect x="{tag_x}" y="{y+8}" width="38" height="16" rx="4" fill="#FFFFFF"/>')
+        svg.append(f'<text x="{tag_x+19}" y="{y+20}" font-size="10" font-weight="700" fill="#33383c" text-anchor="middle">ALT</text>')
+        tag_x += 44
+    if big and MARQ in ("tag", "plate"):
+        svg.append(f'<rect x="{tag_x}" y="{y+8}" width="64" height="16" rx="4" fill="#F0C850"/>')
+        svg.append(f'<text x="{tag_x+32}" y="{y+20}" font-size="9.5" font-weight="700" fill="#2A2410" text-anchor="middle" letter-spacing="0.6">MARQUEE</text>')
+
 # ----------------------------------------------------------------------------- network rows
 y = PAD_T
 for row in rows:
-    lh = ST_H if row["stream"] else ROW_H
+    lh = ROW_H
     rh = len(row["lanes"])*lh
     svg.append(f'<rect x="0" y="{y}" width="{LABEL_W}" height="{rh}" fill="#FFFFFF" fill-opacity="0.05"/>')
     nl = net_logo(row["name"], dark=True)
@@ -570,165 +838,7 @@ for row in rows:
         for g in lane:
             x = xof(g["dt"]); w = g["end_min"]*PX-4
             ac, hc = color(g["a"]["id"]), color(g["h"]["id"])
-            if row["stream"]:
-                sv = VENUES.get(g["id"])
-                mini_card(x+1, y+3, w, g, clock(g["dt"]) + (f" · {sv}" if sv else ""))
-                continue
-            half = BLOCK_H/2
-            (ba, ia), (bh2, ih) = legible(ac), legible(hc)
-            ra, rh_ = rank_of(g["a"]), rank_of(g["h"])
-            rv = rivalry_of(g)
-            big = bool(ra and rh_) or bool(rv and rv[1] == 1) or bool(MOCK_TRAY.get((g["a"]["team"], g["h"]["team"])) and "Showdown" in (MOCK_TRAY[(g["a"]["team"], g["h"]["team"])][2] or ""))
-            SIL, TRAY, MARQ = STYLE["silhouette"], STYLE["tray"], STYLE["marquee"]
-            CARD_H = BLOCK_H + TRAY_H
-            cx0, cy0 = x+1, y+4                      # card origin
-            # --- marquee back-layer (behind the card) -------------------------------------
-            lane_clip = f"lane{int(y)}"
-            if big and MARQ == "halo" and f'id="{lane_clip}"' not in "".join(svg[-40:]):
-                svg.append(f'<clipPath id="{lane_clip}"><rect x="0" y="{y+1}" width="{W}" height="{lh-2}"/></clipPath>')
-            if big:
-                if MARQ == "sunburst":
-                    svg.append(f'<ellipse cx="{cx0+w/2}" cy="{cy0+CARD_H/2}" rx="{w/2+42}" ry="{CARD_H/2+34}" fill="url(#sunburst)"/>')
-                elif MARQ == "halo":   # gold wash on the row background, extending past both ends of the card
-                    svg.append(f'<g clip-path="url(#{lane_clip})"><ellipse cx="{cx0+w/2}" cy="{cy0+CARD_H/2}" rx="{w/2+95}" ry="{lh*0.85}" fill="url(#halo)"/></g>')
-            # --- card plate ---------------------------------------------------------------
-            if big:
-                grp_f = 'url(#glow)' if MARQ == "sunburst" else ('url(#soft)' if MARQ == "tag" else 'url(#glow1)')
-            else:
-                grp_f = 'url(#softer)' if SIL == "quiet" else 'url(#soft)'
-            plate = "#3A3218" if (big and MARQ == "plate") else "#23282E"
-            svg.append(f'<g filter="{grp_f}"><rect x="{cx0}" y="{cy0}" width="{w}" height="{CARD_H}" rx="9" fill="{plate}"/></g>')
-            ins = 3 if SIL == "bezel" else 0          # bezel: bands sit inside a charcoal frame
-            bx, bw, by = cx0+ins, w-2*ins, cy0+ins
-            bh_top = half - ins
-            svg.append(f'<rect x="{bx}" y="{by}" width="{bw}" height="{bh_top}" rx="{9-ins}" fill="{ba}"/><rect x="{bx}" y="{by+bh_top*0.5}" width="{bw}" height="{bh_top*0.5}" fill="{ba}"/>')
-            svg.append(f'<rect x="{bx}" y="{cy0+half}" width="{bw}" height="{half-ins}" fill="{bh2}"/>')
-            CAP = BLOCK_H - ins  # endcap width
-            la, lhm = logo_uri(g["a"]["id"]), logo_uri(g["h"]["id"])
-            for cap_i,(cx, cc, lg) in enumerate(((bx, ac, la), (bx+bw-CAP, hc, lhm))):
-                gid = f"cap{id(g)}_{cap_i}"
-                svg.append(f'<linearGradient id="{gid}" x1="0%" y1="0%" x2="0%" y2="100%">'
-                           f'<stop offset="0%" stop-color="{tint(cc,0.86)}"/>'
-                           f'<stop offset="100%" stop-color="{tint(cc,0.58)}"/></linearGradient>')
-                fill = f"url(#{gid})"
-                cap_h = BLOCK_H - 2*ins
-                inner = f'<rect x="{cx+CAP-8}" y="{by}" width="8" height="{cap_h}" fill="{fill}"/>' if cap_i==0 else f'<rect x="{cx}" y="{by}" width="8" height="{cap_h}" fill="{fill}"/>'
-                svg.append(f'<rect x="{cx}" y="{by}" width="{CAP}" height="{cap_h}" rx="{8-ins}" fill="{fill}"/>{inner}')
-                sep_x = cx+CAP if cap_i==0 else cx
-                svg.append(f'<line x1="{sep_x}" y1="{by}" x2="{sep_x}" y2="{by+cap_h}" stroke="#FFFFFF" stroke-opacity="0.55"/>')
-                if lg: svg.append(f'<image x="{cx+7}" y="{by+7}" width="{CAP-14}" height="{cap_h-14}" href="{lg}"/>')
-            svg.append(f'<line x1="{bx+CAP}" y1="{cy0+half}" x2="{bx+bw-CAP}" y2="{cy0+half}" stroke="#FFFFFF" stroke-opacity="0.7"/>')
-            span_l, span_r = bx+CAP+10, bx+bw-CAP-10
-            mid = (span_l+span_r)/2
-            for i,(side,ink,rk) in enumerate(((g["a"],ia,ra),(g["h"],ih,rh_))):
-                cy = cy0+half*(i+0.5)
-                label = (("" if i==0 else "@ ") + (f"{rk} " if rk else "") + side["team"]).upper()
-                rec = record_label(g, side) if STYLE["records"] == "name" else None
-                rec = rec.upper() if rec else None
-                fs = 26; span = span_r-span_l; GAP_R = 0.32
-                def parts_w(fs, rec):
-                    nw = tw_barlow(label, fs); rw = tw_barlow(rec, fs*0.6) if rec else 0
-                    return nw, rw, nw + ((fs*GAP_R + rw) if rec else 0)
-                nw, rw, total = parts_w(fs, rec)
-                if rec and total > span:
-                    fs = max(18, fs*span/total)                        # shrink a little to keep the record...
-                    nw, rw, total = parts_w(fs, rec)
-                    if total > span: rec = None; fs = 26; nw, rw, total = parts_w(fs, rec)   # ...then drop it
-                if total > span: fs = max(14, fs*span/total); nw, rw, total = parts_w(fs, rec)
-                x0 = mid - total/2            # centering uses the measured width; adjacency is left to the renderer
-                run = f'<tspan font-size="{fs*0.6:.1f}" fill-opacity="0.82" dx="{fs*GAP_R:.1f}">{E(rec)}</tspan>' if rec else ""
-                svg.append(f'<text x="{x0:.1f}" y="{cy+fs*0.34:.1f}" font-size="{fs:.1f}" font-weight="700" font-family="{BC}" fill="{ink}">{E(label)}{run}</text>')
-            # --- tray ---------------------------------------------------------------------
-            ty = cy0+BLOCK_H
-            seam_fill = "#F0C850" if (big and MARQ in ("tag", "plate")) else f"url(#tg{id(g)})"
-            SEC_INK = "#F0C850" if (big and MARQ == "plate") else "#B4BAC0"   # v1.2: lighter than #848C93, still below the primary
-            svg.append(f'<linearGradient id="tg{id(g)}" x1="0%" x2="100%"><stop offset="0%" stop-color="{ac}"/><stop offset="100%" stop-color="{hc}"/></linearGradient>')
-            svg.append(f'<rect x="{bx}" y="{ty-ins}" width="{bw}" height="2.5" fill="{seam_fill}"/>')
-            v = VENUES.get(g["id"])
-            prim = clock(g["dt"]) + (f" · {v}" if v else "")
-            line_h = 24                                # first tray line is always 24 tall
-            fp = 12.5
-            if tw_inter(prim, fp) > w*0.45: fp = max(9.5, (w*0.45)/(len(prim)*0.55))
-            svg.append(f'<text x="{x+15}" y="{ty+line_h/2+5}" font-size="{fp:.1f}" font-weight="700" fill="#F2F3F4">{E(prim)}</text>')
-            def draw_chips(chx, right_edge=None):
-                """streamer micro-chips; returns x after the last chip. right_edge → right-aligned."""
-                items = []
-                for b in g["badges"]:
-                    derived = b.endswith("*"); bname = b.rstrip("*"); nl2 = net_logo(bname, chip=True)
-                    if nl2:
-                        uri2, asp2, suf2 = nl2; lh3 = 14; lw3 = min(asp2*lh3, 64)
-                        sufw2 = (9 if suf2=="+" else 7*len(suf2)+3) if suf2 else 0
-                        items.append(("img", lw3 + 12 + sufw2 + (14 if derived else 10), uri2, lw3, suf2, derived))
-                    else:
-                        items.append(("txt", len(b)*6 + 10, b, 0, "", derived))
-                if right_edge is not None: chx = right_edge - sum(it[1] for it in items)
-                for kind, adv, a1, lw3, suf2, derived in items:
-                    if kind == "img":
-                        chw = adv - (14 if derived else 10)
-                        svg.append(f'<rect x="{chx}" y="{ty+line_h/2-9.5}" width="{chw}" height="19" rx="4" fill="#31363D"/>')
-                        svg.append(f'<image x="{chx+6}" y="{ty+line_h/2-7}" width="{lw3}" height="14" href="{a1}" preserveAspectRatio="xMidYMid meet"/>')
-                        if suf2: svg.append(f'<text x="{chx+6+lw3+1}" y="{ty+line_h/2+4}" font-size="{11 if suf2=="+" else 8}" font-weight="700" fill="#F2F3F4">{E(suf2)}</text>')
-                        if derived: svg.append(f'<text x="{chx+chw+2}" y="{ty+line_h/2-4}" font-size="9" fill="#848C93">*</text>')
-                    else:
-                        svg.append(f'<text x="{chx}" y="{ty+line_h/2+4.5}" font-size="10" fill="#CFD4D9">{E(a1)}</text>')
-                    chx += adv
-                return chx
-            sec_parts = tray_parts(g)               # ordered by display priority (spread first)
-            if TRAY == "single":
-                chx = draw_chips(x + 15 + len(prim)*fp*0.56 + 12)
-                fs2 = 10; avail = w - (chx - x) - 30; full = list(sec_parts)
-                while sec_parts and tw_inter(" · ".join(sec_parts), fs2)*0.95 > avail: sec_parts = sec_parts[:-1]
-                if len(sec_parts) < len(full): DROP_LOG.append((f'{g["a"]["team"]} @ {g["h"]["team"]} ({g["end_min"]}m)', full[len(sec_parts):]))
-                if sec_parts:
-                    svg.append(f'<text x="{cx0+w-14}" y="{ty+line_h/2+4.5}" font-size="{fs2}" font-weight="600" fill="{SEC_INK}" text-anchor="end">{E(" · ".join(sec_parts))}</text>')
-            elif TRAY == "twoline":
-                draw_chips(x + 15 + len(prim)*fp*0.56 + 12)
-                sec = " · ".join(sec_parts)
-                if sec:
-                    fs2 = 10; avail = w - 30
-                    while sec_parts and tw_inter(" · ".join(sec_parts), fs2)*0.95 > avail: sec_parts = sec_parts[:-1]   # drop lowest-priority first
-                    svg.append(f'<text x="{x+15}" y="{ty+line_h+7.5}" font-size="{fs2}" fill="#9aa2a8">{E(" · ".join(sec_parts))}</text>')
-            elif TRAY == "priority":
-                chip_left = draw_chips(0, right_edge=cx0+w-12)
-                sec_x = x + 15 + len(prim)*fp*0.56 + 16
-                avail = chip_left - 12 - sec_x
-                fs2 = 10
-                while sec_parts and tw_inter(" · ".join(sec_parts), fs2)*0.95 > avail: sec_parts = sec_parts[:-1]
-                if sec_parts:
-                    svg.append(f'<line x1="{sec_x-8}" y1="{ty+7}" x2="{sec_x-8}" y2="{ty+line_h-7}" stroke="#FFFFFF" stroke-opacity="0.18"/>')
-                    svg.append(f'<text x="{sec_x}" y="{ty+line_h/2+4.5}" font-size="{fs2}" fill="#9aa2a8">{E(" · ".join(sec_parts))}</text>')
-            elif TRAY == "tokens":
-                chx = draw_chips(x + 15 + len(prim)*fp*0.56 + 12)
-                fs2 = 9.5; right = cx0+w-10; toks = []
-                for part in sec_parts:                # keep in priority order, drop when out of room
-                    tw = tw_inter(part, fs2)*0.92 + 12
-                    if right - sum(t[1]+6 for t in toks) - tw < chx + 8: break
-                    toks.append((part, tw))
-                px_ = right
-                for part, tw in toks:                 # draw right-to-left so priority sits nearest the edge
-                    px_ -= tw
-                    gold = rv and part == rv[0]
-                    svg.append(f'<rect x="{px_}" y="{ty+line_h/2-8.5}" width="{tw}" height="17" rx="3.5" fill="{"#3A3218" if gold else "#2C3138"}" stroke="{"#F0C850" if gold else "#FFFFFF"}" stroke-opacity="{0.9 if gold else 0.14}"/>')
-                    svg.append(f'<text x="{px_+tw/2}" y="{ty+line_h/2+3.5}" font-size="{fs2}" font-weight="600" fill="{"#F0C850" if gold else "#C9CED3"}" text-anchor="middle">{E(part)}</text>')
-                    px_ -= 6
-            # --- outline (top layer) --------------------------------------------------------
-            if big:
-                svg.append(f'<rect x="{cx0}" y="{cy0}" width="{w}" height="{CARD_H}" rx="9" fill="none" stroke="#F0C850" stroke-width="3.5"/>')
-            elif SIL == "outline":
-                svg.append(f'<rect x="{cx0}" y="{cy0}" width="{w}" height="{CARD_H}" rx="9" fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="2.5"/>')
-            elif SIL == "bezel":
-                svg.append(f'<rect x="{cx0-0.75}" y="{cy0-0.75}" width="{w+1.5}" height="{CARD_H+1.5}" rx="9.5" fill="none" stroke="#05070A" stroke-opacity="0.85" stroke-width="1.5"/>')
-                svg.append(f'<rect x="{cx0+1}" y="{cy0+1}" width="{w-2}" height="{CARD_H-2}" rx="8" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="1"/>')
-            elif SIL == "quiet":
-                svg.append(f'<rect x="{cx0}" y="{cy0}" width="{w}" height="{CARD_H}" rx="9" fill="none" stroke="#FFFFFF" stroke-opacity="0.28" stroke-width="1.5"/>')
-            tag_x = bx+CAP+6
-            if g["alt"]:
-                svg.append(f'<rect x="{tag_x}" y="{y+8}" width="38" height="16" rx="4" fill="#FFFFFF"/>')
-                svg.append(f'<text x="{tag_x+19}" y="{y+20}" font-size="10" font-weight="700" fill="#33383c" text-anchor="middle">ALT</text>')
-                tag_x += 44
-            if big and MARQ in ("tag", "plate"):
-                svg.append(f'<rect x="{tag_x}" y="{y+8}" width="64" height="16" rx="4" fill="#F0C850"/>')
-                svg.append(f'<text x="{tag_x+32}" y="{y+20}" font-size="9.5" font-weight="700" fill="#2A2410" text-anchor="middle" letter-spacing="0.6">MARQUEE</text>')
+            draw_card(g, x, y, w, lh)
         y += lh
 svg.append(f'<line x1="0" y1="{y}" x2="{W-PAD_X}" y2="{y}" stroke="#FFFFFF" stroke-opacity="0.24" stroke-width="1.5"/>')
 
@@ -752,9 +862,7 @@ if tbd_groups:
                 txt = "KICKOFF TBA · " + " / ".join(nets) + (" (not carried)" if all(n in UNAVAILABLE for n in nets) else "")
             else:
                 txt = "KICKOFF AND TV TBA"
-            rv = rivalry_of(g); ln = LINES.get(g["id"])
-            right = rv[0] if rv else (ln["display"] if ln and ln.get("display") else None)
-            mini_card(cx, cy, TBD_CARD_W, g, txt, right)
+            draw_card(g, cx-1, cy-4, TBD_CARD_W, TBD_ROW, prim_text=txt)
         y += math.ceil(len(gs)/TBD_COLS)*TBD_ROW + 12
 
 # ----------------------------------------------------------------------------- footer
@@ -773,7 +881,7 @@ out_dir = Path(ARGS.out); out_dir.mkdir(parents=True, exist_ok=True)
 svg_path = out_dir / f"grid_{TARGET}.svg"
 svg_path.write_text("\n".join(svg), encoding="utf-8")
 for gname, dropped in DROP_LOG: print(f"  tray drop: {gname}: {dropped}")
-print(f"v1.2: {len(day)} on grid · {len(tbd)} TBA · {len(omitted)} omitted · {W:.0f}x{H:.0f} -> {svg_path}"
+print(f"v1.3: {len(day)} on grid · {len(tbd)} TBA · {len(omitted)} omitted · {W:.0f}x{H:.0f} -> {svg_path}"
       + (" · enrichment loaded" if ENR else " · NO enrichment") + (" · MOCK" if USE_MOCK else ""))
 if ARGS.png or ARGS.export:
     try:

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""MySports Phase 3B — network & streamer logo fetch, v2.
+"""MySports Phase 3B — network & streamer logo fetch, v3.
+v3 adds horizontal SVG wordmarks for the tray chips (VECTOR_MARKS); `--force-svg` re-downloads them.
 Sources, in order: (1) known-good Commons file titles, (2) the network's English
 Wikipedia article image list (non-free logos live on en.wikipedia, not Commons).
 HTTP 429 is retried with backoff (honoring Retry-After) and reported as THROTTLED,
@@ -35,6 +36,17 @@ NETWORKS = {
     "hbo-max": (["HBO Max Logo.svg", "Max logo.svg"], "HBO Max"),
     "paramount-plus": (["Paramount Plus.svg", "Paramount+ logo.svg"], "Paramount+"),
     "disney-plus": (["Disney+ logo.svg", "Disney Plus logo.svg"], "Disney+"),
+}
+
+# v3 (2026-08-31): horizontal VECTOR wordmarks for the tray's streamer chips. Direct Commons file URLs
+# (from the imageinfo API); saved as assets/network-logos/{slug}.svg and nested inline by render_day.py.
+# Chosen for aspect ratio (all ≥ 4:1 except Disney+, which has no horizontal form): see contract §3.
+VECTOR_MARKS = {
+    "hbo-max":        "https://upload.wikimedia.org/wikipedia/commons/7/7e/HBO_Max_May_2025_%28Horizontal%29.svg",
+    "paramount-plus": "https://upload.wikimedia.org/wikipedia/commons/4/4e/Paramount%2B_logo.svg",
+    "peacock":        "https://upload.wikimedia.org/wikipedia/commons/2/20/NBCUniversal_Peacock_Logo_%282026%29.svg",
+    "disney-plus":    "https://upload.wikimedia.org/wikipedia/commons/6/64/Disney%2B_2024.svg",
+    "espn-plus":      "https://upload.wikimedia.org/wikipedia/commons/8/80/ESPN_Plus.svg",
 }
 
 class Throttled(Exception): pass
@@ -85,8 +97,31 @@ def download(url, dest):
         dest.write_bytes(body); return True
     return False
 
+def fetch_vectors(out, force=False):
+    """Download the SVG wordmarks. Idempotent unless force. Validates that the body is an SVG document."""
+    got, bad = [], []
+    for slug, url in VECTOR_MARKS.items():
+        dest = out / f"{slug}.svg"
+        if dest.exists() and not force: got.append(slug); continue
+        try:
+            req = urllib.request.Request(url, headers=UA)
+            with urllib.request.urlopen(req, timeout=30) as r: body = r.read()
+            if b"<svg" in body[:2000]:
+                dest.write_bytes(body); got.append(slug); print(f"  {slug}.svg: {len(body)} bytes")
+            else:
+                bad.append(slug); print(f"  {slug}.svg: not an SVG document")
+        except Exception as e:
+            bad.append(slug); print(f"  {slug}.svg: FAILED {e}")
+        time.sleep(1.0)
+    return got, bad
+
 def main():
     out = Path("assets/network-logos"); out.mkdir(parents=True, exist_ok=True)
+    force = "--force-svg" in sys.argv
+    print("vector wordmarks (SVG):")
+    vgot, vbad = fetch_vectors(out, force=force)
+    print(f"  svg present: {len(vgot)}/{len(VECTOR_MARKS)}" + (f", failed: {vbad}" if vbad else ""))
+    print("raster marks (PNG):")
     ok, missing, throttled = [], [], []
     for slug, (titles, article) in NETWORKS.items():
         dest = out / f"{slug}.png"
@@ -111,7 +146,7 @@ def main():
     print(f"\npresent: {len(ok)}/{len(NETWORKS)}")
     print(f"missing (need new source): {missing if missing else 'none'}")
     print(f"throttled (re-run later): {throttled if throttled else 'none'}")
-    return 0 if not missing and not throttled else 1
+    return 0 if not missing and not throttled and not vbad else 1
 
 if __name__ == "__main__":
     sys.exit(main())
