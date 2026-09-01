@@ -28,6 +28,11 @@ omitted and the header says so. `--mock` re-enables the layout-only MOCK values 
 the header with a MOCK warning; it is never the default.
 """
 import argparse, json, html, base64, io, colorsys, math, re
+import sys
+try:  # Windows consoles default to cp1252; the output lines carry "·" and team names like Hawai'i
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from pathlib import Path
@@ -63,6 +68,12 @@ ARGS.enrichment = ARGS.enrichment or f"artifacts/validation/cfbd_2026_week{WK}_e
 CAP_STYLE = "gradient"  # contract: gradient endcaps (solid rejected 2026-08-31)
 EXPORT_SCALE = 2.0      # contract §8: download PNG is @2x of the SVG coordinate space
 ET = ZoneInfo("America/New_York")
+def clock(dt):
+    """'3:45 PM' — portable (Windows' strftime has no %-I)."""
+    return f"{dt.hour % 12 or 12}:{dt.minute:02d} {'AM' if dt.hour < 12 else 'PM'}"
+def longdate(dt):
+    """'Saturday, September 5, 2026' — portable (no %-d)."""
+    return f"{dt.strftime('%A')}, {dt.strftime('%B')} {dt.day}, {dt.year}"
 
 _raw = json.load(open(ARGS.games_raw, encoding="utf-8")) if Path(ARGS.games_raw).exists() else []
 VENUES = {str(g["id"]): g.get("venue") for g in _raw if g.get("venue")}
@@ -350,11 +361,11 @@ def week_label():
                 if len(sats) >= 2 and tgt <= sats[0] + timedelta(days=1): return 0
     return WK
 WEEK_LABEL = week_label()
-title = f"COLLEGE FOOTBALL WEEK {WEEK_LABEL} — " + datetime.strptime(TARGET,"%Y-%m-%d").strftime("%A, %B %-d, %Y").upper()
+title = f"COLLEGE FOOTBALL WEEK {WEEK_LABEL} — " + longdate(datetime.strptime(TARGET,"%Y-%m-%d")).upper()
 if USE_MOCK: rank_note = "ranks/spreads/records MOCK — layout only"
 elif RANK_SOURCE: rank_note = f"{RANK_SOURCE} (wk {RANK_WEEK})"
 else: rank_note = "no ranking snapshot in enrichment"
-gen = datetime.now(ET).strftime("%b %-d, %Y %-I:%M %p ET")
+_now = datetime.now(ET); gen = f"{_now.strftime('%b')} {_now.day}, {_now.year} {clock(_now)} ET"
 sub = f"all times ET · {rank_note} · data: CFBD fixture week {WK}" + (f" + enrichment {ENR['generatedAt'][:10]}" if ENR else " · no enrichment file") + f" · rendered {gen}"
 
 svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W:.0f}" height="{H:.0f}" font-family="Inter, DejaVu Sans, sans-serif">',
@@ -451,7 +462,7 @@ for m in range(0, total+1, 30):
 AX_FS = 14; last_right = -1e9; last_was_end = False
 for m in event_min:                       # kickoffs and block ends only (Joe, 2026-08-31)
     t = t0+timedelta(minutes=m); x = LABEL_W+m*PX
-    lbl = t.strftime("%-I:%M %p"); wdt = tw("inter-bold", lbl, AX_FS, 0.6)
+    lbl = clock(t); wdt = tw("inter-bold", lbl, AX_FS, 0.6)
     if x - wdt/2 < last_right + 10:       # would collide with the previous label: kickoffs win over block ends
         if m in kick_min and last_was_end: svg.pop(); svg.pop()
         else: continue
@@ -561,7 +572,7 @@ for row in rows:
             ac, hc = color(g["a"]["id"]), color(g["h"]["id"])
             if row["stream"]:
                 sv = VENUES.get(g["id"])
-                mini_card(x+1, y+3, w, g, g["dt"].strftime("%-I:%M %p") + (f" · {sv}" if sv else ""))
+                mini_card(x+1, y+3, w, g, clock(g["dt"]) + (f" · {sv}" if sv else ""))
                 continue
             half = BLOCK_H/2
             (ba, ia), (bh2, ih) = legible(ac), legible(hc)
@@ -634,7 +645,7 @@ for row in rows:
             svg.append(f'<linearGradient id="tg{id(g)}" x1="0%" x2="100%"><stop offset="0%" stop-color="{ac}"/><stop offset="100%" stop-color="{hc}"/></linearGradient>')
             svg.append(f'<rect x="{bx}" y="{ty-ins}" width="{bw}" height="2.5" fill="{seam_fill}"/>')
             v = VENUES.get(g["id"])
-            prim = g["dt"].strftime("%-I:%M %p") + (f" · {v}" if v else "")
+            prim = clock(g["dt"]) + (f" · {v}" if v else "")
             line_h = 24                                # first tray line is always 24 tall
             fp = 12.5
             if tw_inter(prim, fp) > w*0.45: fp = max(9.5, (w*0.45)/(len(prim)*0.55))
@@ -736,7 +747,7 @@ if tbd_groups:
             cy = y + (i // TBD_COLS)*TBD_ROW
             nets = [o for o in g["outlets"]]
             if key == "network_tbd":
-                txt = g["dt"].strftime("%-I:%M %p") + " · TV TBA"
+                txt = clock(g["dt"]) + " · TV TBA"
             elif key == "time_tbd":
                 txt = "KICKOFF TBA · " + " / ".join(nets) + (" (not carried)" if all(n in UNAVAILABLE for n in nets) else "")
             else:
