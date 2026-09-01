@@ -32,7 +32,8 @@ ACCESS = {"AVAILABLE": "available", "UNAVAILABLE": "unavailable", "UNKNOWN": "un
           "OUT_OF_MARKET": "out_of_market", "UNVERIFIED": "unverified"}
 SOURCE_ID = {"cfbd.games+media": "cfbd", "espn.scoreboard": "espn.scoreboard", "nhl.schedule": "nhl.schedule", "nba.schedule": "nba.schedule"}
 SOURCE_META = {"cfbd": ("structured_provider", 60), "espn.scoreboard": ("structured_provider", 55), "nhl.schedule": ("league_api", 80),
-               "nba.schedule": ("league_api", 80), "data/local_rights": ("hand_entered", 90), "data/market_coverage": ("hand_entered", 90)}
+               "nba.schedule": ("league_api", 80), "data/local_rights": ("hand_entered", 90), "506sports": ("official_aggregator", 70)}
+PARSER_VERSION = "adapters@b69f4f8"
 STREAM_TYPES = {"ESPN+", "ESPN Unlimited", "Peacock", "Paramount+", "HBO Max", "Prime Video", "Netflix", "Disney+", "Hulu", "Apple TV", "SEC Network+", "YouTube"}
 
 
@@ -54,12 +55,6 @@ def viewing_day(dt_utc: datetime, cutover_hour: int = 3):
     return (et - timedelta(days=1)).date() if et.hour < cutover_hour else et.date()
 
 
-def row_order_for(sport: str) -> list[str]:
-    ro = json.loads((ROOT / "data" / "row_order.json").read_text(encoding="utf-8")).get(sport) or {}
-    out = [b["network"] for b in ro.get("broadcast", [])] + ro.get("cable", []) + ro.get("conference", []) + ro.get("local", [])
-    return out + ro.get("streaming", [])
-
-
 def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
     fx = json.loads(path.read_text(encoding="utf-8"))
     meta = fx.get("validation") or {}
@@ -70,14 +65,13 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
     market = json.loads((ROOT / "data" / "markets.json").read_text(encoding="utf-8"))
     local_abbrevs = set(market.get(sport, {}).get("localTeams", []))
     market_id = market["market"]["id"]
-    order = row_order_for(sport)
     content_hash = hashlib.sha256(path.read_bytes()).hexdigest()
-    counts = {"games": 0, "broadcasts": 0, "odds": 0, "records": 0, "observations": 0, "team_refs": 0, "venues": 0}
+    counts = {"games": 0, "broadcasts": 0, "odds": 0, "records": 0, "observations": 0, "observations_seen": 0, "observations_closed": 0, "team_refs": 0, "venues": 0}
 
     # snapshot row for this fixture file (id retrieved live; in emit mode observations reference it by subquery)
     db.run("insert into source_snapshots (source_id, source_url, http_status, content_hash, content_type, storage_url, parser_version, parse_status) "
            "values (%s, %s, 200, %s, 'application/json', %s, %s, 'ok')",
-           (source_id, _rel(path), content_hash, f"fixtures/{sport}/{path.name}", "adapters@0d67eb4"), tag="source_snapshots")
+           (source_id, _rel(path), content_hash, f"fixtures/{sport}/{path.name}", PARSER_VERSION), tag="source_snapshots")
     snap_sub = f"(select id from source_snapshots where content_hash = '{content_hash}' order by id desc limit 1)"
 
     for g in fx.get("games", []):
@@ -101,40 +95,49 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
             m["outlet"] = normalize_outlet(m.get("outlet") or "")
         tbd = bool(g.get("startTimeTBD"))
         flex = bool((g.get("flags") or {}).get("isTBDFlex"))
-        available_tv = [m for m in media if m.get("mediaType") == "tv" and m.get("access") == "AVAILABLE"]
-        available_web = [m for m in media if m.get("mediaType") == "web" and m.get("access") in ("AVAILABLE", "UNKNOWN")]
-        primary = None
-        for name in order:
-            if any(m["outlet"] == name for m in available_tv):
-                primary = name; break
-        if primary is None and available_web:
-            primary = available_web[0]["outlet"]
-        state = ("time_and_network_tbd" if tbd and not media else "time_tbd" if tbd else "network_tbd" if not media and sport == "cfb" else "fully_assigned")
-        sched = "FLEX_PENDING" if flex else "TBD" if tbd else "FINAL"
         et = start.astimezone(ET)
+        # Milestone 2: the loader writes game IDENTITY only. Canonical kickoff/network/state and rights context are
+        # decided by pipeline/reconcile.py from the observations below (spec 6.1); a new game stays
+        # time_and_network_tbd until reconciled. game_date/viewing_day are seeded on insert and moved by the reconciler.
         game = {"id": gid, "sport": sport, "external_primary_id": gid.split("-", 1)[-1] if sport != "cfb" else gid, "season": g.get("season") or meta.get("year"),
                 "week": g.get("week"), "game_date": et.date(), "viewing_day": viewing_day(start),
-                "home_team_id": str(home["id"]), "away_team_id": str(away["id"]), "neutral_site": bool(g.get("neutralSite")),
-                "rights_controller_type": "league" if sport != "cfb" else "unknown",
-                "canonical_kickoff_at_utc": start, "canonical_kickoff_at_et": et, "kickoff_status": "tbd" if tbd else "set",
-                "kickoff_certainty": "tbd" if tbd else "flex" if flex else "definite", "schedule_certainty": sched,
-                "primary_network_id": slug(primary) if primary else None, "network_status": "assigned" if primary else ("tbd" if not media else "not_receivable"),
-                "network_certainty": "definite" if primary else "tbd", "canonical_state": state, "last_verified_at": datetime.now(timezone.utc)}
-        for m in media:   # normalize outlet spellings from older fixtures, then network stubs first: games.primary_network_id and game_broadcasts.service_id reference them
-            m["outlet"] = normalize_outlet(m.get("outlet") or "")
+                "home_team_id": str(home["id"]), "away_team_id": str(away["id"]), "neutral_site": bool(g.get("neutralSite"))}
+        for m in media:   # network stubs first: game_broadcasts.service_id references them
             outlet = m["outlet"]
             is_local_tba = (m.get("carriageCertainty") or "CONFIRMED") in ("UNANNOUNCED", "TBA_NO_RIGHTS_HOLDER")
             db.upsert("networks_services", [{"id": slug(outlet), "canonical_name": outlet, "type": "local_tba" if is_local_tba else ("streaming" if (m.get("mediaType") == "web" or outlet in STREAM_TYPES) else "linear_cable")}],
                       "id", [], tag="networks_services.stub")
-        db.upsert("games", [game], "id", [k for k in game if k not in ("id", "sport", "external_primary_id")], tag="games")
+        db.upsert("games", [game], "id", ["season", "week", "neutral_site"], tag="games")
         if venue_id_sub:
             db.run("update games set venue_id = (select id from venues where name = %s and city = '' limit 1) where id = %s", (venue_id_sub, gid), tag="games.venue")
         counts["games"] += 1
-        # observations: kickoff + each media row
-        db.run("insert into source_observations (source_id, game_id, snapshot_id, field_name, raw_value, normalized_value, authority_role, authority_score, claim_certainty, source_url_or_key, extraction_method, parser_version) "
-               f"values (%s, %s, {snap_sub}, 'kickoff_at', %s, %s, %s, %s, %s, %s, 'adapter', 'adapters@0d67eb4')",
-               (source_id, gid, g.get("startDate"), start.isoformat(), role, score, "tbd" if tbd else "flex" if flex else "definite", path.name), tag="source_observations")
-        counts["observations"] += 1
+
+        # ---- observations with supersession (spec 9.6 step 5, 9.13): a source that repeats itself bumps last_seen_at;
+        # a source that changes its claim gets a new row and valid_to on its old one; a broadcast row a source no longer
+        # lists is closed (valid_to) and its game_broadcasts row goes inactive. Nothing is deleted (spec 15.2).
+        active_rows = db.fetch("select id, source_id, field_name, normalized_value, claim_certainty from source_observations where game_id = %s and valid_to is null and field_name in ('kickoff_at', 'broadcast', 'local_carriage')", (gid,))
+        active: dict[tuple[str, str], dict[str, tuple[int, str]]] = {}     # (source, field) -> normalized_value -> (id, certainty)
+        for oid, osrc, ofield, oval, ocert in active_rows:
+            active.setdefault((osrc, ofield), {})[oval] = (int(oid), ocert)
+        seen_now: dict[tuple[str, str], set[str]] = {}
+
+        def observe(src: str, fieldn: str, raw: str | None, norm: str, label: str | None, orole: str, oscore: int, cert: str, key: str) -> None:
+            seen_now.setdefault((src, fieldn), set()).add(norm)
+            prior = active.get((src, fieldn), {}).get(norm)
+            if prior and prior[1] == cert:
+                db.run("update source_observations set last_seen_at = now(), seen_count = seen_count + 1 where id = %s", (prior[0],), tag="source_observations.seen")
+                counts["observations_seen"] += 1
+                return
+            if fieldn == "kickoff_at":   # single-valued field: every earlier active claim from this source is superseded
+                for oid, _ in active.get((src, fieldn), {}).values():
+                    db.run("update source_observations set valid_to = now() where id = %s and valid_to is null", (oid,), tag="source_observations.supersede")
+                    counts["observations_closed"] += 1
+            db.run("insert into source_observations (source_id, game_id, snapshot_id, field_name, raw_value, normalized_value, raw_label, authority_role, authority_score, claim_certainty, source_url_or_key, extraction_method, parser_version) "
+                   f"values (%s, %s, {snap_sub}, %s, %s, %s, %s, %s, %s, %s, %s, 'adapter', %s)",
+                   (src, gid, fieldn, raw, norm, label, orole, oscore, cert, key, PARSER_VERSION), tag="source_observations")
+            counts["observations"] += 1
+
+        observe(source_id, "kickoff_at", g.get("startDate"), start.isoformat(), None, role, score, "tbd" if tbd else "flex" if flex else "definite", path.name)
         for m in media:
             outlet = m.get("outlet") or ""
             sid = slug(outlet)
@@ -147,20 +150,30 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
             acc = ACCESS.get(m.get("access") or "UNKNOWN", "unknown")
             db.upsert("game_broadcasts", [{
                 "game_id": gid, "service_id": sid, "delivery_surface": "STREAMING" if m.get("mediaType") == "web" else "LINEAR",
-                "feed_side": feed, "is_primary": bool(primary and outlet == primary), "requires_auth": m.get("mediaType") == "web",
+                "feed_side": feed, "is_primary": False, "requires_auth": m.get("mediaType") == "web",
                 "access_status": acc, "carriage_certainty": certainty, "suppresses_local_feed": False,
                 "blackout_rule": "OUT_OF_MARKET" if acc == "out_of_market" else "NONE",
-                "market_id": market_id if mk in ("local", "regional") else None, "label": m.get("label"), "last_seen_at": datetime.now(timezone.utc)}],
-                "game_id, service_id, delivery_surface, feed_side", ["is_primary", "access_status", "carriage_certainty", "blackout_rule", "market_id", "label", "last_seen_at"], tag="game_broadcasts")
+                "market_id": market_id if mk in ("local", "regional") else None, "label": m.get("label"), "last_seen_at": datetime.now(timezone.utc), "active": True}],
+                "game_id, service_id, delivery_surface, feed_side", ["access_status", "carriage_certainty", "blackout_rule", "market_id", "label", "last_seen_at", "active"], tag="game_broadcasts")
             counts["broadcasts"] += 1
             src = m.get("source") or ""
-            obs_source, (obs_role, obs_score) = (("data/local_rights", SOURCE_META["data/local_rights"]) if src.startswith("data/local_rights")
-                                                 else ("data/local_rights", SOURCE_META["data/market_coverage"]) if "market_coverage" in src or src.startswith("market:")
-                                                 else (source_id, (role, score)))
-            db.run("insert into source_observations (source_id, game_id, snapshot_id, field_name, raw_value, normalized_value, raw_label, authority_role, authority_score, claim_certainty, source_url_or_key, extraction_method, parser_version) "
-                   f"values (%s, %s, {snap_sub}, 'broadcast', %s, %s, %s, %s, %s, %s, %s, 'adapter', 'adapters@0d67eb4')",
-                   (obs_source, gid, outlet, f"{sid}|{mk}|{certainty}", m.get("label"), obs_role, obs_score, "tbd" if is_local_tba else "definite", src), tag="source_observations")
-            counts["observations"] += 1
+            if src.startswith("data/local_rights"):          # synthesized local row: the outlet itself is hand-entered (spec 3.12)
+                observe("data/local_rights", "broadcast", outlet, f"{sid}|{mk}|{certainty}", m.get("label"), *SOURCE_META["data/local_rights"], "tbd" if is_local_tba else "definite", src)
+            else:                                             # the outlet claim belongs to the feed ...
+                observe(source_id, "broadcast", outlet, f"{sid}|{mk}|{certainty}", m.get("label"), role, score, "tbd" if is_local_tba else "definite", src)
+                if "market_coverage" in src or src.startswith("market:"):   # ... and the Cleveland-receives-it judgment is its own hand-entered claim (spec 9.13: 14-day horizon)
+                    cov_src = "506sports" if "market_coverage" in src else "data/local_rights"
+                    observe(cov_src, "local_carriage", outlet, f"{sid}|{market_id}|{acc}", None, *SOURCE_META[cov_src], "definite", src)
+        # close broadcast claims this source no longer makes, then deactivate broadcast rows with no active claim left
+        for (osrc, ofield), vals in active.items():
+            if ofield not in ("broadcast", "local_carriage") or (osrc, ofield) not in seen_now:
+                continue
+            for oval, (oid, _) in vals.items():
+                if oval not in seen_now[(osrc, ofield)]:
+                    db.run("update source_observations set valid_to = now() where id = %s and valid_to is null", (oid,), tag="source_observations.close")
+                    counts["observations_closed"] += 1
+        db.run("update game_broadcasts b set active = exists (select 1 from source_observations o where o.game_id = b.game_id and o.field_name = 'broadcast' and o.valid_to is null "
+               "and split_part(o.normalized_value, '|', 1) = b.service_id) where b.game_id = %s", (gid,), tag="game_broadcasts.active")
         od = g.get("odds")
         if od and od.get("spread") is not None:
             db.upsert("game_odds", [{"game_id": gid, "provider": od.get("provider") or "unknown", "spread": od.get("spread"), "total": od.get("overUnder"),

@@ -38,5 +38,7 @@ jobs:
       - run: python scripts/sync_assets.py --push
       - name: Reference data -> mysports.* (idempotent)
         run: python -m pipeline.bootstrap
-      - name: Load every fixture on disk
+      - name: Load every fixture on disk (evidence only)
         run: python -m pipeline.load --all --workflow bootstrap_season
+      - name: Reconcile canonical facts (Milestone 2 — every game)
+        run: python -m pipeline.reconcile --all --workflow bootstrap_season

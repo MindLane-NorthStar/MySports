@@ -53,8 +53,12 @@ jobs:
           done
       - name: Push new logos to R2
         run: python scripts/sync_assets.py --push --prefix logos/
-      - name: Load fixtures into mysports.* (Milestone 1 loader; Milestone 2 adds reconciliation)
+      - name: Load fixtures into mysports.* (evidence only — Milestone 1 loader)
         run: python -m pipeline.load --all --workflow schedule_refresh
+      - name: Reconcile canonical facts (Milestone 2 — games with new evidence)
+        run: python -m pipeline.reconcile --workflow schedule_refresh
+      - name: Unit tests (resolver)
+        run: python -m unittest tests.test_reconcile
       - name: Archive fixtures + raw payloads (private bucket)
         run: python scripts/sync_assets.py --push-data artifacts/validation --prefix fixtures/$(date -u +%Y-%m-%d)/
       - uses: actions/upload-artifact@v4

@@ -1,0 +1,43 @@
+{
+  "_about": "Authority rules for the reconciliation engine (spec 9.1-9.7, 9.13, 9.15). pipeline/resolver.py reads this file; every canonical_decisions row records rule_version. Edit here, bump rule_version, and re-run `python -m pipeline.reconcile --all` to re-decide every game under the new rules (old decisions stay in the table).",
+  "rule_version": "authority_rules_v1",
+
+  "fields": {
+    "kickoff_at": {
+      "_about": "spec 9.4 'Kickoff time'. Roles in descending authority. Roles absent from this list never decide the field.",
+      "roles": ["rights_controller", "broadcaster", "league_api", "host_school", "visitor_school", "structured_provider", "official_aggregator", "secondary_aggregator", "hand_entered"],
+      "staleness_days": null
+    },
+    "primary_network": {
+      "_about": "spec 9.4 'Primary television network'. Resolved from the LINEAR rows of the field 'broadcast' observations; streaming rows never become the primary (spec 9.11). hand_entered last: data/local_rights supplies a local carrier row only when no higher source lists a linear outlet.",
+      "roles": ["rights_controller", "broadcaster", "league_api", "host_school", "visitor_school", "structured_provider", "official_aggregator", "secondary_aggregator", "hand_entered"],
+      "staleness_days": 60
+    },
+    "local_carriage": {
+      "_about": "spec 9.13: local carrier attribution goes stale in 14 days and must be re-verified at every season boundary. Hand entry (data/local_rights.json, 506sports) outranks the feeds for THIS field only.",
+      "roles": ["hand_entered", "rights_controller", "broadcaster", "league_api", "structured_provider", "official_aggregator"],
+      "staleness_days": 14
+    }
+  },
+
+  "certainty_rank": {"definite": 4, "flex": 3, "choice_set": 2, "window": 2, "tbd": 1},
+
+  "rights_context": {
+    "_about": "spec 9.2. How games.rights_controller_type / rights_controller_id are filled. A source whose rights_scope (sources table) equals the game's rights_controller_id keeps the rights_controller role; any other source claiming rights_controller is demoted to 'corroboration_rank' for that game.",
+    "cfb": {"non_neutral": "home_conference", "neutral": "event_organizer", "independent_conference_ids": ["cfb-fbs-independents"], "independent": "independent_school"},
+    "nfl": "league", "nhl": "league", "nba": "league", "mlb": "league",
+    "demoted_role": "official_aggregator"
+  },
+
+  "primary_network_tiebreak": {
+    "_about": "Within the winning source, when it lists several linear outlets for one game: national feed before home/away local feeds, then rail order from data/row_order.json[sport].",
+    "feed_order": ["NATIONAL", "HOME", "AWAY"]
+  },
+
+  "eligibility": {
+    "_about": "spec 10. Which game_broadcasts.access_status values make profile 1 eligible, and the reason label recorded when the only path is a carrier-TBA local row.",
+    "eligible_access": ["available"],
+    "conditional_access": ["conditional"],
+    "local_tba_reason": "local feed - carrier TBA"
+  }
+}
