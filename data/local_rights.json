@@ -21,8 +21,9 @@
     "outlet": "WUAB 43",
     "surface": "tv",
     "expectedCount": 15,
-    "note": "15 games per season free on DAZN and simulcast OTA on WUAB 43; the schedule is announced in-season, possibly piecemeal - the weekly research task watches cavs.com/dazn and RESN/WUAB announcements and Joe hand-enters games here",
-    "games": []
+    "note": "15 games per season free on DAZN and simulcast OTA on WUAB 43. The partner is hand-entered on Joe's authority (2026-09-01); the club's public announcement of partner and schedule is pending ('communicated at a later date') and the weekly research watch covers it. Games are hand-entered here as announced - no WUAB row is emitted until dated games exist below.",
+    "games": [],
+    "confirmed": "Joe, 2026-09-01 (hand-entered authority; public announcement pending)"
    }
   }
  }

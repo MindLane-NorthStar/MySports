@@ -199,6 +199,19 @@ OUTLET_ALIASES = {
     "TruTV": "truTV", "SN": "Sportsnet", "SNP": "Sportsnet", "SNO": "Sportsnet", "SNE": "Sportsnet", "SNW": "Sportsnet",
     "TVAS": "TVA Sports", "CBC": "CBC", "ESPN Deportes": "ESPN Deportes",
     "WUAB": "WUAB 43", "WUAB-43": "WUAB 43", "Cleveland's 43": "WUAB 43", "Cavaliers on DAZN": "DAZN", "DAZN 1": "DAZN",
+    # MLB raw spellings (docs/research/mlb-adapter-brief.md 3.1-3.2); opponent RSNs pass through verbatim
+    "Guardians.TV Presented by Progressive": "Guardians TV",
+    "CLEGuardians.TV": "Guardians TV",
+    "MLBN": "MLB Network",
+    "ESPN/ESPN App": "ESPN",
+    "ABC/ESPN App": "ABC",
+    "NBC/Peacock": "NBC",
+    "Peacock/NBCSN": "Peacock",
+    "Peacock / NBCSN Extra": "Peacock",
+    "FOX / FOX ONE": "FOX",
+    "TBS (out-of-market only)": "TBS",
+    "FOX / FS1": "FOX",
+    "WKYC 3": "NBC",
 }
 
 

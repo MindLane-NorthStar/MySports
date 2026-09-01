@@ -81,6 +81,19 @@ def _tid(sport: str, value: str | None):
     return int(value) if sport == "cfb" and value.isdigit() else value
 
 
+def _details(spread, home_abbr, away_abbr):
+    """Rebuild the adapter's odds 'details' string ("JAX -7.5") that render_day.py displays (line ~415).
+    game_odds stores no details column, but the spread is home-relative (negative = home favored), so the
+    favorite and line are exactly derivable. 0 renders as "PK"."""
+    if spread is None or not home_abbr or not away_abbr:
+        return None
+    s = float(spread)
+    if s == 0:
+        return "PK"
+    fav, line = (home_abbr, s) if s < 0 else (away_abbr, -s)
+    return f"{fav} {line:g}"
+
+
 def _market(feed_side: str | None, market_id: str | None) -> str:
     if feed_side in ("HOME", "AWAY"):
         return "local"
@@ -142,6 +155,7 @@ def build(db: DB, sport: str, *, date: str | None, week: int | None, year: int) 
             o = odds.get(gid)
             g["odds"] = None if o is None else {
                 "provider": o[1],
+                "details": _details(o[2], habbr, aabbr),
                 "spread": float(o[2]) if o[2] is not None else None,
                 "overUnder": float(o[3]) if o[3] is not None else None,
                 "moneylineHome": o[4], "moneylineAway": o[5], "fetchedAt": _iso(o[6]),

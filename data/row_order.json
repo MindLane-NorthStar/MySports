@@ -143,5 +143,40 @@
    "ESPN+"
   ]
  },
- "_ordering_note": "Station ordering rule (Joe, 2026-09-01): when WOIO 19, WUAB 43 and The CW/WBNX 55 share a grid, the order is WOIO 19 -> WUAB 43 -> WBNX 55 (channel order). WUAB 43 carries the OTA Cavs simulcasts (decision 7)."
+ "_ordering_note": "Station ordering rule (Joe, 2026-09-01): when WOIO 19, WUAB 43 and The CW/WBNX 55 share a grid, the order is WOIO 19 -> WUAB 43 -> WBNX 55 (channel order). WUAB 43 carries the OTA Cavs simulcasts (decision 7).",
+ "mlb": {
+  "broadcast": [
+   {
+    "network": "NBC",
+    "station": "WKYC",
+    "channel": 3
+   },
+   {
+    "network": "FOX",
+    "station": "WJW",
+    "channel": 8
+   },
+   {
+    "network": "ABC",
+    "station": "WEWS",
+    "channel": 5
+   }
+  ],
+  "cable": [
+   "Guardians TV",
+   "ESPN",
+   "FS1",
+   "TBS",
+   "truTV",
+   "MLB Network"
+  ],
+  "conference": [],
+  "local": [],
+  "streaming": [
+   "Apple TV",
+   "Peacock",
+   "HBO Max",
+   "Netflix"
+  ]
+ }
 }

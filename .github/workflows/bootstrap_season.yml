@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       season: { description: "Season start year", required: true, default: "2026" }
-      sports: { description: "Comma list: cfb,nfl,nhl,nba,mlb", required: true, default: "cfb,nfl,nhl,nba" }
+      sports: { description: "Comma list: cfb,nfl,nhl,nba,mlb", required: true, default: "cfb,nfl,nhl,nba,mlb" }
 jobs:
   bootstrap:
     runs-on: ubuntu-latest
@@ -32,7 +32,7 @@ jobs:
               nfl) python -m adapters.espn --league nfl --teams-only ;;
               nhl) python -m adapters.nhl --date $(TZ=America/New_York date +%F) --all-logos ;;
               nba) python -m adapters.nba --date $(TZ=America/New_York date +%F) --all-logos ;;
-              mlb) echo "mlb adapter: Milestone 8 part 3" ;;
+              mlb) python -m adapters.mlb --date $(TZ=America/New_York date +%F) --teams --all-logos ;;
             esac
           done
       - run: python scripts/sync_assets.py --push

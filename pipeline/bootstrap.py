@@ -27,7 +27,12 @@ ALIASES = {"CBS": ["CBS Sports"], "The CW": ["CW", "The CW Network"], "USA Netwo
            "CBS Sports Network": ["CBSSN"], "FS1": ["FOX Sports 1"], "FS2": ["FOX Sports 2"], "ESPN+": ["ESPN Plus"],
            "Paramount+": ["Paramount Plus"], "HBO Max": ["Max", "HBO MAX", "MAX"], "Prime Video": ["Amazon Prime Video", "Prime", "Amazon"],
            "Hulu": ["HULU"], "NFL Network": ["NFL Net", "NFLN"], "truTV": ["TruTV"],
-           "DAZN": ["Cavaliers on DAZN", "DAZN 1"], "WUAB 43": ["WUAB", "WUAB-43", "Cleveland's 43"]}
+           "DAZN": ["Cavaliers on DAZN", "DAZN 1"], "WUAB 43": ["WUAB", "WUAB-43", "Cleveland's 43"],
+           # MLB raw spellings (docs/research/mlb-adapter-brief.md 3.1-3.2); opponent RSNs pass through verbatim
+           "Guardians TV": ["Guardians.TV Presented by Progressive", "CLEGuardians.TV"],
+           "MLB Network": ["MLBN"], "ESPN": ["ESPN/ESPN App"], "ABC": ["ABC/ESPN App"],
+           "NBC": ["NBC/Peacock", "WKYC 3"], "Peacock": ["Peacock/NBCSN", "Peacock / NBCSN Extra"],
+           "FOX": ["FOX / FOX ONE", "FOX / FS1"], "TBS": ["TBS (out-of-market only)"]}
 
 
 def load_json(p: Path) -> Any:

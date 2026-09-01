@@ -1,0 +1,4 @@
+{
+ "_about": "Cleveland coverage for MLB regional windows, hand-entered (FOX Saturday 7:15 carries 2-3 simultaneous regional games, all labeled FOX/FOX ONE - mlb-adapter-brief 8.1). Keyed by date then gamePk or AWAY@HOME; cleveland true/false. Any Saturday with a Guardians game resolves itself (the local team's feed is AVAILABLE by rule).",
+ "weeks": {}
+}

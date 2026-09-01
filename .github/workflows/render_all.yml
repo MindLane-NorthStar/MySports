@@ -41,7 +41,7 @@ jobs:
         run: |
           set -e
           D=${{ steps.when.outputs.date }}
-          for S in nhl nba nfl; do
+          for S in nhl nba nfl mlb; do
             F="artifacts/validation/db_${S}_${D}_fixture.json"
             N=$(python -m pipeline.render_feed --sport $S --date $D --out "$F" | head -1 | awk '{print $3}')
             echo "$S: ${N:-0} game(s) in the database for $D"
