@@ -4,3 +4,6 @@
 
 # generated validation/rendering artifacts (regenerable; fixtures promoted to tests/ when needed)
 artifacts/
+
+# python bytecode
+__pycache__/
