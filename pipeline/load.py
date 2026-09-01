@@ -58,6 +58,10 @@ def viewing_day(dt_utc: datetime, cutover_hour: int = 3):
 def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
     fx = json.loads(path.read_text(encoding="utf-8"))
     meta = fx.get("validation") or {}
+    if (meta.get("source") or "") == "mysports-db":
+        # render_feed output is the database speaking, not evidence; loading it would rank the DB against itself
+        print(f"{path.name}: skipped (mysports-db feed is renderer output, not evidence)")
+        return {}
     sport = meta.get("sport") or "cfb"
     source_id = SOURCE_ID.get(meta.get("source") or "", "cfbd" if sport == "cfb" else "espn.scoreboard")
     role, score = SOURCE_META.get(source_id, ("structured_provider", 50))
@@ -212,11 +216,11 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--fixture", action="append", help="fixture file (repeatable)")
-    g.add_argument("--all", action="store_true", help="every *_fixture.json under artifacts/validation (samples/ excluded)")
+    g.add_argument("--all", action="store_true", help="every *_fixture.json under artifacts/validation (samples/ and db_* renderer feeds excluded)")
     ap.add_argument("--emit-sql", metavar="FILE")
     ap.add_argument("--workflow", default="cowork")
     args = ap.parse_args(argv)
-    files = [Path(f) for f in args.fixture] if args.fixture else sorted((ROOT / "artifacts" / "validation").glob("*_fixture.json"))
+    files = [Path(f) for f in args.fixture] if args.fixture else sorted(f for f in (ROOT / "artifacts" / "validation").glob("*_fixture.json") if not f.name.startswith("db_"))
     db = DB(args.emit_sql)
     totals: dict[str, int] = {}
     run_id = None
