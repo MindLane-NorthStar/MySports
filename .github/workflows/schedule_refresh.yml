@@ -1,0 +1,71 @@
+# MySports — scheduled refresh (deployment contract v1.0 §5; spec §15.1)
+# Mon/Wed/Fri 11:00 UTC = 07:00 EDT / 06:00 EST, plus manual dispatch. Inert until the repository secrets exist.
+name: schedule_refresh
+on:
+  schedule:
+    - cron: "0 11 * * 1,3,5"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Anchor viewing day (YYYY-MM-DD, ET). Default: today."
+        required: false
+concurrency: { group: mysports-refresh, cancel-in-progress: false }
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      date: ${{ steps.when.outputs.date }}
+    env:
+      CFBD_API_KEY: ${{ secrets.CFBD_API_KEY }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET_ASSETS: mysports-assets
+      R2_BUCKET_DATA: mysports-data
+      MYSPORTS_MARKET: cleveland
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - name: Resolve anchor date (ET) and CFBD week
+        id: when
+        env: { INPUT_DATE: "${{ github.event.inputs.date }}" }
+        run: |
+          D="$INPUT_DATE"; if [ -z "$D" ]; then D=$(TZ=America/New_York date +%F); fi
+          echo "date=$D" >> "$GITHUB_OUTPUT"
+          echo "cfb_week=$(D=$D python -c "import os,datetime as d;t=d.date.fromisoformat(os.environ['D']);print(max(1,(t-d.date(2026,9,1)).days//7+1))")" >> "$GITHUB_OUTPUT"
+      - name: Pull asset cache from R2
+        run: python scripts/sync_assets.py --pull
+      - name: CFB (CFBD)
+        run: python -m adapters.cfbd --week ${{ steps.when.outputs.cfb_week }} --teams
+      - name: NFL (ESPN) — the coming Sunday's week
+        run: python -m adapters.espn --league nfl --date $(python -c "import datetime as d;t=d.date.fromisoformat('${{ steps.when.outputs.date }}');print((t+d.timedelta((6-t.weekday())%7)).isoformat())")
+      - name: NHL — 7-day window
+        run: python -m adapters.nhl --date ${{ steps.when.outputs.date }}
+      - name: NBA — next 7 viewing days (ESPN source until the league file is reachable from a runner)
+        run: |
+          for i in 0 1 2 3 4 5 6; do
+            python -m adapters.nba --date $(python -c "import datetime as d;print((d.date.fromisoformat('${{ steps.when.outputs.date }}')+d.timedelta($i)).isoformat())") --no-logos || exit 1
+          done
+      - name: Push new logos to R2
+        run: python scripts/sync_assets.py --push --prefix logos/
+      # Milestone 2: load fixtures into mysports.* through SUPABASE_DB_URL and write mysports.refresh_runs (spec §16).
+      # - run: python -m pipeline.load --run-workflow schedule_refresh
+      - name: Archive fixtures + raw payloads (private bucket)
+        run: python scripts/sync_assets.py --push-data artifacts/validation --prefix fixtures/$(date -u +%Y-%m-%d)/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-${{ steps.when.outputs.date }}
+          path: artifacts/validation
+          retention-days: 14
+  render:
+    needs: refresh
+    uses: ./.github/workflows/render_all.yml
+    secrets: inherit
+    with:
+      date: ${{ needs.refresh.outputs.date }}

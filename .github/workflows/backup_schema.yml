@@ -1,0 +1,30 @@
+# MySports — weekly schema dump to the private bucket (deployment contract v1.0 D9). Sundays 12:00 UTC.
+name: backup_schema
+on:
+  schedule:
+    - cron: "0 12 * * 0"
+  workflow_dispatch:
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET_DATA: mysports-data
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install boto3
+      - name: pg_dump the mysports schema (postgres 17 client to match the server)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17 >/dev/null || sudo apt-get install -y -qq postgresql-client >/dev/null
+          F=mysports_$(date -u +%F).sql.gz
+          pg_dump "$SUPABASE_DB_URL" --schema=mysports --no-owner --no-privileges | gzip -9 > "$F"
+          ls -la "$F"
+          echo "file=$F" >> "$GITHUB_ENV"
+      - name: Upload and prune to 8
+        run: python scripts/sync_assets.py --push-data "$file" --prefix backups/ --keep 8

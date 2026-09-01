@@ -1,0 +1,61 @@
+# MySports — render the viewing day(s) and publish grids to R2 (deployment contract v1.0 §5; contract §11)
+# Daily 09:30 UTC in season (05:30 EDT), after a successful refresh, or manual. Inert until secrets exist.
+name: render_all
+on:
+  schedule:
+    - cron: "30 9 * 9,10,11,12,1,2 *"
+  workflow_dispatch:
+    inputs:
+      date: { description: "Viewing day (YYYY-MM-DD, ET). Default: today.", required: false }
+  workflow_call:
+    inputs:
+      date: { type: string, required: false }
+concurrency: { group: mysports-render, cancel-in-progress: true }
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET_ASSETS: mysports-assets
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt cairosvg   # cairosvg installs cleanly on ubuntu-latest (the Windows problem does not apply here)
+      - name: Fonts for rasterization
+        run: mkdir -p ~/.fonts && python scripts/sync_assets.py --pull --prefix fonts/ && cp assets/fonts/*.ttf ~/.fonts/ && fc-cache -f
+      - name: Pull logos + network marks
+        run: python scripts/sync_assets.py --pull
+      - name: Resolve date
+        id: when
+        run: |
+          D="${{ inputs.date || github.event.inputs.date }}"
+          if [ -z "$D" ]; then D=$(TZ=America/New_York date +%F); fi
+          echo "date=$D" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: validation-*
+          path: artifacts/validation
+          merge-multiple: true
+      - name: Render every in-season sport that has a fixture for the day
+        run: |
+          set -e
+          D=${{ steps.when.outputs.date }}
+          for S in nhl nba nfl; do
+            if ls artifacts/validation/${S}_*_${D}_fixture.json >/dev/null 2>&1; then
+              python scripts/render_day.py --sport $S --date $D --png --export
+            fi
+          done
+          # CFB: Saturday renders from the current week's fixture (the file name carries the week, not the date)
+          if [ "$(date -d $D +%u)" = "6" ] && ls artifacts/validation/cfbd_*_week*_fixture.json >/dev/null 2>&1; then
+            W=$(ls artifacts/validation/cfbd_*_week*_fixture.json | sed -E 's/.*week([0-9]+)_fixture.json/\1/' | sort -n | tail -1)
+            python scripts/render_day.py --week $W --date $D --png --export
+          fi
+      - name: Publish grids to R2 (last-known-good stays if a render is missing — uploads are per file)
+        run: python scripts/sync_assets.py --push-grids artifacts/rendering
+      # Milestone 2/4: insert mysports.generated_grids rows (render_hash, urls) — spec §7.12, §12

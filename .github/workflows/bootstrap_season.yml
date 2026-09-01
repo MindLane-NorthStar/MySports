@@ -1,0 +1,39 @@
+# MySports — season bootstrap (spec §17). Manual only.
+name: bootstrap_season
+on:
+  workflow_dispatch:
+    inputs:
+      season: { description: "Season start year", required: true, default: "2026" }
+      sports: { description: "Comma list: cfb,nfl,nhl,nba,mlb", required: true, default: "cfb,nfl,nhl,nba" }
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CFBD_API_KEY: ${{ secrets.CFBD_API_KEY }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET_ASSETS: mysports-assets
+      R2_BUCKET_DATA: mysports-data
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - name: Teams + logos for every requested sport
+        run: |
+          IFS=, read -ra SP <<< "${{ github.event.inputs.sports }}"
+          for S in "${SP[@]}"; do
+            case $S in
+              cfb) python -m adapters.cfbd --week 1 --teams ;;
+              nfl) python -m adapters.espn --league nfl --teams-only ;;
+              nhl) python -m adapters.nhl --date $(TZ=America/New_York date +%F) ;;
+              nba) python -m adapters.nba --date $(TZ=America/New_York date +%F) ;;
+              mlb) echo "mlb adapter: Milestone 8 part 3" ;;
+            esac
+          done
+      - run: python scripts/sync_assets.py --push
+      # Milestone 1: python -m pipeline.bootstrap --season ${{ github.event.inputs.season }}  (teams, conferences, venues, rivalries -> mysports.*)

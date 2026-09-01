@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MySports — day grid renderer, design v1.5 (Phase 4: multi-sport plumbing on the v1.4 contract).
+"""MySports — day grid renderer, design v1.6 (Phase 4: multi-sport plumbing + Around the League strip on the v1.4 contract).
 
 Renders one calendar day of college football as SVG (canonical) and optionally PNG,
 from the CFBD validation fixture + enrichment probe + cached assets. Run from the repo root:
@@ -92,6 +92,30 @@ else:
     ARGS.games_raw = ARGS.games_raw or "/nonexistent"     # pro fixtures carry the venue inline
 ARGS.fixture = ARGS.fixture or f"{_PFX}_fixture.json"
 ARGS.enrichment = ARGS.enrichment or f"{_PFX}_enrichment.json"
+if SPORT != "cfb" and ARGS.out == "artifacts/rendering":      # v1.6: one folder per sport so grid_{date}.svg never collides across leagues
+    ARGS.out = f"artifacts/rendering/{SPORT}"
+# v1.6: asset fallback — a logo/mark missing from the local cache is fetched once from the R2 bucket (deployment contract §3)
+import os as _os, urllib.request as _ur
+def _load_dotenv_value(key):
+    if _os.getenv(key): return _os.getenv(key)
+    p = Path(".env")
+    if p.exists():
+        for line in p.read_text(encoding="utf-8").splitlines():
+            if line.strip().startswith(key + "="):
+                return line.split("=", 1)[1].strip().strip('"').strip("'")
+    return None
+ASSET_BASE_URL = (_load_dotenv_value("ASSET_BASE_URL") or "").rstrip("/")
+def asset_fallback(local_path, key):
+    """Fetch {ASSET_BASE_URL}/{key} into the cache when the local file is missing. Silent on failure (render proceeds without the mark)."""
+    if local_path.exists() or not ASSET_BASE_URL: return local_path.exists()
+    try:
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        with _ur.urlopen(_ur.Request(f"{ASSET_BASE_URL}/{key}", headers={"User-Agent": "MySports-renderer"}), timeout=20) as r:
+            data = r.read()
+        if data: local_path.write_bytes(data); return True
+    except Exception:
+        pass
+    return False
 CAP_STYLE = "gradient"  # contract: gradient endcaps (solid rejected 2026-08-31)
 EXPORT_SCALE = 2.0      # contract §8: download PNG is @2x of the SVG coordinate space
 ET = ZoneInfo("America/New_York")
@@ -282,6 +306,8 @@ def net_logo(name, dark=False, chip=False):
     if key not in NLOGO:
         p = Path(ARGS.network_logos) / f"{slug}.png"
         psvg = Path(ARGS.network_logos) / f"{slug}.svg"
+        if not (p.exists() or psvg.exists()):
+            asset_fallback(p, f"network-logos/{slug}.png"); asset_fallback(psvg, f"network-logos/{slug}.svg")
         if chip and psvg.exists():          # v1.3: vector wordmarks for chips when available (inline nested <svg>)
             tmpl, asp = svg_chip_mark(psvg, slug)
             NLOGO[key] = ("svg:" + tmpl, asp, "" if slug in ("espn-plus",) else NET_SUFFIX.get(slug, ""))
@@ -300,6 +326,7 @@ LOGO = {}
 def logo_uri(tid):
     if tid not in LOGO:
         p = Path(ARGS.logos) / f"{tid}.png"
+        asset_fallback(p, f"logos/{tid}.png")
         if p.exists():
             im = _Img.open(p).convert("RGBA"); im.thumbnail((64,64))
             buf = io.BytesIO(); im.save(buf, "PNG")
@@ -475,8 +502,13 @@ TBD_COLS = max(1, int((W - 2*PAD_X + TBD_GAP) // (TBD_CARD_W + TBD_GAP)))
 TBD_H = 0
 if tbd_groups:
     TBD_H = TBD_HEAD + sum(TBD_GROUP_HEAD + math.ceil(len(gs)/TBD_COLS)*TBD_ROW + 12 for _,_,gs in tbd_groups)
+# v1.6 — Around the League strip (contract §11.8 / spec §3.12): pro-league games the market does not receive,
+# one muted line each below the TBD section. Never for CFB (its omitted games keep the footer pill).
+ATL = sorted(omitted, key=lambda g: (g["dt"], g["h"]["team"])) if PRO else []
+ATL_HEAD, ATL_LINE = 54, 20
+ATL_H = (ATL_HEAD + len(ATL)*ATL_LINE + 14) if ATL else 0
 FOOT_H = 34
-H = PAD_T + GRID_H + TBD_H + FOOT_H + PAD_B
+H = PAD_T + GRID_H + TBD_H + ATL_H + FOOT_H + PAD_B
 xof = lambda dt: LABEL_W + (dt-t0).total_seconds()/60*PX
 
 # ----------------------------------------------------------------------------- header + legend
@@ -972,6 +1004,24 @@ if tbd_groups:
             draw_card(g, cx-1, cy-4, TBD_CARD_W, TBD_ROW, prim_text=txt)
         y += math.ceil(len(gs)/TBD_COLS)*TBD_ROW + 12
 
+# ----------------------------------------------------------------------------- Around the League strip (v1.6, contract §11.8)
+if ATL:
+    y += 26
+    mk_name = str(FX_META.get("market", "Cleveland")).split(" (")[0]
+    svg.append(f'<text x="{PAD_X}" y="{y+8}" font-size="18" font-weight="700" font-family="{BC}" fill="#9aa2a8" letter-spacing="0.4">{E(f"AROUND THE LEAGUE — {len(ATL)} GAMES NOT RECEIVED IN {mk_name.upper()}")}</text>')
+    svg.append(f'<text x="{PAD_X}" y="{y+26}" font-size="11" fill="#6F767D">every game the league scheduled today is listed · the reason is a stated fact from the adapter, never a guess · expandable in the web app</text>')
+    svg.append(f'<line x1="{PAD_X}" y1="{y+34}" x2="{W-PAD_X}" y2="{y+34}" stroke="#FFFFFF" stroke-opacity="0.10"/>')
+    y += ATL_HEAD
+    col_time, col_game, col_outlet = PAD_X, PAD_X + 72, PAD_X + 72 + 300
+    for g in ATL:
+        outs = " / ".join(o for o in g["outlets"]) or "no U.S. telecast listed"
+        svg.append(f'<text x="{col_time}" y="{y+12}" font-size="11" font-weight="600" fill="#848C93">{E(clock(g["dt"]))}</text>')
+        svg.append(f'<text x="{col_game}" y="{y+12}" font-size="11.5" font-weight="600" fill="#B4BAC0">{E(g["a"]["team"] + " @ " + g["h"]["team"])}</text>')
+        svg.append(f'<text x="{col_outlet}" y="{y+12}" font-size="11" fill="#848C93">{E(outs)}</text>')
+        svg.append(f'<text x="{W-PAD_X}" y="{y+12}" font-size="10.5" fill="#6F767D" text-anchor="end">{E(g.get("reason", "not on your services"))}</text>')
+        y += ATL_LINE
+    y += 14
+
 # ----------------------------------------------------------------------------- footer (v1.4 status bar)
 y += 10
 fx = PAD_X
@@ -991,10 +1041,8 @@ if tbd: foot_pill(f"{len(tbd)} KICKOFF / NETWORK TBA", glyph="tba")
 if omitted and not PRO:
     outs = sorted({o for g in omitted for o in g["outlets"]})
     foot_pill(f"{len(omitted)} NOT ON YOUR SERVICES · {', '.join(outs)}", ink="#9aa2a8", glyph="omit")
-elif omitted:   # v1.5 pro leagues: stated reasons, counted — the Around the League strip (§11.8) replaces this pill in v1.6
-    from collections import Counter as _C
-    reasons = _C(g.get("reason", "not on your services") for g in omitted)
-    foot_pill(f"{len(omitted)} AROUND THE LEAGUE · " + " · ".join(f"{n} {r}" for r, n in reasons.most_common()), ink="#9aa2a8", glyph="omit")
+elif omitted:   # v1.6 pro leagues: the strip above carries the reasons; the pill is the count
+    foot_pill(f"{len(omitted)} AROUND THE LEAGUE · LISTED ABOVE", ink="#9aa2a8", glyph="omit")
 svg.append(f'<text x="{fx+6}" y="{y+14}" font-size="10.5" fill="#6F767D">every game is kept in the database — nothing is deleted · {E(sub.split(" · data: ")[1]) if " · data: " in sub else ""}</text>')
 svg.append('</svg>')
 
@@ -1003,7 +1051,7 @@ out_dir = Path(ARGS.out); out_dir.mkdir(parents=True, exist_ok=True)
 svg_path = out_dir / f"grid_{TARGET}.svg"
 svg_path.write_text("\n".join(svg), encoding="utf-8")
 for gname, dropped in DROP_LOG: print(f"  tray drop: {gname}: {dropped}")
-print(f"v1.5 [{SPORT}]: {len(day)} on grid · {len(tbd)} TBA · {len(omitted)} omitted · {W:.0f}x{H:.0f} -> {svg_path}"
+print(f"v1.6 [{SPORT}]: {len(day)} on grid · {len(tbd)} TBA · {len(omitted)} omitted · {W:.0f}x{H:.0f} -> {svg_path}"
       + (" · enrichment loaded" if ENR else " · NO enrichment") + (" · MOCK" if USE_MOCK else ""))
 if ARGS.png or ARGS.export:
     try:

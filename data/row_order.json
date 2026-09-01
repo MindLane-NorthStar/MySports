@@ -112,5 +112,32 @@
    "Hulu",
    "HBO Max"
   ]
+ },
+ "nba": {
+  "broadcast": [
+   {
+    "network": "ABC",
+    "station": "WEWS",
+    "channel": 5
+   },
+   {
+    "network": "NBC",
+    "station": "WKYC",
+    "channel": 3
+   }
+  ],
+  "cable": [
+   "ESPN",
+   "ESPN2"
+  ],
+  "conference": [],
+  "local": [
+   "CAVS LOCAL"
+  ],
+  "streaming": [
+   "Peacock",
+   "Prime Video",
+   "ESPN+"
+  ]
  }
 }
