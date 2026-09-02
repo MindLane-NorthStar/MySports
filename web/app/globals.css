@@ -1289,3 +1289,58 @@ input:focus-visible {
   color: var(--gold);
   border-color: rgba(240, 200, 80, 0.45);
 }
+
+/* ---- banner + navbar (design session 2026-09-02) */
+/* ================================================================ MAIN BANNER (home page) */
+.banner{position:relative;overflow:hidden;border-bottom:1px solid var(--line-soft);
+  background:radial-gradient(90% 130% at 50% 10%,#3B3B3B 0%,#262626 55%,#161616 100%)}
+.bn-pc{position:relative}
+.bn-pc .scatter{display:block;width:100%;max-width:1400px;height:auto;margin:0 auto}
+.bn-title{position:absolute;left:0;right:0;top:0;text-align:center;z-index:3;pointer-events:none}
+.wordmark{font-family:var(--display);font-weight:700;line-height:1;letter-spacing:.04em;text-transform:uppercase;color:#fff;white-space:nowrap;
+  text-shadow:0 0 2px #F0C850,0 0 10px rgba(240,200,80,.55),0 2px 6px rgba(0,0,0,.8)}
+.wordmark b{font-weight:700;color:var(--gold);text-shadow:0 0 10px rgba(240,200,80,.6),0 2px 6px rgba(0,0,0,.8)}
+.bn-pc .wordmark{font-size:56px;padding-top:16px}
+.bnsub{font-family:var(--display);font-weight:600;text-transform:uppercase;color:var(--dim);white-space:nowrap;
+  text-shadow:0 1px 4px rgba(0,0,0,.9)}
+.bn-pc .bnsub{font-size:15px;letter-spacing:.32em;margin-top:8px;padding-left:.32em}
+.bn-mobile{display:none;position:relative}
+.bn-mobile .scatter{display:block;width:100%;height:auto}
+.bn-mobile .wordmark{font-size:40px;padding-top:12px}
+.bn-mobile .bnsub{font-size:11px;letter-spacing:.2em;margin-top:6px;padding-left:.2em}
+.slot rect{opacity:.7}
+@media (max-width:699px){.bn-pc{display:none}.bn-mobile{display:block}}
+/* forced modes for the review frames */
+.force-mobile .bn-pc{display:none}.force-mobile .bn-mobile{display:block}
+
+/* ================================================================ NAVBAR BANNER (subpages) */
+.navbar{position:relative;display:flex;align-items:center;gap:22px;height:60px;padding:0 22px;
+  background:linear-gradient(180deg,#2A2A2A 0%,#1C1C1C 100%);border-bottom:1px solid var(--line-soft);
+  box-shadow:0 2px 10px rgba(0,0,0,.45)}
+.nb-brand{display:flex;align-items:center;gap:12px;flex:0 0 auto}
+.nb-tv{height:44px;width:auto;filter:drop-shadow(0 2px 4px rgba(0,0,0,.7))}
+.nb-wm{font-size:26px;letter-spacing:.05em}
+.nb-nav{display:flex;gap:4px;margin-left:8px}
+.nb-nav a{font-family:var(--display);font-weight:600;font-size:18px;letter-spacing:.08em;text-transform:uppercase;padding:18px 14px 15px;color:var(--dim);border-bottom:3px solid transparent}
+.nb-nav a.on{color:var(--ink);border-bottom-color:var(--gold)}
+.nb-ctx{margin-left:auto;display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.nb-ctx b{color:var(--gold);font-weight:600}
+.nb-ctx .pill{padding:3px 9px 2px;border:1px solid var(--gold-dim);border-radius:3px;color:var(--gold);font-size:12px;letter-spacing:.12em}
+.nb-ctx .muted{font-family:var(--body);font-size:12px;letter-spacing:.02em;text-transform:none;color:var(--faint)}
+.navbar.mobile{height:50px;padding:0 12px;gap:10px}
+.navbar.mobile .nb-tv{height:34px}
+.navbar.mobile .nb-wm{font-size:21px}
+.navbar.mobile .nb-nav{margin-left:auto;gap:0}
+.navbar.mobile .nb-nav a{font-size:14px;padding:16px 8px 13px;letter-spacing:.06em}
+.navbar.mobile .nb-ctx{display:none}
+.navbar.mobile.ctx .nb-nav{display:none}
+.navbar.mobile.ctx .nb-ctx{display:flex;margin-left:auto;font-size:13px}
+@media (max-width:699px){
+  .navbar:not(.mobile){height:50px;padding:0 12px;gap:10px}
+  .navbar:not(.mobile) .nb-tv{height:34px}
+  .navbar:not(.mobile) .nb-wm{font-size:21px}
+  .navbar:not(.mobile) .nb-nav{margin-left:auto;gap:0}
+  .navbar:not(.mobile) .nb-nav a{font-size:14px;padding:16px 8px 13px;letter-spacing:.06em}
+  .navbar:not(.mobile) .nb-ctx{display:none}
+}
+

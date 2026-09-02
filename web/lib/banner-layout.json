@@ -1,551 +1,553 @@
 {
- "pc": {
-  "w": 1400,
-  "h": 280,
-  "tv": {
-   "cx": 700,
-   "cy": 193,
-   "h": 172,
-   "href": "/brand/tv-cutout.png"
+  "pc": {
+    "w": 1400,
+    "h": 280,
+    "tv": {
+      "cx": 700,
+      "cy": 193,
+      "h": 172,
+      "href": "/brand/tv-cutout.png",
+      "ar": 0.9514
+    },
+    "title": {
+      "y": 60,
+      "size": 56,
+      "ls": 2.24
+    },
+    "sub": {
+      "y": 94,
+      "size": 15,
+      "ls": 4.8
+    },
+    "subhead": "EVERY GAME. EVERY CHANNEL. ONE PLACE.",
+    "marks": [
+      {
+        "slug": "nfl",
+        "kind": "league",
+        "cx": 560,
+        "cy": 150,
+        "h": 64,
+        "href": "/leagues/nfl_dark.png",
+        "ar": 0.7305,
+        "pending": false
+      },
+      {
+        "slug": "cfp",
+        "kind": "league",
+        "cx": 700,
+        "cy": 124,
+        "h": 40,
+        "href": "/leagues/cfp_dark.png",
+        "ar": 0.6914,
+        "pending": false
+      },
+      {
+        "slug": "nba",
+        "kind": "league",
+        "cx": 840,
+        "cy": 150,
+        "h": 64,
+        "href": "/leagues/nba_dark.png",
+        "ar": 0.4414,
+        "pending": false
+      },
+      {
+        "slug": "mlb",
+        "kind": "league",
+        "cx": 546,
+        "cy": 238,
+        "h": 48,
+        "href": "/leagues/mlb_dark.png",
+        "ar": 1.8984,
+        "pending": false
+      },
+      {
+        "slug": "nhl",
+        "kind": "league",
+        "cx": 862,
+        "cy": 238,
+        "h": 58,
+        "href": "/leagues/nhl_dark.png",
+        "ar": 0.8789,
+        "pending": false
+      },
+      {
+        "slug": "wwe",
+        "kind": "league",
+        "cx": 452,
+        "cy": 126,
+        "h": 46,
+        "href": "/leagues/wwe_dark.png",
+        "ar": 1.1016,
+        "pending": false
+      },
+      {
+        "slug": "indycar",
+        "kind": "league",
+        "cx": 452,
+        "cy": 184,
+        "h": 44,
+        "href": "/leagues/indycar_dark.png",
+        "ar": 1.4336,
+        "pending": false
+      },
+      {
+        "slug": "ufc",
+        "kind": "league",
+        "cx": 446,
+        "cy": 240,
+        "h": 30,
+        "href": "/leagues/ufc_dark.png",
+        "ar": 2.875,
+        "pending": false
+      },
+      {
+        "slug": "aew",
+        "kind": "league",
+        "cx": 950,
+        "cy": 126,
+        "h": 40,
+        "href": "/leagues/aew_dark.png",
+        "ar": 2.0078,
+        "pending": false
+      },
+      {
+        "slug": "nascar",
+        "kind": "league",
+        "cx": 952,
+        "cy": 184,
+        "h": 22,
+        "href": "/leagues/nascar_dark.png",
+        "ar": 5.9961,
+        "pending": false
+      },
+      {
+        "slug": "big-noon-kickoff",
+        "kind": "prog",
+        "cx": 950,
+        "cy": 240,
+        "h": 34,
+        "href": "/programs/big-noon-kickoff.png",
+        "ar": 1.6562,
+        "pending": false,
+        "hf": 1.079
+      },
+      {
+        "slug": "espn",
+        "kind": "net",
+        "cx": 150,
+        "cy": 102,
+        "h": 30,
+        "href": "/marks/espn.png",
+        "ar": 4.0234,
+        "pending": false,
+        "hf": 0.637
+      },
+      {
+        "slug": "abc",
+        "kind": "net",
+        "cx": 262,
+        "cy": 140,
+        "h": 32,
+        "href": "/marks/abc.png",
+        "ar": 1.0,
+        "pending": false,
+        "hf": 1.15
+      },
+      {
+        "slug": "fox",
+        "kind": "net",
+        "cx": 368,
+        "cy": 116,
+        "h": 30,
+        "href": "/marks/fox.png",
+        "ar": 2.3594,
+        "pending": false,
+        "hf": 0.817
+      },
+      {
+        "slug": "college-gameday",
+        "kind": "prog",
+        "cx": 150,
+        "cy": 208,
+        "h": 34,
+        "href": "/programs/college-gameday.png",
+        "ar": 0.9219,
+        "pending": false,
+        "hf": 1.15
+      },
+      {
+        "slug": "cbs",
+        "kind": "net",
+        "cx": 262,
+        "cy": 244,
+        "h": 30,
+        "href": "/marks/cbs.png",
+        "ar": 3.6016,
+        "pending": false,
+        "hf": 0.758
+      },
+      {
+        "slug": "apple-tv",
+        "kind": "net",
+        "cx": 354,
+        "cy": 222,
+        "h": 32,
+        "href": "/marks/apple-tv.png",
+        "ar": 1.9688,
+        "pending": false,
+        "hf": 1.15
+      },
+      {
+        "slug": "nbc",
+        "kind": "net",
+        "cx": 1035,
+        "cy": 116,
+        "h": 32,
+        "href": "/marks/nbc.png",
+        "ar": 1.0156,
+        "pending": false,
+        "hf": 1.15
+      },
+      {
+        "slug": "usa-network",
+        "kind": "net",
+        "cx": 1140,
+        "cy": 140,
+        "h": 30,
+        "href": "/marks/usa-network.png",
+        "ar": 2.2734,
+        "pending": false,
+        "hf": 0.923
+      },
+      {
+        "slug": "peacock",
+        "kind": "net",
+        "cx": 1252,
+        "cy": 102,
+        "h": 30,
+        "href": "/marks/peacock.png",
+        "ar": 3.2344,
+        "pending": false,
+        "hf": 1.15
+      },
+      {
+        "slug": "prime-video",
+        "kind": "net",
+        "cx": 1047,
+        "cy": 222,
+        "h": 30,
+        "href": "/marks/prime-video.png",
+        "ar": 3.2344,
+        "pending": false,
+        "hf": 1.119
+      },
+      {
+        "slug": "netflix",
+        "kind": "net",
+        "cx": 1152,
+        "cy": 244,
+        "h": 30,
+        "href": "/marks/netflix.png",
+        "ar": 3.7188,
+        "pending": false,
+        "hf": 0.801
+      },
+      {
+        "slug": "disney-plus",
+        "kind": "net",
+        "cx": 1252,
+        "cy": 208,
+        "h": 32,
+        "href": "/marks/disney-plus.png",
+        "ar": 1.8281,
+        "pending": false,
+        "hf": 1.15
+      }
+    ],
+    "sparks": [
+      {
+        "x": 478,
+        "y": 80,
+        "kind": "g",
+        "r": 10
+      },
+      {
+        "x": 922,
+        "y": 80,
+        "kind": "g",
+        "r": 10
+      },
+      {
+        "x": 606,
+        "y": 264,
+        "kind": "w",
+        "r": 7
+      },
+      {
+        "x": 794,
+        "y": 268,
+        "kind": "w",
+        "r": 7
+      },
+      {
+        "x": 500,
+        "y": 198,
+        "kind": "c",
+        "r": 5
+      },
+      {
+        "x": 902,
+        "y": 198,
+        "kind": "m",
+        "r": 5
+      },
+      {
+        "x": 210,
+        "y": 176,
+        "kind": "w",
+        "r": 7
+      },
+      {
+        "x": 1195,
+        "y": 176,
+        "kind": "w",
+        "r": 7
+      },
+      {
+        "x": 318,
+        "y": 180,
+        "kind": "r",
+        "r": 5
+      },
+      {
+        "x": 1085,
+        "y": 180,
+        "kind": "g",
+        "r": 6
+      },
+      {
+        "x": 640,
+        "y": 100,
+        "kind": "w",
+        "r": 5
+      },
+      {
+        "x": 760,
+        "y": 100,
+        "kind": "w",
+        "r": 5
+      },
+      {
+        "x": 120,
+        "y": 170,
+        "kind": "g",
+        "r": 6
+      },
+      {
+        "x": 1300,
+        "y": 170,
+        "kind": "c",
+        "r": 5
+      },
+      {
+        "x": 400,
+        "y": 176,
+        "kind": "m",
+        "r": 4
+      },
+      {
+        "x": 1000,
+        "y": 176,
+        "kind": "r",
+        "r": 4
+      }
+    ]
   },
-  "title": {
-   "y": 60,
-   "size": 56,
-   "ls": 2.24
+  "mobile": {
+    "w": 390,
+    "h": 280,
+    "tv": {
+      "cx": 195,
+      "cy": 184,
+      "h": 128,
+      "href": "/brand/tv-cutout.png",
+      "ar": 0.9514
+    },
+    "title": {
+      "y": 46,
+      "size": 40,
+      "ls": 1.6
+    },
+    "sub": {
+      "y": 72,
+      "size": 11,
+      "ls": 2.2
+    },
+    "subhead": "EVERY GAME. EVERY CHANNEL. ONE PLACE.",
+    "marks": [
+      {
+        "slug": "nfl",
+        "kind": "league",
+        "cx": 96,
+        "cy": 142,
+        "h": 50,
+        "href": "/leagues/nfl_dark.png",
+        "ar": 0.7305,
+        "pending": false
+      },
+      {
+        "slug": "cfp",
+        "kind": "league",
+        "cx": 195,
+        "cy": 122,
+        "h": 34,
+        "href": "/leagues/cfp_dark.png",
+        "ar": 0.6914,
+        "pending": false
+      },
+      {
+        "slug": "nba",
+        "kind": "league",
+        "cx": 294,
+        "cy": 142,
+        "h": 50,
+        "href": "/leagues/nba_dark.png",
+        "ar": 0.4414,
+        "pending": false
+      },
+      {
+        "slug": "mlb",
+        "kind": "league",
+        "cx": 60,
+        "cy": 206,
+        "h": 40,
+        "href": "/leagues/mlb_dark.png",
+        "ar": 1.8984,
+        "pending": false
+      },
+      {
+        "slug": "nhl",
+        "kind": "league",
+        "cx": 330,
+        "cy": 204,
+        "h": 46,
+        "href": "/leagues/nhl_dark.png",
+        "ar": 0.8789,
+        "pending": false
+      },
+      {
+        "slug": "abc",
+        "kind": "net",
+        "cx": 48,
+        "cy": 254,
+        "h": 24,
+        "href": "/marks/abc.png",
+        "ar": 1.0,
+        "pending": false,
+        "hf": 1.15
+      },
+      {
+        "slug": "espn",
+        "kind": "net",
+        "cx": 118,
+        "cy": 256,
+        "h": 24,
+        "href": "/marks/espn.png",
+        "ar": 4.0234,
+        "pending": false,
+        "hf": 0.637
+      },
+      {
+        "slug": "usa-network",
+        "kind": "net",
+        "cx": 195,
+        "cy": 258,
+        "h": 24,
+        "href": "/marks/usa-network.png",
+        "ar": 2.2734,
+        "pending": false,
+        "hf": 0.923
+      },
+      {
+        "slug": "fox",
+        "kind": "net",
+        "cx": 272,
+        "cy": 256,
+        "h": 24,
+        "href": "/marks/fox.png",
+        "ar": 2.3594,
+        "pending": false,
+        "hf": 0.817
+      },
+      {
+        "slug": "nbc",
+        "kind": "net",
+        "cx": 340,
+        "cy": 252,
+        "h": 24,
+        "href": "/marks/nbc.png",
+        "ar": 1.0156,
+        "pending": false,
+        "hf": 1.15
+      }
+    ],
+    "sparks": [
+      {
+        "x": 138,
+        "y": 104,
+        "kind": "g",
+        "r": 7
+      },
+      {
+        "x": 252,
+        "y": 104,
+        "kind": "g",
+        "r": 7
+      },
+      {
+        "x": 26,
+        "y": 166,
+        "kind": "w",
+        "r": 5
+      },
+      {
+        "x": 364,
+        "y": 166,
+        "kind": "w",
+        "r": 5
+      },
+      {
+        "x": 122,
+        "y": 198,
+        "kind": "c",
+        "r": 4
+      },
+      {
+        "x": 270,
+        "y": 198,
+        "kind": "m",
+        "r": 4
+      },
+      {
+        "x": 195,
+        "y": 242,
+        "kind": "w",
+        "r": 4
+      },
+      {
+        "x": 60,
+        "y": 240,
+        "kind": "r",
+        "r": 3
+      },
+      {
+        "x": 330,
+        "y": 240,
+        "kind": "g",
+        "r": 3
+      }
+    ]
   },
-  "sub": {
-   "y": 94,
-   "size": 15,
-   "ls": 4.8
-  },
-  "subhead": "EVERY GAME. EVERY CHANNEL. ONE PLACE.",
-  "marks": [
-   {
-    "slug": "nfl",
-    "kind": "league",
-    "cx": 560,
-    "cy": 150,
-    "h": 64,
-    "href": "/leagues/nfl_dark.png",
-    "ar": 0.7305,
-    "pending": false
-   },
-   {
-    "slug": "cfp",
-    "kind": "league",
-    "cx": 700,
-    "cy": 124,
-    "h": 40,
-    "href": "/leagues/cfp_dark.png",
-    "ar": 0.6914,
-    "pending": false
-   },
-   {
-    "slug": "nba",
-    "kind": "league",
-    "cx": 840,
-    "cy": 150,
-    "h": 64,
-    "href": "/leagues/nba_dark.png",
-    "ar": 0.4414,
-    "pending": false
-   },
-   {
-    "slug": "mlb",
-    "kind": "league",
-    "cx": 546,
-    "cy": 238,
-    "h": 48,
-    "href": "/leagues/mlb_dark.png",
-    "ar": 1.8984,
-    "pending": false
-   },
-   {
-    "slug": "nhl",
-    "kind": "league",
-    "cx": 862,
-    "cy": 238,
-    "h": 58,
-    "href": "/leagues/nhl_dark.png",
-    "ar": 0.8789,
-    "pending": false
-   },
-   {
-    "slug": "wwe",
-    "kind": "league",
-    "cx": 452,
-    "cy": 126,
-    "h": 46,
-    "href": "/leagues/wwe_dark.png",
-    "ar": 1.1016,
-    "pending": false
-   },
-   {
-    "slug": "indycar",
-    "kind": "league",
-    "cx": 452,
-    "cy": 184,
-    "h": 44,
-    "href": "/leagues/indycar_dark.png",
-    "ar": 1.4336,
-    "pending": false
-   },
-   {
-    "slug": "ufc",
-    "kind": "league",
-    "cx": 446,
-    "cy": 240,
-    "h": 30,
-    "href": "/leagues/ufc_dark.png",
-    "ar": 2.875,
-    "pending": false
-   },
-   {
-    "slug": "aew",
-    "kind": "league",
-    "cx": 950,
-    "cy": 126,
-    "h": 40,
-    "href": "/leagues/aew_dark.png",
-    "ar": 2.0078,
-    "pending": false
-   },
-   {
-    "slug": "nascar",
-    "kind": "league",
-    "cx": 952,
-    "cy": 184,
-    "h": 22,
-    "href": "/leagues/nascar_dark.png",
-    "ar": 5.9961,
-    "pending": false
-   },
-   {
-    "slug": "big-noon-kickoff",
-    "kind": "prog",
-    "cx": 950,
-    "cy": 240,
-    "h": 34,
-    "href": "/programs/big-noon-kickoff.png",
-    "ar": 1.6562,
-    "pending": false,
-    "hf": 1.079
-   },
-   {
-    "slug": "espn",
-    "kind": "net",
-    "cx": 150,
-    "cy": 102,
-    "h": 30,
-    "href": "/marks/espn.png",
-    "ar": 4.0234,
-    "pending": false,
-    "hf": 0.637
-   },
-   {
-    "slug": "abc",
-    "kind": "net",
-    "cx": 262,
-    "cy": 140,
-    "h": 32,
-    "href": "/marks/abc.png",
-    "ar": 1.0,
-    "pending": false,
-    "hf": 1.15
-   },
-   {
-    "slug": "fox",
-    "kind": "net",
-    "cx": 368,
-    "cy": 116,
-    "h": 30,
-    "href": "/marks/fox.png",
-    "ar": 2.3594,
-    "pending": false,
-    "hf": 0.817
-   },
-   {
-    "slug": "college-gameday",
-    "kind": "prog",
-    "cx": 150,
-    "cy": 208,
-    "h": 34,
-    "href": "/programs/college-gameday.png",
-    "ar": 0.9219,
-    "pending": false,
-    "hf": 1.15
-   },
-   {
-    "slug": "cbs",
-    "kind": "net",
-    "cx": 262,
-    "cy": 244,
-    "h": 30,
-    "href": "/marks/cbs.png",
-    "ar": 3.6016,
-    "pending": false,
-    "hf": 0.758
-   },
-   {
-    "slug": "apple-tv",
-    "kind": "net",
-    "cx": 354,
-    "cy": 222,
-    "h": 32,
-    "href": "/marks/apple-tv.png",
-    "ar": 1.9688,
-    "pending": false,
-    "hf": 1.15
-   },
-   {
-    "slug": "nbc",
-    "kind": "net",
-    "cx": 1035,
-    "cy": 116,
-    "h": 32,
-    "href": "/marks/nbc.png",
-    "ar": 1.0156,
-    "pending": false,
-    "hf": 1.15
-   },
-   {
-    "slug": "usa-network",
-    "kind": "net",
-    "cx": 1140,
-    "cy": 140,
-    "h": 30,
-    "href": "/marks/usa-network.png",
-    "ar": 2.2734,
-    "pending": false,
-    "hf": 0.923
-   },
-   {
-    "slug": "peacock",
-    "kind": "net",
-    "cx": 1252,
-    "cy": 102,
-    "h": 30,
-    "href": "/marks/peacock.png",
-    "ar": 3.2344,
-    "pending": false,
-    "hf": 1.15
-   },
-   {
-    "slug": "prime-video",
-    "kind": "net",
-    "cx": 1047,
-    "cy": 222,
-    "h": 30,
-    "href": "/marks/prime-video.png",
-    "ar": 3.2344,
-    "pending": false,
-    "hf": 1.119
-   },
-   {
-    "slug": "netflix",
-    "kind": "net",
-    "cx": 1152,
-    "cy": 244,
-    "h": 30,
-    "href": "/marks/netflix.png",
-    "ar": 3.7188,
-    "pending": false,
-    "hf": 0.801
-   },
-   {
-    "slug": "disney-plus",
-    "kind": "net",
-    "cx": 1252,
-    "cy": 208,
-    "h": 32,
-    "href": "/marks/disney-plus.png",
-    "ar": 1.8281,
-    "pending": false,
-    "hf": 1.15
-   }
-  ],
-  "sparks": [
-   {
-    "x": 478,
-    "y": 80,
-    "kind": "g",
-    "r": 10
-   },
-   {
-    "x": 922,
-    "y": 80,
-    "kind": "g",
-    "r": 10
-   },
-   {
-    "x": 606,
-    "y": 264,
-    "kind": "w",
-    "r": 7
-   },
-   {
-    "x": 794,
-    "y": 268,
-    "kind": "w",
-    "r": 7
-   },
-   {
-    "x": 500,
-    "y": 198,
-    "kind": "c",
-    "r": 5
-   },
-   {
-    "x": 902,
-    "y": 198,
-    "kind": "m",
-    "r": 5
-   },
-   {
-    "x": 210,
-    "y": 176,
-    "kind": "w",
-    "r": 7
-   },
-   {
-    "x": 1195,
-    "y": 176,
-    "kind": "w",
-    "r": 7
-   },
-   {
-    "x": 318,
-    "y": 180,
-    "kind": "r",
-    "r": 5
-   },
-   {
-    "x": 1085,
-    "y": 180,
-    "kind": "g",
-    "r": 6
-   },
-   {
-    "x": 640,
-    "y": 100,
-    "kind": "w",
-    "r": 5
-   },
-   {
-    "x": 760,
-    "y": 100,
-    "kind": "w",
-    "r": 5
-   },
-   {
-    "x": 120,
-    "y": 170,
-    "kind": "g",
-    "r": 6
-   },
-   {
-    "x": 1300,
-    "y": 170,
-    "kind": "c",
-    "r": 5
-   },
-   {
-    "x": 400,
-    "y": 176,
-    "kind": "m",
-    "r": 4
-   },
-   {
-    "x": 1000,
-    "y": 176,
-    "kind": "r",
-    "r": 4
-   }
-  ]
- },
- "mobile": {
-  "w": 390,
-  "h": 280,
-  "tv": {
-   "cx": 195,
-   "cy": 184,
-   "h": 128,
-   "href": "/brand/tv-cutout.png"
-  },
-  "title": {
-   "y": 46,
-   "size": 40,
-   "ls": 1.6
-  },
-  "sub": {
-   "y": 72,
-   "size": 11,
-   "ls": 2.2
-  },
-  "subhead": "EVERY GAME. EVERY CHANNEL. ONE PLACE.",
-  "marks": [
-   {
-    "slug": "nfl",
-    "kind": "league",
-    "cx": 96,
-    "cy": 142,
-    "h": 50,
-    "href": "/leagues/nfl_dark.png",
-    "ar": 0.7305,
-    "pending": false
-   },
-   {
-    "slug": "cfp",
-    "kind": "league",
-    "cx": 195,
-    "cy": 122,
-    "h": 34,
-    "href": "/leagues/cfp_dark.png",
-    "ar": 0.6914,
-    "pending": false
-   },
-   {
-    "slug": "nba",
-    "kind": "league",
-    "cx": 294,
-    "cy": 142,
-    "h": 50,
-    "href": "/leagues/nba_dark.png",
-    "ar": 0.4414,
-    "pending": false
-   },
-   {
-    "slug": "mlb",
-    "kind": "league",
-    "cx": 60,
-    "cy": 206,
-    "h": 40,
-    "href": "/leagues/mlb_dark.png",
-    "ar": 1.8984,
-    "pending": false
-   },
-   {
-    "slug": "nhl",
-    "kind": "league",
-    "cx": 330,
-    "cy": 204,
-    "h": 46,
-    "href": "/leagues/nhl_dark.png",
-    "ar": 0.8789,
-    "pending": false
-   },
-   {
-    "slug": "abc",
-    "kind": "net",
-    "cx": 48,
-    "cy": 254,
-    "h": 24,
-    "href": "/marks/abc.png",
-    "ar": 1.0,
-    "pending": false,
-    "hf": 1.15
-   },
-   {
-    "slug": "espn",
-    "kind": "net",
-    "cx": 118,
-    "cy": 256,
-    "h": 24,
-    "href": "/marks/espn.png",
-    "ar": 4.0234,
-    "pending": false,
-    "hf": 0.637
-   },
-   {
-    "slug": "usa-network",
-    "kind": "net",
-    "cx": 195,
-    "cy": 258,
-    "h": 24,
-    "href": "/marks/usa-network.png",
-    "ar": 2.2734,
-    "pending": false,
-    "hf": 0.923
-   },
-   {
-    "slug": "fox",
-    "kind": "net",
-    "cx": 272,
-    "cy": 256,
-    "h": 24,
-    "href": "/marks/fox.png",
-    "ar": 2.3594,
-    "pending": false,
-    "hf": 0.817
-   },
-   {
-    "slug": "nbc",
-    "kind": "net",
-    "cx": 340,
-    "cy": 252,
-    "h": 24,
-    "href": "/marks/nbc.png",
-    "ar": 1.0156,
-    "pending": false,
-    "hf": 1.15
-   }
-  ],
-  "sparks": [
-   {
-    "x": 138,
-    "y": 104,
-    "kind": "g",
-    "r": 7
-   },
-   {
-    "x": 252,
-    "y": 104,
-    "kind": "g",
-    "r": 7
-   },
-   {
-    "x": 26,
-    "y": 166,
-    "kind": "w",
-    "r": 5
-   },
-   {
-    "x": 364,
-    "y": 166,
-    "kind": "w",
-    "r": 5
-   },
-   {
-    "x": 122,
-    "y": 198,
-    "kind": "c",
-    "r": 4
-   },
-   {
-    "x": 270,
-    "y": 198,
-    "kind": "m",
-    "r": 4
-   },
-   {
-    "x": 195,
-    "y": 242,
-    "kind": "w",
-    "r": 4
-   },
-   {
-    "x": 60,
-    "y": 240,
-    "kind": "r",
-    "r": 3
-   },
-   {
-    "x": 330,
-    "y": 240,
-    "kind": "g",
-    "r": 3
-   }
-  ]
- },
- "notes": "Stage px inside the SVG viewBox. net/prog marks render at h*hf (hf frozen: marks/manifest.json, programs/manifest.json); leagues at h. ar = width/height of the PNG. No pending marks remain (2026-09-02)."
+  "notes": "Stage px inside the SVG viewBox. net/prog marks render at h*hf (hf frozen: marks/manifest.json, programs/manifest.json); leagues at h. ar = width/height of the PNG. No pending marks remain (2026-09-02)."
 }

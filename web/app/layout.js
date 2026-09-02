@@ -1,8 +1,9 @@
 import './globals.css';
-import Nav from '../components/Nav.js';
+import Banner from '../components/Banner.js';
+import Chrome from '../components/Chrome.js';
 
 export const metadata = {
-  title: 'MySports',
+  title: 'MySports TV',
   description: 'What is on today, this week, and what has already been played.',
 };
 
@@ -10,14 +11,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
+        {/* The chrome sits OUTSIDE .shell so it can run the full width: the banner carries its own
+            background and bottom rule and is meant to bleed, while the content below stays inside
+            the 1100px column. Banner is rendered here, on the server, and handed to Chrome, which
+            only decides whether this route gets it or the compact bar. */}
+        <Chrome banner={<Banner />} />
         <div className="shell">
-          <header className="masthead">
-            <div className="wordmark">
-              My<span>Sports</span>
-            </div>
-            <Nav />
-            <div className="tagline">all times ET · Cleveland (DMA 510)</div>
-          </header>
           {children}
           <p className="footnote">
             Every game is kept in the database — nothing is deleted. Reads are anon, read-only, live.

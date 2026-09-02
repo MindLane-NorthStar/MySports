@@ -328,7 +328,9 @@ def update_layout_ar() -> int:
     d = json.loads(LAYOUT.read_text(encoding="utf-8"))
     n = 0
     for side in ("pc", "mobile"):
-        for m in d.get(side, {}).get("marks", []):
+        side_d = d.get(side, {})
+        # The TV cutout is placed the same way a mark is, so it needs the same `ar`.
+        for m in list(side_d.get("marks", [])) + ([side_d["tv"]] if "tv" in side_d else []):
             p = ROOT / "web" / "public" / m["href"].lstrip("/")
             if not p.exists():
                 continue
