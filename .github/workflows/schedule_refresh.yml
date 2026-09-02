@@ -77,6 +77,13 @@ jobs:
         run: python scripts/sync_assets.py --push --prefix logos/
       - name: Load fixtures into mysports.* (evidence only — Milestone 1 loader)
         run: python -m pipeline.load --all --workflow schedule_refresh
+      - name: CFB ranks, records + rivalry flags into games (loader-written provider facts)
+        # Records move on every game day, the poll moves once a week (AP drops Sunday, the
+        # Playoff Committee Tuesday), so this runs DAILY with --fetch: that keeps records current
+        # and picks the new poll up on the day it lands, which a Tuesday-only step would not do
+        # for records. Ranks are per-poll inside the module - a week with no poll published yet
+        # leaves them untouched rather than erasing last week's, so a daily run is safe.
+        run: python -m pipeline.enrich_cfb --latest-week --fetch --workflow schedule_refresh
       - name: Reconcile canonical facts (Milestone 2 — games with new evidence)
         run: python -m pipeline.reconcile --workflow schedule_refresh
       - name: Unit tests (resolver)

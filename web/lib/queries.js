@@ -31,6 +31,9 @@ const GAME_SELECT = [
   'home_rank',
   'away_rank',
   'is_rivalry',
+  // the marquee criterion is tier-ONE rivalry, and tier lives on rivalries - one join through the FK,
+  // which is why stage 4 needed no new column for it
+  'rivalry:rivalries(name,tier,display_label)',
   'venue:venues(name,city,state)',
   'home:teams!games_home_team_id_fkey(id,canonical_name,short_name,display_name,abbreviation,primary_color,secondary_color,conference:conferences(name))',
   'away:teams!games_away_team_id_fkey(id,canonical_name,short_name,display_name,abbreviation,primary_color,secondary_color,conference:conferences(name))',

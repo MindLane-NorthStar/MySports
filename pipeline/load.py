@@ -57,8 +57,9 @@ def viewing_day(dt_utc: datetime, cutover_hour: int = 3):
 
 
 # every counter load_fixture reports; the mysports-db skip path returns this zeroed so TOTAL still prints in full
-ZERO_COUNTS = {"games": 0, "broadcasts": 0, "odds": 0, "records": 0, "probables": 0, "observations": 0,
-               "observations_seen": 0, "observations_closed": 0, "team_refs": 0, "venues": 0}
+ZERO_COUNTS = {"games": 0, "broadcasts": 0, "odds": 0, "records": 0, "records_on_game": 0,
+               "probables": 0, "observations": 0, "observations_seen": 0, "observations_closed": 0,
+               "team_refs": 0, "venues": 0}
 # Joe 2026-09-01: ESPN box scores for cfb/nfl/nba (our ids ARE ESPN ids), league-native for nhl/mlb.
 # Raw URLs are never displayed - the completed event card is the click target.
 _BOXSCORE = {
@@ -99,6 +100,16 @@ PROBABLES_SQL = """
 update games set
   probable_home_pitcher = coalesce(%s, probable_home_pitcher),
   probable_away_pitcher = coalesce(%s, probable_away_pitcher)
+where id = %s
+"""
+
+# Pro records onto the game row, null-safe the same way: a fixture that stops carrying a record never
+# erases one. Suppressed at 0-0, matching the contract's record run (v1.1). CFB records come from the
+# weekly enrichment file instead - see pipeline/enrich_cfb.py, which owns the same two columns for cfb.
+RECORDS_SQL = """
+update games set
+  home_record = coalesce(%s, home_record),
+  away_record = coalesce(%s, away_record)
 where id = %s
 """
 
@@ -243,6 +254,15 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
                                      "fetched_at": parse_iso(od.get("fetchedAt")) or datetime.now(timezone.utc)}], "game_id, provider, fetched_at", [], tag="game_odds")
             counts["odds"] += 1
         recs = g.get("records") or {}
+        # The same adapter records that feed team_records also go on the GAME, so the grid's record run
+        # and the listings card read one consistent source instead of two. Pro RANKS stay null - these
+        # leagues run no polls, and inventing one would be worse than an empty prefix.
+        if recs:
+            hr = _text(recs.get("home")) if _text(recs.get("home")) != "0-0" else None
+            ar = _text(recs.get("away")) if _text(recs.get("away")) != "0-0" else None
+            if hr or ar:
+                db.run(RECORDS_SQL, (hr, ar, gid), tag="games.records")
+                counts["records_on_game"] += sum(1 for v in (hr, ar) if v)
         for side_k, side in (("home", home), ("away", away)):
             r = recs.get(side_k)
             if r and r != "0-0":

@@ -347,14 +347,18 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen }) {
   const home = teamLine(game, 'home', standings);
   const cap = Math.min(blockH, w / 3);
   const b = item.broadcast;
-  const marquee = Boolean(game.is_rivalry) || game.home_rank === 1 || game.away_rank === 1;
+  // Contract §3 / legend: MARQUEE = BOTH RANKED, or a TIER-1 rivalry. Not "is ranked #1", which is
+  // what this used to test - render_day.py's rule is `bool(ra and rh) or bool(rv and rv[1] == 1)`.
+  const bothRanked = Number.isInteger(game.home_rank) && Number.isInteger(game.away_rank);
+  const tierOne = Boolean(game.is_rivalry) && Number(game.rivalry?.tier) === 1;
+  const marquee = bothRanked || tierOne;
   const nameSize = Math.max(8, 15 * 0.8);
 
   const odds = (game.odds || [])[0];
   const pills = [];
   if (odds?.spread != null) pills.push({ kind: 'spread', text: `${Number(odds.spread) > 0 ? '+' : ''}${odds.spread}` });
   if (odds?.total != null) pills.push({ kind: 'ou', text: `O/U ${odds.total}` });
-  if (game.is_rivalry) pills.push({ kind: 'rivalry', text: 'RIVALRY' });
+  if (game.is_rivalry) pills.push({ kind: 'rivalry', text: (game.rivalry?.name || 'RIVALRY').toUpperCase() });
   // right-to-left drop priority: the narrower the block, the fewer pills survive
   const room = Math.max(0, Math.floor((w - 90) / 46));
   const shown = pills.slice(0, room);
