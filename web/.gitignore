@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+build/
+.env.local
+.env*.local
+next-env.d.ts
+*.tsbuildinfo
+.DS_Store
+npm-debug.log*
+
+# The root .gitignore excludes .env.* everywhere; this template holds only publishable values
+# (the anon key and the public asset base) and must be committed so a clean checkout can run.
+!.env.local.example

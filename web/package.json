@@ -1,0 +1,18 @@
+{
+  "name": "mysports-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MySports production app skeleton - live reads from the mysports schema over the anon REST API",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "next": "15.5.24",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  }
+}
