@@ -7,7 +7,7 @@ The bucket `mysports-assets` is the source of truth; `assets/` on any machine is
     python scripts/sync_assets.py --push           # upload local files the bucket lacks or that differ
     python scripts/sync_assets.py --pull           # download bucket files the cache lacks or that differ
     python scripts/sync_assets.py --push --prefix logos/   # one prefix only
-    python scripts/sync_assets.py --push-grids artifacts/rendering            # grids/{sport}/{date}.svg|.png|@2x.png (public bucket)
+    python scripts/sync_assets.py --push-grids artifacts/rendering            # grids/{sport}/grid_{date}.svg|.png|@2x.png (public bucket)
     python scripts/sync_assets.py --push-data artifacts/validation --prefix fixtures/2026-09-01/   # private bucket (R2_BUCKET_DATA)
     python scripts/sync_assets.py --push-data backup.sql.gz --prefix backups/ --keep 8            # upload one file, prune oldest beyond 8
 
@@ -111,8 +111,11 @@ def special_modes(args) -> int:
             if p.suffix.lower() not in (".svg", ".png"):
                 continue
             sport = p.parent.name if p.parent != base else "cfb"        # renderer v1.6: pro leagues render into artifacts/rendering/{sport}/
-            stem = p.name[len("grid_"):]                                 # 2026-10-01.svg | 2026-10-01.png | 2026-10-01@2x.png
-            key = f"grids/{sport}/{stem}".lower()
+            # The FULL filename is the key (grid_2026-10-01.svg), because that is the key
+            # scripts/register_grids.py stores in generated_grids.svg_asset_url. Stripping the "grid_"
+            # prefix here - as this did until 2026-09-02 - made every archived grid URL in the database
+            # a 404. One key scheme, and the registry's rows are the ones that must keep working.
+            key = f"grids/{sport}/{p.name}".lower()
             _put(s3, bucket, key, p); n += 1
             print("  ", key)
         print(f"pushed {n} grid file(s) -> {bucket}")
@@ -143,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--check", action="store_true")
     g.add_argument("--push", action="store_true")
     g.add_argument("--pull", action="store_true")
-    g.add_argument("--push-grids", metavar="DIR", help="upload grid_*.svg/png from DIR (and DIR/{sport}/) to grids/{sport}/{date}.*")
+    g.add_argument("--push-grids", metavar="DIR", help="upload grid_*.svg/png from DIR (and DIR/{sport}/) to grids/{sport}/grid_{date}.* - the key register_grids.py stores")
     g.add_argument("--push-data", metavar="PATH", help="upload a file or directory tree to the PRIVATE bucket under --prefix")
     ap.add_argument("--prefix", help="key prefix filter (check/push/pull) or destination prefix (push-data)")
     ap.add_argument("--keep", type=int, help="push-data: after upload, delete the oldest objects under --prefix beyond this count")

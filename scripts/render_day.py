@@ -549,7 +549,10 @@ def _feed_asof():
     return ts
 _asof = _feed_asof(); gen = f"{_asof.strftime('%b')} {_asof.day}, {_asof.year} {clock(_asof)} ET"
 DATA_LABEL = POLICY.get("data_label", "CFBD")
-_fx_desc = f"{DATA_LABEL} fixture week {WK}" if SPORT == "cfb" else f"{DATA_LABEL} fixture {FX_META.get('generatedAt', '')[:10]} ({FX_META.get('source', '')})"
+# v1.6.3: the fixture-date prefix comes from the SAME ET datetime as "data as of". It used to slice
+# validation.generatedAt raw, i.e. UTC, so a feed generated after 20:00 ET printed tomorrow's date beside
+# tonight's time - "fixture 2026-09-02 ... data as of Sep 1, 2026 8:40 PM ET", two calendar days for one instant.
+_fx_desc = f"{DATA_LABEL} fixture week {WK}" if SPORT == "cfb" else f"{DATA_LABEL} fixture {_asof.strftime('%Y-%m-%d')} ({FX_META.get('source', '')})"
 if FX_META.get("sample"): _fx_desc += " · SAMPLE DATA"
 sub = f"all times ET · {rank_note} · data: {_fx_desc}" + (f" + enrichment {ENR['generatedAt'][:10]}" if ENR else (" · no enrichment file" if SPORT == "cfb" else "")) + f" · data as of {gen}"
 
@@ -1077,7 +1080,7 @@ svg_path = out_dir / f"grid_{TARGET}.svg"
 svg_path.write_text("\n".join(svg), encoding="utf-8")
 # v1.6.1 sidecar: the counts this run actually produced, so scripts/register_grids.py can archive a grid
 # without re-deriving them from the SVG. Truthful by construction - same variables the console line prints.
-GENERATOR_VERSION = "v1.6.2"
+GENERATOR_VERSION = "v1.6.3"
 meta_path = out_dir / f"grid_{TARGET}.meta.json"
 meta_path.write_text(json.dumps({
     "sport": SPORT, "date": TARGET,
