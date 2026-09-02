@@ -52,6 +52,20 @@ from zoneinfo import ZoneInfo
 
 ET = ZoneInfo("America/New_York")
 UA = "MySports-adapters/0.1 (+https://github.com/MindLane-NorthStar/MySports)"
+# ESPN sits behind Akamai, which answers a non-browser User-Agent with 403 AkamaiGHost for EVERY
+# endpoint - observed from the Cowork cloud workspace on 2026-09-02 (research changelog, Brief 2
+# standing gotcha). It has NOT happened on the GitHub Actions runner (the 2026-09-02 refresh fetched
+# NFL, NBA and CFB fine), so this is insurance against an IP range being reclassified, not a fix for a
+# live failure. Only ESPN hosts get it; every other provider keeps the honest identifying UA.
+BROWSER_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+              "Chrome/140.0.0.0 Safari/537.36")
+ESPN_HOSTS = ("espn.com", "espncdn.com")
+
+
+def ua_for(url: str) -> str:
+    """Browser UA for ESPN's Akamai-fronted hosts, the project UA everywhere else."""
+    host = urllib.parse.urlsplit(url).hostname or ""
+    return BROWSER_UA if any(host == h or host.endswith("." + h) for h in ESPN_HOSTS) else UA
 
 try:  # Windows consoles default to cp1252
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -100,7 +114,7 @@ def http_json(url: str, headers: dict[str, str] | None = None, params: dict[str,
     if params:
         q = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None}, doseq=True)
         url = f"{url}?{q}"
-    hdrs = {"Accept": "application/json", "User-Agent": UA}
+    hdrs = {"Accept": "application/json", "User-Agent": ua_for(url)}
     hdrs.update(headers or {})
     last: Exception | None = None
     for attempt in range(retries + 1):
@@ -129,7 +143,7 @@ def download(url: str, dest: Path, headers: dict[str, str] | None = None, skip_e
     if skip_existing and dest.exists() and dest.stat().st_size > 0:
         return "cached"
     dest.parent.mkdir(parents=True, exist_ok=True)
-    hdrs = {"User-Agent": UA}
+    hdrs = {"User-Agent": ua_for(url)}
     hdrs.update(headers or {})
     try:
         req = urllib.request.Request(url, headers=hdrs)

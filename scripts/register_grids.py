@@ -100,11 +100,18 @@ def main(argv: list[str] | None = None) -> int:
         print("note: ASSET_BASE_URL not set - storing bare grids/... keys")
 
     render_root = Path(args.directory)
+    # "Nothing was rendered" is a legitimate outcome, not a failure: an out-of-season day, or a day the
+    # database holds no games for, renders nothing and therefore creates no directory. Exiting 2 there
+    # failed render_all on 2026-09-02 (Actions run 33637788703) AFTER every real step had succeeded.
+    # There is nothing to register, so say so and stop cleanly.
     if not render_root.exists():
-        print(f"ERROR: {render_root} does not exist", file=sys.stderr)
-        return 2
+        print(f"{render_root} does not exist - nothing was rendered for this date; nothing to register")
+        return 0
 
     rows = grid_rows(render_root, base)
+    if not rows:
+        print(f"{render_root} holds no grid_*.svg - nothing to register")
+        return 0
     db = DB()
     registered = already = 0
     try:

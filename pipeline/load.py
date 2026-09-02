@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -254,6 +255,20 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
     return counts
 
 
+def run_context() -> dict[str, Any]:
+    """Where this run happened, for the refresh_runs ledger.
+
+    A GitHub Actions run carries GITHUB_RUN_ID; a laptop run does not. Recording it means the ledger
+    answers "did the runner refresh, or did Joe?" without anyone having to remember.
+    """
+    run_id = os.getenv("GITHUB_RUN_ID")
+    if not run_id:
+        return {"host": "local"}
+    return {"host": "github-actions", "github_run_id": run_id,
+            "github_workflow": os.getenv("GITHUB_WORKFLOW"),
+            "github_sha": (os.getenv("GITHUB_SHA") or "")[:12]}
+
+
 def fixture_files(validation_dir: Path) -> list[Path]:
     """The `--all` file set: every *_fixture.json directly under validation_dir, minus the renderer's own
     db_* feeds (which are the database speaking, not evidence - see load_fixture's mysports-db guard).
@@ -296,17 +311,28 @@ def main(argv: list[str] | None = None) -> int:
     try:
         rows = db.fetch("insert into refresh_runs (workflow, providers_called) values (%s, %s) returning run_id", (args.workflow, sorted({f.name.split("_")[0] for f in files})))
         run_id = rows[0][0] if rows else None
+        # Land the ledger row in its OWN transaction, immediately.
+        #
+        # It used to ride along in the same uncommitted transaction as the whole load, so the
+        # `rollback()` in the failure path below discarded it - and the "mark it failed" UPDATE then
+        # matched zero rows and committed happily. A run that failed therefore left NO TRACE AT ALL,
+        # which is why refresh_runs showed no `schedule_refresh` row on 2026-09-03 even though the
+        # runner had dispatched and failed on 2026-09-02 (Actions run 33645776411). A run log that
+        # only records successes cannot tell "never ran" from "ran and broke".
+        if db.conn is not None and run_id is not None:
+            db.conn.commit()
         for f in files:
             c = load_fixture(db, f, run_id)
             print(f"{f.name}: " + " · ".join(f"{k} {v}" for k, v in c.items()))
             for k, v in c.items():
                 totals[k] = totals.get(k, 0) + v
+        notes = json.dumps({**totals, **run_context()})
         if run_id is not None:
             db.run("update refresh_runs set completed_at = now(), status = 'succeeded', games_checked = %s, notes = %s where run_id = %s",
-                   (totals.get("games", 0), json.dumps(totals), run_id), tag="refresh_runs")
+                   (totals.get("games", 0), notes, run_id), tag="refresh_runs")
         else:
             db.run("insert into refresh_runs (workflow, completed_at, status, games_checked, notes) values (%s, now(), 'succeeded', %s, %s)",
-                   (args.workflow, totals.get("games", 0), json.dumps(totals)), tag="refresh_runs")
+                   (args.workflow, totals.get("games", 0), notes), tag="refresh_runs")
         db.commit()
         print("TOTAL: " + " · ".join(f"{k} {v}" for k, v in totals.items()) + (f" · run_id {run_id}" if run_id else "") + ("" if args.emit_sql else " · committed"))
         if args.emit_sql:
@@ -317,7 +343,8 @@ def main(argv: list[str] | None = None) -> int:
             if run_id is not None:
                 try:
                     with db.conn.cursor() as cur:
-                        cur.execute("update refresh_runs set completed_at = now(), status = 'failed', errors = %s where run_id = %s", (json.dumps([str(e)]), run_id))
+                        cur.execute("update refresh_runs set completed_at = now(), status = 'failed', errors = %s, notes = %s where run_id = %s",
+                                    (json.dumps([str(e)]), json.dumps(run_context()), run_id))
                     db.conn.commit()
                 except Exception:  # noqa: BLE001
                     pass

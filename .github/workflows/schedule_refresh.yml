@@ -1,9 +1,11 @@
 # MySports — scheduled refresh (deployment contract v1.0 §5; spec §15.1)
-# Mon/Wed/Fri 11:00 UTC = 07:00 EDT / 06:00 EST, plus manual dispatch. Inert until the repository secrets exist.
+# DAILY 11:00 UTC = 07:00 EDT / 06:00 EST, plus manual dispatch. Inert until the repository secrets exist.
+# Daily since 2026-09-03: render_all already runs every day in season, so a Mon/Wed/Fri refresh meant four
+# days a week were rendered from stale rows. One refresh a day, and the render that follows it, stay in step.
 name: schedule_refresh
 on:
   schedule:
-    - cron: "0 11 * * 1,3,5"
+    - cron: "0 11 * * *"
   workflow_dispatch:
     inputs:
       date:
