@@ -1,0 +1,68 @@
+{
+  "_about": "Default display duration in minutes per program_type (spec v0.5 P.8). A repo data file, not a table, matching data/render_policies.json. NOTHING READS THIS YET - the renderer and the app pick it up in a later prompt. A program row's expected_duration_min overrides it; open_ended=true means the end is unknown and the card fades right (deferred to rendering contract v1.7).",
+  "_provenance": "Every entry carries a `source` field. 'render_policies.json' means the number is the sport's existing block_minutes and is AUTHORITATIVE - it is what the grid already draws today. 'provisional' means the Brief 2 research set is the intended authority but has NO REPO COPY (research-nascar.md and its siblings live in the claude.ai project workspace), so the number is a conventional broadcast-window placeholder that has NOT been confirmed against research. Provisional values are safe to use - they are all plausible window lengths - but must be reconciled with research-nascar.md before any of this content ships to a grid.",
+
+  "game": {
+    "default": 180,
+    "source": "render_policies.json",
+    "by_sport": {
+      "cfb": { "minutes": 210, "source": "render_policies.json" },
+      "nfl": { "minutes": 210, "source": "render_policies.json" },
+      "nhl": { "minutes": 150, "source": "render_policies.json" },
+      "nba": { "minutes": 150, "source": "render_policies.json" },
+      "mlb": { "minutes": 180, "source": "render_policies.json" }
+    },
+    "note": "Mirrors data/render_policies.json block_minutes exactly, and the fallback matches web/lib/gridmodel.js blockMinutes() (180). If the two ever disagree, render_policies.json wins - it is what the renderer reads."
+  },
+
+  "race_session": {
+    "default": 210,
+    "source": "provisional",
+    "by_track_type": {
+      "superspeedway": { "minutes": 240, "source": "provisional" },
+      "intermediate":  { "minutes": 210, "source": "provisional" },
+      "short_track":   { "minutes": 210, "source": "provisional" },
+      "road_course":   { "minutes": 210, "source": "provisional" },
+      "street_circuit":{ "minutes": 180, "source": "provisional" },
+      "oval_indycar":  { "minutes": 180, "source": "provisional" }
+    },
+    "open_ended_default": true,
+    "note": "PENDING research-nascar.md, which is not in this repo - these are conventional broadcast-window lengths, not sourced values. Track type is not yet a column on programs; it arrives with the motorsport adapter. Races default to open_ended because a caution period moves the end time, which is exactly the case P.8 exists for. RACE ONLY - practice and qualifying are out of scope (Joe 2026-09-02)."
+  },
+
+  "fight_card": {
+    "default": 360,
+    "source": "provisional",
+    "open_ended_default": true,
+    "note": "One UFC event start to finish - early prelims through main card - which is why it is long. The interior structure is programs.segments, not sibling programs (Joe 2026-09-02). Open-ended because a card's end depends on how many fights go the distance. CBS carries a WINDOW of some events; that is a game_broadcasts row with window_start/window_end, not a shorter program."
+  },
+
+  "weekly_show": {
+    "default": 180,
+    "source": "provisional",
+    "by_show": {
+      "wwe-raw":        { "minutes": 180, "source": "provisional" },
+      "wwe-smackdown":  { "minutes": 180, "source": "provisional" },
+      "aew-dynamite":   { "minutes": 120, "source": "provisional" },
+      "aew-collision":  { "minutes": 120, "source": "provisional" }
+    },
+    "note": "SmackDown is a 3h show per the Brief 2 rights summary in docs/research/research-changelog.md (2026-09-02 entry: 'SmackDown USA (3h)'); the others are conventional and provisional. NXT is out of scope (Joe 2026-09-02)."
+  },
+
+  "special_event": {
+    "default": 240,
+    "source": "provisional",
+    "open_ended_default": true,
+    "note": "WWE PLEs and AEW specials included with a subscription. PPV is EXCLUDED - there is no purchasable access state (Joe 2026-09-02). SNME is modelled here as PLE-class; see spec v0.5 P.11, ASSUMPTION PENDING JOE."
+  },
+
+  "studio_show": {
+    "default": 120,
+    "source": "provisional",
+    "by_show": {
+      "college-gameday":   { "minutes": 180, "source": "provisional" },
+      "big-noon-kickoff":  { "minutes": 120, "source": "provisional" }
+    },
+    "note": "Pregame/postgame BOOKENDS only - no daily talk or debate shows. A studio show is chipless: it carries the sport it covers so it filters with that sport, but never creates a chip of its own (P.5)."
+  }
+}

@@ -15,6 +15,7 @@ migration history records the same names.
 | 0006_reconciliation.sql | applied 2026-09-01 ~14:35 ET (Claude Code, scripts/apply_migration.py, after CSV backup + rolled-back dry run; Supabase history row `mysports_0006_reconciliation` added by Cowork) | Milestone 2: `source_observations.last_seen_at` / `seen_count`, `sources.rights_scope`, `game_broadcasts.active`; one-time collapse of duplicate observation rows (1,914 → 408, seen_count preserves the count), same-source supersession (`valid_to`), re-attribution of feed outlets that Milestone 1 credited to `data/local_rights`; two indexes |
 | 0007_final_scores.sql | applied 2026-09-02 | `games` gains `home_score`, `away_score`, `result_status` (checked: scheduled/in_progress/final/postponed/cancelled), `boxscore_url`, `completed_at` — all nullable, additive; `grant select, insert on generated_grids` + sequence usage to `mysports_writer`. **Scores are loader-written provider facts, not reconciled observations** — one structured provider per sport reports objective post-game results, so spec §9.6 deliberately does not apply and the reconciler never reads or writes these columns. |
 | 0008_standings_and_probables.sql | applied 2026-09-02 ~13:35 ET (Claude Code, `scripts/apply_migration.py`, after CSV backups of `team_records` (30 rows) and `games` (295 rows) and a rolled-back dry run) | `team_records` gains `ot_losses`, `points`, `division_rank`, `games_back`; `games` gains `probable_home_pitcher` / `probable_away_pitcher`; `teams` gains `display_name`. All nullable, additive, no row rewritten - counts identical before and after (team_records 30, games 295, teams 808, 29 tables). Standings and probables are **loader-written provider facts, not reconciled observations** - same reasoning as 0007's scores. |
+| 0009_programs_supertype.sql | applied 2026-09-02 ~19:50 ET (Claude Code, `scripts/apply_migration.py`, after CSV backups of `games` (375 rows) and `game_broadcasts` (442 rows) and a rolled-back dry run) | Spec v0.5 §P, the **programs supertype**. `sport` enum gains `nascar`, `indycar`, `ufc`, `wwe`, `aew`; new enums `program_type` (game/race_session/fight_card/weekly_show/special_event/studio_show) and `source_tier` (announced/reported); new tables `programs`, `studio_shows`, `studio_show_instances` (all three empty, RLS on, `anon_read`); `games` gains nullable FK `program_id`; `game_broadcasts` gains `window_start`, `window_end`, `simulcast_linear`. **Additive only** - nothing dropped, narrowed or retyped, no existing row touched: 375 games and 442 broadcast rows before and after, `access_status` unchanged at 7 values. Architecture only; the app and grids behave identically. |
 
 Applied state after 0005 (verified through the connector): 29 tables in `mysports`, all owned by `mysports_owner`, RLS on all 29, `anon_read` on 26 (not on source_snapshots, source_observations, refresh_runs), 20 enums, seed rows: 1 market, 1 viewer profile, 5 render policies, 10 sources; `public` still 36 tables. Migration history: mysports_0001 … mysports_0006.
 
@@ -25,6 +26,36 @@ ever created in `public`; new tables get RLS + an `anon_read` policy in the same
 that rewrites existing rows (0006), take a `pg_dump --schema=mysports -t mysports.<table>` of the affected table.
 
 ---
+
+## 0009: the two semantics that are easy to get wrong
+
+**A NULL broadcast window means the row carries the WHOLE program. Null is "all of it", not "unknown".**
+That is precisely what makes every pre-0009 `game_broadcasts` row correct and unchanged with no backfill —
+all 442 of them are null-window, and all 442 still mean exactly what they meant before. The columns exist
+because CBS carries *part* of some UFC events, which the v0.4 model could not express at all.
+
+Its consequence, which is the actual bug this prevents: **duplicate-feed suppression must compare windows.**
+Two broadcast rows for the same program on the same service are duplicates only when their windows also
+coincide. A suppression rule written against the old implicit whole-program assumption will silently collapse
+a CBS window into its parent streaming row and lose the fact that the two carry different parts of the event.
+
+**There is no `purchasable` access state, and that is a decision, not an omission.** Joe ruled on 2026-09-02
+that purchasable content is out of scope: the grid answers "what can I watch", not "what could I buy", so
+putting a $39.99 AEW PPV on it would invert the product's purpose. `access_status` is therefore untouched by
+0009 and still has its original seven values. AEW's scope is Dynamite/Collision plus specials *included with*
+a subscription the viewer already has. If this is ever revisited it needs a Joe decision, not a migration.
+
+Two smaller notes on 0009, both deliberate:
+
+* The `programs_series_ck` constraint compares `sport::text = 'nascar'` rather than the enum literal.
+  PostgreSQL forbids *using* a new enum value in the same transaction that added it, and
+  `scripts/apply_migration.py` runs the whole file in one transaction. Casting to text compares two strings
+  and never references the enum value, so the constraint is identical in effect and the migration stays a
+  single atomic file. (Verified on PG 17.6 by dry run before applying.)
+* `programs` gets the same `set_updated_at()` trigger `games` has carried since 0004. That is `updated_at`
+  maintenance only. The shadow-row logic — creating and updating a game's program row — lives in
+  `pipeline/load.py`, in code that runs, never in a trigger.
+
 
 ## Backups and the recovery drill (deployment contract §6)
 
