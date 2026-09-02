@@ -52,18 +52,28 @@ from zoneinfo import ZoneInfo
 
 ET = ZoneInfo("America/New_York")
 UA = "MySports-adapters/0.1 (+https://github.com/MindLane-NorthStar/MySports)"
-# ESPN sits behind Akamai, which answers a non-browser User-Agent with 403 AkamaiGHost for EVERY
-# endpoint - observed from the Cowork cloud workspace on 2026-09-02 (research changelog, Brief 2
-# standing gotcha). It has NOT happened on the GitHub Actions runner (the 2026-09-02 refresh fetched
-# NFL, NBA and CFB fine), so this is insurance against an IP range being reclassified, not a fix for a
-# live failure. Only ESPN hosts get it; every other provider keeps the honest identifying UA.
+# ESPN sits behind Akamai, which can answer with 403 "Access Denied" (errors.edgesuite.net) - seen from
+# the Cowork cloud workspace on 2026-09-02 (research changelog, Brief 2 standing gotcha).
+#
+# **A browser UA is OFF by default, and that is a measured decision, not an oversight.** Sending one was
+# tried on the Actions runner on 2026-09-03 and it made things WORSE: the 15:00Z run on the honest
+# project UA fetched NFL, NBA and CFB fine, and the very next run - identical except for a Chrome UA -
+# got 403 on the first ESPN call (run 33673744218). Akamai's bot manager scores a Chrome User-Agent that
+# arrives with none of the headers a real Chrome sends (Accept-Language, Sec-Fetch-*, a plausible
+# Referer) as a spoofing client, which is a stronger signal than an honest bot UA. Half a disguise is
+# worse than none.
+#
+# Set MYSPORTS_ESPN_BROWSER_UA=1 to switch it on without a code change if the honest UA ever starts
+# getting blocked on its own - but if that day comes, send a COMPLETE header set, not just this line.
 BROWSER_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
               "Chrome/140.0.0.0 Safari/537.36")
 ESPN_HOSTS = ("espn.com", "espncdn.com")
 
 
 def ua_for(url: str) -> str:
-    """Browser UA for ESPN's Akamai-fronted hosts, the project UA everywhere else."""
+    """The project UA, unless MYSPORTS_ESPN_BROWSER_UA is set and the host is one of ESPN's."""
+    if os.getenv("MYSPORTS_ESPN_BROWSER_UA", "") not in ("1", "true", "yes"):
+        return UA
     host = urllib.parse.urlsplit(url).hostname or ""
     return BROWSER_UA if any(host == h or host.endswith("." + h) for h in ESPN_HOSTS) else UA
 
