@@ -28,7 +28,10 @@ from adapters.common import (access_lookup, dump_json, et_display, fetch_logos, 
                              outlet_access, result_status, score_int, team_record, write_text)
 
 API = "https://statsapi.mlb.com/api/v1"
-HYDRATE = "broadcasts(all),team,venue,seriesStatus,statusFlags,preGameOdds"
+HYDRATE = "broadcasts(all),team,venue,seriesStatus,statusFlags,preGameOdds,probablePitcher"
+# one batched follow-up call turns the schedule's probablePitcher ids into "F. Lastname (W-L, ERA)"
+PEOPLE_HYDRATE = "stats(group=[pitching],type=[season])"
+PEOPLE_CHUNK = 100
 # MLB abbreviations that differ from ESPN's (brief 6.1)
 MLB_TO_ESPN = {"AZ": "ARI", "CWS": "CHW"}
 # gameType: keep the ones that reach a grid; drop spring/exhibition/intrasquad (brief 1.4)
@@ -63,10 +66,100 @@ def build_teams(mlb_teams: list[dict[str, Any]], espn_teams: list[dict[str, Any]
             f"mlb-{t['id']}", t.get("teamName") or t.get("name") or "", ab, division, "mlb",
             e.get("color"), e.get("alternateColor"), list(e.get("logos") or []),
             teamFull=t.get("name"), location=t.get("locationName"),
+            # `nickname` is the card name every other sport's teams file already carries, and it is what
+            # pipeline.bootstrap writes to teams.short_name. Without it bootstrap fell back to the last
+            # word of the full name, which turned "Red Sox"/"White Sox" into "Sox" (two clubs, one name)
+            # and "Blue Jays" into "Jays". statsapi's `teamName` IS the nickname - verified live
+            # 2026-09-02: 111 -> "Red Sox", 145 -> "White Sox", 141 -> "Blue Jays".
+            nickname=t.get("teamName"),
             league=(t.get("league") or {}).get("name"), division=division,
             venueId=(t.get("venue") or {}).get("id"),
         ))
     return sorted(out, key=lambda r: r["school"])
+
+
+# --------------------------------------------------------------------------- probable pitchers
+def probable_ids(raw: dict[str, Any]) -> list[int]:
+    """Every probablePitcher id in a /schedule payload, de-duplicated, in first-seen order."""
+    out: list[int] = []
+    seen: set[int] = set()
+    for bucket in (raw.get("dates") or []):
+        for g in (bucket.get("games") or []):
+            for which in ("away", "home"):
+                pid = (((g.get("teams") or {}).get(which) or {}).get("probablePitcher") or {}).get("id")
+                if isinstance(pid, int) and pid not in seen:
+                    seen.add(pid)
+                    out.append(pid)
+    return out
+
+
+def fetch_people(ids: list[int]) -> dict[int, dict[str, Any]]:
+    """ONE batched GET /people?personIds=<list>&hydrate=stats(...) per 100 ids. Empty list -> no call."""
+    people: dict[int, dict[str, Any]] = {}
+    for i in range(0, len(ids), PEOPLE_CHUNK):
+        chunk = ids[i:i + PEOPLE_CHUNK]
+        data = http_json(f"{API}/people", params={"personIds": ",".join(str(x) for x in chunk),
+                                                  "hydrate": PEOPLE_HYDRATE})
+        for p in (data or {}).get("people") or []:
+            if p.get("id") is not None:
+                people[int(p["id"])] = p
+    return people
+
+
+def _season_line(person: dict[str, Any]) -> str | None:
+    """'(13-9, 2.06)' from the season pitching split, or None when the stats are not usable.
+
+    A traded pitcher gets one split per club PLUS a combined split that carries `numTeams` and no `team`
+    key (verified live 2026-09-02: Jose Soriano, 11-7 3.45 across two clubs). The combined split is the
+    season line; per-club splits are never summed by hand.
+    """
+    best: dict[str, Any] | None = None
+    for group in person.get("stats") or []:
+        if ((group.get("group") or {}).get("displayName") or "") not in ("pitching", ""):
+            continue
+        for sp in group.get("splits") or []:
+            if (sp.get("gameType") or "R") != "R":
+                continue
+            if best is None or (sp.get("numTeams") and not best.get("numTeams")):
+                best = sp
+    if best is None:
+        return None
+    st = best.get("stat") or {}
+    wins, losses, era = st.get("wins"), st.get("losses"), st.get("era")
+    if not isinstance(wins, int) or not isinstance(losses, int):
+        return None
+    try:                       # MLB sends '-.--' for a pitcher with no innings; that is not an ERA
+        float(str(era))
+    except (TypeError, ValueError):
+        return None
+    return f"({wins}-{losses}, {era})"
+
+
+def pitcher_display(pitcher: dict[str, Any] | None, people: dict[int, dict[str, Any]]) -> str | None:
+    """'C. Sale (13-9, 2.06)'. Name alone when the stats call did not answer for this id; None when the
+    schedule carries no probable at all - common more than two days out and for game 2 of a doubleheader."""
+    if not pitcher:
+        return None
+    pid = pitcher.get("id")
+    person = people.get(int(pid)) if isinstance(pid, int) else None
+    first = (person or pitcher).get("useName") or (person or pitcher).get("firstName") or ""
+    last = (person or pitcher).get("lastName") or ""
+    if not last:                                     # fall back to whatever full name we were given
+        full = (person or pitcher).get("fullName") or ""
+        parts = full.split()
+        if not parts:
+            return None
+        first, last = (parts[0], parts[-1]) if len(parts) > 1 else ("", parts[0])
+    name = f"{first[0]}. {last}" if first else last
+    line = _season_line(person) if person else None
+    return f"{name} {line}" if line else name
+
+
+def build_probables(game: dict[str, Any], people: dict[int, dict[str, Any]]) -> dict[str, str | None]:
+    """Always present, both sides, null where the league has not named a starter."""
+    teams = game.get("teams") or {}
+    return {which: pitcher_display((teams.get(which) or {}).get("probablePitcher"), people)
+            for which in ("away", "home")}
 
 
 def _odds(game: dict[str, Any]) -> dict[str, Any] | None:
@@ -152,7 +245,12 @@ def build_media(game: dict[str, Any], *, local_abbrevs: set[str], available: set
                     elif pick is False:
                         market, access, certainty = "regional", "OUT_OF_MARKET", "CONFIRMED"
                     else:
-                        market, access, certainty = "regional", "UNVERIFIED", "UNVERIFIED"
+                        # The telecast IS announced - what is unknown is which regional slice Cleveland
+                        # gets. That uncertainty belongs in `access` (the renderer's OMIT_ACCESS keeps the
+                        # game off the grid until data/market_coverage_mlb.json says), NOT in the
+                        # certainty: 'UNVERIFIED' is not a carriage_certainty value and the loader could
+                        # not write it. Same handling as the NFL regional path in adapters/espn.py.
+                        market, access, certainty = "regional", "UNVERIFIED", "CONFIRMED"
         else:
             has_local = True
             ha = (b.get("homeAway") or "").lower()
@@ -179,7 +277,9 @@ def build_media(game: dict[str, Any], *, local_abbrevs: set[str], available: set
 
 
 def build_fixture(raw: dict[str, Any], root: Path, *, season: int, date: str,
-                  teams: list[dict[str, Any]]) -> tuple[dict[str, Any], list[str], dict[str, list]]:
+                  teams: list[dict[str, Any]],
+                  people: dict[int, dict[str, Any]] | None = None) -> tuple[dict[str, Any], list[str], dict[str, list]]:
+    people = people or {}
     available, unavailable = access_lookup(root)
     markets = load_data(root, "markets.json", {}) or {}
     local_abbrevs = {a.upper() for a in ((markets.get("mlb") or {}).get("localTeams") or ["CLE"])}
@@ -254,6 +354,7 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, date: str,
                 "home": home, "away": away, "media": media,
                 "odds": _odds(g),
                 "records": {"home": record("home"), "away": record("away")},
+                "probables": build_probables(g, people),
                 "gameType": g.get("gameType"),
                 "doubleHeader": dh, "doubleheaderGameNumber": gnum if dh != "N" else None,
                 "seriesGameNumber": g.get("seriesGameNumber"), "gamesInSeries": g.get("gamesInSeries"),
@@ -294,10 +395,13 @@ def report_md(fixture: dict[str, Any], notes: list[str], tombstones: dict[str, l
     for g in fixture["games"]:
         media = "; ".join(f"{m['outlet']}[{m['access'][:4]}/{m['market'][:3]}/{m.get('feedSide','')[:4]}]"
                           for m in g["media"]) or "-"
+        pr = g.get("probables") or {}
+        probables = " vs ".join(pr.get(s) or "TBA" for s in ("away", "home"))
         rows.append([f"{g['away']['abbreviation']} @ {g['home']['abbreviation']}",
                      g["startTimeET"] or "TBD", g["gameType"], media,
-                     "yes" if g["suppressesLocalFeed"] else ""])
-    out.append(md_table(["Game", "Start (ET)", "Type", "Media rows [access/market/side]", "Locals suppressed"], rows))
+                     "yes" if g["suppressesLocalFeed"] else "", probables])
+    out.append(md_table(["Game", "Start (ET)", "Type", "Media rows [access/market/side]", "Locals suppressed",
+                         "Probables (away vs home)"], rows))
     for name, items in tombstones.items():
         if items:
             out += ["", f"## {name.title()}", ""] + [f"- `{t['id']}` {t['officialDate']} {t.get('reason') or ''}"
@@ -341,7 +445,23 @@ def main(argv: list[str] | None = None) -> int:
         teams = prior
     print(f"mlb teams: {len(teams)} -> {teams_path.relative_to(root)}")
 
-    fixture, notes, tombstones = build_fixture(raw, root, season=args.season, date=args.date, teams=teams)
+    # probable pitchers: the schedule hydration names them, ONE batched /people call adds W-L and ERA.
+    # Offline replay reuses the saved people payload when there is one; without it the names still render
+    # and the stats are simply absent - the display string degrades to the name alone, never to a guess.
+    people_path = out_dir / f"mlb_{args.season}_{args.date}_people.json"
+    pids = probable_ids(raw)
+    people: dict[int, dict[str, Any]] = {}
+    if pids and not offline:
+        people = _safe(lambda: fetch_people(pids)) or {}
+        if people:
+            dump_json(people_path, {"people": list(people.values())})
+    elif pids and people_path.exists():
+        people = {int(p["id"]): p for p in json.loads(people_path.read_text(encoding="utf-8")).get("people", [])
+                  if p.get("id") is not None}
+    print(f"probable pitchers: {len(pids)} named by the schedule, {len(people)} with season stats")
+
+    fixture, notes, tombstones = build_fixture(raw, root, season=args.season, date=args.date, teams=teams,
+                                               people=people)
 
     # Fail-closed guard (brief 10.4): games but zero TV rows in the whole window is a fetch failure,
     # not a league-wide suppression - writing the fixture would close every active broadcast row.

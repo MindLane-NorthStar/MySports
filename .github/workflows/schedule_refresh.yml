@@ -67,6 +67,10 @@ jobs:
           for i in -1 0 1 2 3 4 5 6; do
             python -m adapters.mlb --date $(python -c "import datetime as d;print((d.date.fromisoformat('${{ steps.when.outputs.date }}')+d.timedelta($i)).isoformat())") --no-logos || exit 1
           done
+      - name: Standings — all four pro leagues (one team_records row per club per ET day)
+        # Fail honest per league: a league whose fetch fails is skipped inside the module and the
+        # others still commit, so one flaky league API never fails the refresh.
+        run: python -m pipeline.standings --workflow schedule_refresh
       - name: Push new logos to R2
         run: python scripts/sync_assets.py --push --prefix logos/
       - name: Load fixtures into mysports.* (evidence only — Milestone 1 loader)

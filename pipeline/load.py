@@ -56,8 +56,8 @@ def viewing_day(dt_utc: datetime, cutover_hour: int = 3):
 
 
 # every counter load_fixture reports; the mysports-db skip path returns this zeroed so TOTAL still prints in full
-ZERO_COUNTS = {"games": 0, "broadcasts": 0, "odds": 0, "records": 0, "observations": 0, "observations_seen": 0,
-               "observations_closed": 0, "team_refs": 0, "venues": 0}
+ZERO_COUNTS = {"games": 0, "broadcasts": 0, "odds": 0, "records": 0, "probables": 0, "observations": 0,
+               "observations_seen": 0, "observations_closed": 0, "team_refs": 0, "venues": 0}
 # Joe 2026-09-01: ESPN box scores for cfb/nfl/nba (our ids ARE ESPN ids), league-native for nhl/mlb.
 # Raw URLs are never displayed - the completed event card is the click target.
 _BOXSCORE = {
@@ -90,6 +90,18 @@ where id = %s
 """
 
 
+# Probable pitchers are loader-written provider facts too (migration 0008), and null-safe the same way:
+# an incoming null NEVER erases a stored starter (the schedule stops naming one for a game already under
+# way, and for game 2 of a doubleheader it never named one), while a CHANGED name overwrites - a scratch
+# two hours before first pitch has to reach the card.
+PROBABLES_SQL = """
+update games set
+  probable_home_pitcher = coalesce(%s, probable_home_pitcher),
+  probable_away_pitcher = coalesce(%s, probable_away_pitcher)
+where id = %s
+"""
+
+
 def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
     fx = json.loads(path.read_text(encoding="utf-8"))
     meta = fx.get("validation") or {}
@@ -105,7 +117,7 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
     local_abbrevs = set(market.get(sport, {}).get("localTeams", []))
     market_id = market["market"]["id"]
     content_hash = hashlib.sha256(path.read_bytes()).hexdigest()
-    counts = {"games": 0, "broadcasts": 0, "odds": 0, "records": 0, "observations": 0, "observations_seen": 0, "observations_closed": 0, "team_refs": 0, "venues": 0}
+    counts = dict(ZERO_COUNTS)
 
     # snapshot row for this fixture file (id retrieved live; in emit mode observations reference it by subquery)
     db.run("insert into source_snapshots (source_id, source_url, http_status, content_hash, content_type, storage_url, parser_version, parse_status) "
@@ -156,6 +168,10 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
             _st = None                                      # poison the score write (coalesce needs text)
         db.run(SCORES_SQL, (g.get("homeScore"), g.get("awayScore"), _st, _st, _st,
                             boxscore_url(sport, gid), gid), tag="games.result")
+        pr = g.get("probables")
+        if isinstance(pr, dict):
+            db.run(PROBABLES_SQL, (_text(pr.get("home")), _text(pr.get("away")), gid), tag="games.probables")
+            counts["probables"] += sum(1 for s in ("home", "away") if _text(pr.get(s)))
 
         # ---- observations with supersession (spec 9.6 step 5, 9.13): a source that repeats itself bumps last_seen_at;
         # a source that changes its claim gets a new row and valid_to on its old one; a broadcast row a source no longer
@@ -251,6 +267,11 @@ def _rel(p: Path) -> str:
         return p.relative_to(ROOT.resolve()).as_posix()
     except ValueError:
         return p.as_posix()
+
+
+def _text(v: Any) -> str | None:
+    """A probable-pitcher cell is a display string or nothing; '' and non-strings are nothing."""
+    return v.strip() if isinstance(v, str) and v.strip() else None
 
 
 def _int(v: Any) -> int | None:

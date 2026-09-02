@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -94,6 +96,10 @@ def teams_and_conferences(db: DB) -> tuple[int, int]:
             ext = {k: t[k] for k in ("espnId", "nhlId", "espnAbbreviation") if t.get(k)}
             if sport == "cfb":
                 ext["cfbd"] = t["id"]
+            # short_name is the card name. Every pro teams file supplies `nickname`; the last-word
+            # fallback below is a last resort ONLY - it cannot spell a two-word nickname ("Red Sox" ->
+            # "Sox", "Blue Jays" -> "Jays"), so an adapter that omits `nickname` is the bug to fix, not
+            # this line (see adapters/mlb.py build_teams).
             teams.append({"id": str(t["id"]), "sport": sport, "canonical_name": t.get("school"),
                           "short_name": t.get("nickname") or (t.get("school") if sport == "cfb" else (t.get("school") or "").split(" ")[-1]),
                           "location": t.get("location"), "abbreviation": t.get("abbreviation"), "conference_id": conf_id,
@@ -102,6 +108,59 @@ def teams_and_conferences(db: DB) -> tuple[int, int]:
     nc = db.upsert("conferences", confs.values(), "id", ["name"])
     nt = db.upsert("teams", teams, "id", ["canonical_name", "short_name", "location", "abbreviation", "conference_id", "fbs_status", "primary_color", "secondary_color", "external_ids"])
     return nc, nt
+
+
+def _norm_school(s: str | None) -> str:
+    """Fold a school name for matching only: accents, punctuation, 'State'/'St', case and spacing.
+    Never used to DISPLAY a name - only to decide that two spellings are the same school."""
+    t = unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode().lower()
+    t = t.replace("&", " and ").replace("'", "")
+    t = re.sub(r"[^a-z0-9]+", " ", t).strip()
+    t = re.sub(r"\bst\b", "state", t)
+    t = re.sub(r"\buniv(ersity)?\b", "", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def display_names(db: DB) -> dict[str, Any]:
+    """teams.display_name for college football, from ESPN's `shortDisplayName` (the scoreboard convention).
+
+    Rule (Joe 2026-09-02): write it only where it DIFFERS from short_name - a name that is already the
+    media-standard short form needs no second copy, and null means "fall back to short_name". Pro sports
+    stay null. A school ESPN does not carry is listed and left null; a display name is NEVER guessed.
+
+    Matching is by ESPN id first (CFBD ids ARE ESPN ids), then by normalized school name.
+    """
+    p = ROOT / "artifacts" / "validation" / "cfb_espn_teams.json"
+    if not p.exists():
+        print(f"  display_name: no {p.name} - run `python -m adapters.espn --league cfb --teams-only` first; skipped")
+        return {"written": 0, "cleared": 0, "unmatched": [], "diffs": []}
+    espn = load_json(p)
+    by_id = {str(t.get("espnId") or t["id"]): t for t in espn}
+    by_name: dict[str, dict[str, Any]] = {}
+    for t in espn:
+        by_name.setdefault(_norm_school(t.get("location") or t.get("school")), t)
+
+    rows = db.fetch("select id, short_name, canonical_name from teams where sport = 'cfb' order by id")
+    diffs: list[tuple[str, str, str, str]] = []
+    unmatched: list[tuple[str, str]] = []
+    cleared = 0
+    for tid, short_name, canonical in rows:
+        tid = str(tid)
+        match = by_id.get(tid) or by_name.get(_norm_school(short_name or canonical))
+        if not match:
+            unmatched.append((tid, short_name or canonical or ""))
+            continue
+        sdn = (match.get("shortDisplayName") or "").strip()
+        how = "id" if tid in by_id else "name"
+        if sdn and sdn != (short_name or ""):
+            db.run("update teams set display_name = %s where id = %s", (sdn, tid), tag="teams.display_name")
+            diffs.append((tid, short_name or "", sdn, how))
+        else:
+            # already the short form (or ESPN has none): null means "use short_name"
+            db.run("update teams set display_name = null where id = %s and display_name is not null",
+                   (tid,), tag="teams.display_name.clear")
+            cleared += 1
+    return {"written": len(diffs), "cleared": cleared, "unmatched": unmatched, "diffs": diffs}
 
 
 def territories(db: DB, team_ids_by_sport_abbr: dict[tuple[str, str], str]) -> int:
@@ -150,6 +209,13 @@ def main(argv: list[str] | None = None) -> int:
         if p.exists():
             for t in load_json(p):
                 cfb_by_school[t["school"]] = str(t["id"])
+        dn = display_names(db)
+        print(f"teams.display_name: {dn['written']} written, {dn['cleared']} left null (already short), "
+              f"{len(dn['unmatched'])} unmatched")
+        for tid, short_name, sdn, how in dn["diffs"]:
+            print(f"    {tid}: {short_name!r} -> {sdn!r}  [matched by {how}]")
+        for tid, name in dn["unmatched"]:
+            print(f"    unmatched (left null): {tid} {name!r}")
         print("team_territories:", territories(db, by_abbr))
         print("rivalries:", rivalries(db, cfb_by_school))
         db.commit()

@@ -49,19 +49,52 @@ REGIONAL_NETWORKS = {"CBS", "FOX"}
 
 
 # ----------------------------------------------------------------------------- teams
-def fetch_teams(league: str) -> list[dict[str, Any]]:
-    data = http_json(f"{SITE}/{LEAGUE_PATH[league]}/teams", params={"limit": 100})
+def fetch_teams(league: str, *, groups: tuple[int, ...] = (), limit: int = 100) -> list[dict[str, Any]]:
+    """Team directory for one ESPN league.
+
+    College football is the only league that needs paging: the directory is 760 schools and the endpoint
+    caps a page at 500. Pages are walked until one comes back short.
+
+    NOTE, verified live 2026-09-02: `/college-football/teams` IGNORES the `groups` parameter - groups 80
+    (FBS) and 81 (FCS) return byte-identical payloads containing both. Both are still requested, and the
+    union is deduplicated by ESPN id, so the call is correct whether or not ESPN starts honouring it.
+
+    cfb keeps ESPN's bare integer id (CFBD ids ARE ESPN ids, and the rendering contract's fixtures are
+    byte-compatible with integer cfb ids); every other league is namespaced `{league}-{id}`.
+    """
+    by_id: dict[str, dict[str, Any]] = {}
+    for grp in (groups or (None,)):
+        page = 1
+        while True:
+            params: dict[str, Any] = {"limit": limit, "page": page}
+            if grp is not None:
+                params["groups"] = grp
+            data = http_json(f"{SITE}/{LEAGUE_PATH[league]}/teams", params=params)
+            batch = data["sports"][0]["leagues"][0]["teams"]
+            for t in batch:
+                by_id[str(t["team"]["id"])] = t["team"]
+            if len(batch) < limit:
+                break
+            page += 1
     out = []
-    for t in data["sports"][0]["leagues"][0]["teams"]:
-        team = t["team"]
+    for team in by_id.values():
         logos = [l.get("href") for l in team.get("logos", []) if l.get("href")]
         out.append(team_record(
-            f"{league}-{team['id']}", team.get("displayName") or team.get("name"), team.get("abbreviation"),
+            str(team["id"]) if league == "cfb" else f"{league}-{team['id']}",
+            team.get("displayName") or team.get("name"), team.get("abbreviation"),
             None, league, team.get("color"), team.get("alternateColor"), logos,
             espnId=str(team["id"]), location=team.get("location"), nickname=team.get("name"),
             shortDisplayName=team.get("shortDisplayName")))
     out.sort(key=lambda r: r["school"])
     return out
+
+
+# ESPN groups 80 (FBS) and 81 (FCS); see the note in fetch_teams about the parameter being ignored.
+CFB_GROUPS = (80, 81)
+
+
+def fetch_cfb_directory() -> list[dict[str, Any]]:
+    return fetch_teams("cfb", groups=CFB_GROUPS, limit=500)
 
 
 def teams_by_abbrev(teams: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -251,7 +284,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.from_file and teams_path.exists():   # offline replay: reuse the cached teams file
         teams = json.loads(teams_path.read_text(encoding="utf-8"))
     else:
-        teams = fetch_teams(args.league)
+        teams = fetch_cfb_directory() if args.league == "cfb" else fetch_teams(args.league)
         dump_json(teams_path, teams)
     print(f"{args.league} teams: {len(teams)} -> {teams_path.relative_to(root)}")
     if args.teams_only or args.league != "nfl":
