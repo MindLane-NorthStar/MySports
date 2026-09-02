@@ -43,7 +43,10 @@ jobs:
           D=${{ steps.when.outputs.date }}
           for S in nhl nba nfl mlb; do
             F="artifacts/validation/db_${S}_${D}_fixture.json"
-            N=$(python -m pipeline.render_feed --sport $S --date $D --out "$F" | head -1 | awk '{print $3}')
+            # --teams-out writes the renderer's teams file FROM THE DATABASE. This job runs on its own
+            # fresh runner and artifacts/ is gitignored, so the adapter output the refresh job produced is
+            # not here - which is how this step failed with FileNotFoundError on mlb_2026_teams.json.
+            N=$(python -m pipeline.render_feed --sport $S --date $D --out "$F" --teams-out | grep '^db feed:' | awk '{print $3}')
             echo "$S: ${N:-0} game(s) in the database for $D"
             if [ "${N:-0}" -gt 0 ]; then
               python scripts/render_day.py --sport $S --date $D --png --export --fixture "$F"
@@ -54,7 +57,7 @@ jobs:
             W=$(python -m pipeline.render_feed --sport cfb --latest-week || true)
             if [ -n "$W" ]; then
               F="artifacts/validation/db_cfbd_week${W}_fixture.json"
-              N=$(python -m pipeline.render_feed --sport cfb --week "$W" --out "$F" | head -1 | awk '{print $3}')
+              N=$(python -m pipeline.render_feed --sport cfb --week "$W" --out "$F" --teams-out | grep '^db feed:' | awk '{print $3}')
               echo "cfb: week $W, ${N:-0} game(s) in the database"
               if [ "${N:-0}" -gt 0 ]; then
                 python scripts/render_day.py --week "$W" --date $D --png --export --fixture "$F"

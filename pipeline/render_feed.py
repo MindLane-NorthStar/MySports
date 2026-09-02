@@ -196,6 +196,49 @@ def latest_week(db: DB, sport: str, year: int) -> int | None:
     return rows[0][0] if rows and rows[0][0] is not None else None
 
 
+TEAMS_SQL = """
+select t.id, t.canonical_name, t.short_name, t.abbreviation, t.primary_color, t.secondary_color,
+       c.name as conference, t.fbs_status
+from teams t left join conferences c on c.id = t.conference_id
+where t.sport = %s
+order by t.id
+"""
+
+
+def teams_rows(db: DB, sport: str) -> list[dict]:
+    """The renderer's teams file, straight out of mysports.teams.
+
+    scripts/render_day.py reads exactly two fields from this file - `abbreviation` and `color` - but it
+    reads them for every team on the slate, so a missing file is fatal. On a GitHub runner the file IS
+    missing: artifacts/ is gitignored, and render_all runs as its OWN job on a FRESH machine, so it
+    never sees the adapter output the refresh job produced (that is how render_all failed on
+    2026-09-02 and again in run 33674243466 with FileNotFoundError on mlb_2026_teams.json).
+
+    The database already holds everything the file needs, so the renderer can source it from there and
+    stop depending on a sibling job's working directory. Shape matches adapters.common.team_record.
+    """
+    out = []
+    for tid, canonical, short, abbr, color, alt, conf, fbs in db.fetch(TEAMS_SQL, (sport,)):
+        out.append({
+            "id": str(tid),
+            "school": canonical or short or str(tid),
+            "abbreviation": abbr,
+            "conference": conf,
+            "classification": fbs or sport,
+            "color": color,
+            "alternateColor": alt,
+            "logos": [],          # render_day reads logos from the local asset cache, not from here
+            "nickname": short,
+        })
+    return out
+
+
+def teams_default_path(sport: str, year: int) -> str:
+    """The path scripts/render_day.py looks for when --teams is not given."""
+    return (f"artifacts/validation/cfbd_{year}_teams.json" if sport == "cfb"
+            else f"artifacts/validation/{sport}_{year}_teams.json")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Emit one viewing day (pro) or week (cfb) from mysports.* "
                                              "in the adapter fixture shape.")
@@ -205,6 +248,9 @@ def main() -> int:
     ap.add_argument("--year", type=int, default=2026)
     ap.add_argument("--latest-week", action="store_true", help="print the newest loaded week for --sport and exit")
     ap.add_argument("--out", help="write here instead of the default artifacts/validation path")
+    ap.add_argument("--teams-out", nargs="?", const="", metavar="PATH",
+                    help="also write the renderer's teams file from the database (default path when "
+                         "given no value) - lets a runner render without the adapter working directory")
     args = ap.parse_args()
 
     db = DB()
@@ -226,6 +272,12 @@ def main() -> int:
                 print(f"ERROR: --date is required for {args.sport}", file=sys.stderr)
                 return 2
             default = f"artifacts/validation/db_{args.sport}_{args.year}_{args.date}_fixture.json"
+
+        if args.teams_out is not None:
+            tpath = Path(args.teams_out or teams_default_path(args.sport, args.year))
+            rows = teams_rows(db, args.sport)
+            dump_json(tpath, rows)
+            print(f"db teams: {len(rows)} -> {tpath.as_posix()}")
 
         feed, by_day = build(db, args.sport, date=args.date, week=args.week, year=args.year)
         path = Path(args.out or default)

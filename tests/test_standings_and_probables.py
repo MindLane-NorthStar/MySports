@@ -116,15 +116,30 @@ class ProbablePitcherFromSavedSnapshot(unittest.TestCase):
                         self.assertRegex(value, r"\(\d+-\d+, \d+\.\d+\)$")
         self.assertGreater(seen, 0, "no probable rendered from the saved snapshot")
 
-    def test_doubleheader_game_two_has_no_probable(self):
-        # MLB never names a starter for game 2 of a split doubleheader; both CLE games on 2026-09-04
+    def test_a_side_the_schedule_does_not_name_is_null(self):
+        """An unnamed side is None - on any game, doubleheader or not.
+
+        This test used to assert that game 2 of a doubleheader NEVER carries a probable. That was an
+        overreach from a single day's payload: on 2026-09-03 both halves of the 2026-09-04 DET @ CLE
+        doubleheader were blank, and by 2026-09-04 MLB had named a starter for one of them. What is
+        actually load-bearing - and true every day - is that a side the schedule leaves out comes back
+        null rather than guessed.
+        """
         raw = load_raw("mlb_2026_2026-09-04_raw.json")
-        games = [g for b in raw.get("dates", []) for g in b.get("games", [])
-                 if (g.get("doubleHeader") or "N") != "N" and g.get("gameNumber") == 2]
-        if not games:
-            self.skipTest("snapshot has no doubleheader game 2")
+        games = [g for b in raw.get("dates", []) for g in b.get("games", [])]
+        self.assertTrue(games, "snapshot has no games")
+        checked = 0
         for g in games:
-            self.assertEqual(mlb.build_probables(g, {}), {"away": None, "home": None})
+            teams = g.get("teams") or {}
+            built = mlb.build_probables(g, {})
+            for side in ("away", "home"):
+                named = ((teams.get(side) or {}).get("probablePitcher") or {}).get("id")
+                if named is None:
+                    self.assertIsNone(built[side], f"{g.get('gamePk')} {side}")
+                    checked += 1
+                else:
+                    self.assertIsNotNone(built[side], f"{g.get('gamePk')} {side}")
+        self.assertGreater(checked, 0, "no unnamed side in the snapshot to check")
 
 
 # --------------------------------------------------------------------------- loader null-safety

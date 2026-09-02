@@ -355,7 +355,8 @@ input[type='search'] {
   display: flex;
   align-items: center;
   min-width: 0;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  row-gap: 1px;
 }
 
 .at {
@@ -371,8 +372,7 @@ input[type='search'] {
   align-items: center;
   gap: 7px;
   line-height: 22px;
-  min-width: 0;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
 }
 
 .tname img {
@@ -382,11 +382,16 @@ input[type='search'] {
   flex: 0 0 auto;
 }
 
+/* The tiered shrink (15 -> 12.5 -> 11px, set inline by nameSize()) only means anything if the name is
+   allowed to occupy the width that size implies. It used to sit in a shrinkable flex item with
+   `overflow: hidden; text-overflow: ellipsis`, so the flexbox squeezed short names like "Blue Jays"
+   and "Brewers" into "Blue ..." / "Brew..." long before any tier had been tried. The name is now
+   unbreakable and unshrinkable, and the DUEL wraps instead: the home team drops to a second line whole
+   rather than either name being cut. Ellipsis is a last resort only, at the smallest tier. */
 .tname b {
   font-weight: 600;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 0 0 auto;
 }
 
 /* lines 2-3, each under its own team; the columns split the card evenly so a long standing line
@@ -783,17 +788,30 @@ input:focus-visible {
   object-fit: contain;
 }
 
+/* Two short lines at most, produced by lib/raillabel.js. Deliberately NO text-overflow: a mid-word
+   ellipsis ("Marlins.T...") tells the reader nothing, so the label is shortened at word boundaries
+   before it ever reaches the tile. */
 .mrail-call {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   font-size: 10px;
   line-height: 11px;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   color: var(--dim);
   text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 100%;
+}
+
+.mrail-call span {
+  white-space: nowrap;
+}
+
+/* the '@' that marks the home band of a grid block (contract §3) */
+.mname .mat {
+  color: var(--faint);
+  margin-right: 3px;
 }
 
 .mgrid-lanes {
@@ -1218,23 +1236,32 @@ input:focus-visible {
   .tagline {
     margin-left: 0;
   }
+  /* The slot stays in the RIGHT-HAND COLUMN on a phone, as the locked demo card has it. It used to
+     drop to a full-width row underneath ('slot slot'), which put SCHED and the odds bottom-left - the
+     one place the eye does not look for them. Only the columns get tighter. */
   .mcard {
-    grid-template-columns: 62px minmax(0, 1fr);
-    grid-template-areas: 'time body' 'slot slot';
-    row-gap: 8px;
+    grid-template-columns: 54px minmax(0, 1fr) auto;
+    column-gap: 9px;
+    padding: 10px 10px 10px 13px;
   }
   .mcard .mtime {
-    grid-area: time;
+    font-size: 15px;
   }
-  .mcard .mbody {
-    grid-area: body;
+  .mslot {
+    max-width: 84px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 5px;
   }
-  .mcard .mslot {
-    grid-area: slot;
-    justify-self: start;
-    border-top: 1px solid var(--line-soft);
-    padding-top: 8px;
-    width: 100%;
+  .mslot img {
+    width: 20px;
+    height: 20px;
+  }
+  .mslot-state {
+    font-size: 13px;
+  }
+  .mnet-mark {
+    max-width: 64px;
   }
 }
 
@@ -1249,4 +1276,16 @@ input:focus-visible {
   font-size: 14px;
   letter-spacing: 0.08em;
   margin-bottom: 6px;
+}
+
+/* the jump chip that keeps the grid one tap away now that listings come first */
+.jumpbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: -6px 0 8px;
+}
+
+.jumpchip {
+  color: var(--gold);
+  border-color: rgba(240, 200, 80, 0.45);
 }

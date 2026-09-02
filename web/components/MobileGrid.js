@@ -29,6 +29,7 @@ import { markStyle, hasMark } from '../lib/marks.js';
 import { etTime } from '../lib/format.js';
 import { cardName, cardBroadcast } from './MatchupCard.js';
 import { recordText, standingFor } from '../lib/standings.js';
+import { railLabel } from '../lib/raillabel.js';
 
 const SCALE = 0.8; // M1: all grid content renders at 80% of contract design size
 const SEAM_PX = 30; // the dashed cut occupies this much of the axis (M3)
@@ -117,7 +118,8 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
     for (const it of timed) {
       for (const side of ['home', 'away']) {
         const l = teamLine(it.game, side, standings);
-        const text = `${l.rank ? `${l.rank} ` : ''}${l.name}${l.record ? `  ${l.record}` : ''}`;
+        const at = side === 'home' ? '@ ' : '';
+        const text = `${at}${l.rank ? `${l.rank} ` : ''}${l.name}${l.record ? `  ${l.record}` : ''}`;
         widest = Math.max(widest, measure(text, nameFont));
       }
     }
@@ -249,10 +251,18 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
               <div className="mrail-cell">
                 <div className="mrail-mark">
                   {hasMark(row.id) ? (
-                    <img src={markStyle(row.id, 42).src} alt="" loading="lazy" />
+                    <img src={markStyle(row.id, 42).src} alt={row.name} loading="lazy" />
                   ) : null}
                 </div>
-                <div className="mrail-call">{row.name}</div>
+                {/* a network WITH a mark needs no name under it; one without gets a derived
+                    abbreviation of at most two short lines - never a mid-word ellipsis */}
+                {hasMark(row.id) ? null : (
+                  <div className="mrail-call" title={row.name}>
+                    {railLabel(row.name).map((line) => (
+                      <span key={line}>{line}</span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="mgrid-lanes" style={{ width: scale.width, height: row.lanes.length * laneH }}>
                 {ticks.lines.map((l) => (
@@ -376,7 +386,10 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen }) {
             {away.record ? <span className="mrec">{away.record}</span> : null}
           </div>
           <div className="mhair" style={{ width: '86%' }} />
+          {/* contract §3: the home band reads "@ {rank} {TEAM}". The '@' is what marks the band as
+              the home side and does NOT depend on rank data, which is null for most games. */}
           <div className="mname" style={{ fontSize: nameSize }}>
+            <span className="mat">{game.neutral_site ? 'vs' : '@'}</span>
             {home.rank ? <span className="mrank">{home.rank}</span> : null}
             {home.name}
             {home.record ? <span className="mrec">{home.record}</span> : null}

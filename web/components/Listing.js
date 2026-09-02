@@ -35,10 +35,20 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
     return () => clearInterval(id);
   }, [games, router]);
 
+  const showGrid = Boolean(grid && sport && games.length);
+  const gridId = `grid-${sport || 'all'}-${day || ''}`;
+
+  // LISTINGS FIRST, in every view and for every sport (Joe's ruling 2026-09-03). The grid is the
+  // second thing on the page, not the first: a phone opens to what is on, and the grid is one tap
+  // away through the jump chip rather than a screen of scrolling.
   return (
     <>
-      {grid && sport && games.length ? (
-        <MobileGrid games={games} sport={sport} day={day} standings={standings} onOpen={setOpen} />
+      {showGrid ? (
+        <div className="jumpbar">
+          <a className="chip jumpchip" href={`#${gridId}`}>
+            Grid &darr;
+          </a>
+        </div>
       ) : null}
 
       <div className="cards">
@@ -46,6 +56,12 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
           <MatchupCard key={g.id} game={g} standings={standings} showDay={showDay} onOpen={setOpen} />
         ))}
       </div>
+
+      {showGrid ? (
+        <div id={gridId}>
+          <MobileGrid games={games} sport={sport} day={day} standings={standings} onOpen={setOpen} />
+        </div>
+      ) : null}
 
       {open ? (
         <GameDetail game={open} standings={standings} generatedAt={generatedAt} onClose={() => setOpen(null)} />
