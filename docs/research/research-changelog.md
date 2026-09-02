@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-09-02 — Brief 2: Events & Shows (Chat architecture session)
+- **Requests recorded** (enhancement-register.md): NASCAR (3 series), UFC, IndyCar, WWE, AEW, studio/pregame shows.
+- **Decisions (Joe):** programs supertype approved; individual sport chips; race only; UFC one card + segment timeline; purchasable content excluded (AEW PPV out); studio = pre/post bookends; hosts/locations sourced not curated; one nascar sport + series; WWE = Raw/SmackDown/PLEs, NXT out; design pass option (a) prototype-first; UFC/NASCAR odds under show_odds.
+- **Correction logged:** register initially re-flagged the §21 betting-lines contradiction; it was resolved 08-31 (`show_odds`) and odds already render (prompt 13). Failure mode: memory carried a stale open item past its resolution. Rule: check handoff-status "SIX DECISIONS" before re-raising any decision.
+- **Verified fetch-clean sources:** espnpressroom.com (GameDay site table), wwe.com (Drupal; Premier Shows block = calendar), paramountplus.com Sneak Peak UFC schedule (static WP), paramountpressexpress.com (CBS windows), indycar.com (season table). **JS-blank:** espn.com stories, nascar.com schedule pages.
+- **Rights verified:** UFC P+ exclusive through 2033 + CBS partial windows; WWE Raw Netflix / SmackDown USA (3h) / PLEs ESPN Unlimited / SNME Peacock; AEW Dynamite TBS+HBO Max, Collision TNT+HBO Max (volatile), PPV $39.99 purchase; NASCAR Cup FOX→Prime→TNT→USA/NBC(+Peacock ×4), O'Reilly CW, Truck FS1 (2 FOX); IndyCar all FOX.
+- **New standing gotcha:** ESPN `site.api.espn.com` returned Akamai 403 for ALL endpoints (incl. NFL) from the cloud workspace 09-02. Verify Actions runner; consider browser UA in adapters/espn.py.
+- **Watch-task additions proposed:** GameDay/Big Noon site releases (weekly); AEW monthly WBD schedule + mid-month moves; WWE PLE carriage confirmation; NASCAR postponements.
+- **Deliverables:** research-studio-shows.md, research-wwe.md, research-aew.md, research-ufc.md, research-nascar.md, research-indycar.md, research-summary-2.md, research-brief-2-events-and-shows.md, enhancement-register.md (v0.1 + decisions §7–§9).
+
 ### 2026-09-01 (evening) — Tier 1 refresh: CBJ still TBA (Prime Video is a REPORT), Cavs OTA partner resolution, Guardians/ESPN 2027, NFL Wk1, ESPN Unlimited price
 Full entries with sources: `claude/research-refresh-2026-09-01.md` in the claude.ai project (parallel research session). The load-bearing points:
 - **CBJ (Entry 1):** no carrier announced as of 2026-09-01; `TBA_NO_RIGHTS_HOLDER` holds. SBJ (08-31) REPORTS the four NHL-Productions clubs "could" join the Stars on Prime Video — the NHL declined comment; RUMOR until the club or league names a platform. Firmed up: NHL Productions produces (07-21 release), all games are TV/radio simulcasts with Mears/Shelley (07-29 release; crew known before carrier), several CBJ start times changed ~08-24 (the reconciler's kickoff supersession is the check). Watch daily until the Oct 1 opener. If Prime proves true, expect TWO local rows (streaming + a linear partner) per the Kraken/Hurricanes shape.
