@@ -149,6 +149,9 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--push-grids", metavar="DIR", help="upload grid_*.svg/png from DIR (and DIR/{sport}/) to grids/{sport}/grid_{date}.* - the key register_grids.py stores")
     g.add_argument("--push-data", metavar="PATH", help="upload a file or directory tree to the PRIVATE bucket under --prefix")
     ap.add_argument("--prefix", help="key prefix filter (check/push/pull) or destination prefix (push-data)")
+    ap.add_argument("--make-dark", action="store_true",
+                    help="before pushing, build any missing assets/logos/{id}_dark.png (charcoal-floating "
+                         "contexts, mobile addendum M12). Idempotent; a provider's own dark art is kept.")
     ap.add_argument("--keep", type=int, help="push-data: after upload, delete the oldest objects under --prefix beyond this count")
     args = ap.parse_args(argv)
     if args.push_grids or args.push_data:
@@ -157,6 +160,15 @@ def main(argv: list[str] | None = None) -> int:
     root = find_repo_root()
     load_dotenv(root / ".env")
     bucket = os.getenv("R2_BUCKET_ASSETS", "mysports-assets")
+    if args.make_dark:
+        # Two logo contexts ship to the same bucket: the RAW {id}.png that grid cap endcaps use
+        # unmodified, and the {id}_dark.png a listings card floats on charcoal. The second is derived
+        # here so it can never drift from the first. Pillow only; the push itself is unchanged.
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from build_web_marks import team_dark_variants
+        c = team_dark_variants()
+        print(f"dark logo variants: {c['generated']} generated, {c['present']} already present "
+              f"(provider art kept), {c['skipped']} unreadable")
     s3 = client()
     local = local_files(root, args.prefix)
     remote = remote_objects(s3, bucket, args.prefix)

@@ -10,12 +10,15 @@
 //      R2 base (a registry row pointing at a 404 is worse than no row at all);
 //   d) the two intentionally-unreadable tables really are unreadable, so nothing quietly starts
 //      depending on them;
-//   e) the embeds the pages rely on (teams via both FKs, broadcasts via networks_services) come back.
+//   e) the embeds the pages rely on (teams via both FKs, broadcasts via networks_services) come back;
+//   f) v0.2 - standings exist for all four pro leagues (or are honestly absent before a season starts),
+//      a probable pitcher renders for tomorrow's slate, display names behave, and "Sox" is not a team.
 //
 // Exits non-zero on the first failure. Reads nothing secret: the anon key is publishable.
 
 import { rest, RestError } from '../lib/rest.js';
 import { SUPABASE_URL, ASSET_BASE_URL } from '../lib/config.js';
+import { indexStandings, standingLine } from '../lib/standings.js';
 
 let failures = 0;
 let checks = 0;
@@ -119,6 +122,82 @@ console.log('\n(e) embeds the pages depend on');
   assert(rows.every((r) => r.home?.canonical_name && r.away?.canonical_name), 'both team embeds resolve');
   const withNet = rows.filter((r) => (r.broadcasts || []).some((b) => b.network?.canonical_name));
   assert(withNet.length > 0, 'broadcast -> network embed resolves', `${withNet.length}/3 have a named network`);
+}
+
+
+// ---------------------------------------------------------------- (f) v0.2 data the locked card needs
+console.log('\n(f) standings, probables, display names, MLB short names');
+{
+  // -- standings for all four pro leagues. A league whose season has not started has NO rows for that
+  //    season, and that is a PASS: the card omits the record line rather than showing last spring's.
+  const rows = await rest(
+    'team_records?select=team_id,season,as_of,wins,losses,ties,ot_losses,points,division_rank,games_back,source' +
+      '&as_of=gte.2026-09-01&order=as_of.desc'
+  );
+  assert(rows.length > 0, 'team_records has recent rows', `got ${rows.length}`);
+  const byLeague = {};
+  for (const r of rows) {
+    const lg = String(r.team_id).split('-')[0];
+    (byLeague[lg] ||= []).push(r);
+  }
+  for (const lg of ['mlb', 'nhl', 'nba', 'nfl']) {
+    const n = (byLeague[lg] || []).length;
+    const seasons = [...new Set((byLeague[lg] || []).map((r) => r.season))].sort();
+    assert(n > 0, `${lg}: standings rows present`, `${n} rows, season(s) ${seasons.join('/') || 'none'}`);
+  }
+  // NBA's division_rank carries the CONFERENCE seed (Joe's ruling) - it must be a plausible 1..15.
+  const nbaRanks = (byLeague.nba || []).map((r) => r.division_rank).filter((v) => v != null);
+  assert(
+    nbaRanks.length === 0 || nbaRanks.every((v) => v >= 1 && v <= 15),
+    'nba division_rank holds a conference seed (1..15)',
+    `${nbaRanks.length} ranked, max ${Math.max(0, ...nbaRanks)}`
+  );
+  const idx = indexStandings(rows);
+  const cle = idx.get('mlb-114|2026');
+  assert(Boolean(cle), 'the Guardians have a current row');
+  if (cle) console.log(`        CLE line: ${standingLine(cle, 'mlb', 'American League Central')}`);
+
+  // -- a probable pitcher renders for an upcoming slate
+  const pitched = await rest(
+    'games?select=id,viewing_day,probable_home_pitcher,probable_away_pitcher&sport=eq.mlb' +
+      '&viewing_day=gte.2026-09-03&or=(probable_home_pitcher.not.is.null,probable_away_pitcher.not.is.null)&limit=5'
+  );
+  assert(pitched.length > 0, 'an upcoming MLB game names a probable starter', `${pitched.length} games`);
+  const shape = /^[A-Z]\. \S/;
+  const sample = pitched.flatMap((g) => [g.probable_away_pitcher, g.probable_home_pitcher]).filter(Boolean);
+  assert(sample.every((s) => shape.test(s)), 'every probable reads "F. Lastname..."', sample[0] || '');
+  console.log(`        e.g. ${pitched[0].viewing_day}  ${sample[0]}`);
+
+  // -- display names: written only where they DIFFER from short_name; null means fall back
+  const liu = await rest('teams?select=id,short_name,display_name&id=eq.2341');
+  const gast = await rest('teams?select=id,short_name,display_name&id=eq.2247');
+  const bama = await rest('teams?select=id,short_name,display_name&id=eq.333');
+  assert(
+    liu[0]?.display_name && liu[0].display_name !== liu[0].short_name,
+    'LIU carries a shorter display name',
+    `${liu[0]?.short_name} -> ${liu[0]?.display_name}`
+  );
+  assert(
+    gast[0]?.display_name !== gast[0]?.short_name,
+    'Georgia State has a display name distinct from short_name',
+    `${gast[0]?.short_name} -> ${gast[0]?.display_name}`
+  );
+  assert(
+    bama[0]?.display_name === null,
+    'a name that is already short stays null (falls back to short_name)',
+    `Alabama -> ${bama[0]?.display_name}`
+  );
+
+  const pro = await rest('teams?select=id&sport=neq.cfb&display_name=not.is.null&limit=1');
+  assert(pro.length === 0, 'pro teams have no display_name', `${pro.length} found`);
+
+  // -- "Sox" is not a team
+  const sox = await rest('teams?select=id,short_name&id=in.("mlb-111","mlb-145","mlb-141")&order=id.asc');
+  const byId = Object.fromEntries(sox.map((t) => [t.id, t.short_name]));
+  assert(byId['mlb-111'] === 'Red Sox', 'mlb-111 is the Red Sox', String(byId['mlb-111']));
+  assert(byId['mlb-145'] === 'White Sox', 'mlb-145 is the White Sox', String(byId['mlb-145']));
+  assert(byId['mlb-111'] !== byId['mlb-145'], 'Red Sox and White Sox are different names');
+  assert(byId['mlb-141'] === 'Blue Jays', 'mlb-141 is the Blue Jays', String(byId['mlb-141']));
 }
 
 console.log(`\n${failures === 0 ? 'OK' : 'FAILED'} - ${checks - failures}/${checks} checks passed`);

@@ -49,7 +49,71 @@ export function teamLogoUrl(teamId) {
   return `${ASSET_BASE_URL}logos/${String(teamId).toLowerCase()}.png`;
 }
 
+/**
+ * The dark-context team logo (mobile addendum M12). TWO contexts, two files:
+ *   - grid cap endcaps and light tint plates use teamLogoUrl()  - RAW, never lightness-adjusted;
+ *   - a logo FLOATING on charcoal (listings line 1, the odds slot) uses this one.
+ * Built by scripts/build_web_marks.py --team-logos, which keeps a provider's own dark art where ESPN
+ * offers it and derives the rest.
+ */
+export function teamLogoDarkUrl(teamId) {
+  if (!teamId) return null;
+  return `${ASSET_BASE_URL}logos/${String(teamId).toLowerCase()}_dark.png`;
+}
+
 export function networkLogoUrl(slug) {
   if (!slug) return null;
   return `${ASSET_BASE_URL}network-logos/${String(slug).toLowerCase()}.png`;
+}
+
+/** The processed marks the app ships itself (web/public/marks), NOT the raw bucket art. */
+export function markUrl(slug) {
+  return slug ? `/marks/${String(slug).toLowerCase()}.png` : null;
+}
+
+/** Poll interval while games are in flight (addendum M11: near-live 15-minute refresh). */
+export const REFRESH_SECONDS = 900;
+
+/** Where a viewer can actually watch a service. Curated; anything unlisted falls back to DirecTV Stream. */
+export const DIRECTV_STREAM = 'https://stream.directv.com';
+
+export const WATCH = {
+  espn: 'https://www.espn.com/watch/',
+  espn2: 'https://www.espn.com/watch/',
+  espnu: 'https://www.espn.com/watch/',
+  'espn-plus': 'https://plus.espn.com/',
+  'espn-unlimited': 'https://plus.espn.com/',
+  abc: 'https://abc.com/watch-live',
+  cbs: 'https://www.cbs.com/live-tv/stream/',
+  'cbs-sports-network': 'https://www.cbssports.com/cbs-sports-network/',
+  nbc: 'https://www.nbc.com/live',
+  peacock: 'https://www.peacocktv.com/',
+  fox: 'https://www.fox.com/live/',
+  fs1: 'https://www.fox.com/live/',
+  'the-cw': 'https://www.cwtv.com/shows/cw-live/',
+  tnt: 'https://www.tntdrama.com/watchtnt',
+  tbs: 'https://www.tbs.com/watchtbs',
+  trutv: 'https://www.trutv.com/watchtrutv',
+  'usa-network': 'https://www.usanetwork.com/live',
+  'big-ten-network': 'https://www.btn.com/watch/',
+  'sec-network': 'https://www.espn.com/watch/',
+  'sec-network-plus': 'https://www.espn.com/watch/',
+  'acc-network': 'https://www.espn.com/watch/',
+  'paramount-plus': 'https://www.paramountplus.com/',
+  'hbo-max': 'https://www.hbomax.com/',
+  'prime-video': 'https://www.amazon.com/gp/video/storefront',
+  'apple-tv': 'https://tv.apple.com/',
+  netflix: 'https://www.netflix.com/',
+  'disney-plus': 'https://www.disneyplus.com/',
+  hulu: 'https://www.hulu.com/live-tv',
+  youtube: 'https://tv.youtube.com/',
+  'nfl-network': 'https://www.nfl.com/network/',
+  'mlb-network': 'https://www.mlb.com/network',
+  'guardians-tv': 'https://www.mlb.com/guardians/watch',
+  dazn: 'https://www.dazn.com/',
+  'wuab-43': 'https://www.fox8.com/',
+};
+
+export function watchUrl(serviceId) {
+  return WATCH[String(serviceId || '').toLowerCase()] || DIRECTV_STREAM;
 }

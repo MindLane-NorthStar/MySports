@@ -1,18 +1,86 @@
-/* Minimal dark chrome on the grid palette. STRUCTURAL ONLY - Joe's approved prototype design gets
-   applied in a later pass, so this stays deliberately plain: spacing, hierarchy and legibility, no
-   guessed-at polish. Every colour below comes from the renderer's palette so the later pass is a
-   restyle, not a re-theme. */
+/* MySports web app - the locked design system (v0.2, applied 2026-09-02).
+ *
+ * Every colour here is the renderer's palette, so the app and the archival grid are one design.
+ * The charcoal "spotlight" radial is the page ground the grid renders on; panels, lines and ink
+ * are the card surfaces. Display type is Barlow Condensed, body type is Inter - both self-hosted
+ * from web/public/fonts (OFL), so there is no third-party font request and no layout shift.
+ *
+ * Mobile grid rules live in docs/rendering-contract-mobile.md (M1-M13); the class names below say
+ * which rule they implement.
+ */
 
+/* ----------------------------------------------------------------- self-hosted faces (OFL) */
+@font-face {
+  font-family: 'Barlow Condensed';
+  src: url('/fonts/BarlowCondensed-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  src: url('/fonts/BarlowCondensed-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ----------------------------------------------------------------- tokens */
 :root {
-  --page-top: #1b1b1b;
-  --page-bottom: #0e0e0e;
+  color-scheme: dark;
+
+  --spot-0: #3b3b3b;
+  --spot-1: #232323;
+  --spot-2: #1b1b1b;
+  --spot-3: #0e0e0e;
+
+  --panel: #23262b;
   --panel-top: #31363d;
   --panel-bottom: #1e2126;
+
+  --line: #3a3f47;
+  --line-soft: #2b2f35;
+
   --ink: #f2f2f0;
   --dim: #9aa0a8;
+  --faint: #6a7078;
+
   --gold: #f0c850;
-  --hairline: rgba(255, 255, 255, 0.1);
+  --gold-dim: #8a7530;
+
+  --live: #7fd1a3;
+  --alert: #e8918d;
+
+  --display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --body: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
   --radius: 8px;
+  --hairline: rgba(255, 255, 255, 0.1);
+
+  /* mobile grid (M1/M4): presentation scale and the fixed rail */
+  --m-scale: 0.8;
+  --rail-w: 69px;
 }
 
 * {
@@ -27,11 +95,10 @@ body {
 
 body {
   min-height: 100vh;
-  background: radial-gradient(130% 130% at 50% -8%, var(--page-top) 0%, #232323 42%, #1b1b1b 64%, var(--page-bottom) 100%)
+  background: radial-gradient(130% 130% at 50% -8%, var(--spot-0) 0%, var(--spot-1) 42%, var(--spot-2) 64%, var(--spot-3) 100%)
     fixed;
   color: var(--ink);
-  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
+  font-family: var(--body);
   font-size: 14px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
@@ -55,14 +122,16 @@ a {
   align-items: baseline;
   gap: 8px 20px;
   padding-bottom: 14px;
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .wordmark {
-  font-size: 20px;
+  font-family: var(--display);
+  font-size: 26px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  line-height: 1;
 }
 
 .wordmark span {
@@ -97,16 +166,20 @@ a {
 
 /* ----------------------------------------------------------------- page furniture */
 h1 {
-  font-size: 22px;
+  font-family: var(--display);
+  font-size: 30px;
   font-weight: 700;
+  letter-spacing: 0.01em;
   margin: 22px 0 2px;
 }
 
 h2 {
-  font-size: 15px;
+  font-family: var(--display);
+  font-size: 20px;
   font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   margin: 26px 0 8px;
-  letter-spacing: 0.02em;
 }
 
 h3 {
@@ -144,7 +217,7 @@ input[type='search'],
 select {
   background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
   color: var(--ink);
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--line-soft);
   border-radius: 6px;
   padding: 6px 9px;
   font: inherit;
@@ -165,7 +238,7 @@ input[type='search'] {
   display: inline-block;
   padding: 5px 11px;
   border-radius: 999px;
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--line-soft);
   background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
   color: var(--dim);
   font-size: 12px;
@@ -183,7 +256,7 @@ input[type='search'] {
   display: inline-block;
   padding: 2px 7px;
   border-radius: 4px;
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--line-soft);
   background: rgba(255, 255, 255, 0.04);
   color: var(--dim);
   font-size: 10.5px;
@@ -198,12 +271,8 @@ input[type='search'] {
 }
 
 .pill[data-tone='live'] {
-  color: #7fd1a3;
+  color: var(--live);
   border-color: rgba(127, 209, 163, 0.4);
-}
-
-.pill[data-tone='tbd'] {
-  color: var(--dim);
 }
 
 .empty {
@@ -213,7 +282,7 @@ input[type='search'] {
 }
 
 .error {
-  color: #e8918d;
+  color: var(--alert);
   background: rgba(232, 145, 141, 0.08);
   border: 1px solid rgba(232, 145, 141, 0.3);
   border-radius: var(--radius);
@@ -221,27 +290,31 @@ input[type='search'] {
   font-size: 13px;
 }
 
-/* ----------------------------------------------------------------- game cards */
+/* ================================================================= LISTINGS CARD (3.4)
+ * The locked matchup card. One row: [time][duel line + network][odds slot].
+ * Nothing here paints a plate behind a logo - every mark is published pre-conditioned for charcoal
+ * (scripts/build_web_marks.py), so a backing card would only be covering up a processing failure.
+ */
 .cards {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.card {
+.mcard {
   position: relative;
   display: grid;
-  grid-template-columns: 96px 1fr auto;
+  grid-template-columns: 78px minmax(0, 1fr) auto;
   gap: 14px;
   align-items: center;
-  padding: 11px 14px 11px 18px;
-  border: 1px solid var(--hairline);
+  padding: 10px 14px 10px 17px;
+  border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
   overflow: hidden;
 }
 
-/* the team-colour seam: home colour above, away colour below, down the leading edge */
+/* team-colour seam down the leading edge: away above, home below */
 .seam {
   position: absolute;
   left: 0;
@@ -255,63 +328,186 @@ input[type='search'] {
   height: 50%;
 }
 
-.card-time {
-  color: var(--dim);
-  font-size: 12px;
+/* left time column - gold, ET */
+.mtime {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  color: var(--gold);
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
 }
 
-.card-matchup {
-  font-size: 14px;
+.mtime .mtime-day {
+  display: block;
+  font-family: var(--body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+  text-transform: uppercase;
+}
+
+/* the duel line. The '@' HUGS the away name - it is in the content flow between the away column and
+   the home logo, deliberately NOT a fixed centre column, so the two sides read as one sentence. */
+.duel {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.at {
+  flex: 0 0 auto;
+  margin: 0 9px;
+  color: var(--faint);
+  font-size: 13px;
   font-weight: 600;
 }
 
-.card-meta {
-  color: var(--dim);
-  font-size: 12px;
-  margin-top: 2px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.card-right {
+.tname {
   display: flex;
   align-items: center;
-  gap: 10px;
-  text-align: right;
+  gap: 7px;
+  line-height: 22px;
+  min-width: 0;
+  flex: 0 1 auto;
 }
 
-.score {
-  font-size: 16px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-}
-
-.logo {
+.tname img {
   width: 20px;
   height: 20px;
   object-fit: contain;
-  vertical-align: -4px;
+  flex: 0 0 auto;
 }
 
-/* a whole card that is a link (history) */
-a.card {
-  transition: border-color 120ms ease;
+.tname b {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-a.card:hover {
-  border-color: rgba(240, 200, 80, 0.55);
+/* lines 2-3, each under its own team; the columns split the card evenly so a long standing line
+   never drags the '@' out of position */
+.dsubs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 14px;
+  margin-top: 1px;
 }
 
-.card-linkhint {
+.dsub {
+  min-width: 0;
+}
+
+/* line 2 - record + standing. Absent means ABSENT: the element is not rendered at all, never blank. */
+.tcol-rec {
+  color: var(--dim);
+  font-size: 11.5px;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* line 3 - MLB probable pitcher */
+.tcol-pitch {
+  color: var(--faint);
+  font-size: 11.5px;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* network line: grey text under EVERY matchup; the processed mark only for access-profile networks */
+.mnet {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 5px;
+  min-width: 0;
+}
+
+.mnet-mark {
+  flex: 0 0 auto;
+  width: auto;
+  object-fit: contain;
+  /* height is set inline: 2/3 of the three-line stack * the mark's manifest hf */
+}
+
+.mnet-text {
+  color: var(--dim);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* right slot: favoured team's dark logo + moneyline over O/U, else the state */
+.mslot {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  justify-self: end;
+  text-align: right;
+}
+
+.mslot img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.mslot-ml {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.mslot-ou {
   color: var(--dim);
   font-size: 11px;
-  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.mslot-state {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  white-space: nowrap;
+  color: var(--dim);
+}
+
+.mslot-state[data-tone='final'] {
+  color: var(--gold);
+}
+
+.mslot-state[data-tone='live'] {
+  color: var(--live);
+}
+
+.mscore {
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+button.mcard {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  appearance: none;
+}
+
+button.mcard:hover {
+  border-color: rgba(240, 200, 80, 0.45);
 }
 
 /* ----------------------------------------------------------------- day columns (/weeks) */
@@ -323,7 +519,7 @@ a.card:hover {
 }
 
 .daycol {
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
   padding: 10px 11px 12px;
@@ -337,11 +533,12 @@ a.card:hover {
   gap: 6px;
   padding-bottom: 7px;
   margin-bottom: 8px;
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .daycol-head strong {
-  font-size: 12px;
+  font-family: var(--display);
+  font-size: 15px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -368,7 +565,7 @@ a.card:hover {
 }
 
 .daycol li .t {
-  color: var(--dim);
+  color: var(--gold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -378,7 +575,7 @@ a.card:hover {
 }
 
 .weekblock {
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   padding: 14px;
   margin-bottom: 16px;
@@ -406,7 +603,7 @@ a.card:hover {
 
 /* ----------------------------------------------------------------- archived grid */
 .gridpanel {
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
   padding: 12px;
@@ -418,7 +615,7 @@ a.card:hover {
   width: 100%;
   height: auto;
   border-radius: 4px;
-  background: #0e0e0e;
+  background: var(--spot-3);
 }
 
 .gridpanel figcaption {
@@ -428,14 +625,13 @@ a.card:hover {
 }
 
 .footnote {
-  color: #6f767d;
+  color: var(--faint);
   font-size: 11.5px;
   margin-top: 34px;
   padding-top: 12px;
-  border-top: 1px solid var(--hairline);
+  border-top: 1px solid var(--line-soft);
 }
 
-/* buttons that are chips (the sport filter) must not inherit the UA button chrome */
 button.chip {
   font: inherit;
   font-size: 12px;
@@ -447,7 +643,595 @@ button.chip {
 
 button.chip:focus-visible,
 a.chip:focus-visible,
+button.mcard:focus-visible,
 input:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
+}
+
+/* ================================================================= MOBILE GRID (M1-M13)
+ * docs/rendering-contract-mobile.md. The canvas scrolls under a permanently fixed rail; pinch-zoom
+ * scales the canvas by a CSS transform and the rail scales with it, so the rail is pinned at every
+ * zoom level (M4/M6).
+ */
+.mgrid {
+  position: relative;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: var(--panel);
+  overflow: hidden;
+  margin: 14px 0 20px;
+}
+
+.mgrid-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.mgrid-head h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 17px;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+}
+
+.mgrid-head .mgrid-meta {
+  color: var(--dim);
+  font-size: 11.5px;
+}
+
+/* M8: jump-to-network quick nav */
+.mgrid-nav {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  scrollbar-width: thin;
+}
+
+.mgrid-nav button {
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dim);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  padding: 3px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mgrid-scroll {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+}
+
+.mgrid-canvas {
+  position: relative;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+/* M4: the rail is sticky at x=0 inside the scroller, so panning moves only the schedule */
+.mrail-cell,
+.mgrid-axis-rail {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  width: var(--rail-w);
+  min-width: var(--rail-w);
+  max-width: var(--rail-w);
+}
+
+.mgrid-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.mrail-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 4px 3px;
+}
+
+/* the mark shrinks INSIDE the fixed tile and is fit-boxed; the call-letter band is unchanged */
+.mrail-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 30px;
+}
+
+.mrail-mark img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.mrail-call {
+  font-size: 10px;
+  line-height: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--dim);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.mgrid-lanes {
+  position: relative;
+  flex: 1 1 auto;
+}
+
+.mgrid-lane {
+  position: relative;
+}
+
+/* M5: hour-only shorthand labels, Style B - gold, uppercase, Barlow Condensed */
+.mgrid-axis {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--line);
+  height: 26px;
+}
+
+.mgrid-axis-track {
+  position: relative;
+  flex: 1 1 auto;
+}
+
+.maxis-label {
+  position: absolute;
+  top: 4px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 18px;
+  letter-spacing: 1.2px;
+  color: var(--gold);
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: translateX(-2px);
+}
+
+.mgrid-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.mgrid-line[data-hour='true'] {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* M3: hard cut - a dashed seam labelled with the skipped range */
+.mgrid-cut {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px dashed rgba(240, 200, 80, 0.55);
+  z-index: 2;
+}
+
+.mgrid-cut-label {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  color: var(--gold-dim);
+  white-space: nowrap;
+  background: var(--panel);
+  padding: 0 3px;
+}
+
+/* block anatomy (M13 = the PC contract) */
+.mblock {
+  position: absolute;
+  top: 4px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--panel-bottom);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  display: block;
+}
+
+.mblock[data-marquee='true'] {
+  border-color: rgba(240, 200, 80, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(240, 200, 80, 0.25);
+}
+
+.mblock-body {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+/* cap endcaps carry the RAW logo on the team-tinted gradient (contract v1.3e / addendum M12) */
+.mcap {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mcap img {
+  max-width: 78%;
+  max-height: 78%;
+  object-fit: contain;
+}
+
+.mnames {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 0 3px;
+}
+
+.mname {
+  font-family: var(--display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+}
+
+.mname .mrank {
+  color: var(--gold);
+  margin-right: 3px;
+}
+
+/* record run: 60% opacity at 82% of the name size (contract v1.1) */
+.mname .mrec {
+  opacity: 0.6;
+  font-size: 82%;
+  margin-left: 4px;
+}
+
+.mhair {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mseam {
+  height: 2px;
+}
+
+.mtray {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 0 4px;
+  overflow: hidden;
+}
+
+.mtray-left {
+  color: var(--ink);
+  font-size: 9.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mtray-right {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+}
+
+.mtray-pill {
+  border-radius: 3px;
+  background: #2e333a;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  color: #b4bac0;
+  font-size: 8.5px;
+  font-weight: 600;
+  padding: 1px 4px;
+  white-space: nowrap;
+}
+
+.mtray-pill[data-kind='rivalry'] {
+  color: var(--gold);
+  background: #3a3218;
+  box-shadow: inset 0 0 0 1px rgba(240, 200, 80, 0.6);
+}
+
+.mplate {
+  position: absolute;
+  inset: 0;
+  background: rgba(240, 200, 80, 0.09);
+  pointer-events: none;
+}
+
+/* M7: TBD cards scale to viewport width */
+.mtbd {
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+}
+
+.mtbd h4 {
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.mtbd-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mtbd-card {
+  width: 100%;
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
+  padding: 7px 9px;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
+}
+
+.mtbd-card em {
+  display: block;
+  color: var(--faint);
+  font-style: normal;
+  font-size: 10.5px;
+  margin-top: 2px;
+}
+
+/* M9: footer pills wrap; the omitted pill is never dropped */
+.mgrid-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 9px 12px;
+  border-top: 1px solid var(--line);
+}
+
+/* ================================================================= DETAIL PANEL (3.6) */
+.dpanel-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 8, 8, 0.62);
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.dpanel {
+  width: min(560px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px 12px 0 0;
+  padding: 16px 16px 24px;
+}
+
+@media (min-width: 700px) {
+  .dpanel-scrim {
+    align-items: center;
+  }
+  .dpanel {
+    border-radius: 12px;
+  }
+}
+
+.dpanel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.dpanel-head img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.dpanel-head strong {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.dpanel-close {
+  margin-left: auto;
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--dim);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.dsec {
+  margin-top: 14px;
+}
+
+.dsec h4 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.dsec ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dbcast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.dbcast img {
+  height: 18px;
+  width: auto;
+  object-fit: contain;
+}
+
+.dbcast .dacc {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.dbcast .dacc[data-a='available'] {
+  color: var(--live);
+}
+
+.dbcast .dacc[data-a='unavailable'],
+.dbcast .dacc[data-a='out_of_market'] {
+  color: var(--alert);
+}
+
+.dgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  font-size: 13px;
+}
+
+.dgrid div span {
+  display: block;
+  color: var(--faint);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dlinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.dlink {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(240, 200, 80, 0.45);
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dstamp {
+  margin-top: 16px;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+/* ----------------------------------------------------------------- narrow screens (M9) */
+@media (max-width: 560px) {
+  .shell {
+    padding: 16px 12px 48px;
+  }
+  .masthead {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .tagline {
+    margin-left: 0;
+  }
+  .mcard {
+    grid-template-columns: 62px minmax(0, 1fr);
+    grid-template-areas: 'time body' 'slot slot';
+    row-gap: 8px;
+  }
+  .mcard .mtime {
+    grid-area: time;
+  }
+  .mcard .mbody {
+    grid-area: body;
+  }
+  .mcard .mslot {
+    grid-area: slot;
+    justify-self: start;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 8px;
+    width: 100%;
+  }
+}
+
+/* week day grouping on /weeks (the two-week model renders locked cards under a day heading) */
+.weekday {
+  margin-bottom: 14px;
+}
+
+.weekday h3 {
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
 }

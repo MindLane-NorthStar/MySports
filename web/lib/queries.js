@@ -1,7 +1,7 @@
 // Every read the app makes, in one file, so the data contract is reviewable in one place.
 // See docs/app-skeleton.md for the route -> query mapping.
 
-import { rest } from './rest.js';
+import { rest, inList } from './rest.js';
 import { SPORTS } from './config.js';
 
 // The column list every game card needs. Teams are embedded through the two FKs on games; the
@@ -24,9 +24,18 @@ const GAME_SELECT = [
   'result_status',
   'boxscore_url',
   'completed_at',
-  'home:teams!games_home_team_id_fkey(id,canonical_name,short_name,abbreviation,primary_color,secondary_color)',
-  'away:teams!games_away_team_id_fkey(id,canonical_name,short_name,abbreviation,primary_color,secondary_color)',
-  'broadcasts:game_broadcasts(service_id,delivery_surface,feed_side,is_primary,access_status,active,label,network:networks_services(id,canonical_name,type))',
+  // v0.2: the locked listings card needs the pitching matchup, the ranks the grid prefixes a name
+  // with, the rivalry flag the marquee plate keys off, and the venue the tray prints.
+  'probable_home_pitcher',
+  'probable_away_pitcher',
+  'home_rank',
+  'away_rank',
+  'is_rivalry',
+  'venue:venues(name,city,state)',
+  'home:teams!games_home_team_id_fkey(id,canonical_name,short_name,display_name,abbreviation,primary_color,secondary_color,conference:conferences(name))',
+  'away:teams!games_away_team_id_fkey(id,canonical_name,short_name,display_name,abbreviation,primary_color,secondary_color,conference:conferences(name))',
+  'broadcasts:game_broadcasts(service_id,delivery_surface,feed_side,is_primary,access_status,carriage_certainty,active,label,network:networks_services(id,canonical_name,type,default_sort_order))',
+  'odds:game_odds(provider,spread,total,home_moneyline,away_moneyline,fetched_at)',
 ].join(',');
 
 const ORDER = 'order=canonical_kickoff_at_utc.asc.nullslast,id.asc';
@@ -130,4 +139,40 @@ export function matchesSearch(game, needle) {
     .join(' ')
     .toLowerCase();
   return hay.includes(q);
+}
+
+/**
+ * Standings for a set of clubs. team_records keeps one row per club PER DAY, so this asks for the
+ * relevant (team, season) pairs and lets lib/standings.js pick the newest as_of for each.
+ *
+ * A club with no row comes back with nothing, and the card omits its record line entirely. That is
+ * the correct answer before a season starts: pipeline/standings.py files the NBA and NHL tables under
+ * the season they actually describe, so a 2026-27 game has no 2026-27 standings until games are played.
+ */
+export async function standingsFor(teamIds, seasons) {
+  const ids = [...new Set((teamIds || []).filter(Boolean))];
+  const yrs = [...new Set((seasons || []).filter((s) => Number.isInteger(s)))];
+  if (!ids.length || !yrs.length) return [];
+  return rest(
+    `team_records?select=team_id,season,as_of,wins,losses,ties,ot_losses,points,division_rank,games_back,source` +
+      `&team_id=in.${inList(ids)}&season=in.(${yrs.join(',')})&order=as_of.asc`
+  );
+}
+
+/** The standings index for a page's games, in one round trip. */
+export async function standingsForGames(games) {
+  const ids = [];
+  const seasons = [];
+  for (const g of games || []) {
+    if (g.home?.id) ids.push(g.home.id);
+    if (g.away?.id) ids.push(g.away.id);
+    if (Number.isInteger(g.season)) seasons.push(g.season);
+  }
+  return standingsFor(ids, seasons);
+}
+
+/** One game with everything the detail panel shows. */
+export async function gameById(id) {
+  const rows = await rest(`games?select=${GAME_SELECT}&id=eq.${encodeURIComponent(id)}&limit=1`);
+  return rows[0] || null;
 }

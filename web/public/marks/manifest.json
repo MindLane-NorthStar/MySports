@@ -1,0 +1,114 @@
+[
+  {
+    "slug": "abc",
+    "hf": 1.15
+  },
+  {
+    "slug": "acc-network",
+    "hf": 0.923
+  },
+  {
+    "slug": "apple-tv",
+    "hf": 1.15
+  },
+  {
+    "slug": "big-ten-network",
+    "hf": 1.04
+  },
+  {
+    "slug": "cbs",
+    "hf": 0.758
+  },
+  {
+    "slug": "dazn",
+    "hf": 0.964
+  },
+  {
+    "slug": "disney-plus",
+    "hf": 1.15
+  },
+  {
+    "slug": "espn",
+    "hf": 0.637
+  },
+  {
+    "slug": "espn-plus",
+    "hf": 0.64
+  },
+  {
+    "slug": "espn-unlimited",
+    "hf": 0.85
+  },
+  {
+    "slug": "espn2",
+    "hf": 0.62
+  },
+  {
+    "slug": "espnu",
+    "hf": 1.15
+  },
+  {
+    "slug": "fox",
+    "hf": 0.817
+  },
+  {
+    "slug": "fs1",
+    "hf": 1.043
+  },
+  {
+    "slug": "guardians-tv",
+    "hf": 1.25
+  },
+  {
+    "slug": "hbo-max",
+    "hf": 0.62
+  },
+  {
+    "slug": "mlb-network",
+    "hf": 1.15
+  },
+  {
+    "slug": "nbc",
+    "hf": 1.15
+  },
+  {
+    "slug": "netflix",
+    "hf": 0.801
+  },
+  {
+    "slug": "paramount-plus",
+    "hf": 1.107
+  },
+  {
+    "slug": "peacock",
+    "hf": 1.15
+  },
+  {
+    "slug": "prime-video",
+    "hf": 1.119
+  },
+  {
+    "slug": "sec-network",
+    "hf": 0.866
+  },
+  {
+    "slug": "sec-network-plus",
+    "hf": 0.855
+  },
+  {
+    "slug": "the-cw",
+    "hf": 0.874
+  },
+  {
+    "slug": "tnt",
+    "hf": 1.15
+  },
+  {
+    "slug": "usa-network",
+    "hf": 0.923
+  },
+  {
+    "slug": "wuab-43",
+    "hf": 1.15
+  }
+]
