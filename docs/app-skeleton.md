@@ -113,6 +113,55 @@ once, at the first load that sees `result_status = 'final'`, and never overwritt
 event card is the click target. A final game with no `boxscore_url` renders as a plain card rather
 than a dead link.
 
+## Page chrome — Banner, NavBanner, layout routing
+
+The home page (`/`) opens on the full banner; `/weeks` and `/history` wear a compact bar cut from the
+same art. The old `MySports` masthead is retired, and the wordmark everywhere is now
+`MySports <b>TV</b>`, rendering `MYSPORTS TV` with the `TV` in gold.
+
+[`web/app/layout.js`](../web/app/layout.js) renders `<Banner/>` **on the server** and passes it to
+[`Chrome.js`](../web/components/Chrome.js), a client component that returns it on `/` and
+[`<NavBanner/>`](../web/components/NavBanner.js) everywhere else. A client component cannot *import*
+a server component but can place one it is handed, so the banner ships no JavaScript and only the
+`usePathname()` lookup lives on the client. Both sit **outside** `.shell`, so the chrome bleeds the
+full width while content stays in the 1100px column.
+
+`NavBanner` takes `{sport, week, day}` and renders **only what it is given** — a page that knows its
+sport says so, one that does not shows nothing rather than an empty pill. The standing
+`all times ET · Cleveland` tag always rides along because it is true on every page; the stylesheet
+drops it below 700px. Mounted from the layout it currently receives no props, which is the empty case
+behaving as designed — a route that wants context passes it in.
+
+### The `web/lib/banner-layout.json` contract
+
+One file describes both breakpoints, and [`Banner.js`](../web/components/Banner.js) is a pure
+function of it. Moving a mark is a JSON edit, never a code change. Under `pc` and `mobile`:
+
+| Key | Meaning |
+|---|---|
+| `w`, `h` | stage size in `viewBox` units — 1400×280 and 390×280. Not pixels: the SVG scales to width |
+| `tv` | `{cx, cy, h, href, ar}` — the cutout, placed exactly like a mark |
+| `title`, `sub` | `{y, size, ls}` for the two `<text>` runs, plus `subhead` for the subhead string |
+| `marks[]` | `{slug, kind, cx, cy, h, href, ar, pending}`, plus `hf` on `net` and `prog` |
+| `sparks[]` | `{x, y, kind, r}` — `g`/`w` are four-point stars, `c`/`m`/`r` coloured dots |
+
+Rules the component applies:
+
+- **Placement is by centre.** `x = cx - w/2`, `y = cy - h/2`. Width is `h * ar`.
+- **`ar` is the PNG's own width/height**, written by `scripts/build_brand_marks.py` — the one number
+  the SVG cannot derive for itself. It is stored rather than measured at request time so the server
+  component needs no image library.
+- **Height depends on `kind`.** `league` draws at `h`; `net` and `prog` draw at `h * hf`, the frozen
+  ink-normalization factor, so a thin wordmark and a fat roundel carry equal visual weight.
+- **`pending: true` marks are skipped** — the slot is reserved in the layout but nothing is drawn.
+  No mark is pending as of 2026-09-02.
+- **Filter ids are namespaced per breakpoint** (`pc-` / `mo-`). Both SVGs are in the DOM at once with
+  CSS hiding one, and SVG filter ids are document-global: share an id and the hidden copy can win the
+  lookup, at which point Chromium renders **nothing at all** rather than an unfiltered shape.
+
+Composition rules, the mark classes and the contrast rulings are in
+[`docs/design/banner.md`](design/banner.md).
+
 ## Asset URL rules
 
 `scripts/sync_assets.py` **lowercases every R2 key on upload**. NBA team ids are uppercase

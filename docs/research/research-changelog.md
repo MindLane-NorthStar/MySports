@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-09-02 — Design session: icon v6, league/program marks, banner + navbar
+- **Deliverables filed:** `docs/design/banner.md` (composition, mark classes, contrast rulings), `docs/design/banner/` (the two static reference SVGs, the CSS, the navbar markup), `web/lib/banner-layout.json` (both breakpoints), `scripts/build_brand_marks.py` (rebuilds all three mark classes; `--check` diffs against what is committed).
+- **App icon:** v6-B chosen, shipped as `web/public/brand/app-icon-mysports-tv.png` (1024). v5 and v6-A retired/rejected, kept untracked under `assets/brand/`.
+- **New art:** 10 leagues x raw + `_dark` at 256px (`web/public/leagues/`), 2 programs at 128px (`web/public/programs/`), the 700px TV cutout (`web/public/brand/`). Sources stay untracked under `assets/`, matching the network suite's split.
+- **Program `hf` is normalized against the FROZEN NETWORK TARGET (11734), read from `web/public/marks/manifest.json` and never recomputed** — a program logo sits beside network marks, so it must weigh what they weigh; normalizing the two programs against each other would have made them weigh the same as each other instead. The network manifest is not written by the program build.
+- **Two league recipes are not a plain PNG:** NASCAR builds from `nascar.svg`; IndyCar keys white off its JPEG by flooding inward from the border (a global brightness test also deletes the white *inside* the badge), and its dark variant whitens only the wordmark rows below the badge gap.
+- **Three contrast rulings (NHL / ESPN / ABC):** lift a mark only when its darkness is an accident, never when it is the design. NHL reads by its rim; ESPN's colour is its identity; ABC's black is background, and `dark_ready` would invert it into the white plate the no-plate rule forbids.
+- **Web:** home `/` gets `<Banner/>` (server component, inline SVG per breakpoint, drawn from the layout JSON); `/weeks` and `/history` get `<NavBanner/>`. Wordmark is now `MYSPORTS TV`; the old masthead is retired; `metadata.title` is `MySports TV`.
+- **Known miss:** `build_brand_marks.py --check` reports 22/23 PASS. `programs/big-noon-kickoff.png` as committed carries ~1.1% more ink than a faithful re-rasterization of its SVG at any height (converges to 10490 by 3072px against 10609 shipped), so the chain that produced it could not be recovered. Dimensions match, so the banner layout is unaffected; the committed file was left alone rather than widening the check's 1% tolerance to hide it.
+
 ## 2026-09-02 — Brief 2: Events & Shows (Chat architecture session)
 - **Requests recorded** (enhancement-register.md): NASCAR (3 series), UFC, IndyCar, WWE, AEW, studio/pregame shows.
 - **Decisions (Joe):** programs supertype approved; individual sport chips; race only; UFC one card + segment timeline; purchasable content excluded (AEW PPV out); studio = pre/post bookends; hosts/locations sourced not curated; one nascar sport + series; WWE = Raw/SmackDown/PLEs, NXT out; design pass option (a) prototype-first; UFC/NASCAR odds under show_odds.
