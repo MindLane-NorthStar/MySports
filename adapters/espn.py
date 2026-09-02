@@ -34,7 +34,7 @@ from typing import Any
 
 from adapters.common import (ET, access_lookup, dump_json, et_date, et_display, fetch_logos, fixture_envelope,
                              hex6, http_json, load_data, load_raw_or_fetch, md_table, media_row, normalize_outlet,
-                             outlet_access, parse_iso, team_record, write_text, now_et_iso, find_repo_root)
+                             outlet_access, parse_iso, team_record, write_text, now_et_iso, find_repo_root, result_status, score_int)
 
 SITE = "https://site.api.espn.com/apis/site/v2/sports"
 LEAGUE_PATH = {"nfl": "football/nfl", "nhl": "hockey/nhl", "nba": "basketball/nba", "mlb": "baseball/mlb",
@@ -114,6 +114,21 @@ def _broadcast_names(comp: dict[str, Any]) -> list[tuple[str, str]]:
     return seen
 
 
+
+def _status_scores(comp: dict[str, Any], sides: dict[str, Any]) -> dict[str, Any]:
+    """ESPN status.type -> result_status + integer scores (competitors send '0' strings before kickoff)."""
+    t = ((comp.get("status") or {}).get("type") or {})
+    state, name, done = t.get("state"), t.get("name") or "", bool(t.get("completed"))
+    if state == "post" and not done and "POSTPONE" not in name.upper() and "CANCEL" not in name.upper():
+        print(f"  warn: ESPN state 'post' with completed=false ({name}) - result_status left null")
+        st = None
+    else:
+        st = result_status(state, detail=name, context=f"espn {name}")
+    return {"status": st,
+            "homeScore": score_int((sides.get("home") or {}).get("score"), st),
+            "awayScore": score_int((sides.get("away") or {}).get("score"), st)}
+
+
 def build_nfl_fixture(raw: dict[str, Any], root: Path, *, season: int, week: int | None, day_filter: str | None,
                       teams: list[dict[str, Any]]) -> tuple[dict[str, Any], list[str]]:
     available, unavailable = access_lookup(root)
@@ -179,6 +194,7 @@ def build_nfl_fixture(raw: dict[str, Any], root: Path, *, season: int, week: int
             "venue": (comp.get("venue") or {}).get("fullName"),
             "home": home, "away": away, "media": media,
             "odds": _odds(comp), "records": recs or None,
+            **_status_scores(comp, sides),
             "flags": {"isTBDFlex": bool((comp.get("status") or {}).get("isTBDFlex")),
                       "espnBroadcast": comp.get("broadcast")},
         })

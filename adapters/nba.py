@@ -29,7 +29,7 @@ from typing import Any
 
 from adapters.common import (access_lookup, dump_json, et_date, et_display, fetch_logos, find_repo_root, fixture_envelope,
                              http_json, load_data, load_raw_or_fetch, md_table, media_row, normalize_outlet, outlet_access,
-                             team_record, write_text, now_et_iso)
+                             team_record, write_text, now_et_iso, result_status, score_int)
 from adapters.espn import fetch_scoreboard, fetch_teams, _odds, _broadcast_names
 
 ESPN_TO_TRICODE = {"NY": "NYK", "GS": "GSW", "SA": "SAS", "UTAH": "UTA", "NO": "NOP", "WSH": "WAS"}
@@ -84,6 +84,27 @@ def _simulcast_row(side: dict[str, Any], carriage: dict[str, Any], other_ab: str
 
 
 # ----------------------------------------------------------------------------- ESPN source (verified)
+
+def _status_scores(comp: dict[str, Any], sides: dict[str, Any]) -> dict[str, Any]:
+    """ESPN status.type -> result_status + integer scores (competitors send '0' strings before tip)."""
+    t = ((comp.get("status") or {}).get("type") or {})
+    st = result_status(t.get("state"), detail=t.get("name") or "", context=f"nba {t.get('name')}")
+    return {"status": st,
+            "homeScore": score_int((sides.get("home") or {}).get("score"), st),
+            "awayScore": score_int((sides.get("away") or {}).get("score"), st)}
+
+
+def _league_status_scores(g: dict[str, Any]) -> dict[str, Any]:
+    """cdn.nba.com league file (shape unverified - see the module note): gameStatusText is free text, so
+    only the numeric gameStatus 1/2/3 is trusted; anything else leaves status null."""
+    code = g.get("gameStatus")
+    st = {1: "scheduled", 2: "in_progress", 3: "final"}.get(code)
+    if st is None and code is not None:
+        print(f"  warn: unrecognized league-file gameStatus {code!r} - result_status left null")
+    return {"status": st, "homeScore": score_int((g.get("homeTeam") or {}).get("score"), st),
+            "awayScore": score_int((g.get("awayTeam") or {}).get("score"), st)}
+
+
 def build_from_espn(raw: dict[str, Any], root: Path, *, season: int, day_filter: str | None, teams: list[dict[str, Any]]) -> tuple[dict[str, Any], list[str]]:
     available, unavailable = access_lookup(root)
     local_abbrevs = set(load_data(root, "markets.json", {}).get("nba", {}).get("localTeams", ["CLE"]))
@@ -132,6 +153,7 @@ def build_from_espn(raw: dict[str, Any], root: Path, *, season: int, day_filter:
                       "startDate": start, "startTimeET": et_display(start), "startTimeTBD": tbd,
                       "neutralSite": bool(comp.get("neutralSite")), "venue": (comp.get("venue") or {}).get("fullName"),
                       "home": home, "away": away, "media": media, "odds": _odds(comp), "records": recs or None,
+                      **_status_scores(comp, sides),
                       "flags": {"nationalExclusive": national_exclusive, "espnBroadcast": comp.get("broadcast"),
                                 "seasonType": ((ev.get("season") or {}).get("type"))}})
     games.sort(key=lambda g: (g["startDate"] or "", g["id"]))
@@ -199,6 +221,7 @@ def build_from_league(raw: dict[str, Any], root: Path, *, season: int, day_filte
                           "startDate": start, "startTimeET": et_display(start), "startTimeTBD": tbd,
                           "neutralSite": bool(g.get("neutralSite")) if g.get("neutralSite") is not None else False,
                           "venue": g.get("arenaName"), "home": home, "away": away, "media": media, "odds": None, "records": None,
+                          **_league_status_scores(g),
                           "flags": {"nationalExclusive": national_exclusive, "gameLabel": g.get("gameLabel"), "gameSubLabel": g.get("gameSubLabel"),
                                     "seriesText": g.get("seriesText"), "seasonYear": ls.get("seasonYear")}})
     if unknown_keys:

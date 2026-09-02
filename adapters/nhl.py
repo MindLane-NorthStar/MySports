@@ -31,7 +31,7 @@ from typing import Any
 
 from adapters.common import (access_lookup, dump_json, et_date, et_display, fetch_logos, find_repo_root, fixture_envelope,
                              http_json, load_data, load_raw_or_fetch, md_table, media_row, normalize_outlet, outlet_access,
-                             team_record, write_text)
+                             team_record, write_text, result_status, score_int)
 
 API = "https://api-web.nhle.com/v1"
 # NHL abbreviations that differ from ESPN's
@@ -98,6 +98,14 @@ def build_teams(raw_weeks: list[dict[str, Any]], espn_teams: list[dict[str, Any]
     return sorted(seen.values(), key=lambda r: r["school"])
 
 
+
+def _status_scores(g: dict[str, Any]) -> dict[str, Any]:
+    """NHL gameState -> result_status + scores (homeTeam/awayTeam carry them once play starts)."""
+    st = result_status(g.get("gameState"), context=f"nhl {g.get('id')}")
+    return {"status": st,
+            "homeScore": score_int((g.get("homeTeam") or {}).get("score"), st),
+            "awayScore": score_int((g.get("awayTeam") or {}).get("score"), st)}
+
 def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: str,
                   teams: list[dict[str, Any]]) -> tuple[dict[str, Any], list[str]]:
     available, unavailable = access_lookup(root)
@@ -157,6 +165,7 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
                 "neutralSite": bool(g.get("neutralSite")),
                 "venue": (g.get("venue") or {}).get("default"),
                 "home": home, "away": away, "media": media,
+                **_status_scores(g),
                 "odds": None, "records": None,
                 "flags": {"gameType": GAME_TYPE.get(g.get("gameType"), str(g.get("gameType"))),
                           "gameState": g.get("gameState"), "gameScheduleState": g.get("gameScheduleState"),

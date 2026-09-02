@@ -25,7 +25,7 @@ from typing import Any
 
 from adapters.common import (access_lookup, dump_json, et_display, fetch_logos, find_repo_root, fixture_envelope,
                              http_json, load_data, load_raw_or_fetch, md_table, media_row, normalize_outlet,
-                             outlet_access, team_record, write_text)
+                             outlet_access, result_status, score_int, team_record, write_text)
 
 API = "https://statsapi.mlb.com/api/v1"
 HYDRATE = "broadcasts(all),team,venue,seriesStatus,statusFlags,preGameOdds"
@@ -239,6 +239,8 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, date: str,
             home, away = side("home"), side("away")
             venue = g.get("venue") or {}
             rec = (g.get("teams") or {})
+            _st = result_status(status.get("abstractGameState"),
+                                detail=status.get("detailedState"), context=f"mlb {pk}")
 
             def record(which: str) -> str | None:
                 lr = ((rec.get(which) or {}).get("leagueRecord") or {})
@@ -257,10 +259,12 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, date: str,
                 "seriesGameNumber": g.get("seriesGameNumber"), "gamesInSeries": g.get("gamesInSeries"),
                 "dayNight": g.get("dayNight"),
                 "scheduleCertainty": "TBD_FOLLOWS" if (dh == "Y" and gnum == 2) else ("TBD" if tbd else "FINAL"),
-                "status": {"code": code, "detailedState": status.get("detailedState"), "reason": status.get("reason")},
+                "providerStatus": {"code": code, "detailedState": status.get("detailedState"), "reason": status.get("reason")},
                 "rescheduledFrom": g.get("rescheduledFromDate"), "resumedFrom": g.get("resumedFrom"),
                 "description": g.get("description"),
                 "suppressesLocalFeed": suppresses,
+                "status": _st, "homeScore": score_int(rec.get("home", {}).get("score"), _st),
+                "awayScore": score_int(rec.get("away", {}).get("score"), _st),
                 "officialDate": official_date,
             }
             by_pk[pk] = game

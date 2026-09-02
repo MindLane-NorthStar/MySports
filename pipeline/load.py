@@ -55,13 +55,48 @@ def viewing_day(dt_utc: datetime, cutover_hour: int = 3):
     return (et - timedelta(days=1)).date() if et.hour < cutover_hour else et.date()
 
 
+# every counter load_fixture reports; the mysports-db skip path returns this zeroed so TOTAL still prints in full
+ZERO_COUNTS = {"games": 0, "broadcasts": 0, "odds": 0, "records": 0, "observations": 0, "observations_seen": 0,
+               "observations_closed": 0, "team_refs": 0, "venues": 0}
+# Joe 2026-09-01: ESPN box scores for cfb/nfl/nba (our ids ARE ESPN ids), league-native for nhl/mlb.
+# Raw URLs are never displayed - the completed event card is the click target.
+_BOXSCORE = {
+    "cfb": "https://www.espn.com/college-football/boxscore/_/gameId/{n}",
+    "nfl": "https://www.espn.com/nfl/boxscore/_/gameId/{n}",
+    "nba": "https://www.espn.com/nba/boxscore/_/gameId/{n}",
+    "nhl": "https://www.nhl.com/gamecenter/{n}",
+    "mlb": "https://www.mlb.com/gameday/{n}",
+}
+
+
+def boxscore_url(sport: str, game_id: str) -> str | None:
+    """Computed once, at the first load that sees result_status 'final'; never overwritten."""
+    tmpl = _BOXSCORE.get(sport)
+    if not tmpl:
+        return None
+    return tmpl.format(n=game_id.split("-", 1)[-1] if sport != "cfb" else game_id)
+
+
+# Scores are loader-written provider facts (db/migrations/0007 header), not reconciled observations.
+# Null-safe by construction: an incoming null never erases a stored score, status, completion or link.
+SCORES_SQL = """
+update games set
+  home_score    = coalesce(%s, home_score),
+  away_score    = coalesce(%s, away_score),
+  result_status = coalesce(%s, result_status),
+  completed_at  = case when coalesce(%s, result_status) = 'final' then coalesce(completed_at, now()) else completed_at end,
+  boxscore_url  = case when coalesce(%s, result_status) = 'final' then coalesce(boxscore_url, %s) else boxscore_url end
+where id = %s
+"""
+
+
 def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
     fx = json.loads(path.read_text(encoding="utf-8"))
     meta = fx.get("validation") or {}
     if (meta.get("source") or "") == "mysports-db":
         # render_feed output is the database speaking, not evidence; loading it would rank the DB against itself
         print(f"{path.name}: skipped (mysports-db feed is renderer output, not evidence)")
-        return {}
+        return dict(ZERO_COUNTS)
     sport = meta.get("sport") or "cfb"
     source_id = SOURCE_ID.get(meta.get("source") or "", "cfbd" if sport == "cfb" else "espn.scoreboard")
     role, score = SOURCE_META.get(source_id, ("structured_provider", 50))
@@ -115,6 +150,12 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
         if venue_id_sub:
             db.run("update games set venue_id = (select id from venues where name = %s and city = '' limit 1) where id = %s", (venue_id_sub, gid), tag="games.venue")
         counts["games"] += 1
+        _st = g.get("status")
+        if _st is not None and not isinstance(_st, str):   # an adapter sending the wrong type must not
+            print(f"  warn: {gid} status is {type(_st).__name__}, not str - result_status left null")
+            _st = None                                      # poison the score write (coalesce needs text)
+        db.run(SCORES_SQL, (g.get("homeScore"), g.get("awayScore"), _st, _st, _st,
+                            boxscore_url(sport, gid), gid), tag="games.result")
 
         # ---- observations with supersession (spec 9.6 step 5, 9.13): a source that repeats itself bumps last_seen_at;
         # a source that changes its claim gets a new row and valid_to on its old one; a broadcast row a source no longer

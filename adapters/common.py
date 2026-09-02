@@ -256,6 +256,50 @@ def media_row(media_type: str, outlet: str, access: str, *, market: str = "natio
     return row
 
 
+# --------------------------------------------------------------------------- result status (Milestone 4 part 0)
+# games.result_status vocabulary; scores are loader-written provider facts, never reconciled observations.
+RESULT_STATES = ("scheduled", "in_progress", "final", "postponed", "cancelled")
+# every provider word observed in a live payload, mapped to that vocabulary
+_PROVIDER_STATE = {
+    "pre": "scheduled", "in": "in_progress", "post": "final",                       # ESPN status.type.state
+    "FUT": "scheduled", "PRE": "scheduled", "LIVE": "in_progress",                  # NHL gameState
+    "CRIT": "in_progress", "FINAL": "final", "OFF": "final",
+    "Preview": "scheduled", "Live": "in_progress", "Final": "final",                # MLB abstractGameState
+}
+
+
+def result_status(state: str | None, *, detail: str | None = None, context: str = "") -> str | None:
+    """Provider state -> games.result_status. Postponed/cancelled in `detail` wins over `state`.
+
+    Fail honest (Joe, 2026-09-01): a state this table does not know maps to None with one warning line.
+    An unknown state is NEVER guessed to 'final' - a wrong final freezes completed_at and boxscore_url,
+    and the history it feeds cannot be backfilled.
+    """
+    d = (detail or "").upper()
+    if "POSTPONE" in d:
+        return "postponed"
+    if "CANCEL" in d:          # ESPN spells it CANCELED, MLB Cancelled
+        return "cancelled"
+    if state is None:
+        return None
+    key = str(state).strip()
+    mapped = _PROVIDER_STATE.get(key) or _PROVIDER_STATE.get(key.upper()) or _PROVIDER_STATE.get(key.title())
+    if mapped is None:
+        print(f"  warn: unrecognized provider status {state!r}{' (' + context + ')' if context else ''}"
+              f" - result_status left null")
+    return mapped
+
+
+def score_int(value: Any, status: str | None) -> int | None:
+    """Scores only exist once a game is under way; ESPN sends the string '0' on scheduled games."""
+    if status not in ("in_progress", "final") or value is None or value == "":
+        return None
+    try:
+        return int(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
 # ----------------------------------------------------------------------------- output
 def dump_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)

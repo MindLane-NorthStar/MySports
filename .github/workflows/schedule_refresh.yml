@@ -41,19 +41,30 @@ jobs:
       - name: Pull asset cache from R2
         run: python scripts/sync_assets.py --pull
       - name: CFB (CFBD)
-        run: python -m adapters.cfbd --week ${{ steps.when.outputs.cfb_week }} --teams
-      - name: NFL (ESPN) — the coming Sunday's week
-        run: python -m adapters.espn --league nfl --date $(python -c "import datetime as d;t=d.date.fromisoformat('${{ steps.when.outputs.date }}');print((t+d.timedelta((6-t.weekday())%7)).isoformat())")
-      - name: NHL — 7-day window
-        run: python -m adapters.nhl --date ${{ steps.when.outputs.date }}
+        run: |
+          python -m adapters.cfbd --week ${{ steps.when.outputs.cfb_week }} --teams
+          # finals pass: Sunday (7) and Monday (1) re-fetch the week just played
+          DOW=$(date -d ${{ steps.when.outputs.date }} +%u)
+          if [ "$DOW" = "7" ] || [ "$DOW" = "1" ]; then
+            W=$(python -m pipeline.render_feed --sport cfb --latest-week || true)
+            if [ -n "$W" ]; then python -m adapters.cfbd --week "$W"; fi
+          fi
+      - name: NFL (ESPN) — yesterday (finals pass) then the coming Sunday's week
+        run: |
+          python -m adapters.espn --league nfl --date $(python -c "import datetime as d;print((d.date.fromisoformat('${{ steps.when.outputs.date }}')+d.timedelta(-1)).isoformat())") || exit 1
+          python -m adapters.espn --league nfl --date $(python -c "import datetime as d;t=d.date.fromisoformat('${{ steps.when.outputs.date }}');print((t+d.timedelta((6-t.weekday())%7)).isoformat())")
+      - name: NHL — yesterday (finals pass) then the 7-day window
+        run: |
+          python -m adapters.nhl --date $(python -c "import datetime as d;print((d.date.fromisoformat('${{ steps.when.outputs.date }}')+d.timedelta(-1)).isoformat())") --no-logos || exit 1
+          python -m adapters.nhl --date ${{ steps.when.outputs.date }}
       - name: NBA — next 7 viewing days (ESPN source until the league file is reachable from a runner)
         run: |
-          for i in 0 1 2 3 4 5 6; do
+          for i in -1 0 1 2 3 4 5 6; do
             python -m adapters.nba --date $(python -c "import datetime as d;print((d.date.fromisoformat('${{ steps.when.outputs.date }}')+d.timedelta($i)).isoformat())") --no-logos || exit 1
           done
       - name: MLB — next 7 viewing days (statsapi officialDate == ET viewing day)
         run: |
-          for i in 0 1 2 3 4 5 6; do
+          for i in -1 0 1 2 3 4 5 6; do
             python -m adapters.mlb --date $(python -c "import datetime as d;print((d.date.fromisoformat('${{ steps.when.outputs.date }}')+d.timedelta($i)).isoformat())") --no-logos || exit 1
           done
       - name: Push new logos to R2

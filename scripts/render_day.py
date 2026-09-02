@@ -663,6 +663,17 @@ for m, x, lbl, line in placed:
     svg.append(f'<text x="{x}" y="{PAD_T-25-(16 if line == 1 else 0)}" font-size="{AX_FS}" font-weight="700" fill="#E8EAEC" text-anchor="middle">{E(lbl)}</text>')
 
 # ----------------------------------------------------------------------------- shared card pieces
+
+def gkey(g):
+    """Stable SVG-id fragment from the game's own fixture id (v1.6.1).
+
+    Previously these ids came from id(g) - a memory address, different every process - which made two
+    renders of identical data differ byte for byte and defeated generated_grids.render_hash. The fixture
+    id is unique within a render and stable across runs.
+    """
+    return re.sub(r"[^A-Za-z0-9_-]", "", str(g.get("id", "")))
+
+
 def mini_card(x, y, w, g, tray_text, tray_right=None, ranks=True):
     """Streaming-scale silhouette (contract §4) used by streaming rows and the TBD section."""
     ac, hc = color(g["a"]["id"]), color(g["h"]["id"])
@@ -672,7 +683,7 @@ def mini_card(x, y, w, g, tray_text, tray_right=None, ranks=True):
     svg.append(f'<rect x="{x}" y="{y}" width="{w}" height="{mh}" rx="7" fill="{sba}"/><rect x="{x}" y="{y+mh*0.5}" width="{w}" height="{mh*0.5}" fill="{sba}"/>')
     svg.append(f'<rect x="{x}" y="{y+mh}" width="{w}" height="{mh}" fill="{sbh}"/>')
     for ci,(cx2, cc2, lg2) in enumerate(((x, ac, logo_uri(g["a"]["id"])), (x+w-MC, hc, logo_uri(g["h"]["id"])))):
-        gid2 = f"scap{id(g)}_{ci}"
+        gid2 = f"scap{gkey(g)}_{ci}"
         svg.append(f'<linearGradient id="{gid2}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="{tint(cc2,0.86)}"/><stop offset="100%" stop-color="{tint(cc2,0.58)}"/></linearGradient>')
         svg.append(f'<rect x="{cx2}" y="{y}" width="{MC}" height="{ST_BLOCK}" rx="7" fill="url(#{gid2})"/>')
         fx2 = cx2+MC-7 if ci==0 else cx2
@@ -688,8 +699,8 @@ def mini_card(x, y, w, g, tray_text, tray_right=None, ranks=True):
         if tw_barlow(lbl, fs3) > w-2*MC-16: fs3 = max(9, (w-2*MC-16)/(len(lbl)*0.42))
         svg.append(f'<text x="{smid}" y="{cy2+fs3*0.34}" font-size="{fs3:.1f}" font-weight="700" font-family="{BC}" fill="{ink2}" text-anchor="middle">{E(lbl.upper())}</text>')
     sty = y+ST_BLOCK
-    svg.append(f'<linearGradient id="stg{id(g)}" x1="0%" x2="100%"><stop offset="0%" stop-color="{ac}"/><stop offset="100%" stop-color="{hc}"/></linearGradient>')
-    svg.append(f'<rect x="{x}" y="{sty}" width="{w}" height="1.8" fill="url(#stg{id(g)})"/>')
+    svg.append(f'<linearGradient id="stg{gkey(g)}" x1="0%" x2="100%"><stop offset="0%" stop-color="{ac}"/><stop offset="100%" stop-color="{hc}"/></linearGradient>')
+    svg.append(f'<rect x="{x}" y="{sty}" width="{w}" height="1.8" fill="url(#stg{gkey(g)})"/>')
     fsp = 9.5; avail = w-20 - (tw_inter(tray_right, 8.5)+14 if tray_right else 0)
     if tw_inter(tray_text, fsp) > avail: fsp = max(7.5, avail/(len(tray_text)*0.55))
     svg.append(f'<text x="{x+11}" y="{sty+ST_TRAY/2+3.5}" font-size="{fsp:.1f}" font-weight="700" fill="#E8EAEC">{E(tray_text)}</text>')
@@ -764,7 +775,7 @@ def draw_card(g, x, y, w, lh, prim_text=None):
     CAP = BLOCK_H - ins  # endcap width
     la, lhm = logo_uri(g["a"]["id"]), logo_uri(g["h"]["id"])
     for cap_i,(cx, cc, lg) in enumerate(((bx, ac, la), (bx+bw-CAP, hc, lhm))):
-        gid = f"cap{id(g)}_{cap_i}"
+        gid = f"cap{gkey(g)}_{cap_i}"
         svg.append(f'<linearGradient id="{gid}" x1="0%" y1="0%" x2="0%" y2="100%">'
                    f'<stop offset="0%" stop-color="{tint(cc,0.86)}"/>'
                    f'<stop offset="100%" stop-color="{tint(cc,0.58)}"/></linearGradient>')
@@ -798,9 +809,9 @@ def draw_card(g, x, y, w, lh, prim_text=None):
         svg.append(f'<text x="{x0:.1f}" y="{cy+fs*0.34:.1f}" font-size="{fs:.1f}" font-weight="700" font-family="{BC}" fill="{ink}">{E(label)}{run}</text>')
     # --- tray ---------------------------------------------------------------------
     ty = cy0+BLOCK_H
-    seam_fill = "#F0C850" if (big and MARQ in ("tag", "plate")) else f"url(#tg{id(g)})"
+    seam_fill = "#F0C850" if (big and MARQ in ("tag", "plate")) else f"url(#tg{gkey(g)})"
     SEC_INK = "#F0C850" if (big and MARQ == "plate") else "#B4BAC0"   # v1.2: lighter than #848C93, still below the primary
-    svg.append(f'<linearGradient id="tg{id(g)}" x1="0%" x2="100%"><stop offset="0%" stop-color="{ac}"/><stop offset="100%" stop-color="{hc}"/></linearGradient>')
+    svg.append(f'<linearGradient id="tg{gkey(g)}" x1="0%" x2="100%"><stop offset="0%" stop-color="{ac}"/><stop offset="100%" stop-color="{hc}"/></linearGradient>')
     svg.append(f'<rect x="{bx}" y="{ty-ins}" width="{bw}" height="2.5" fill="{seam_fill}"/>')
     v = VENUES.get(g["id"]) or g.get("venue")
     prim = prim_text if prim_text is not None else clock(g["dt"]) + (f" · {v}" if v else "")
@@ -909,7 +920,7 @@ def draw_card(g, x, y, w, lh, prim_text=None):
             if fav:
                 lg = logo_uri(fav["id"]); fc = color(fav["id"]); r_ = (ph-1)/2; li = ph-3
                 if STYLE["favlogo"] == "disc":     # light team-tinted disc behind the logo (the endcap idea, miniature)
-                    did = f"fd{id(g)}{kind}"
+                    did = f"fd{gkey(g)}{kind}"
                     svg.append(f'<linearGradient id="{did}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="{tint(fc,0.86)}"/><stop offset="100%" stop-color="{tint(fc,0.58)}"/></linearGradient>')
                     svg.append(f'<circle cx="{tx+r_}" cy="{ty_c}" r="{r_}" fill="url(#{did})"/>')
                 if lg:
@@ -1050,8 +1061,18 @@ svg.append('</svg>')
 out_dir = Path(ARGS.out); out_dir.mkdir(parents=True, exist_ok=True)
 svg_path = out_dir / f"grid_{TARGET}.svg"
 svg_path.write_text("\n".join(svg), encoding="utf-8")
+# v1.6.1 sidecar: the counts this run actually produced, so scripts/register_grids.py can archive a grid
+# without re-deriving them from the SVG. Truthful by construction - same variables the console line prints.
+GENERATOR_VERSION = "v1.6.1"
+meta_path = out_dir / f"grid_{TARGET}.meta.json"
+meta_path.write_text(json.dumps({
+    "sport": SPORT, "date": TARGET,
+    "season": YR, "week": (WEEK_LABEL if SPORT == "cfb" else FX_META.get("week")),
+    "gamesOnGrid": len(day), "gamesTbd": len(tbd), "gamesOmitted": len(omitted),
+    "generatorVersion": GENERATOR_VERSION,
+}, indent=2) + chr(10), encoding="utf-8")
 for gname, dropped in DROP_LOG: print(f"  tray drop: {gname}: {dropped}")
-print(f"v1.6 [{SPORT}]: {len(day)} on grid · {len(tbd)} TBA · {len(omitted)} omitted · {W:.0f}x{H:.0f} -> {svg_path}"
+print(f"{GENERATOR_VERSION} [{SPORT}]: {len(day)} on grid · {len(tbd)} TBA · {len(omitted)} omitted · {W:.0f}x{H:.0f} -> {svg_path}"
       + (" · enrichment loaded" if ENR else " · NO enrichment") + (" · MOCK" if USE_MOCK else ""))
 if ARGS.png or ARGS.export:
     try:

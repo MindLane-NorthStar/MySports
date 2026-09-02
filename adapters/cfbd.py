@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from adapters.common import (access_lookup, dump_json, et_display, fetch_logos, find_repo_root, http_json,
-                             load_dotenv, md_table, normalize_outlet, now_et_iso, outlet_access, team_record, write_text)
+                             load_dotenv, md_table, normalize_outlet, now_et_iso, outlet_access, team_record, write_text, score_int)
 
 API_BASE = "https://api.collegefootballdata.com"
 
@@ -76,6 +76,9 @@ def build_fixture(games: list[dict[str, Any]], media: list[dict[str, Any]], root
             "id": g.get("id"), "sport": "cfb", "season": g.get("season"), "week": g.get("week"),
             "startDate": g.get("startDate"), "startTimeET": et_display(g.get("startDate")),
             "startTimeTBD": g.get("startTimeTBD"), "neutralSite": g.get("neutralSite"), "venue": g.get("venue"),
+            "status": "final" if g.get("completed") else "scheduled",
+            "homeScore": score_int(g.get("homePoints"), "final" if g.get("completed") else "scheduled"),
+            "awayScore": score_int(g.get("awayPoints"), "final" if g.get("completed") else "scheduled"),
             "home": {"id": g.get("homeId"), "team": g.get("homeTeam"), "conference": g.get("homeConference"),
                      "classification": g.get("homeClassification")},
             "away": {"id": g.get("awayId"), "team": g.get("awayTeam"), "conference": g.get("awayConference"),

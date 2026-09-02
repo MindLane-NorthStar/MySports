@@ -63,4 +63,5 @@ jobs:
           fi
       - name: Publish grids to R2 (last-known-good stays if a render is missing — uploads are per file)
         run: python scripts/sync_assets.py --push-grids artifacts/rendering
-      # Milestone 2/4: insert mysports.generated_grids rows (render_hash, urls) — spec §7.12, §12
+      - name: Register the archived grids (mysports.generated_grids — spec §7.12, §12)
+        run: python scripts/register_grids.py artifacts/rendering --workflow actions
