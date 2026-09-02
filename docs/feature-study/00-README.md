@@ -31,7 +31,7 @@
 | # | Ambiguity | Call made | Why | What Joe would change |
 |---|---|---|---|---|
 | A-01 | Brief assumes cloud tools (project_write, Artifact publish, Playwright, TaskCreate, PushNotification) | Ran in Chat with substitutes: outputs under `/mnt/user-data/outputs/docs/feature-study/`, presented HTML files instead of published artifacts, no push | Joe said start now, no questions | Re-run Phase 5's publish + push from a Cowork/cloud session, or file these outputs into the project by hand |
-| A-02 | Supabase read-only queries | Skipped after two "No approval received" errors | Connector requires an interactive approval Joe could not give | Run §1.3's five SELECTs from Cowork; the data inventory in `01` §4 is from docs |
+| A-02 | Supabase read-only queries | Skipped after two "No approval received" errors | Connector requires an interactive approval Joe could not give | RESOLVED 2026-09-02: the five SELECTs were run from the laptop (psycopg, read-only transaction, rolled back) and the results are filed in `01` §4 as "Verified 2026-09-02 (read-only)" |
 | A-03 | Published artifacts unreadable here | Reconstructed both prototypes from `claude/src/*` templates with real data | Only path to "look at the app, not the docs" | Compare against the live artifacts; reconstruction artifacts are listed in `01` §7 |
 | A-04 | R2 unreachable; network marks unavailable | Text pills stand in for marks in mockups and reconstructions | Egress allowlist | Rebuild the mockup with `build_app.py`'s mark pipeline from the laptop |
 | A-05 | Team colors (`proto_colors.json` regenerable, not backed up) | Dominant saturated color derived from each ESPN CDN logo | No DB access | Substitute DB colors; seams and bands will shift slightly |

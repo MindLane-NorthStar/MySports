@@ -72,7 +72,7 @@ Approved but not built: a `programs` supertype (spec v0.5) carrying NASCAR, UFC,
 
 ## 4. Data inventory
 
-*Confirmed from docs; the read-only DB check could not run in this venue (see `00-README.md` A-02).*
+*The table below is confirmed from docs. The read-only DB check that could not run in the study's venue (see `00-README.md` A-02) **has now run**, from the laptop on 2026-09-02; its results are the sub-table beneath, and they supersede the docs wherever the two disagree.*
 
 | Per-game fact | Known? | Provider / cadence |
 |---|---|---|
@@ -90,6 +90,78 @@ Approved but not built: a `programs` supertype (spec v0.5) carrying NASCAR, UFC,
 | Weather | fetched by ESPN, deliberately not shown | contract §3 |
 | Market coverage maps (NFL) | planned | 506sports, ~Sept 8–9 weekly |
 | Program data (shows, sessions, cards) | none yet | v0.5 |
+
+### Verified 2026-09-02 (read-only)
+
+Five SELECT-only queries run from the laptop against `SUPABASE_DB_URL` via psycopg, in a
+`read_only=True` transaction (server-side `transaction_read_only = on`), rolled back at the end.
+No DDL, no writes, nothing under migration 0009.
+
+**(a) Schema `mysports` — 29 base tables, 6,936 rows.** The 22 non-empty tables are below. The seven empty
+ones are `assets`, `broadcast_crews`, `carriage_status`, `market_coverage`, `rankings`,
+`whip_around_broadcasts` and `whip_around_games` — each corresponds to a feature the study lists as
+not-yet-built or not-yet-in-season; this check counted them but did not investigate why.
+
+| Table | Rows | | Table | Rows |
+|---|---:|---|---|---:|
+| `teams` | 808 | | `game_broadcasts` | 442 |
+| `source_observations` | 844 | | `games` | 375 |
+| `canonical_decisions` | 2,726 | | `viewer_game_eligibility` | 375 |
+| `source_snapshots` | 238 | | `canonical_change_history` | 305 |
+| `venues` | 198 | | `team_records` | 154 |
+| `viewer_services` | 88 | | `networks_services` | 87 |
+| `conferences` | 83 | | `game_odds` | 74 |
+| `refresh_runs` | 55 | | `rivalries` | 48 |
+| `generated_grids` | 15 | | `sources` | 10 |
+| `render_policies` | 5 | | `team_territories` | 4 |
+| `markets` | 1 | | `viewer_profiles` | 1 |
+
+**(b) `viewing_day` 2026-09-05 — 83 games, two sports.** Every game has at least one broadcast row and
+exactly one `viewer_game_eligibility` row; there are no gaps to explain.
+
+| Sport | Games | With broadcast | Broadcast rows | Eligible | Not eligible | No eligibility row |
+|---|---:|---:|---:|---:|---:|---:|
+| cfb | 68 | 68 | 73 | 62 | 6 | 0 |
+| mlb | 15 | 15 | 28 | 1 | 14 | 0 |
+
+Broadcast rows by access state — the MLB column is the out-of-market story the study describes, in numbers:
+
+| Sport | `access_status` | Rows |
+|---|---|---:|
+| cfb | `available` | 66 |
+| cfb | `unavailable` | 7 |
+| mlb | `out_of_market` | 25 |
+| mlb | `unverified` | 2 |
+| mlb | `available` | 1 |
+
+**(c) `team_records` — 154 rows, 124 distinct teams, 2 seasons.** Newest `as_of` = **2026-09-02** (today).
+The table has **no `updated_at` column**; per 0003 its freshness column is `as_of` (a date), so that is what
+was read. By source: `espn.standings` 62, `nhl.standings` 32, `espn.scoreboard` 30, `mlb-statsapi` 30.
+
+**(d) MLB probables, `viewing_day` 2026-09-05 — 15 games.** Home-side probable on 7, away-side probable on 7,
+**both sides on only 3**. So the pitching matchup line 0008 was added for can be drawn in full on 3 of 15 cards
+for that Saturday; a one-sided fallback is a real design case, not a hypothetical.
+
+**(e) `generated_grids` — 15 rows, newest `generated_at` 2026-09-02 20:05:50 UTC.** Twelve distinct
+(sport, day) pairs spanning 2026-08-29 to 2026-10-28:
+
+| Sport | Day | Rows | Newest `generated_at` (UTC) | On grid / TBD / omitted |
+|---|---|---:|---|---|
+| nba | 2026-10-28 | 3 | 2026-09-02 03:49:25 | 3 / 0 / 9 |
+| cfb | 2026-10-24 | 1 | 2026-09-02 00:37:42 | — |
+| cfb | 2026-10-01 | 1 | 2026-09-02 00:37:42 | — |
+| nhl | 2026-10-01 | 1 | 2026-09-02 00:37:42 | — |
+| mlb | 2026-09-18 | 1 | 2026-09-02 00:37:42 | — |
+| cfb | 2026-09-13 | 1 | 2026-09-02 00:37:42 | — |
+| nfl | 2026-09-13 | 1 | 2026-09-02 00:37:42 | — |
+| cfb | 2026-09-06 | 1 | 2026-09-02 00:37:42 | — |
+| cfb | 2026-09-05 | 1 | 2026-09-02 00:37:42 | — |
+| mlb | 2026-09-04 | 2 | 2026-09-02 01:05:24 | 3 / 0 / 13 |
+| mlb | 2026-09-02 | 1 | 2026-09-02 20:05:50 | 2 / 0 / 13 |
+| cfb | 2026-08-29 | 1 | 2026-09-02 00:37:42 | — |
+
+The dashed rows are grids registered before `games_on_grid`/`games_tbd`/`games_omitted` were being written,
+so the null is a history artifact rather than a missing render.
 
 **Freshness gotchas that shape every candidate:** RSN attribution has a weeks-level staleness horizon (Cavaliers, Blue Jackets carriers unannounced); ESPN's API is Akamai-blocked from cloud workspaces but fine from the Actions runner; wrestling and GameDay/Big Noon sites move weekly.
 
