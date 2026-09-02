@@ -238,6 +238,13 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
     return counts
 
 
+def fixture_files(validation_dir: Path) -> list[Path]:
+    """The `--all` file set: every *_fixture.json directly under validation_dir, minus the renderer's own
+    db_* feeds (which are the database speaking, not evidence - see load_fixture's mysports-db guard).
+    samples/ is excluded by construction: glob() does not descend into subdirectories."""
+    return sorted(f for f in Path(validation_dir).glob("*_fixture.json") if not f.name.startswith("db_"))
+
+
 def _rel(p: Path) -> str:
     p = p.resolve()
     try:
@@ -261,7 +268,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--emit-sql", metavar="FILE")
     ap.add_argument("--workflow", default="cowork")
     args = ap.parse_args(argv)
-    files = [Path(f) for f in args.fixture] if args.fixture else sorted(f for f in (ROOT / "artifacts" / "validation").glob("*_fixture.json") if not f.name.startswith("db_"))
+    files = [Path(f) for f in args.fixture] if args.fixture else fixture_files(ROOT / "artifacts" / "validation")
     db = DB(args.emit_sql)
     totals: dict[str, int] = {}
     run_id = None

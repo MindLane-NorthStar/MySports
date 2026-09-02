@@ -47,6 +47,46 @@ def asset_url(base: str, sport: str, name: str) -> str:
     return f"{base}/{key}" if base else key
 
 
+def grid_rows(render_root: Path, base: str) -> list[tuple]:
+    """Scan a render directory and build one INSERT row tuple per grid SVG - the whole pure part of this
+    script, so the scan/hash/URL behaviour is testable without a database.
+
+    Row order matches INSERT: (sport, season, week, game_date, render_hash, svg_url, png_url, png2x_url,
+    generator_version, games_on_grid, games_tbd, games_omitted). Rows are keyed
+    (sport, game_date, render_hash) by the ON CONFLICT clause, so re-scanning an unchanged tree yields
+    identical tuples and the second insert is a no-op.
+    """
+    rows: list[tuple] = []
+    for svg in sorted(p for p in render_root.rglob("grid_*.svg") if p.is_file()):
+        # pro leagues render into {root}/{sport}/; the legacy flat layout is cfb
+        sport = svg.parent.name if svg.parent != render_root else "cfb"
+        date = svg.name[len("grid_"):-len(".svg")]
+        meta_path = svg.with_suffix(".meta.json")
+        meta = {}
+        if meta_path.exists():
+            try:
+                meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            except ValueError:
+                print(f"  warn: {meta_path.name} is not valid JSON - counts left null")
+        png = svg.with_suffix(".png")
+        png2x = svg.parent / f"grid_{date}@2x.png"
+        rows.append((
+            meta.get("sport") or sport,
+            meta.get("season"),
+            meta.get("week"),
+            date,
+            sha256(svg),
+            asset_url(base, sport, svg.name),
+            asset_url(base, sport, png.name) if png.exists() else None,
+            asset_url(base, sport, png2x.name) if png2x.exists() else None,
+            meta.get("generatorVersion") or "unknown",
+            meta.get("gamesOnGrid"),
+            meta.get("gamesTbd"),
+            meta.get("gamesOmitted"),
+        ))
+    return rows
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("directory", help="render root, e.g. artifacts/rendering")
@@ -64,52 +104,27 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {render_root} does not exist", file=sys.stderr)
         return 2
 
-    svgs = sorted(p for p in render_root.rglob("grid_*.svg") if p.is_file())
+    rows = grid_rows(render_root, base)
     db = DB()
     registered = already = 0
     try:
-        for svg in svgs:
-            # pro leagues render into {root}/{sport}/; the legacy flat layout is cfb
-            sport = svg.parent.name if svg.parent != render_root else "cfb"
-            date = svg.name[len("grid_"):-len(".svg")]
-            meta_path = svg.with_suffix(".meta.json")
-            meta = {}
-            if meta_path.exists():
-                try:
-                    meta = json.loads(meta_path.read_text(encoding="utf-8"))
-                except ValueError:
-                    print(f"  warn: {meta_path.name} is not valid JSON - counts left null")
-            png = svg.with_suffix(".png")
-            png2x = svg.parent / f"grid_{date}@2x.png"
-            row = (
-                meta.get("sport") or sport,
-                meta.get("season"),
-                meta.get("week"),
-                date,
-                sha256(svg),
-                asset_url(base, sport, svg.name),
-                asset_url(base, sport, png.name) if png.exists() else None,
-                asset_url(base, sport, png2x.name) if png2x.exists() else None,
-                meta.get("generatorVersion") or "unknown",
-                meta.get("gamesOnGrid"),
-                meta.get("gamesTbd"),
-                meta.get("gamesOmitted"),
-            )
+        for row in rows:
+            sport, date = row[0], row[3]
             before = db.fetch("select count(*) from generated_grids where sport = %s and game_date = %s "
                               "and render_hash = %s", (row[0], row[3], row[4]))
             exists = bool(before and before[0][0])
             db.run(INSERT, row, tag="generated_grids")
             if exists:
                 already += 1
-                print(f"  already   {sport}/{svg.name}  {row[4][:12]}")
+                print(f"  already   {sport}/grid_{date}.svg  {row[4][:12]}")
             else:
                 registered += 1
-                print(f"  registered {sport}/{svg.name}  {row[4][:12]}  "
+                print(f"  registered {sport}/grid_{date}.svg  {row[4][:12]}  "
                       f"({row[9] if row[9] is not None else '?'} on grid, {row[8]})")
         db.commit()
     finally:
         db.close()
-    print(f"TOTAL: {registered} registered, {already} already, {len(svgs)} grid(s) scanned "
+    print(f"TOTAL: {registered} registered, {already} already, {len(rows)} grid(s) scanned "
           f"[workflow {args.workflow}]")
     return 0
 
