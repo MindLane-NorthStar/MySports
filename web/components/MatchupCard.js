@@ -119,6 +119,12 @@ export default function MatchupCard({ game, standings, showDay = false, onOpen }
       </div>
 
       <div className="mbody" style={{ minWidth: 0 }}>
+        {/* The processed mark is 2/3 of the three-line stack scaled by its manifest hf, and it is
+            VERTICALLY CENTRED ON LINE 2 - so it lives in its own column spanning the stack rather
+            than sitting on the network text line. The grey text stays under the matchup. */}
+        {mark ? (
+          <img className="mnet-mark" src={mark.src} height={mark.height} alt="" loading="lazy" />
+        ) : null}
         {/* the '@' sits between the away name's last character and the home logo - content flow,
             never a fixed centre column */}
         <div className="duel">
@@ -147,11 +153,8 @@ export default function MatchupCard({ game, standings, showDay = false, onOpen }
           />
         </div>
 
-        {/* grey network text under EVERY matchup; the mark only when the profile has an opinion */}
+        {/* grey network text under EVERY matchup, mark or no mark */}
         <div className="mnet">
-          {mark ? (
-            <img className="mnet-mark" src={mark.src} height={mark.height} alt="" loading="lazy" />
-          ) : null}
           <span className="mnet-text">{networkText(game, b)}</span>
         </div>
       </div>

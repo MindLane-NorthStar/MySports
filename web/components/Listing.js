@@ -38,7 +38,7 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
   return (
     <>
       {grid && sport && games.length ? (
-        <MobileGrid games={games} sport={sport} day={day} onOpen={setOpen} />
+        <MobileGrid games={games} sport={sport} day={day} standings={standings} onOpen={setOpen} />
       ) : null}
 
       <div className="cards">

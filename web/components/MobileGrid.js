@@ -28,6 +28,7 @@ import { teamLogoUrl } from '../lib/config.js';
 import { markStyle, hasMark } from '../lib/marks.js';
 import { etTime } from '../lib/format.js';
 import { cardName, cardBroadcast } from './MatchupCard.js';
+import { recordText, standingFor } from '../lib/standings.js';
 
 const SCALE = 0.8; // M1: all grid content renders at 80% of contract design size
 const SEAM_PX = 30; // the dashed cut occupies this much of the axis (M3)
@@ -71,10 +72,18 @@ function useTextMeasurer() {
   );
 }
 
-function teamLine(game, side) {
+/**
+ * The record run beside a name (contract v1.1). `games.home_record` / `away_record` are the CFB
+ * enrichment path and are null for every game in the database today, so the run falls back to the
+ * club's current team_records row - the same number the listings card shows. A club with neither
+ * simply has no run, which is the contract's "suppressed at 0-0" behaviour by another route.
+ */
+function teamLine(game, side, standings) {
   const t = side === 'home' ? game.home : game.away;
   const rank = side === 'home' ? game.home_rank : game.away_rank;
-  const rec = side === 'home' ? game.home_record : game.away_record;
+  const stored = side === 'home' ? game.home_record : game.away_record;
+  const row = standings ? standingFor(standings, t?.id, game.season) : null;
+  const rec = stored || (row ? recordText(row, game.sport) : null);
   return {
     rank: Number.isInteger(rank) && rank > 0 ? String(rank) : null,
     name: (cardName(t, side === 'home' ? game.home_team_id : game.away_team_id) || '').toUpperCase(),
@@ -84,7 +93,7 @@ function teamLine(game, side) {
   };
 }
 
-export default function MobileGrid({ games, sport, day, onOpen }) {
+export default function MobileGrid({ games, sport, day, standings, onOpen }) {
   const { measure, ready } = useTextMeasurer();
 
   const model = useMemo(() => {
@@ -107,7 +116,7 @@ export default function MobileGrid({ games, sport, day, onOpen }) {
     let widest = 0;
     for (const it of timed) {
       for (const side of ['home', 'away']) {
-        const l = teamLine(it.game, side);
+        const l = teamLine(it.game, side, standings);
         const text = `${l.rank ? `${l.rank} ` : ''}${l.name}${l.record ? `  ${l.record}` : ''}`;
         widest = Math.max(widest, measure(text, nameFont));
       }
@@ -140,7 +149,7 @@ export default function MobileGrid({ games, sport, day, onOpen }) {
     for (const r of rows) r.lanes = packLanes(r.items);
 
     return { rows, scale, ticks, cuts, pxPerMin, tbd, blockMins: mins, widest };
-  }, [games, sport, measure, ready]);
+  }, [games, sport, measure, ready, standings]);
 
   // M6: pinch-to-zoom over the canvas; the rail is sticky inside it and so scales with it.
   const [zoom, setZoom] = useState(1);
@@ -266,6 +275,7 @@ export default function MobileGrid({ games, sport, day, onOpen }) {
                       top={li * laneH}
                       blockH={blockH}
                       trayH={trayH}
+                      standings={standings}
                       onOpen={onOpen}
                     />
                   ))
@@ -319,12 +329,12 @@ export default function MobileGrid({ games, sport, day, onOpen }) {
 }
 
 /** One block: cap endcaps with RAW logos on tint gradients, centred names, hairline, seam, tray. */
-function Block({ item, scale, top, blockH, trayH, onOpen }) {
+function Block({ item, scale, top, blockH, trayH, standings, onOpen }) {
   const { game } = item;
   const x = scale.toX(item.start);
   const w = Math.max(46, scale.toX(item.end) - x - 4);
-  const away = teamLine(game, 'away');
-  const home = teamLine(game, 'home');
+  const away = teamLine(game, 'away', standings);
+  const home = teamLine(game, 'home', standings);
   const cap = Math.min(blockH, w / 3);
   const b = item.broadcast;
   const marquee = Boolean(game.is_rivalry) || game.home_rank === 1 || game.away_rank === 1;

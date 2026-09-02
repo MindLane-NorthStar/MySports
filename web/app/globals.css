@@ -424,18 +424,33 @@ input[type='search'] {
 
 /* network line: grey text under EVERY matchup; the processed mark only for access-profile networks */
 .mnet {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin-top: 5px;
+  margin-top: 4px;
   min-width: 0;
+  grid-column: 2;
+}
+
+/* the mark column spans the three-line stack and is centred in it - line 2 IS the middle line, so
+   `align-self: center` over rows 1-2 puts the mark's centre on line 2 by construction. Height comes
+   in inline: 2/3 of the stack height, times the mark's frozen manifest hf. */
+.mbody {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 11px;
+  align-items: start;
 }
 
 .mnet-mark {
-  flex: 0 0 auto;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-self: center;
   width: auto;
   object-fit: contain;
-  /* height is set inline: 2/3 of the three-line stack * the mark's manifest hf */
+  max-width: 92px;
+}
+
+.duel,
+.dsubs {
+  grid-column: 2;
 }
 
 .mnet-text {
