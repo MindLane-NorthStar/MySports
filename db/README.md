@@ -22,3 +22,37 @@ Dry-run result for 0006 (rolled back): observations 1,914 → 408 rows (sum of `
 Rules: every file starts with `set role mysports_owner; set search_path = mysports;` and ends with `reset role;`; nothing is
 ever created in `public`; new tables get RLS + an `anon_read` policy in the same file that creates them. Before a migration
 that rewrites existing rows (0006), take a `pg_dump --schema=mysports -t mysports.<table>` of the affected table.
+
+---
+
+## Backups and the recovery drill (deployment contract §6)
+
+`python scripts/backup_table.py TABLE [TABLE ...]` dumps `mysports.<table>` to
+`artifacts/backups/{table}_{UTC timestamp}.csv` over the writer DSN (psycopg `COPY ... TO STDOUT`).
+`python scripts/sync_assets.py --push-data <dir> --prefix backups/<stamp>/` copies them offsite to the
+**private** `mysports-data` bucket (never the public asset base — verified 404 there).
+
+`python scripts/recovery_drill.py TABLE [TABLE ...]` proves a backup actually restores **without
+touching the live table**. For each table, inside a single session:
+
+```
+create temp table drill_{table} (like mysports.{table} including all)
+copy drill_{table} from the newest artifacts/backups/{table}_*.csv
+assert count(drill) == count(live)
+assert (drill except live) and (live except drill) are both empty     -- exact content, not just a count
+```
+
+Temp tables live in a per-session `pg_temp` schema, are invisible to every other connection, and
+vanish on disconnect. Nothing in the `mysports` schema is created, altered or deleted. **A backup
+that has not round-tripped is a backup you do not have.**
+
+### Drill log
+
+| Date | Tables backed up (rows) | Drilled | Result |
+|---|---|---|---|
+| 2026-09-02 04:06 UTC (Claude Code, overnight run) | games 295 · game_broadcasts 285 · networks_services 85 · teams 808 · canonical_decisions 2,566 · generated_grids 14 · viewer_game_eligibility 295 | `games`, `game_broadcasts` | **PASS.** games: 295 restored = 295 live, content exact. game_broadcasts: 285 restored = 285 live, content exact. Live row counts unchanged afterwards; zero surviving `drill*` tables; 29 tables still in `mysports`. All seven CSVs pushed to `mysports-data/backups/2026-09-02T040653Z/` (7 objects, `games` CSV verified byte-identical on read-back). |
+
+The drill covers `games` and `game_broadcasts` — the two tables the pipeline rewrites most and the
+two whose loss would be hardest to reconstruct. The other five are backed up and pushed offsite but
+not yet drilled; `recovery_drill.py` takes any table name, so extending the drill is a one-line
+change when there is reason to.
