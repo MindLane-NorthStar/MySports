@@ -533,11 +533,25 @@ if USE_MOCK: rank_note = "ranks/spreads/records MOCK — layout only"
 elif RANK_SOURCE: rank_note = f"{RANK_SOURCE} (wk {RANK_WEEK})"
 elif PRO: rank_note = (f"lines: {next((g['odds']['provider'] for g in games if g.get('odds')), '')}" if any(g.get("odds") for g in games) else "no lines in fixture")
 else: rank_note = "no ranking snapshot in enrichment"
-_now = datetime.now(ET); gen = f"{_now.strftime('%b')} {_now.day}, {_now.year} {clock(_now)} ET"
+# v1.6.2: the displayed time is the FEED's generatedAt, not the wall clock. Two renders of one fixture are
+# byte-identical whenever they run, which is what keeps generated_grids.render_hash stable - one archive row
+# per data state, not one per render minute. Label says 'data as of' because that is now what it means.
+def _feed_asof():
+    raw = FX_META.get("generatedAt")
+    if raw:
+        try:
+            return datetime.fromisoformat(str(raw).replace("Z", "+00:00")).astimezone(ET)
+        except ValueError:
+            pass
+    ts = datetime.fromtimestamp(Path(ARGS.fixture).stat().st_mtime, ET)
+    print(f"  note: fixture has no usable validation.generatedAt - using its file mtime "
+          f"({ts.strftime('%Y-%m-%d %H:%M')} ET) as 'data as of'")
+    return ts
+_asof = _feed_asof(); gen = f"{_asof.strftime('%b')} {_asof.day}, {_asof.year} {clock(_asof)} ET"
 DATA_LABEL = POLICY.get("data_label", "CFBD")
 _fx_desc = f"{DATA_LABEL} fixture week {WK}" if SPORT == "cfb" else f"{DATA_LABEL} fixture {FX_META.get('generatedAt', '')[:10]} ({FX_META.get('source', '')})"
 if FX_META.get("sample"): _fx_desc += " · SAMPLE DATA"
-sub = f"all times ET · {rank_note} · data: {_fx_desc}" + (f" + enrichment {ENR['generatedAt'][:10]}" if ENR else (" · no enrichment file" if SPORT == "cfb" else "")) + f" · rendered {gen}"
+sub = f"all times ET · {rank_note} · data: {_fx_desc}" + (f" + enrichment {ENR['generatedAt'][:10]}" if ENR else (" · no enrichment file" if SPORT == "cfb" else "")) + f" · data as of {gen}"
 
 svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W:.0f}" height="{H:.0f}" font-family="Inter, DejaVu Sans, sans-serif">',
 f'''<defs>
@@ -1063,7 +1077,7 @@ svg_path = out_dir / f"grid_{TARGET}.svg"
 svg_path.write_text("\n".join(svg), encoding="utf-8")
 # v1.6.1 sidecar: the counts this run actually produced, so scripts/register_grids.py can archive a grid
 # without re-deriving them from the SVG. Truthful by construction - same variables the console line prints.
-GENERATOR_VERSION = "v1.6.1"
+GENERATOR_VERSION = "v1.6.2"
 meta_path = out_dir / f"grid_{TARGET}.meta.json"
 meta_path.write_text(json.dumps({
     "sport": SPORT, "date": TARGET,
