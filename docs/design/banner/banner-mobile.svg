@@ -1,0 +1,25 @@
+<svg class="scatter" viewBox="0 0 390 280" width="390" height="280" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+<defs><filter id="mo-ds" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity=".7"/></filter><filter id="mo-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="1.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="mo-wm" x="-20%" y="-50%" width="140%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="1" flood-color="#F0C850" flood-opacity="1"/><feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#F0C850" flood-opacity=".5"/><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity=".8"/></filter><filter id="mo-sub" x="-10%" y="-50%" width="120%" height="200%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000" flood-opacity=".9"/></filter></defs>
+<path d="M138 97 Q138 104 145 104 Q138 104 138 111 Q138 104 131 104 Q138 104 138 97Z" fill="#F0C850" filter="url(#mo-glow)" opacity=".95"/>
+<path d="M252 97 Q252 104 259 104 Q252 104 252 111 Q252 104 245 104 Q252 104 252 97Z" fill="#F0C850" filter="url(#mo-glow)" opacity=".95"/>
+<path d="M26 161 Q26 166 31 166 Q26 166 26 171 Q26 166 21 166 Q26 166 26 161Z" fill="#FFFFFF" filter="url(#mo-glow)" opacity=".95"/>
+<path d="M364 161 Q364 166 369 166 Q364 166 364 171 Q364 166 359 166 Q364 166 364 161Z" fill="#FFFFFF" filter="url(#mo-glow)" opacity=".95"/>
+<circle cx="122" cy="198" r="2.2" fill="#5ED8F0" filter="url(#mo-glow)"/>
+<circle cx="270" cy="198" r="2.2" fill="#F05ED2" filter="url(#mo-glow)"/>
+<path d="M195 238 Q195 242 199 242 Q195 242 195 246 Q195 242 191 242 Q195 242 195 238Z" fill="#FFFFFF" filter="url(#mo-glow)" opacity=".95"/>
+<circle cx="60" cy="240" r="1.7" fill="#F06060" filter="url(#mo-glow)"/>
+<path d="M330 237 Q330 240 333 240 Q330 240 330 243 Q330 240 327 240 Q330 240 330 237Z" fill="#F0C850" filter="url(#mo-glow)" opacity=".95"/>
+<text x="195.0" y="46" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="40" letter-spacing="1.6" fill="#fff" filter="url(#mo-wm)">MYSPORTS <tspan fill="#F0C850">TV</tspan></text>
+<text x="196.1" y="72" text-anchor="middle" font-family="Barlow Condensed" font-weight="600" font-size="11" letter-spacing="2.2" fill="#9AA0A8" filter="url(#mo-sub)">EVERY GAME. EVERY CHANNEL. ONE PLACE.</text>
+<image href="/brand/tv-cutout.png" x="134.1" y="120.0" width="121.8" height="128" filter="url(#mo-ds)"/>
+<image href="/leagues/nfl_dark.png" x="77.7" y="117.0" width="36.5" height="50.0" filter="url(#mo-ds)"><title>nfl</title></image>
+<image href="/leagues/cfp_dark.png" x="183.2" y="105.0" width="23.5" height="34.0" filter="url(#mo-ds)"><title>cfp</title></image>
+<image href="/leagues/nba_dark.png" x="283.0" y="117.0" width="22.1" height="50.0" filter="url(#mo-ds)"><title>nba</title></image>
+<image href="/leagues/mlb_dark.png" x="22.0" y="186.0" width="75.9" height="40.0" filter="url(#mo-ds)"><title>mlb</title></image>
+<image href="/leagues/nhl_dark.png" x="309.8" y="181.0" width="40.4" height="46.0" filter="url(#mo-ds)"><title>nhl</title></image>
+<image href="/marks/abc.png" x="34.2" y="240.2" width="27.6" height="27.6" filter="url(#mo-ds)"><title>abc</title></image>
+<image href="/marks/espn.png" x="87.2" y="248.4" width="61.5" height="15.3" filter="url(#mo-ds)"><title>espn</title></image>
+<image href="/marks/usa-network.png" x="169.8" y="246.9" width="50.4" height="22.2" filter="url(#mo-ds)"><title>usa-network</title></image>
+<image href="/marks/fox.png" x="248.9" y="246.2" width="46.3" height="19.6" filter="url(#mo-ds)"><title>fox</title></image>
+<image href="/marks/nbc.png" x="326.0" y="238.2" width="28.0" height="27.6" filter="url(#mo-ds)"><title>nbc</title></image>
+</svg>

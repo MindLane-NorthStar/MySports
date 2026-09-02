@@ -1,0 +1,72 @@
+[
+  {
+    "slug": "nfl",
+    "raw_lum": 158.9,
+    "dark_lum": 158.9,
+    "dark_source": "provider-dark (ESPN 500-dark)",
+    "aspect": 0.73
+  },
+  {
+    "slug": "nba",
+    "raw_lum": 176.6,
+    "dark_lum": 176.9,
+    "dark_source": "provider-dark (ESPN 500-dark)",
+    "aspect": 0.441
+  },
+  {
+    "slug": "mlb",
+    "raw_lum": 146.9,
+    "dark_lum": 147.0,
+    "dark_source": "provider-dark (ESPN 500-dark)",
+    "aspect": 1.893
+  },
+  {
+    "slug": "nhl",
+    "raw_lum": 106.6,
+    "dark_lum": 107.0,
+    "dark_source": "provider-dark (ESPN 500-dark)",
+    "aspect": 0.882
+  },
+  {
+    "slug": "cfp",
+    "raw_lum": 221.3,
+    "dark_lum": 221.1,
+    "dark_source": "dark_ready chain",
+    "aspect": 0.691
+  },
+  {
+    "slug": "wwe",
+    "raw_lum": 16.2,
+    "dark_lum": 231.1,
+    "dark_source": "provider-dark (ESPN 500-dark)",
+    "aspect": 1.103
+  },
+  {
+    "slug": "ufc",
+    "raw_lum": 76.7,
+    "dark_lum": 124.3,
+    "dark_source": "dark_ready chain",
+    "aspect": 2.877
+  },
+  {
+    "slug": "aew",
+    "raw_lum": 26.4,
+    "dark_lum": 222.3,
+    "dark_source": "provider-dark (ESPN 500-dark)",
+    "aspect": 2.009
+  },
+  {
+    "slug": "nascar",
+    "raw_lum": 32.0,
+    "dark_lum": 135.1,
+    "dark_source": "dark_ready chain (derive: black wordmark -> white; bars kept)",
+    "aspect": 5.996
+  },
+  {
+    "slug": "indycar",
+    "raw_lum": 151.6,
+    "dark_lum": 173.6,
+    "dark_source": "badge raw + wordmark whitened (black-is-background plate, like ABC)",
+    "aspect": 1.434
+  }
+]

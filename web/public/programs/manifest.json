@@ -1,0 +1,18 @@
+[
+  {
+    "slug": "big-noon-kickoff",
+    "hf": 1.079,
+    "recipe": "floor_l 0.55 (FOX blue lifted; white + yellow untouched)",
+    "ink_area": 10085,
+    "target": 11734,
+    "lum": 196.2
+  },
+  {
+    "slug": "college-gameday",
+    "hf": 1.15,
+    "recipe": "RAW \u2014 sponsor block removed, shield rebuilt; dark body reads by rim + white text (NHL/ABC ruling)",
+    "ink_area": 7947,
+    "target": 11734,
+    "lum": 77.5
+  }
+]
