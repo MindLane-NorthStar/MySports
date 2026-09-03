@@ -34,11 +34,15 @@ export const dynamic = 'force-dynamic';
 //
 // FLAGGED FOR JOE'S VETO: "are coming" makes a soft promise with no date. The alternatives were a
 // bare "no games" (section 13 rules it out), a date (invented), and a rights claim (rots).
+//
+// THE SPORT IS PRONOUNCED ONCE, in the shared prefix, and referred back to here. Every one of the
+// four used to repeat it - "No games on this viewing day for UFC. UFC is not loaded yet." - and
+// that includes IndyCar, whose possessive "IndyCar's" doubled it just as plainly as the rest.
 const SPORT_EMPTY = {
-  nascar: 'NASCAR arrives with the playoffs, September 6.',
-  indycar: "IndyCar's 2026 season ends this month; the 2027 schedule publishes in October.",
-  ufc: 'UFC is not loaded yet. The numbered events and Fight Nights are coming.',
-  wwe: 'WWE is not loaded yet. Raw, SmackDown and the premium live events are coming.',
+  nascar: 'It arrives with the playoffs, September 6.',
+  indycar: 'The 2026 season ends this month; the 2027 schedule publishes in October.',
+  ufc: 'It is not loaded yet — the numbered events and Fight Nights are coming.',
+  wwe: 'It is not loaded yet — Raw, SmackDown and the premium live events are coming.',
 };
 
 async function ArchivedGrid({ sport, day }) {
