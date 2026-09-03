@@ -5,6 +5,13 @@ import Chrome from '../components/Chrome.js';
 export const metadata = {
   title: 'MySports TV',
   description: 'What is on today, this week, and what has already been played.',
+  // The home-screen label iOS prints under the icon. iOS truncates around 12 characters and
+  // "MySports TV" is 11, so it lands whole rather than as "MySports T...".
+  //
+  // There is deliberately no hand-written <link rel="apple-touch-icon"> anywhere in this file:
+  // Next's App Router serves and links app/icon.png and app/apple-icon.png by file convention. If a
+  // link tag ever seems necessary here, the icon file is in the wrong place.
+  appleWebApp: { title: 'MySports TV' },
 };
 
 export default function RootLayout({ children }) {
