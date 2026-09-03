@@ -1347,16 +1347,9 @@ input:focus-visible {
 }
 
 /* the jump chip that keeps the grid one tap away now that listings come first */
-.jumpbar {
-  display: flex;
-  justify-content: flex-end;
-  margin: -6px 0 8px;
-}
+/* .jumpbar and .jumpchip were removed with 05 section 11: with the grid second on a phone, the
+   Grid-down chip had nothing left to jump past. */
 
-.jumpchip {
-  color: var(--gold);
-  border-color: rgba(240, 200, 80, 0.45);
-}
 
 /* ---- banner + navbar (design session 2026-09-02) */
 /* ================================================================ MAIN BANNER (home page) */
@@ -1509,11 +1502,20 @@ input:focus-visible {
 .mgrid-only { display: none; }
 @media (max-width: 699px) {
   .mgrid-only { display: block; }
-  /* the jump chip only means anything when there is a grid below it to jump to */
-  .jumpbar { display: flex; }
 }
-@media (min-width: 700px) {
-  .jumpbar { display: none; }
+
+/* 05 SECTION 11, THE PAGE ORDER. DOM order is YOUR TEAMS -> bands -> grid, which is what desktop
+ * reads. On a phone the grid moves between the section and the bands, with CSS `order` rather than
+ * a second DOM tree or a JS width state - every breakpoint in this app is CSS-gated at 699px
+ * precisely so there is no server/client hydration mismatch.
+ *
+ * Negative orders rather than positive ones: the bands are a .map() of unknown length and would all
+ * need numbering otherwise. Leaving them at the default 0 and pulling two known elements in front
+ * of them is the same result with two rules. */
+.listing { display: flex; flex-direction: column; }
+@media (max-width: 699px) {
+  .listing > .yourteams { order: -2; }
+  .listing > .mgrid-only { order: -1; }
 }
 
 /* The PC grid is drawn at 2862px for a 1398px-plus page. Crushing it into a ~950px column was a 3x

@@ -14,6 +14,8 @@ import GameDetail from './GameDetail.js';
 import { indexStandings } from '../lib/standings.js';
 import { REFRESH_SECONDS, SPORTS, SPORT_LABEL } from '../lib/config.js';
 import { offServiceSummary } from '../lib/offservice.js';
+import { favoriteIds, splitFavorites } from '../lib/favorites.js';
+import favoritesDoc from '../../data/favorites.json';
 
 function anyInFlight(games) {
   const now = Date.now();
@@ -36,50 +38,70 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
     return () => clearInterval(id);
   }, [games, router]);
 
+  // 05 section 11: on the Today page the favourites are lifted OUT of their sport bands into one
+  // page-level section, across every sport, chronological among themselves. splitFavorites keeps
+  // input order, and `games` arrives ordered by kickoff, so that is chronological for free.
+  //
+  // The two sets are DISJOINT, which is what makes the counting work: each section is handed only
+  // the games it shows, so its own count line describes the rows beneath it and a favourite is
+  // counted once, in YOUR TEAMS, and not again in its sport's band.
+  const favIds = useMemo(() => favoriteIds(favoritesDoc), []);
+  const { favorites, rest } = useMemo(
+    () => (bands ? splitFavorites(games || [], favIds) : { favorites: [], rest: games || [] }),
+    [bands, games, favIds],
+  );
+
   // Bands render in SPORTS order (cfb, nfl, nba, nhl, mlb), not in kickoff order - the order is the
   // product's, so a quiet sport does not jump the page because it happened to start first. Only
-  // sports with games that day appear.
+  // sports with games that day appear - and since the bands are built from `rest`, a sport whose
+  // only games were favourites now has no band at all rather than a header over nothing.
   const grouped = useMemo(() => {
     if (!bands) return null;
     const by = new Map();
-    for (const g of games || []) {
+    for (const g of rest) {
       if (!by.has(g.sport)) by.set(g.sport, []);
       by.get(g.sport).push(g);
     }
     const known = SPORTS.filter((s) => by.has(s));
     const extra = [...by.keys()].filter((s) => !SPORTS.includes(s)).sort();
     return [...known, ...extra].map((s) => [s, by.get(s)]);
-  }, [bands, games]);
+  }, [bands, rest]);
 
   // The grid stays bound to a SINGLE selected sport, exactly as before - bands do not each get one.
   const showGrid = Boolean(grid && sport && games.length);
-  const gridId = `grid-${sport || 'all'}-${day || ''}`;
 
   // The mobile grid follows what the bands actually show: everything except genuinely ineligible
-  // games. Computed here because the grid spans bands.
+  // games. Computed here because the grid spans bands - and it is deliberately built from the WHOLE
+  // day, not from `rest`, so hoisting favourites into their own section does not remove them from
+  // the grid. The grid shows what it showed.
   const gridGames = useMemo(() => {
     const off = new Set(offServiceSummary(games).off.map((g) => g.id));
     return (games || []).filter((g) => !off.has(g.id));
   }, [games]);
 
-  // LISTINGS FIRST, in every view and for every sport (Joe's ruling 2026-09-03). The grid is the
-  // second thing on the page, not the first: a phone opens to what is on, and the grid is one tap
-  // away through the jump chip rather than a screen of scrolling.
+  // 05 section 11: DOM order is YOUR TEAMS -> bands -> grid. At <=699px CSS `order` lifts the grid
+  // between the section and the bands, so the phone reads YOUR TEAMS -> grid -> bands. `order`
+  // needs a flex parent, which is what .listing is; a column flex container lays block children out
+  // the way a block does, and .band carries a BOTTOM margin only, so there is nothing for flex's
+  // lack of margin collapsing to change. Measured before and after at both widths to be sure.
+  //
+  // The jump chip is gone with the same ruling: with the grid second on a phone it had nothing left
+  // to jump past.
   return (
-    <>
-      {showGrid ? (
-        <div className="jumpbar">
-          <a className="chip jumpchip" href={`#${gridId}`}>
-            Grid &darr;
-          </a>
-        </div>
-      ) : null}
-
+    <div className="listing">
       {bands ? (
-        grouped.map(([s, rows]) => (
-          <SportBand key={s} sport={s} label={SPORT_LABEL[s] || s} games={rows}
-                     standings={standings} showDay={showDay} onOpen={setOpen} />
-        ))
+        <>
+          {favorites.length ? (
+            <SportBand sport={null} label="Your teams" sectionLabel="Your teams" games={favorites}
+                       standings={standings} showDay={showDay} onOpen={setOpen}
+                       showHeader={false} floatFavorites={false} />
+          ) : null}
+          {grouped.map(([s, rows]) => (
+            <SportBand key={s} sport={s} label={SPORT_LABEL[s] || s} games={rows}
+                       standings={standings} showDay={showDay} onOpen={setOpen}
+                       floatFavorites={false} />
+          ))}
+        </>
       ) : (
         // /weeks and /history keep their flat structure - the same component, header off, so the
         // count line, the toggle, the favourites float and the row wrappers have one implementation.
@@ -94,14 +116,15 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
           breakpoint the desktop grid is the archived PC render and nothing else. CSS-gated at the
           same 699px the rest of the app uses, so no JS width state and no hydration mismatch. */}
       {showGrid ? (
-        <div id={gridId} className="mgrid-only">
+        <div className="mgrid-only">
           <MobileGrid games={gridGames} sport={sport} day={day} standings={standings} onOpen={setOpen} />
         </div>
       ) : null}
 
+      {/* position: fixed, so it takes no part in the flex ordering above. */}
       {open ? (
         <GameDetail game={open} standings={standings} generatedAt={generatedAt} onClose={() => setOpen(null)} />
       ) : null}
-    </>
+    </div>
   );
 }

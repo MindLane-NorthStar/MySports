@@ -26,7 +26,13 @@ import favoritesDoc from '../../data/favorites.json';
 // college slot, so the band follows the banner rather than inventing a second convention.
 const MARK = { cfb: 'cfp', nfl: 'nfl', nba: 'nba', nhl: 'nhl', mlb: 'mlb' };
 
-export default function SportBand({ sport, label, games, standings, showDay = false, onOpen, showHeader = true }) {
+// `floatFavorites` and `sectionLabel` exist for 05 section 11. On the Today page the favourites
+// are hoisted to a PAGE-LEVEL section, so the in-band float is switched off there and the section
+// carries the marker instead. /weeks and /history keep the float on - section 11 is scoped to `/`,
+// because those two group by DAY and lifting a favourite out of its day destroys the calendar they
+// exist to be. Defaults preserve their behaviour exactly.
+export default function SportBand({ sport, label, games, standings, showDay = false, onOpen,
+                                    showHeader = true, floatFavorites = true, sectionLabel = null }) {
   const [showAll, setShowAll] = useState(false);
 
   const summary = useMemo(() => offServiceSummary(games), [games]);
@@ -43,10 +49,13 @@ export default function SportBand({ sport, label, games, standings, showDay = fa
     [showAll, games, offIds],
   );
 
-  // D6, now PER BAND rather than across the whole page: a favourite floats to the top of its own
-  // sport, not above another sport's games.
+  // D6's in-band float, retained for /weeks and /history. On `/` this is switched off and the page
+  // hoists favourites into their own section instead (05 section 11), so `favorites` is empty and
+  // `rest` is everything - one flat list, no marker and no trailing rule.
   const favIds = useMemo(() => favoriteIds(favoritesDoc), []);
-  const { favorites, rest } = useMemo(() => splitFavorites(shown, favIds), [shown, favIds]);
+  const split = useMemo(() => splitFavorites(shown, favIds), [shown, favIds]);
+  const favorites = floatFavorites ? split.favorites : [];
+  const rest = floatFavorites ? split.rest : shown;
 
   if (!games?.length) return null;
 
@@ -67,7 +76,12 @@ export default function SportBand({ sport, label, games, standings, showDay = fa
   );
 
   return (
-    <section className="band" aria-label={label || sport}>
+    <section className={sectionLabel ? 'band yourteams' : 'band'} aria-label={label || sport}>
+      {/* The section marker, at SECTION level and never on the card - the card contract is locked
+          and nothing here reaches inside it. Same .favlabel the in-band float uses, so the two
+          arrangements read identically and Joe's open ruling on its prominence still applies to one
+          rule rather than two. */}
+      {sectionLabel ? <p className="favlabel">{sectionLabel}</p> : null}
       {showHeader ? (
         <header className="band-head">
           {MARK[sport] ? <img className="band-mark" src={`/leagues/${MARK[sport]}_dark.png`} alt="" /> : null}
