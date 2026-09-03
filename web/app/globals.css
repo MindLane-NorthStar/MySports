@@ -228,14 +228,28 @@ input[type='search'] {
   min-width: 240px;
 }
 
+/* The row SCROLLS rather than wrapping (register section 13). The ruling's stated premise - that
+ * the locked reference already sets overflow-x:auto here - is false: the only .chiprow carrying it
+ * is docs/feature-study/mockups/home-page-candidates.html:16, the feature-study mockup. This rule
+ * was flex-wrap:wrap, so the scrolling row is a real change, not inherited behaviour. The direction
+ * stands; only its cost was mispriced. Pattern follows .mgrid-nav (line ~707), the same control
+ * shape, already proven on iOS. Ten chips measure about 680px against 390px of viewport, so
+ * wrapping would stack them three deep under the date control. */
 .chiprow {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .chip {
   display: inline-block;
+  /* Flex children shrink by default, which inside a nowrap scroller would compress every chip
+     until the marks squashed instead of the row scrolling. */
+  flex: 0 0 auto;
+  white-space: nowrap;
   padding: 5px 11px;
   border-radius: 999px;
   border: 1px solid var(--line-soft);

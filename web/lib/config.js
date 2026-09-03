@@ -22,8 +22,19 @@ export const ASSET_BASE_URL = (
   process.env.NEXT_PUBLIC_ASSET_BASE_URL || 'https://pub-8373112ac08548d8af79fe58b7c2dcb9.r2.dev/'
 ).replace(/\/*$/, '/');
 
-// The sports the pipeline currently loads. Order is the order the filters render in.
-export const SPORTS = ['cfb', 'nfl', 'nba', 'nhl', 'mlb'];
+// The sports the filters offer. Order is the order the chips render in.
+//
+// The last four have NO games loaded yet, and that is deliberate (register section 13): the chip
+// row is the app's statement of what it covers, so a sport Joe watches belongs there before its
+// adapter lands, selecting to an honest empty state that says when data arrives. Verified safe
+// against the live database before widening this list - the sport column accepts all four and
+// PostgREST returns 200 with an empty array, so queries.js:51 degrades to the empty-state path
+// rather than erroring. The other consumers are all guards or groupers: page.js and
+// history/page.js validate a URL param, and Listing.js only orders bands that HAVE games.
+//
+// AEW is deliberately absent (section 13, amending section 9). It still loads, still appears under
+// All, and still renders on the grid on its networks - it just does not get a chip.
+export const SPORTS = ['cfb', 'nfl', 'nba', 'nhl', 'mlb', 'nascar', 'indycar', 'ufc', 'wwe'];
 
 export const SPORT_LABEL = {
   cfb: 'College Football',
@@ -31,6 +42,10 @@ export const SPORT_LABEL = {
   nba: 'NBA',
   nhl: 'NHL',
   mlb: 'MLB',
+  nascar: 'NASCAR',
+  indycar: 'IndyCar',
+  ufc: 'UFC',
+  wwe: 'WWE',
 };
 
 // Sports whose season is organised into provider-labelled weeks. Everything else - and the

@@ -19,6 +19,21 @@ import { overlayForDay, applyOverlay } from '../lib/livescores.js';
 
 export const dynamic = 'force-dynamic';
 
+// The four sports added to the chip row in prompt 25 have nothing loaded yet, and the general
+// empty state would answer them with a list of dates for OTHER sports - which reads as a bug
+// rather than as a season that has not started. Each says why it is empty and when data arrives.
+//
+// NASCAR and IndyCar carry register section 13's own copy. UFC and WWE do not have copy in section
+// 13, and the register is a Claude project doc rather than a repo file, so rather than inventing a
+// schedule claim - the exact failure working rule 22 exists to prevent - they state only what is
+// verifiable: no adapter has loaded them. FLAGGED for Joe to supply the real copy.
+const SPORT_EMPTY = {
+  nascar: 'NASCAR arrives with the playoffs, September 6.',
+  indycar: "IndyCar's 2026 season ends this month; the 2027 schedule publishes in October.",
+  ufc: 'No UFC events have been loaded yet - the adapter that fetches them has not been built.',
+  wwe: 'No WWE events have been loaded yet - the adapter that fetches them has not been built.',
+};
+
 async function ArchivedGrid({ sport, day }) {
   // Only offered when exactly one sport is selected: a grid is per (sport, day) by construction.
   if (!sport) return null;
@@ -115,9 +130,10 @@ export default async function TodayPage({ searchParams }) {
 
       {!error && games.length === 0 ? (
         <p className="empty">
-          No games on this viewing day{sport ? ` for ${SPORT_LABEL[sport] || sport}` : ''}. The database
-          currently holds loaded days only — try 2026-09-03 or 2026-09-04 (MLB), 2026-09-05 (CFB),
-          2026-09-13 (NFL), 2026-10-01 (NHL) or 2026-10-28 (NBA).
+          No games on this viewing day{sport ? ` for ${SPORT_LABEL[sport] || sport}` : ''}.{' '}
+          {(sport && SPORT_EMPTY[sport]) ||
+            'The database currently holds loaded days only — try 2026-09-03 or 2026-09-04 (MLB), ' +
+              '2026-09-05 (CFB), 2026-09-13 (NFL), 2026-10-01 (NHL) or 2026-10-28 (NBA).'}
         </p>
       ) : null}
 
