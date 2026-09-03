@@ -1536,18 +1536,68 @@ input:focus-visible {
 
 /* ---- prompt 22 chrome: chip marks, tighter banner gap, one-line count */
 
-/* 5a. League marks on the sport chips. _dark variants: these float on charcoal, and v1.3e reserves
- * the raw art for cap endcaps and light tint plates (addendum M12). "All" stays text - it is the one
- * chip that is not a league. */
-.chip-league { display: inline-flex; align-items: center; gap: 6px; }
-.chip-mark { height: 15px; width: auto; object-fit: contain; flex: 0 0 auto; }
-/* 20px, not 13px. Register section 13's width table - the one the scrolling row was sized
- * against - was computed at a 21px chip height, and this rule was rendering marks at 13px, so
- * every mark has been running well under the basis the row was designed for. That is why the
- * 44px accessible pill reads empty around a small mark. width stays auto: NASCAR's wordmark is
- * ~6x as wide as it is tall and constraining width would squash it. Desktop keeps 15px in a 29px
- * pill, where the proportion was never wrong. */
-@media (max-width: 699px) { .chip-mark { height: 20px; } }
+/* ---- REGISTER §15: THE SPORT TILES.
+ *
+ * CONTRACT REPAIR, not new design. docs/design/mobile_demo.html specifies a FIXED SQUARE tile
+ * (.spbtn: 40x40, padding 5px, soft radius, display:flex centred) with the mark sized only by the
+ * box - `max-width/max-height:100%; object-fit:contain`. The shipped app had grown logo-SHAPED
+ * pills instead, because .chip-mark set an explicit height and let width run free: that is what
+ * made NASCAR's 6:1 wordmark three times wider than its neighbours, and what left the 44px pill
+ * looking empty around a 20px mark.
+ *
+ * .chip IS DELIBERATELY UNTOUCHED. It still carries three TEXT controls that cannot be square -
+ * the two /weeks View chips and WeekSelect's <select> wrapper - so the tile gets its own class,
+ * named .spbtn to match the reference so the two can be diffed by eye forever after.
+ *
+ * 44x44 at <=699px preserves prompt 25's tap target, which is not being undone. 36x36 on desktop:
+ * Joe said "the buttons", not "the mobile buttons", and one shape at both widths is the point.
+ * box-sizing is border-box globally, so the mark's content box is 44 - 2(border) - 8(padding) =
+ * 34px square on mobile, 26px on desktop. */
+.spbtn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
+  color: var(--dim);
+  cursor: pointer;
+  appearance: none;
+}
+
+@media (max-width: 699px) {
+  .spbtn { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+}
+
+/* The mark has no dimensions of its own - the box is the only thing sizing it. */
+.spbtn img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+/* "All" is the one tile that is type rather than art, so the type does the filling. Barlow
+   Condensed 700 uppercase, per the reference's .spbtn.all. */
+.spbtn-all {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+@media (max-width: 699px) { .spbtn-all { font-size: 16px; } }
+
+/* §14's inverted active state, unchanged and applied to the tile exactly as it applied to the
+   chip: charcoal ground, gold border, and gold text on the one tile that has text. */
+.spbtn[data-active='true'] { color: var(--gold); border-color: var(--gold); }
 
 /* 5b. The banner-to-date gap was 46px at 1440: .shell padding-top 24px + the h1's own 22px top
  * margin, stacked. The h1 is the first thing under the chrome, so its top margin is pure duplication

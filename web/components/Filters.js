@@ -53,7 +53,7 @@ export function SportFilter({ sport, available }) {
           row rather than floating beside it. The Day label above stays: it is visible work in
           front of a control whose own text is a date. */}
       <div className="chiprow" role="group" aria-label="Sport">
-        <button type="button" className="chip" data-active={!sport} aria-pressed={!sport}
+        <button type="button" className="spbtn spbtn-all" data-active={!sport} aria-pressed={!sport}
                 onClick={() => setParam('sport', null)}>
           All
         </button>
@@ -64,7 +64,7 @@ export function SportFilter({ sport, available }) {
           <button
             key={s}
             type="button"
-            className="chip chip-league"
+            className="spbtn"
             data-active={sport === s}
             aria-pressed={sport === s}
             aria-label={SPORT_LABEL[s] || s}
@@ -82,10 +82,13 @@ export function SportFilter({ sport, available }) {
                 not fit 390px at any sane size, and the marks are the thing Joe recognises. The label
                 moves to aria-label on the BUTTON: removing visible text removes the accessible name,
                 and an unlabelled button is worse than a wide one. The img stays alt="" so a screen
-                reader hears "NFL" once, not twice. Height only, never width - NASCAR's wordmark is
-                126px at 21px tall and constraining width would squash it (section 13's measurements). */}
+                reader hears "NFL" once, not twice.
+
+                REGISTER §15: the img carries NO class and NO dimensions of its own. It is sized
+                entirely by .spbtn's box - max-width/max-height 100% with object-fit: contain, the
+                reference's own rule. The old .chip-mark set an explicit height, which is precisely
+                what was holding every mark down inside a 44px tile. */}
             <img
-              className="chip-mark"
               src={`/leagues/${CHIP_MARK[s] || s}_dark.png`}
               alt=""
               loading="lazy"
