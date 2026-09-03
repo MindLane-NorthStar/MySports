@@ -70,3 +70,32 @@ Joe's stated list is thirteen teams across five sports, so this is **not** the m
 - **E5 market-pending state for regional NFL windows is still unruled and is due before Sunday September 13.** It is not part of this board.
 - E2/E6 derivation and the §11.9 renderer "Tonight summary line" are the same calculation. **Build it once in the web app and have v1.7 import it**, or the two drift within a month.
 - Whether the `YOUR TEAMS` micro-label survives Joe seeing it rendered.
+
+---
+
+## 6. D3 AMENDED — 2026-09-03, after the Vercel egress probe
+
+**The probe answered.** `/api/egress-probe` from Vercel region `iad1` returned **200 on all four targets** on the honest adapter UA: ESPN NFL 134 ms / 250,817 B, ESPN CFB 121 ms / 350,058 B, MLB statsapi 98 ms, `api-web.nhle.com` 135 ms / 75,124 B. **Akamai does not block Vercel.** D3 closes on this evidence alone — the Supabase edge-function probe named in the original ruling is unnecessary and will not be built.
+
+**An error in the original D3 wording, named rather than left to surface at implementation.** "Refresh on open" as written implied *writing* refreshed scores into the database. Writing needs the `mysports_writer` credential, which the deployment contract deliberately keeps out of the web app, and it would open serverless connections into a free-plan pool shared with BudgetBuddy. That cost was not priced when D3 was written.
+
+**Joe's ruling: live overlay — no poll, no database write.**
+
+| | |
+|---|---|
+| **Shape** | The page fetches game state, score and clock from the providers when it renders, caches ~60 s, and overlays them on what the database already holds (schedule, teams, networks, finals). |
+| **Canonical data** | Unchanged. The daily Actions refresh still writes finals the next morning; the database remains the source of truth for everything except the in-flight score. |
+| **In-window Actions poll** | **Never built.** The 900–1,750 minutes/month Actions budget question is void. |
+| **Credentials** | No writer credential on Vercel, ever. The deployment-contract rule stands unamended. |
+| **Connections** | No serverless connections into the shared free-plan pool. |
+| **Supabase edge function** | Not needed, not built. |
+
+**Named cost.** A second, narrow reader of the same provider payloads now exists in JavaScript alongside the Python adapters. It reads **only** state, score and clock — three of the five sports share the identical ESPN shape, so it is roughly 60 lines, not a second adapter. **It must be tested against the same recorded fixtures the Python adapter tests use**, so the two cannot silently disagree. That test is an acceptance item for the home-page implementation prompt.
+
+Mobile Grid Addendum M11's 15-minute in-window client refresh is unaffected: the client re-requests on its own cadence, and each request returns data fresh within 60 seconds.
+
+## 7. Deployment facts settled the same day
+
+- Production: **https://my-sports-xi.vercel.app** — project `my-sports`, Vercel **team** `mindlane-northstar` (Pro), Root Directory `web`, the four `NEXT_PUBLIC_*` variables set explicitly.
+- **Deployment protection: leave Vercel Authentication on Standard Protection.** The project settings page offers only two levels — Standard Protection, and All Deployments behind a paid add-on. Standard Protection exempts the production alias (the UI names `my-sports-xi.vercel.app` as the publicly accessible domain) while keeping preview and per-deployment URLs behind Vercel login. That is exactly the intended posture. *(An earlier instruction to select "Only Preview Deployments" was wrong — that option appears in Vercel's knowledge base but not in the project settings page.)*
+- **Open privacy item before the Cavs season starts (late October):** a public production URL publishes whatever the app displays. Confirm that no loaded broadcast row exposes the unannounced WUAB/RESN arrangement, or keep those rows suppressed until the public announcement.

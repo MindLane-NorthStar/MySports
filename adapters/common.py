@@ -119,30 +119,64 @@ def load_data(root: Path, name: str, default: Any = None) -> Any:
 
 
 # ----------------------------------------------------------------------------- http
+# Bounded retry policy (2026-09-03). ATTEMPTS is the TOTAL number of tries, not the number of extras.
+#
+# WHAT IS RETRIED: connection-level failures and 5xx. A connection reset or a 502 is the network or the
+# origin having a moment, and a second try a couple of seconds later usually lands.
+#
+# WHAT IS NEVER RETRIED: ANY 4xx. A 403 is Akamai's *answer*, not a blip - re-asking makes the bot score
+# worse, which is the opposite of helping. The one CI fetch failure in this repo's history is exactly
+# that: run 33673744218 died on `HTTP Error 403: Forbidden` from site.api.espn.com, and a retry loop
+# would have turned one refusal into several. This includes 429: the spec for this policy says never
+# retry a 4xx, so a rate-limit answer is surfaced to the caller rather than slept on. That is a
+# deliberate narrowing of the previous behaviour, which did retry 429.
+#
+# WHY ConnectionResetError AND TimeoutError ARE CAUGHT SEPARATELY, and this is the bug fix rather than
+# the insurance: urllib wraps failures raised while CONNECTING in URLError, but a reset that arrives
+# mid-body - after the response headers, during resp.read() - propagates as a bare ConnectionResetError,
+# and a read timeout as a bare TimeoutError. Neither is a URLError, so the previous `except URLError`
+# never saw them. That is precisely the shape of the failure observed against api-web.nhle.com on
+# 2026-09-03 (`WinError 10054`, `read ECONNRESET`), so the old retry could not have helped it.
+ATTEMPTS = 2
+BACKOFF_SECONDS = 2.0
+RETRY_STATUS = (500, 502, 503, 504)
+
+
+def _host(url: str) -> str:
+    return urllib.parse.urlsplit(url).hostname or url
+
+
 def http_json(url: str, headers: dict[str, str] | None = None, params: dict[str, Any] | None = None,
-              timeout: int = 45, retries: int = 2) -> Any:
+              timeout: int = 45, attempts: int = ATTEMPTS, sleep=time.sleep) -> Any:
+    """GET JSON with a bounded retry. `sleep` is injectable so tests do not actually wait."""
     if params:
         q = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None}, doseq=True)
         url = f"{url}?{q}"
     hdrs = {"Accept": "application/json", "User-Agent": ua_for(url)}
     hdrs.update(headers or {})
+    bare = url.split("?")[0]
     last: Exception | None = None
-    for attempt in range(retries + 1):
+    for attempt in range(1, max(1, attempts) + 1):
         req = urllib.request.Request(url, headers=hdrs, method="GET")
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return json.loads(resp.read().decode("utf-8"))
-        except urllib.error.HTTPError as e:
+        except urllib.error.HTTPError as e:      # MUST stay above URLError - HTTPError subclasses it
             body = e.read().decode("utf-8", errors="replace")[:500]
-            last = RuntimeError(f"HTTP {e.code} for {url.split('?')[0]}: {body}")
-            if e.code in (429, 500, 502, 503, 504) and attempt < retries:
-                time.sleep(1.5 * (attempt + 1))
+            last = RuntimeError(f"HTTP {e.code} for {bare}: {body}")
+            if e.code in RETRY_STATUS and attempt < attempts:
+                print(f"  warn: {_host(url)} HTTP {e.code}, retry {attempt + 1} of {attempts} "
+                      f"in {BACKOFF_SECONDS:.0f}s")
+                sleep(BACKOFF_SECONDS)
                 continue
             raise last from e
-        except urllib.error.URLError as e:
-            last = RuntimeError(f"request failed for {url.split('?')[0]}: {e}")
-            if attempt < retries:
-                time.sleep(1.5 * (attempt + 1))
+        except (urllib.error.URLError, ConnectionResetError, TimeoutError) as e:
+            reason = getattr(e, "reason", e)
+            last = RuntimeError(f"request failed for {bare}: {e}")
+            if attempt < attempts:
+                print(f"  warn: {_host(url)} {type(e).__name__} ({reason}), retry {attempt + 1} "
+                      f"of {attempts} in {BACKOFF_SECONDS:.0f}s")
+                sleep(BACKOFF_SECONDS)
                 continue
             raise last from e
     raise last  # pragma: no cover
