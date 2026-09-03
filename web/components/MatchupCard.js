@@ -1,7 +1,11 @@
 // The LOCKED listings card (prompt 14 §3.4) - Today and Weeks, every sport.
 //
-//   [ time ]  [ away tcol ] @ [ home tcol ]        [ favoured logo + ML ]
-//             network text (+ mark for access-profile networks)          [ O/U ]
+//   [ time ] [ away tcol ] @ [ home tcol ]   [ MARK ]   [ favoured logo + ML ]
+//            network text                                [ O/U ]
+//
+// FOUR columns: time | body | processed mark | right slot. The mark sits BETWEEN the matchup and the
+// slot, in its own column, vertically centred on line 2 - not inside the body and not left of the
+// matchup, which is where it had drifted to.
 //
 // tcol line 1  logo (DARK variant - it floats on charcoal, addendum M12) + name
 // tcol line 2  record + standing, OMITTED ENTIRELY when there is none
@@ -32,27 +36,28 @@ export function nameSize(name) {
 }
 
 /**
- * Line 1 only. The name row is what the '@' hugs, so it must be its own flow element - if the record
- * and pitcher lines shared a column with it, the column would be as wide as its WIDEST line and the
- * '@' would drift out to a de-facto aligned column, which is exactly what the rule forbids.
+ * ONE COLUMN PER TEAM - line 1 (logo + name), line 2 (record + standing), line 3 (MLB probable).
+ *
+ * This is the shape the locked reference uses (`.duel.hug > .tcol`), and it is what puts each team's
+ * record UNDER ITS OWN NAME. The card had drifted to a split layout - names in a hugging flex row,
+ * records in a separate 50/50 grid - so the away record sat hard left while the home record floated
+ * at the card's midpoint, unrelated to the name above it. Keeping the three lines in one column makes
+ * that misalignment structurally impossible rather than something to tune.
+ *
+ * The column is `flex: 0 1 auto; min-width: 0`, so the '@' still hugs: the stack is only as wide as
+ * its content, and the two stacks close around the '@' rather than sitting in fixed halves.
  */
-function TeamName({ team, teamId }) {
+function TeamStack({ team, teamId, sport, standings, season, probable, showProbable }) {
   const name = cardName(team, teamId);
-  return (
-    <span className="tname">
-      <img src={teamLogoDarkUrl(team?.id || teamId)} alt="" loading="lazy" />
-      <b style={{ fontSize: `${nameSize(name)}px` }}>{name}</b>
-    </span>
-  );
-}
-
-/** Lines 2 and 3, under their own team. An absent standing renders NOTHING, never a blank line. */
-function TeamSub({ team, teamId, sport, standings, season, probable, showProbable }) {
   const row = standings ? standingFor(standings, team?.id || teamId, season) : null;
   const line = standingLine(row, sport, team?.conference?.name);
-  if (!line && !showProbable) return <div className="dsub" />;
   return (
-    <div className="dsub">
+    <div className="tcol">
+      <div className="tl1">
+        <img src={teamLogoDarkUrl(team?.id || teamId)} alt="" loading="lazy" />
+        <b style={{ fontSize: `${nameSize(name)}px` }}>{name}</b>
+      </div>
+      {/* Absent means ABSENT: no blank line is reserved for a record that does not exist. */}
       {line ? <div className="tcol-rec">{line}</div> : null}
       {showProbable ? <div className="tcol-pitch">{probable || 'Starter TBA'}</div> : null}
     </div>
@@ -118,38 +123,18 @@ export default function MatchupCard({ game, standings, showDay = false, onOpen }
         {showDay ? <span className="mtime-day">{shortDay(game.viewing_day)}</span> : null}
       </div>
 
-      <div className="mbody" style={{ minWidth: 0 }}>
-        {/* The processed mark is 2/3 of the three-line stack scaled by its manifest hf, and it is
-            VERTICALLY CENTRED ON LINE 2 - so it lives in its own column spanning the stack rather
-            than sitting on the network text line. The grey text stays under the matchup. */}
-        {mark ? (
-          <img className="mnet-mark" src={mark.src} height={mark.height} alt="" loading="lazy" />
-        ) : null}
+      <div className="mbody">
         {/* the '@' sits between the away name's last character and the home logo - content flow,
             never a fixed centre column */}
-        <div className="duel">
-          <TeamName team={away} teamId={game.away_team_id} />
-          <span className="at">{game.neutral_site ? 'vs' : '@'}</span>
-          <TeamName team={home} teamId={game.home_team_id} />
-        </div>
-        <div className="dsubs">
-          <TeamSub
-            team={away}
-            teamId={game.away_team_id}
-            sport={sport}
-            standings={standings}
-            season={game.season}
-            probable={game.probable_away_pitcher}
-            showProbable={isMlb}
+        <div className="duel hug">
+          <TeamStack
+            team={away} teamId={game.away_team_id} sport={sport} standings={standings}
+            season={game.season} probable={game.probable_away_pitcher} showProbable={isMlb}
           />
-          <TeamSub
-            team={home}
-            teamId={game.home_team_id}
-            sport={sport}
-            standings={standings}
-            season={game.season}
-            probable={game.probable_home_pitcher}
-            showProbable={isMlb}
+          <span className="at">{game.neutral_site ? 'vs' : '@'}</span>
+          <TeamStack
+            team={home} teamId={game.home_team_id} sport={sport} standings={standings}
+            season={game.season} probable={game.probable_home_pitcher} showProbable={isMlb}
           />
         </div>
 
@@ -158,6 +143,15 @@ export default function MatchupCard({ game, standings, showDay = false, onOpen }
           <span className="mnet-text">{networkText(game, b)}</span>
         </div>
       </div>
+
+      {/* THE MARK IS ITS OWN CARD COLUMN, between the matchup and the right slot - not inside the
+          body, where it had drifted to sit left of the matchup. Height is 2/3 of the three-line stack
+          scaled by the frozen manifest hf (markStyle), and the column centres it on line 2. */}
+      {mark ? (
+        <img className="mnet-mark" src={mark.src} height={mark.height} alt="" loading="lazy" />
+      ) : (
+        <span className="mnet-mark mnet-mark-empty" aria-hidden="true" />
+      )}
 
       <div className="mslot">
         {score ? <span className="mscore">{score}</span> : null}
