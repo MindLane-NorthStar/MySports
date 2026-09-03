@@ -32,7 +32,11 @@ export default function WeekSelect({ options, selected, view, label = 'Week' }) 
       <label className="control-label" htmlFor="week-select">
         {label}
       </label>
-      <span className="chip chip-select" data-active="true">
+      {/* NOT data-active. The gold plate is the SELECTED-chip style, and this control renders
+          directly beneath the gold "Season week" chip - two stacked gold pills read as two
+          selected chips. This is a trigger you open, so it takes the inactive chip style; the
+          caret (.chip-select::after) inherits currentColor and follows automatically. */}
+      <span className="chip chip-select">
         <select
           id="week-select"
           value={selected ?? ''}

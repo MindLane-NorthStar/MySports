@@ -353,7 +353,11 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
       <div className="mgrid-foot">
         <span className="pill">{onGrid} on the grid</span>
         {kickTbd.length ? <span className="pill">{kickTbd.length} kickoff TBA</span> : null}
-        <span className="pill">every game is kept - nothing is deleted</span>
+        {/* The "every game is kept" pill lived here and is gone: web/app/layout.js:29 already
+            carries the statement as a global footnote on every page, so it rendered TWICE on one
+            phone screen, and inside the grid it competed with the on-the-grid count, the
+            kickoff-TBA pill and .mgrid-note. M9 requires that a CONDITIONAL pill is never dropped
+            when its count is non-zero; this one was static and carried no count. */}
       </div>
 
       {/* 05 section 9, the grid consequence. A network-TBD game CANNOT take a grid position - the

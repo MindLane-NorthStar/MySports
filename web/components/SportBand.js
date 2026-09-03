@@ -88,7 +88,10 @@ export default function SportBand({ sport, label, games, standings, showDay = fa
           {summary.offCount ? (
             <button type="button" className="offsvc-toggle" onClick={() => setShowAll((v) => !v)}
                     aria-expanded={showAll}>
-              {showAll ? 'Hide them' : 'Show all'}
+              {/* The toggle only renders when offCount is non-zero, and after prompt 24 it reveals
+                  ONLY genuinely off-service games - market-pending and network-TBD are never hidden.
+                  So the number is exact and the label can carry it, in the count line's own words. */}
+              {showAll ? 'Hide them' : `Show ${summary.offCount} not on your services`}
             </button>
           ) : null}
         </div>
