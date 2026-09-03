@@ -146,6 +146,38 @@ def alpha_harden(im: Image.Image, solid: int = 180, mult: float = 1.35, fringe_c
     return im
 
 
+def key_plate(im: Image.Image, tol: int = 34) -> Image.Image:
+    """Knock out a flat background PLATE by flooding inward from the border.
+
+    Some brand composites ship as artwork on an opaque rectangle rather than on transparency - the
+    Guardians TV mark is a navy plate carrying a red logo and a white wordmark, with no alpha channel
+    at all. Left alone, `dark_ready` reads that dark plate's luminance, applies its lightness floor,
+    and turns the navy into a conspicuous mid-blue: a BACKING CARD on charcoal, which contract v1.3e
+    forbids outright ("every logo floats, no backing").
+
+    FLOOD FROM THE BORDER rather than keying a colour range globally, for the same reason IndyCar
+    does in build_brand_marks.py: a global test would also delete any pixel of that colour INSIDE the
+    artwork - a dark outline, a shadow, a letter counter. Flooding removes only what is connected to
+    the outside, which is the actual definition of a background.
+    """
+    import numpy as np
+    from scipy import ndimage
+
+    im = im.convert("RGBA")
+    a = np.asarray(im).astype(int)
+    # The plate colour is whatever the border is; sampling it beats hardcoding a hex per network.
+    edge = np.concatenate([a[0, :, :3], a[-1, :, :3], a[:, 0, :3], a[:, -1, :3]])
+    plate = np.median(edge, axis=0)
+    dist = np.sqrt(((a[:, :, :3] - plate) ** 2).sum(axis=2))
+    cand = dist <= tol
+    lab, _ = ndimage.label(cand)
+    touching = set(lab[0, :]) | set(lab[-1, :]) | set(lab[:, 0]) | set(lab[:, -1])
+    touching.discard(0)
+    bg = np.isin(lab, list(touching))
+    alpha = np.where(bg, 0, a[:, :, 3]).astype("uint8")
+    return Image.fromarray(np.dstack([a[:, :, :3].astype("uint8"), alpha]), "RGBA")
+
+
 def dark_ready(im: Image.Image) -> Image.Image:
     """The general rule for every network without a recipe of its own.
 
@@ -270,7 +302,11 @@ RECIPES: dict[str, tuple[str, Callable[[Image.Image], Image.Image]]] = {
     "sec-network-plus": ("svg", lambda im: with_suffix(im, plus="+")),
     "espn-plus":        ("png", lambda im: with_suffix(floor_l(im, 0.5), plus="+")),
     "espn-unlimited":   ("png", lambda im: with_suffix(floor_l(im, 0.5), subline="UNLIMITED")),
-    "guardians-tv":     ("png", dark_ready),                          # brand composite
+    # The source is artwork on an OPAQUE NAVY PLATE (13,34,58 over 60% of the frame, no alpha at
+    # all). dark_ready alone read that plate as a dark mark, floored its lightness, and shipped a
+    # mid-blue backing card - which is what v1.3e forbids. Key the plate off first, then the
+    # normal chain sees only the red logo and white wordmark.
+    "guardians-tv":     ("png", lambda im: dark_ready(key_plate(im))),
     "mlb-network":      ("png", dark_ready),                          # brand composite
 }
 # SEC Network+ has no vector of its own: it is the SEC Network lockup plus a '+'.
