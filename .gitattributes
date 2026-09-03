@@ -8,5 +8,14 @@
 *.yml   text eol=lf
 *.yaml  text eol=lf
 *.sql   text eol=lf
+# The web sources were left out of the original list, which is about half the repo's text: 51
+# files, five of them CRLF on disk. Windows git normalises on read so the tree looked clean here,
+# while a Linux shell saw a 479-line phantom diff of pure line-ending churn - and the first stage
+# to touch one of those files from Linux would have committed that churn into every future blame.
+*.js    text eol=lf
+*.mjs   text eol=lf
+*.jsx   text eol=lf
+*.css   text eol=lf
+*.html  text eol=lf
 .gitignore     text eol=lf
 .gitattributes text eol=lf
