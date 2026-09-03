@@ -7,3 +7,6 @@ artifacts/
 
 # python bytecode
 __pycache__/
+
+# Cowork scratch that should never be committed
+/Claude outputs/
