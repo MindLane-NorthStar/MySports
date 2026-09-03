@@ -67,7 +67,11 @@ export default function SportBand({ sport, label, games, standings, showDay = fa
         </header>
       ) : null}
 
-      {summary.lines.pending || summary.lines.off ? (
+      {/* The count block renders for EVERY band, not only ones with something hidden. A band that
+          reports nothing beside one reporting four lines reads as missing data rather than as
+          "everything here is available" - seen in the 2026-09-03 QA shot, where College Football
+          showed its header and jumped straight to cards while MLB below it listed four lines. */}
+      {games.length ? (
         <div className="offsvc">
           <span className="offsvc-total">{summary.lines.total}</span>
           {summary.lines.on ? <span>{summary.lines.on}</span> : null}

@@ -193,3 +193,13 @@ test('E5: pending games survive BOTH toggle states', () => {
   assert.deepEqual(collapsed.map((g) => g.id), ['1', '2'], 'default state keeps pending');
   assert.deepEqual(games.map((g) => g.id), ['1', '2', '3'], 'show-all keeps everything, in order');
 });
+
+test('E5: a band with nothing hidden still has a total and an on-services line', () => {
+  // The count block renders for every band; only the empty STATES are omitted. Without the total,
+  // a fully-available band renders no counts at all beside a neighbour showing four lines.
+  const s = offServiceSummary([game('1', true, ['ESPN']), game('2', true, ['ABC'])]);
+  assert.equal(s.lines.total, '2 games');
+  assert.equal(s.lines.on, '2 on your services');
+  assert.equal(s.lines.pending, null);
+  assert.equal(s.lines.off, null);
+});
