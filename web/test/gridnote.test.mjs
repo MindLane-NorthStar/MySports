@@ -89,7 +89,11 @@ test('THE INVARIANT: the grid note can never disagree with the band count line',
   const { netTbd } = partition(games);
   assert.equal(band.tbdCount, 3);
   assert.equal(netTbd.length, band.tbdCount, 'the band counts 3, so the grid must say 3');
-  assert.equal(band.lines.tbd, '3 network TBD');
+  // The LINE now says '3 TBD' - it sums the two TBD states for display (05 section 10). The
+  // grid note still speaks only for network-TBD, so the invariant is asserted against tbdCount,
+  // which is the number the note prints, not against the summed segment.
+  assert.equal(band.lines.tbd, '3 TBD');
+  assert.equal(band.tbdCount, 3, 'and the note prints THIS number');
 });
 
 test('a game filtered by D4 never reaches the note - the grid speaks only for what it was given', () => {

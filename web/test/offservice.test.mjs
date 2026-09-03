@@ -141,8 +141,11 @@ test('E5: a market-pending game is NEVER counted inside "not on your services"',
   const s = offServiceSummary([pend('1', ['FOX']), pend('2', ['CBS']), game('3', false, ['NFL+'])]);
   assert.equal(s.offCount, 1, 'only the genuinely ineligible game counts as off');
   assert.equal(s.pendingCount, 2);
-  assert.equal(s.lines.off, '1 not on your services');
-  assert.equal(s.lines.pending, '2 market pending');
+  // The BUCKETS are unchanged - offCount 1, pendingCount 2 above. 05 section 10 renames the
+  // segments and sums the two TBD states for display only, so 'unavailable' is the off segment
+  // and 'TBD' carries the two pending games.
+  assert.equal(s.lines.unavailable, '1 unavailable');
+  assert.equal(s.lines.tbd, '2 TBD');
 });
 
 test('E5: an eligible row is never pending even if the flag is set', () => {
@@ -174,19 +177,18 @@ test('E5: the Sept 13 shape renders the three-way count', () => {
   const s = offServiceSummary(games);
   // ONE line now, and no outlet lists - each revealed row names its own network. Every COUNT stays,
   // because D4 and E5 both turn on counts this line carries.
-  assert.equal(s.lines.total, '13 games');
-  assert.equal(s.lines.on, '2 available to you');
-  assert.equal(s.lines.pending, '3 market pending');
-  assert.equal(s.lines.off, '8 not on your services');
-  assert.equal(countSummary(s.lines),
-    '13 games · 2 available to you · 3 market pending · 8 not on your services');
+  assert.equal(s.lines.total, '13 games', 'still computed, just no longer ON the line');
+  assert.equal(s.lines.airing, '2 airing');
+  assert.equal(s.lines.tbd, '3 TBD');
+  assert.equal(s.lines.unavailable, '8 unavailable');
+  assert.equal(countSummary(s.lines), '2 airing · 3 TBD · 8 unavailable');
 });
 
 test('E5: a state with no games gets no line rather than a zero', () => {
   const l = countLines(2, 2, [], []);
-  assert.equal(l.on, '2 available to you');
-  assert.equal(l.pending, null, '"0 market pending" invites the reader to wonder what they missed');
-  assert.equal(l.off, null);
+  assert.equal(l.airing, '2 airing');
+  assert.equal(l.tbd, null, '"0 TBD" invites the reader to wonder what they missed');
+  assert.equal(l.unavailable, null);
 });
 
 test('E5: the sponsor trim still applies wherever outlets ARE listed', () => {
@@ -212,16 +214,16 @@ test('E5: a band with nothing hidden still has a total and an on-services line',
   // a fully-available band renders no counts at all beside a neighbour showing four lines.
   const s = offServiceSummary([game('1', true, ['ESPN']), game('2', true, ['ABC'])]);
   assert.equal(s.lines.total, '2 games');
-  assert.equal(s.lines.on, '2 available to you');
-  assert.equal(s.lines.pending, null);
-  assert.equal(s.lines.off, null);
+  assert.equal(s.lines.airing, '2 airing');
+  assert.equal(s.lines.tbd, null);
+  assert.equal(s.lines.unavailable, null);
 });
 
 test('5c: the whole count is ONE line, zero-count segments omitted', () => {
   assert.equal(countSummary(countLines(68, 62, [{}, {}], new Array(4).fill({}))),
-    '68 games · 62 available to you · 2 market pending · 4 not on your services');
-  // nothing hidden -> no pending or off segment, and no "0"
-  assert.equal(countSummary(countLines(11, 11, [], [])), '11 games · 11 available to you');
+    '62 airing · 2 TBD · 4 unavailable');
+  // nothing hidden -> no TBD or unavailable segment, and no "0"
+  assert.equal(countSummary(countLines(11, 11, [], [])), '11 airing');
   assert.doesNotMatch(countSummary(countLines(11, 11, [], [])), /0 /);
 });
 
@@ -304,27 +306,35 @@ test('MARKET TBD and NETWORK TBD are mutually exclusive - no card can render bot
   assert.equal(s.pendingCount, 0, 'a broadcaster that does not exist is not asserted');
 });
 
-test('the count line renders the fourth segment, and omits it at zero', () => {
+test('the count line renders the TBD segment, and omits it at zero', () => {
   // The two worst days of the season load, measured against the live database on 2026-09-03.
   assert.equal(countSummary(countLines(56, 6, [], new Array(5).fill({}), new Array(45).fill({}))),
-    '56 games · 6 available to you · 45 network TBD · 5 not on your services');
-  assert.equal(countSummary(countLines(16, 0, [], [], new Array(16).fill({}))),
-    '16 games · 16 network TBD');
-  // zero-omit survives the new segment, in both directions
-  assert.equal(countSummary(countLines(11, 11, [], [], [])), '11 games · 11 available to you');
-  assert.doesNotMatch(countSummary(countLines(11, 11, [], [], [])), /network TBD/);
+    '6 airing · 45 TBD · 5 unavailable');
+  assert.equal(countSummary(countLines(16, 0, [], [], new Array(16).fill({}))), '16 TBD');
+  // zero-omit survives, in both directions
+  assert.equal(countSummary(countLines(11, 11, [], [], [])), '11 airing');
+  assert.doesNotMatch(countSummary(countLines(11, 11, [], [], [])), /TBD/);
   assert.doesNotMatch(countSummary(countLines(16, 0, [], [], new Array(16).fill({}))), /0 /);
-  assert.equal(countLines(2, 2, [], [], []).tbd, null, '"0 network TBD" is noise');
+  assert.equal(countLines(2, 2, [], [], []).tbd, null, '"0 TBD" is noise');
+  // and the total is gone from the LINE while remaining available on the object
+  assert.doesNotMatch(countSummary(countLines(56, 6, [], new Array(5).fill({}), new Array(45).fill({}))), /games/);
+  assert.equal(countLines(56, 6, [], [], []).total, '56 games');
 });
 
-test('all four segments in one line read in decreasing certainty', () => {
+test('the two TBD states are SUMMED on the line, and only on the line', () => {
+  // 2 market-pending + 9 network-TBD = 11 TBD on the line. 05 section 10: the distinction is not
+  // lost, it moves to the card, which keeps MARKET TBD and NETWORK TBD as two separate badges.
   const l = countLines(20, 5, [{}, {}], new Array(4).fill({}), new Array(9).fill({}));
-  assert.equal(countSummary(l),
-    '20 games · 5 available to you · 2 market pending · 9 network TBD · 4 not on your services');
+  assert.equal(countSummary(l), '5 airing · 11 TBD · 4 unavailable');
+  // the sets themselves are NOT merged - offServiceSummary still buckets them apart
+  const s = offServiceSummary([game('1', true, ['ABC']), pend('2', ['FOX']), bare('3')]);
+  assert.equal(s.pendingCount, 1);
+  assert.equal(s.tbdCount, 1);
+  assert.equal(s.lines.tbd, '2 TBD', 'summed for display');
 });
 
-test('the fourth segment did not disturb the three that were already there', () => {
-  // The E5 shape, unchanged: a day with no bare games renders exactly as it did before prompt 24.
+test('a day with no bare games still renders three segments', () => {
+  // The E5 shape in the section 10 vocabulary: market-pending alone still fills the TBD segment.
   assert.equal(countSummary(countLines(68, 62, [{}, {}], new Array(4).fill({}))),
-    '68 games · 62 available to you · 2 market pending · 4 not on your services');
+    '62 airing · 2 TBD · 4 unavailable');
 });

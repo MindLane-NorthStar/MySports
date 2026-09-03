@@ -1535,7 +1535,13 @@ input:focus-visible {
 .shell { padding-top: 18px; }
 main > h1:first-child { margin-top: 0; }
 
-/* 5c. One line, so it lays out as a line rather than a stack. */
+/* 5c. One line, so it lays out as a line rather than a stack - and since 05 section 10 it holds
+ * one line at 360px too. It got there by shedding a segment and shortening the other three:
+ * prompt 25 measured the four-segment version at 404px against 366px of available width on a
+ * 56-game November Saturday, which wrapped to two lines and pushed the Show-all toggle to a third.
+ * The TOTAL came out because the Today page already prints it one scroll above in <p class="sub">
+ * and the remaining segments sum to it - it was the one number on the line that was duplicated
+ * rather than earned. */
 .offsvc { flex-direction: row; align-items: baseline; flex-wrap: wrap; gap: 10px; }
 .offsvc-line { color: var(--dim); }
 

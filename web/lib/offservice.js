@@ -167,48 +167,57 @@ function outletClause(outlets, max) {
 }
 
 /**
- * The three-way count, as separate lines (E5 §8 shape):
+ * The count line's segments (05 section 10 shape):
  *
- *     13 games
- *       2 on your services
- *       3 market pending - FOX, CBS - map publishes ~Wed
- *       8 not on your services - FOX, CBS
+ *     6 airing · 48 TBD · 5 unavailable
  *
- * Returns { total, on, pending, off } of strings, with null for a state that has no games in it - a
- * zero line is noise, and "0 market pending" invites the reader to wonder what they missed.
+ * Null for a state with no games in it - a zero segment is noise, and "0 TBD" invites the reader
+ * to wonder what they missed.
+ *
+ * THE TWO TBD STATES ARE SUMMED HERE AND NOWHERE ELSE. `pending` and `tbd` arrive as separate
+ * arrays and stay separate everywhere that matters - the buckets in offServiceSummary, D4's
+ * filter carve-outs, the row-wrapper classes in SportBand, and the two card badges. This is a
+ * DISPLAY sum on one line, not a merge of the sets. Section 9's objection was to LABELLING a
+ * network-TBD game "market pending", which asserts a broadcaster exists when none has been named;
+ * a neutral "TBD" asserts neither, and the distinction it protects lives on the card, where
+ * MARKET TBD and NETWORK TBD remain two words that cannot both appear.
+ *
+ * `total` is still returned - it is true and cheap - but it is NOT on the line any more. The Today
+ * page prints it one scroll above in <p class="sub">, and the three segments sum to it.
  */
 export function countLines(total, onCount, pending, off, tbd) {
   const pendingCount = (pending || []).length;
   const tbdCount = (tbd || []).length;
   const offCount = (off || []).length;
+  const bothTbd = pendingCount + tbdCount;
   return {
     total: `${total} ${total === 1 ? 'game' : 'games'}`,
-    on: onCount ? `${onCount} available to you` : null,
-    pending: pendingCount ? `${pendingCount} market pending` : null,
-    tbd: tbdCount ? `${tbdCount} network TBD` : null,
-    off: offCount ? `${offCount} not on your services` : null,
+    airing: onCount ? `${onCount} airing` : null,
+    tbd: bothTbd ? `${bothTbd} TBD` : null,
+    unavailable: offCount ? `${offCount} unavailable` : null,
   };
 }
 
 /**
- * The whole count as ONE line:
- *   '68 games - 62 available to you - 2 market pending - 4 not on your services'
- * A segment with a count of zero is omitted rather than printed as '0'.
+ * The whole count as ONE line (05 section 10):
+ *   '6 airing · 48 TBD · 5 unavailable'
+ * A segment with a count of zero is omitted, so a fully-available day reads '62 airing'.
  *
- * JOE ASKED FOR "62 available to YOU" AND FOR THE BLOCK TO SHRINK. Taken literally that would
- * delete the other two counts - and both are his own rulings from the same day. D4 requires the
- * count of what he CANNOT watch ("without it the page lies by omission"); E5 requires the
- * market-pending count, the thing that stopped September 13 claiming eleven watchable games were
- * unavailable. So this keeps every fact and drops the genuinely verbose part - the outlet lists,
- * which each revealed row already names for itself.
+ * WHY THE TOTAL CAME OUT. Prompt 25 measured the previous four-segment line at 390px on a real
+ * November Saturday: '56 games · 6 available to you · 45 network TBD · 5 not on your services'
+ * rendered 404px against 366px of available width, wrapping to two lines and pushing the toggle
+ * to a third. Dropping the total alone does not close it - a day carrying both TBD states reaches
+ * an estimated 427px - so the wording shortened too.
  *
- * FLAGGED FOR HIS VETO: if he wants the bare '62 available to you' with the other counts gone, that
- * is his call to make with the trade-off named, not one an unattended run should make silently.
+ * THE COST, NAMED AND ACCEPTED BY JOE. 'airing' is true of every game on the page; only some are
+ * airing on services he has. 'unavailable' reads as "not on television" rather than "not on your
+ * services". Both soften D4's deliberate access language, and this product's differentiator is
+ * access, not broadcast. He ruled for brevity on a line that has to survive a 56-game Saturday at
+ * 390px, with the trade-off on the record in 05 section 10.
  */
 export function countSummary(lines) {
-  // Order is decreasing certainty, then the one decided negative: what he can watch, what has a
-  // broadcaster but no market yet, what has no broadcaster at all, and what is genuinely off.
-  return [lines.total, lines.on, lines.pending, lines.tbd, lines.off].filter(Boolean).join(' · ');
+  // What he can watch, what nobody has settled yet, what he cannot watch.
+  return [lines.airing, lines.tbd, lines.unavailable].filter(Boolean).join(' · ');
 }
 
 /** '83 games - 20 not on your services - CBS Sports Network, FOX and 26 more'. Null when nothing is hidden. */
