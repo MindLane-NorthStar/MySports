@@ -11,7 +11,26 @@ export const metadata = {
   // There is deliberately no hand-written <link rel="apple-touch-icon"> anywhere in this file:
   // Next's App Router serves and links app/icon.png and app/apple-icon.png by file convention. If a
   // link tag ever seems necessary here, the icon file is in the wrong place.
-  appleWebApp: { title: 'MySports TV' },
+  //
+  // statusBarStyle was ABSENT, so Next emitted no apple-mobile-web-app-status-bar-style and iOS
+  // fell back to `default` - an opaque LIGHT bar sitting above a #1b1b1b app. 'black-translucent'
+  // makes the web view extend UNDER the status bar, which is only correct alongside the
+  // safe-area work in globals.css and the viewport export below; the two ship together or not at
+  // all. ('black' would be the no-layout-consequence fallback: a dark opaque bar.)
+  appleWebApp: { title: 'MySports TV', statusBarStyle: 'black-translucent' },
+};
+
+// viewportFit: 'cover' is what lets the page paint into the notch and home-indicator areas, and
+// is required for env(safe-area-inset-*) to report anything but 0. Declared through the App
+// Router's viewport export rather than a hand-written <meta name="viewport">, for the same reason
+// recorded above for apple-touch-icon: if a hand-written tag ever seems necessary, something is
+// in the wrong place. width and initialScale are restated because exporting this object replaces
+// Next's default viewport rather than extending it.
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#1b1b1b',
 };
 
 export default function RootLayout({ children }) {

@@ -118,10 +118,17 @@ a {
   text-decoration: none;
 }
 
+/* SAFE AREA. With viewportFit:'cover' the page paints into the notch and home-indicator areas, so
+ * the content column has to hold itself off them. env() falls back to 0px wherever there is no
+ * inset - every normal browser - so this is a no-op outside an installed iOS app. Horizontal
+ * insets matter in LANDSCAPE, where the notch eats one edge; the bottom inset is the home
+ * indicator. The TOP inset is deliberately not here: .banner handles it, because the banner is
+ * meant to bleed to the very top edge and only its CONTENT should clear the status bar. */
 .shell {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 24px 20px 64px;
+  padding: 24px calc(20px + env(safe-area-inset-right, 0px)) calc(64px + env(safe-area-inset-bottom, 0px))
+    calc(20px + env(safe-area-inset-left, 0px));
 }
 
 /* ----------------------------------------------------------------- masthead + nav */
@@ -1279,7 +1286,8 @@ input:focus-visible {
 /* ----------------------------------------------------------------- narrow screens (M9) */
 @media (max-width: 560px) {
   .shell {
-    padding: 16px 12px 48px;
+    padding: 16px calc(12px + env(safe-area-inset-right, 0px)) calc(48px + env(safe-area-inset-bottom, 0px))
+      calc(12px + env(safe-area-inset-left, 0px));
   }
   .masthead {
     flex-direction: column;
@@ -1352,7 +1360,11 @@ input:focus-visible {
 
 /* ---- banner + navbar (design session 2026-09-02) */
 /* ================================================================ MAIN BANNER (home page) */
+/* The banner BLEEDS: its background reaches the very top edge under the translucent status bar,
+ * which is the entire point of black-translucent. Only its CONTENT is pushed clear, with padding
+ * rather than a margin so the gradient still paints behind the clock and battery. */
 .banner{position:relative;overflow:hidden;border-bottom:1px solid var(--line-soft);
+  padding-top:env(safe-area-inset-top, 0px);
   background:radial-gradient(90% 130% at 50% 10%,#3B3B3B 0%,#262626 55%,#161616 100%)}
 .bn-pc{position:relative}
 .bn-pc .scatter{display:block;width:100%;max-width:1400px;height:auto;margin:0 auto}
