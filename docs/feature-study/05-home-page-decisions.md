@@ -178,3 +178,88 @@ Zero-count segments remain omitted.
 **Grid consequence (Cowork's call, open to veto).** A network-TBD game **cannot be placed on the grid** — the grid is organized into network rows and there is no network — so it would silently vanish from the grid while appearing in the list (14 on the grid against 56 in the list on 2026-11-14). The grid therefore renders one honest line naming the count, e.g. `42 games not on the grid · network TBD`, omitted when zero. A literal "TBD" network row was rejected: a grid row is a channel you can tune to, and inventing one breaks that contract.
 
 **A data-layer bug found alongside it, fixed in the same prompt.** 78 of the 529 read `reason = "no national telecast - out of market"` — `pipeline/reconcile.py`'s non-CFB else-branch asserting an out-of-market **conclusion** from an **empty** broadcast list. The 78 reconcile exactly to nfl 24 + nhl 38 + nba 16; CFB's 451 correctly read `no telecast observed`. The guard belongs in the reconciler, not in the web layer, and its sanity gate is inverted: **if the count of genuinely unavailable games falls, the guard is over-broad and is eating real out-of-market verdicts.**
+
+---
+
+## 10. COUNT LINE AMENDED — 2026-09-03, after prompt 25's 390 px measurement
+
+Prompt 25 measured the §9 count line at 390 px on 2026-11-14. `56 games · 6 available to you · 45
+network TBD · 5 not on your services` renders **404 px against 366 px of available width** — two
+lines, with the "Show all" toggle pushed to a third. A day carrying both market-pending and
+network-TBD games reaches an estimated 427 px even with the total removed, so dropping the total
+alone does not close it.
+
+**Joe's ruling: the count line is a summary, not a full accounting.**
+
+    6 airing · 48 TBD · 5 unavailable
+
+Three changes from the §9 shape:
+
+1. **The total is dropped.** It is duplicated one scroll above by the Today page's `<p class="sub">`
+   ("56 games on this viewing day"), and the three segments sum to it.
+2. **Market-pending and network-TBD are summed into one `TBD` figure.** §9's objection was to
+   *labelling* a network-TBD game "market pending" — asserting a broadcaster exists when none has
+   been named. A neutral `TBD` asserts neither. The distinction is not lost: it moves to the card,
+   which keeps `MARKET TBD` and `NETWORK TBD` as two separate badges, mutually exclusive by
+   construction, with prompt 24's test unchanged.
+3. **The wording shortens** to `airing` / `TBD` / `unavailable`.
+
+**Cost named at decision time, and accepted.** `airing` is true of all 56 games — six of them are
+airing *on services Joe has*. `unavailable` reads as "not on television" rather than "not on your
+services". Both amend D4's language, which deliberately said "available to you" and "not on your
+services" because this product's differentiator is access, not broadcast. Joe ruled for brevity on a
+line that has to survive a 56-game November Saturday at 390 px, with the trade-off on the record.
+
+**This supersedes D4's count-line wording and §9's count-line shape. The four states themselves, the
+D4 filter carve-outs for market-pending and network-TBD, and the card badges are untouched.**
+
+Zero-count segments remain omitted.
+
+---
+
+## 11. MOBILE PAGE ORDER RULED — 2026-09-03. This supersedes D6's placement.
+
+**Joe's ruling, and it is the source of truth: the page reads YOUR TEAMS → grid → everything else.**
+
+D6 ruled that favourites float to the top of their own sport band, with no separate pin band and no
+duplicated card; the reasoning on record was that the band never stops reading as a timeline. That
+placement is superseded. The reasoning that produced it was not wrong — it was answering where
+favourites sit *within* a band. This ruling answers where they sit *on the page*, and it wins.
+
+**The shape.**
+
+1. A page-level **YOUR TEAMS** section carrying Joe's favourites across every sport, in chronological
+   order among themselves.
+2. The **grid**, where one renders.
+3. The **sport bands**, in the existing SPORTS order, carrying everything else.
+
+**Structural consequence, named because it is larger than the ruling sounds.** A page-level
+favourites section and D6's in-band float cannot both exist without either duplicating the card —
+which D6 rejected and this ruling does not revive — or holding a JS width state, which this app
+deliberately avoids: every breakpoint in it is CSS-gated at 699 px precisely so there is no
+server/client hydration mismatch. **So the favourites section moves to page level at every width and
+D6's in-band float is retired.** What stays mobile-only is the *grid's* position — hoisted above the
+bands at <=699 px with CSS `order`, left below them above it, so the DOM is written once.
+
+**Counting.** Each section counts what it shows. The YOUR TEAMS section carries its own count line;
+each sport band counts only the games still in it. Every number then describes the rows beneath it,
+which is the property that made the count line trustworthy in the first place. A band reading
+`8 airing · 2 TBD` beside a YOUR TEAMS section reading `3 airing` is correct and adds up; a band
+whose count includes rows that are not in it would not be.
+
+**What survives from D6 unchanged:** the favourites list and its thirteen teams; ids not names; the
+"Ohio is Ohio University, not Ohio State" trap; chronological order among the floated rows; the
+marker living at section level and never on the card, so the locked card contract stays closed; and
+the rejection of a duplicated card.
+
+**Consequence for the jump chip.** With the grid second on a phone, `Grid ↓` has almost nothing to
+jump past. Retire it at <=699 px.
+
+**Desktop.** D5's band-left / grid-right composition at >=1600 px is untouched by this ruling. What
+changes above the breakpoint is only that favourites are a page-level section rather than a float
+inside each band.
+
+**STATUS: RULED AND DOCUMENTED, NOT BUILT.** The implementation rides prompt 27 deliberately. It
+changes which games each count line covers, and prompt 26 §10 is already changing what that line
+says; landing both in one unattended run means a mid-run stop leaves it unclear whether a wrong
+number came from the merge or from the reorder.

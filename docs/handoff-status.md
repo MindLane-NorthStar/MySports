@@ -2,7 +2,7 @@
 
 **This file now lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
-Read first for any session picking up MySports. Memory `/areas/mysports.md` + `/areas/mysports-build-log.md` + `/areas/mysports-ui-repair.md` carry the compressed truth. Companions: `claude/enhancement-register.md` — a project doc, not in the repo (check §7–§13 before re-raising ANY decision), **`docs/feature-study/05-home-page-decisions.md` (D1–D6, the D3 amendment, deployment facts, E5, and §9 NETWORK TBD — BINDING)**, `docs/rendering-contract.md` v1.6.5, `docs/rendering-contract-mobile.md` (Addendum v1.1), `claude/program-card-design-v1.md`.
+Read first for any session picking up MySports. Memory `/areas/mysports.md` + `/areas/mysports-build-log.md` + `/areas/mysports-ui-repair.md` carry the compressed truth. Companions: **`docs/enhancement-register.md`** — the repo copy is the source (prompt 26); §1–§13 are still only in the Claude project and Joe is supplying them, so check there before re-raising ANY decision, **`docs/feature-study/05-home-page-decisions.md` (D1–D6, the D3 amendment, deployment facts, E5, and §9 NETWORK TBD — BINDING)**, `docs/rendering-contract.md` v1.6.5, `docs/rendering-contract-mobile.md` (Addendum v1.1), `claude/program-card-design-v1.md`.
 
 ## Repo state
 main, HEAD **10efae7**. **200 Python tests OK (skipped=1)**, **138/138 JS unit tests**, smoke **30/30**, qa-shots behavioural assertions **8/8**. Tree clean apart from always-untracked `assets/` and `artifacts/`.
@@ -45,7 +45,10 @@ This is **ruled**: `docs/feature-study/05-home-page-decisions.md` **§9 — NETW
 5. Behind that: WWE/AEW → UFC → NASCAR (playoffs to Nov 8) → IndyCar (Dec). CBJ watch escalation ~Sept 15 (ask first); research watch `trig_01Bvo3an2iZBcEBFphv9MqYs` Wednesdays. Cloud egress add still needed: cf.nascar.com.
 6. **Privacy gate before the Cavs season (late October):** production is a public URL. Confirm no loaded broadcast row publishes the unannounced WUAB/RESN arrangement.
 
-## Open — carry into prompt 24 / 25 / v1.7
+## Open — carry into prompt 27 / v1.7
+- **`--faint` reaches 3.63:1 on the card top and true AA is unreachable there** without moving `--dim` or lightening `--panel-top`. Prompt 25 measured it; the smallest same-hue grey that reaches 4.5:1 on `--panel-top` is `#989fa8`, and `--dim` is 4.62:1 on that same ground — 0.06 apart, the same colour to the eye, so the third step of the hierarchy would cease to exist. **Joe's call, accepted. Not a defect to re-raise.**
+- **The mobile page order (`05-home-page-decisions.md` §11) is RULED AND DOCUMENTED BUT NOT BUILT.** It rides prompt 27, deliberately: it changes which games each count line covers, and prompt 26 changed what that line says. §11 also retires D6's in-band favourites float and the `Grid ↓` jump chip at ≤699 px.
+- **The enhancement register §1–§13 are still only in the Claude project.** `docs/enhancement-register.md` exists and is the source going forward, but currently carries only §14; prompt 26 could not relocate the rest because no copy is in the working tree. Joe to supply. Same for the audit triage and `mobile_demo.html`.
 - **`unverified` is load-bearing semantics.** Any adapter that writes it loosely manufactures false market-pending rows. Document it in `data/authority_rules.json` `_about` and `adapters/README.md`.
 - **Loader enum hardening (v1.7).** One mistyped enum (`carriageCertainty="UNVERIFIED"`) aborted a whole daily refresh. Specific bug fixed at `64c9764`; **the class is not.** Validate enum-typed fields against the DB enum before insert and quarantine the offending ROW.
 - **The daily refresh is now two-for-two green** on current code (the 2026-09-03 run fired at 14:54 UTC and added 15 games). The cron is `0 11 * * *`; the 14:54 fire is normal GitHub Actions schedule drift — confirm once, do not treat as a fault. The "only ONE green run" watch item is retired.
