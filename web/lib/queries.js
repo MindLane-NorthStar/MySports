@@ -1,7 +1,7 @@
 // Every read the app makes, in one file, so the data contract is reviewable in one place.
 // See docs/app-skeleton.md for the route -> query mapping.
 
-import { rest, inList } from './rest.js';
+import { rest, inList, restAll } from './rest.js';
 import { SPORTS } from './config.js';
 
 // The column list every game card needs. Teams are embedded through the two FKs on games; the
@@ -76,7 +76,10 @@ export async function gamesForSeasonWeek(sport, season, week) {
  * both week concepts in lib/weeks.js rather than split between SQL and the page.
  */
 export async function weekIndexRows() {
-  return rest('games?select=id,sport,season,week,viewing_day&order=viewing_day.asc,id.asc');
+  // restAll, not rest: this read grows with the season. At 375 games it fitted inside PostgREST's
+  // 1000-row cap; at 1364 it did not, and the cap is SILENT - the Weeks picker simply offered CFB
+  // weeks 1-10 and NFL weeks 1-9 and omitted the rest of the year with nothing to show it had.
+  return restAll('games?select=id,sport,season,week,viewing_day&order=viewing_day.asc,id.asc');
 }
 
 /** Completed games, newest first. `search` matches a team name/abbreviation or a network name. */

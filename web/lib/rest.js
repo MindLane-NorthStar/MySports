@@ -41,6 +41,28 @@ export async function rest(path, { signal } = {}) {
   return text ? JSON.parse(text) : [];
 }
 
+/**
+ * Every row of a query, paging past PostgREST's row cap.
+ *
+ * PostgREST answers an unbounded select with AT MOST 1000 rows and says nothing about it - no error,
+ * no truncation flag, just a short array. That is silent data loss, and it bit the moment the season
+ * loaded: `games` went from 375 rows to 1364, and the Weeks page's index quietly saw only the
+ * earliest 1000, so the picker offered CFB weeks 1-10 and NFL weeks 1-9 and simply omitted the rest
+ * of the season. Nothing looked broken; a third of the year was just missing.
+ *
+ * Pages with limit/offset until a short page arrives. Use it for any read whose row count grows with
+ * the season - a bigger magic limit only moves the cliff to next year.
+ */
+export async function restAll(path, { pageSize = 1000, signal } = {}) {
+  const joiner = path.includes('?') ? '&' : '?';
+  const out = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const page = await rest(`${path}${joiner}limit=${pageSize}&offset=${offset}`, { signal });
+    out.push(...page);
+    if (page.length < pageSize) return out;
+  }
+}
+
 /** PostgREST `in` list: quote every value so ids with punctuation survive. */
 export function inList(values) {
   return `(${values.map((v) => `"${String(v).replace(/"/g, '\\"')}"`).join(',')})`;

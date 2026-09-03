@@ -7,6 +7,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { currentWeekKey } from '../lib/weeks.js';
 
 // The real shape, from the loaded season.
@@ -67,4 +68,16 @@ test('calendar weeks use the same rule', () => {
   ];
   assert.equal(currentWeekKey(cal, '2026-09-03'), '2026-08-31');
   assert.equal(currentWeekKey(cal, '2026-09-09'), '2026-09-07');
+});
+
+// ---------------------------------------------------------------- the silent row cap
+test('the week index must be read with restAll, not rest', () => {
+  // PostgREST caps an unbounded select at 1000 rows and says nothing. At 375 games the week index
+  // fitted; at 1364 it did not, and the picker silently offered CFB weeks 1-10 and NFL weeks 1-9 -
+  // a third of the season missing with nothing to show it. This pins the fix at the source, because
+  // the symptom is invisible: the page looks fine, it just knows less than the database does.
+  const src = readFileSync(new URL('../lib/queries.js', import.meta.url), 'utf8');
+  const fn = src.slice(src.indexOf('export async function weekIndexRows'), src.indexOf('}', src.indexOf('export async function weekIndexRows')));
+  assert.match(fn, /restAll\(/, 'weekIndexRows must page past the 1000-row cap');
+  assert.doesNotMatch(fn, /\brest\('games/, 'a bare rest() here truncates once the season loads');
 });
