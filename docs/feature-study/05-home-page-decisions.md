@@ -129,3 +129,52 @@ Sun Sep 13 · 13 games
 ```
 
 **Register note.** With E5 ruled, `enhancement-register.md` §11 no longer states spec status. Status lives only in this record, so the register cannot go stale behind it.
+
+---
+
+## 9. NETWORK TBD RULED — 2026-09-03. The announcement horizon is a fourth state
+
+The 2026-09-03 season load took `games` from 375 to ~1,379 and immediately exposed a state the app had no vocabulary for.
+
+**The finding.** A read-only diagnostic found **529 games with zero `game_broadcasts` rows**. This is not a load failure — it is a **broadcast-announcement horizon**. CFB is fully assigned through week 3 and falls off a cliff at week 4 (0% → 5% → 61% → ~75% bare), which is precisely a two-to-three-week network-announcement window. NFL is fully assigned through week 15 and week 18 is **100% bare because the league deliberately leaves it flex-scheduled**. NHL and NBA are bare because their seasons have not started. MLB is 0% bare because its RSN deals are static.
+
+**What the app said about them.** All 529 were `eligible = false`, `market_pending = false`, and therefore hidden by D4 and counted as off-service. Season-wide that is **737 of 1,379 games hidden (53.4%), of which 529 — three-quarters of everything hidden — were hidden merely for not being announced yet.** The rendered line for `2027-01-10` was `16 games · 16 not on your services` on a completely empty page. Every word of it is false: it is a full NFL slate, most of which Joe will be able to watch, and the app stated he could watch none.
+
+**Why E5 cannot cover it, structurally.** `is_market_pending()` iterates active broadcast rows looking for `access_status = 'unverified'`. An empty list means the loop body never executes, so the answer is `False` **by construction** — confirmed at 0 of 529. No amount of tuning the market-pending access set reaches a game with no rows.
+
+**And it must not be stretched to cover it.** The two states answer different questions:
+
+| | Market pending (§8) | Network TBD |
+|---|---|---|
+| Known | **Who** is airing it (FOX, CBS) | Nothing |
+| Unknown | Whether Cleveland gets that feed | Whether **anyone** is airing it |
+| Resolved by | `market_coverage` — 506sports maps, ~Wed | The network announcing a window |
+
+Calling a week-18 NFL game "market pending" would be a **second false certainty**: it asserts a broadcaster exists whose regional split is undecided, when no broadcaster has been named.
+
+**Ruling: NETWORK TBD is a fourth state.** A game with zero active broadcast rows is neither watchable nor off-service. It is:
+
+- **always shown, never filtered** — in any surface, in any toggle state, exactly as market-pending games are;
+- marked with a **`NETWORK TBD`** cue, chosen to pair with the existing `MARKET TBD` badge;
+- **counted on its own line**, never inside "not on your services";
+- **self-resolving** — the moment the network announces and a broadcast row loads, the game becomes eligible, market-pending or genuinely out-of-market with no manual step.
+
+**Mutual exclusivity is guaranteed by construction and must be asserted in a test.** Market-pending requires a broadcast row carrying `access_status = 'unverified'`; network-TBD requires **zero** rows. No game can be both, and no card may ever render both badges.
+
+**D4 carve-out, extended.** Filter-by-default applies to genuinely ineligible games only. Both market-pending and network-TBD games are exempt from it.
+
+**Count line shape:**
+
+```
+2026-11-14   56 games · 6 available to you · 42 network TBD · 8 not on your services
+2027-01-10   16 games · 16 network TBD
+2026-09-03   68 games · 62 available to you · 2 market pending · 4 not on your services
+```
+
+Zero-count segments remain omitted.
+
+**Rejected alternatives, on record.** *Horizon collapse* — dropping the availability breakdown entirely on far-future days (`56 games · networks not announced yet`) — was rejected because it suppresses the six games that day that **do** have networks and that Joe can watch. *Hiding them behind "Show all"* was rejected because it guts the calendar half of the product: the Weeks page would show almost nothing for November.
+
+**Grid consequence (Cowork's call, open to veto).** A network-TBD game **cannot be placed on the grid** — the grid is organized into network rows and there is no network — so it would silently vanish from the grid while appearing in the list (14 on the grid against 56 in the list on 2026-11-14). The grid therefore renders one honest line naming the count, e.g. `42 games not on the grid · network TBD`, omitted when zero. A literal "TBD" network row was rejected: a grid row is a channel you can tune to, and inventing one breaks that contract.
+
+**A data-layer bug found alongside it, fixed in the same prompt.** 78 of the 529 read `reason = "no national telecast - out of market"` — `pipeline/reconcile.py`'s non-CFB else-branch asserting an out-of-market **conclusion** from an **empty** broadcast list. The 78 reconcile exactly to nfl 24 + nhl 38 + nba 16; CFB's 451 correctly read `no telecast observed`. The guard belongs in the reconciler, not in the web layer, and its sanity gate is inverted: **if the count of genuinely unavailable games falls, the guard is over-broad and is eating real out-of-market verdicts.**
