@@ -99,3 +99,33 @@ Mobile Grid Addendum M11's 15-minute in-window client refresh is unaffected: the
 - Production: **https://my-sports-xi.vercel.app** — project `my-sports`, Vercel **team** `mindlane-northstar` (Pro), Root Directory `web`, the four `NEXT_PUBLIC_*` variables set explicitly.
 - **Deployment protection: leave Vercel Authentication on Standard Protection.** The project settings page offers only two levels — Standard Protection, and All Deployments behind a paid add-on. Standard Protection exempts the production alias (the UI names `my-sports-xi.vercel.app` as the publicly accessible domain) while keeping preview and per-deployment URLs behind Vercel login. That is exactly the intended posture. *(An earlier instruction to select "Only Preview Deployments" was wrong — that option appears in Vercel's knowledge base but not in the project settings page.)*
 - **Open privacy item before the Cavs season starts (late October):** a public production URL publishes whatever the app displays. Confirm that no loaded broadcast row exposes the unannounced WUAB/RESN arrangement, or keep those rows suppressed until the public announcement.
+
+---
+
+## 8. E5 RULED — 2026-09-03. Market-pending is a third state
+
+E5 was the last unruled item on the enhancement register. Prompt 20's eligibility census forced it.
+
+**The finding.** Sunday September 13, NFL Week 1: **13 games, 2 eligible, 11 "not on your services" — on FOX and CBS**, networks Joe has. The count is not wrong about how many he can watch; most Sunday NFL games genuinely do not air in Cleveland, and saying so is this app's whole differentiator. But it asserts a certainty the data does not have: **`market_coverage_nfl` is empty**, because the 506sports regional maps do not publish until roughly September 8. Those eleven games are not *unavailable*. They are *not assigned yet*.
+
+**And it recurs every week of the season.** Regional maps publish midweek for the coming Sunday, so every Monday through Wednesday the upcoming Sunday sits in exactly this state. Under D4's filter-by-default, that would hide most of the Sunday slate for the first half of every week.
+
+**Ruling: market-pending is a third state.** A regional game with no market assignment yet is **neither watchable nor off-service**. It is:
+
+- **always shown, never filtered** — in any surface, in any toggle state;
+- marked with a **"market TBD"** cue;
+- **counted on its own line**, never inside "not on your services";
+- **self-resolving** — the moment the 506sports map loads into `market_coverage_nfl` the game becomes eligible or genuinely out-of-market, with no manual step.
+
+**D4 carve-out.** Filter-by-default applies to genuinely ineligible games only. Market-pending games are exempt from it.
+
+**Count line shape:**
+
+```
+Sun Sep 13 · 13 games
+  2 on your services
+  3 market pending · FOX, CBS — map publishes ~Wed
+  8 not on your services · FOX, CBS, NFL+
+```
+
+**Register note.** With E5 ruled, `enhancement-register.md` §11 no longer states spec status. Status lives only in this record, so the register cannot go stale behind it.
