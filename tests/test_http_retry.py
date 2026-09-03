@@ -7,11 +7,13 @@ No network: urllib.request.urlopen is monkeypatched, and the backoff is injected
 
 The policy under test, and why each half of it matters:
 
-  * connection-level failures and 5xx are retried once - a reset or a 502 is the network having a
-    moment, and a second try usually lands;
+  * connection-level failures and 5xx are retried up to TWICE, with an ESCALATING backoff (1.5s then
+    3.0s) - a host that just reset you is likelier to answer after 3s than after another 1.5s;
   * NO 4xx is EVER retried. A 403 is Akamai's answer, not a blip; re-asking makes the bot score worse.
     The only CI fetch failure in this repo's history is exactly that (run 33673744218, HTTP 403 from
     site.api.espn.com), so this is the case the policy is shaped around;
+  * 429 is not retried EITHER, but it gets its own distinct log line, because it is the one 4xx that
+    should change our behaviour - the answer is to slow the caller down, never to retry harder;
   * ConnectionResetError and TimeoutError are caught EXPLICITLY, because urllib only wraps failures
     raised while connecting in URLError - a reset arriving mid-body, during resp.read(), is a bare
     ConnectionResetError and the old `except URLError` never saw it. That is the api-web.nhle.com
@@ -93,7 +95,13 @@ class RetriesConnectionFailures(unittest.TestCase):
                                 {"ok": True}])
         self.assertIsNone(err)
         self.assertEqual(value, {"ok": True})
-        self.assertEqual(h.calls, 2, "a reset must be retried exactly once")
+        self.assertEqual(h.calls, 2, "a reset must be retried")
+
+    def test_it_keeps_trying_to_the_third_attempt(self):
+        h, value, err, _ = run([ConnectionResetError(10054, "reset"), ConnectionResetError(10054, "reset"),
+                                {"ok": True}])
+        self.assertIsNone(err, "the third attempt is the one prompt 19 had removed")
+        self.assertEqual(h.calls, 3)
 
     def test_a_bare_timeout_is_retried(self):
         h, value, err, _ = run([TimeoutError("timed out"), {"ok": True}])
@@ -105,10 +113,10 @@ class RetriesConnectionFailures(unittest.TestCase):
         self.assertIsNone(err)
         self.assertEqual(h.calls, 2)
 
-    def test_two_resets_give_up_after_two_attempts(self):
-        h, _, err, _ = run([ConnectionResetError(10054, "reset"), ConnectionResetError(10054, "reset")])
+    def test_it_gives_up_after_three_attempts(self):
+        h, _, err, _ = run([ConnectionResetError(10054, "reset")] * 5)
         self.assertIsInstance(err, RuntimeError)
-        self.assertEqual(h.calls, 2, "bounded: never more than 2 attempts")
+        self.assertEqual(h.calls, 3, "bounded: never more than 3 attempts")
 
 
 class NeverRetriesFourXX(unittest.TestCase):
@@ -124,9 +132,22 @@ class NeverRetriesFourXX(unittest.TestCase):
         self.assertEqual(h.calls, 1)
 
     def test_a_429_is_not_retried_either(self):
-        # Deliberate narrowing on 2026-09-03: the policy is "never retry a 4xx", full stop.
         h, _, err, _ = run([http_error(429), {"ok": True}])
         self.assertEqual(h.calls, 1)
+
+    def test_a_429_gets_its_own_distinct_line_naming_the_remedy(self):
+        """429 must never hide among the other 4xx: it is the one that should change our behaviour."""
+        _, _, _, out = run([http_error(429)])
+        lines = [l for l in out.splitlines() if l.strip()]
+        self.assertEqual(len(lines), 1)
+        self.assertIn("429", lines[0])
+        self.assertIn("RATE LIMITED", lines[0])
+        self.assertIn("slow the caller down", lines[0])
+        self.assertTrue(lines[0].isascii())
+
+    def test_a_403_does_not_claim_to_be_rate_limited(self):
+        _, _, _, out = run([http_error(403)])
+        self.assertEqual(out, "", "a 403 is refused silently; only 429 earns a line")
 
 
 class RetriesServerErrors(unittest.TestCase):
@@ -134,6 +155,11 @@ class RetriesServerErrors(unittest.TestCase):
         h, value, err, _ = run([http_error(502), {"ok": True}])
         self.assertIsNone(err)
         self.assertEqual(h.calls, 2)
+
+    def test_a_5xx_also_gets_the_third_attempt(self):
+        h, _, err, _ = run([http_error(503), http_error(503), {"ok": True}])
+        self.assertIsNone(err)
+        self.assertEqual(h.calls, 3)
 
     def test_a_500_is_retried(self):
         h, _, _, _ = run([http_error(500), {"ok": True}])
@@ -147,9 +173,13 @@ class BoundsAndReporting(unittest.TestCase):
         self.assertEqual(h.slept, [])
         self.assertEqual(out, "", "a successful fetch says nothing")
 
-    def test_the_backoff_is_two_seconds_and_is_not_actually_slept(self):
-        h, _, _, _ = run([ConnectionResetError(10054, "reset"), {"ok": True}])
-        self.assertEqual(h.slept, [2.0])
+    def test_the_backoff_escalates_and_is_not_actually_slept(self):
+        h, _, _, _ = run([ConnectionResetError(10054, "r")] * 5)
+        self.assertEqual(h.slept, [1.5, 3.0], "1.5s before attempt 2, 3.0s before attempt 3")
+
+    def test_a_single_retry_waits_only_the_first_interval(self):
+        h, _, _, _ = run([ConnectionResetError(10054, "r"), {"ok": True}])
+        self.assertEqual(h.slept, [1.5])
 
     def test_one_ascii_warning_line_per_retry_naming_host_and_reason(self):
         _, _, _, out = run([ConnectionResetError(10054, "reset"), {"ok": True}])
@@ -160,8 +190,12 @@ class BoundsAndReporting(unittest.TestCase):
         self.assertTrue(lines[0].isascii(), "console output is ASCII-only on Windows")
 
     def test_attempts_is_a_total_not_an_extra(self):
-        h, _, _, _ = run([ConnectionResetError(10054, "r")] * 5, attempts=3)
-        self.assertEqual(h.calls, 3)
+        h, _, _, _ = run([ConnectionResetError(10054, "r")] * 5, attempts=2)
+        self.assertEqual(h.calls, 2)
+
+    def test_the_default_is_three_attempts(self):
+        self.assertEqual(common.ATTEMPTS, 3)
+        self.assertEqual(common.BACKOFF_SECONDS, (1.5, 3.0))
 
     def test_attempts_of_one_disables_retrying(self):
         h, _, err, out = run([ConnectionResetError(10054, "r"), {"ok": True}], attempts=1)

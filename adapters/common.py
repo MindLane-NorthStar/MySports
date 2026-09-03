@@ -119,36 +119,51 @@ def load_data(root: Path, name: str, default: Any = None) -> Any:
 
 
 # ----------------------------------------------------------------------------- http
-# Bounded retry policy (2026-09-03). ATTEMPTS is the TOTAL number of tries, not the number of extras.
+# Bounded retry policy (2026-09-03, patience restored the same day).
 #
-# WHAT IS RETRIED: connection-level failures and 5xx. A connection reset or a 502 is the network or the
-# origin having a moment, and a second try a couple of seconds later usually lands.
+# ATTEMPTS is the TOTAL number of tries, not the number of extras, and the backoff ESCALATES: a first
+# retry after 1.5s, a second after 3.0s. Prompt 19 briefly cut this to 2 attempts at a flat 2s, which
+# was specified without knowing the helper already did 3 with escalation - so following it made the
+# helper LESS resilient than it was. Restored. Escalation matters more than the attempt count: a host
+# that just reset you is more likely to answer after 3s than after another 1.5s, and two evenly spaced
+# knocks are the worst of both worlds.
 #
-# WHAT IS NEVER RETRIED: ANY 4xx. A 403 is Akamai's *answer*, not a blip - re-asking makes the bot score
-# worse, which is the opposite of helping. The one CI fetch failure in this repo's history is exactly
-# that: run 33673744218 died on `HTTP Error 403: Forbidden` from site.api.espn.com, and a retry loop
-# would have turned one refusal into several. This includes 429: the spec for this policy says never
-# retry a 4xx, so a rate-limit answer is surfaced to the caller rather than slept on. That is a
-# deliberate narrowing of the previous behaviour, which did retry 429.
+# WHAT IS RETRIED: connection-level failures and 5xx. A reset or a 502 is the network or the origin
+# having a moment, and a later try usually lands.
 #
-# WHY ConnectionResetError AND TimeoutError ARE CAUGHT SEPARATELY, and this is the bug fix rather than
-# the insurance: urllib wraps failures raised while CONNECTING in URLError, but a reset that arrives
-# mid-body - after the response headers, during resp.read() - propagates as a bare ConnectionResetError,
-# and a read timeout as a bare TimeoutError. Neither is a URLError, so the previous `except URLError`
-# never saw them. That is precisely the shape of the failure observed against api-web.nhle.com on
-# 2026-09-03 (`WinError 10054`, `read ECONNRESET`), so the old retry could not have helped it.
-ATTEMPTS = 2
-BACKOFF_SECONDS = 2.0
+# WHAT IS NEVER RETRIED: ANY 4xx. A 403 is Akamai's *answer*, not a blip - re-asking makes the bot
+# score worse, which is the opposite of helping. Run 33673744218 died on `HTTP Error 403: Forbidden`
+# from site.api.espn.com, and a retry loop would have turned one refusal into several.
+#
+# 429 IS ALSO NOT RETRIED, BUT IT GETS ITS OWN LINE. It is the one 4xx where the server is explicitly
+# asking for less traffic, so silently lumping it in with 403 would hide the single signal that should
+# change our behaviour. THE ANSWER TO A 429 IS TO SLOW THE OVERLAY DOWN - raise the livescores
+# revalidate window - NEVER to retry harder. None has ever been observed; the line exists so the first
+# one is impossible to miss.
+#
+# WHY ConnectionResetError AND TimeoutError ARE CAUGHT SEPARATELY: urllib wraps failures raised while
+# CONNECTING in URLError, but a reset arriving mid-body - after the headers, during resp.read() -
+# propagates as a bare ConnectionResetError, and a read timeout as a bare TimeoutError. Neither is a
+# URLError, so an `except URLError` alone never sees them. That is exactly the failure shape observed
+# against api-web.nhle.com on 2026-09-03 (`WinError 10054`, `read ECONNRESET`).
+ATTEMPTS = 3
+BACKOFF_SECONDS = (1.5, 3.0)      # before attempt 2, before attempt 3
 RETRY_STATUS = (500, 502, 503, 504)
+RATE_LIMIT_STATUS = 429
 
 
 def _host(url: str) -> str:
     return urllib.parse.urlsplit(url).hostname or url
 
 
+def _backoff(attempt: int) -> float:
+    """Seconds to wait after `attempt` (1-based). Escalates, then holds at the last value."""
+    return BACKOFF_SECONDS[min(attempt, len(BACKOFF_SECONDS)) - 1]
+
+
 def http_json(url: str, headers: dict[str, str] | None = None, params: dict[str, Any] | None = None,
               timeout: int = 45, attempts: int = ATTEMPTS, sleep=time.sleep) -> Any:
-    """GET JSON with a bounded retry. `sleep` is injectable so tests do not actually wait."""
+    """GET JSON with a bounded, escalating retry. `sleep` is injectable so tests do not actually wait."""
     if params:
         q = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None}, doseq=True)
         url = f"{url}?{q}"
@@ -164,19 +179,25 @@ def http_json(url: str, headers: dict[str, str] | None = None, params: dict[str,
         except urllib.error.HTTPError as e:      # MUST stay above URLError - HTTPError subclasses it
             body = e.read().decode("utf-8", errors="replace")[:500]
             last = RuntimeError(f"HTTP {e.code} for {bare}: {body}")
+            if e.code == RATE_LIMIT_STATUS:
+                print(f"  warn: {_host(url)} HTTP 429 RATE LIMITED - not retried on purpose; "
+                      f"slow the caller down (livescores revalidate), do not retry harder")
+                raise last from e
             if e.code in RETRY_STATUS and attempt < attempts:
+                wait = _backoff(attempt)
                 print(f"  warn: {_host(url)} HTTP {e.code}, retry {attempt + 1} of {attempts} "
-                      f"in {BACKOFF_SECONDS:.0f}s")
-                sleep(BACKOFF_SECONDS)
+                      f"in {wait:.1f}s")
+                sleep(wait)
                 continue
             raise last from e
         except (urllib.error.URLError, ConnectionResetError, TimeoutError) as e:
             reason = getattr(e, "reason", e)
             last = RuntimeError(f"request failed for {bare}: {e}")
             if attempt < attempts:
+                wait = _backoff(attempt)
                 print(f"  warn: {_host(url)} {type(e).__name__} ({reason}), retry {attempt + 1} "
-                      f"of {attempts} in {BACKOFF_SECONDS:.0f}s")
-                sleep(BACKOFF_SECONDS)
+                      f"of {attempts} in {wait:.1f}s")
+                sleep(wait)
                 continue
             raise last from e
     raise last  # pragma: no cover
