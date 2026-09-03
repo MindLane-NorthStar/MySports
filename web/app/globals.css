@@ -1344,3 +1344,21 @@ input:focus-visible {
   .navbar:not(.mobile) .nb-ctx{display:none}
 }
 
+
+/* ---- home-route primary nav (prompt 20)
+ * The banner itself carries no links - it is pure SVG - so the home route gets this row beneath it.
+ * Without it, display:"standalone" makes the installed app a dead end: no address bar, no back
+ * button, and no way off Today. Same type treatment and gold active underline as .nb-nav so the two
+ * mount points of PrimaryNav read as one thing; centred, because here it is the whole row rather than
+ * one column of a three-part bar. Tokens only - --ground does not exist in this app; the banner's
+ * settled tone is --spot-2. */
+.homenav{display:flex;justify-content:center;
+  background:linear-gradient(180deg,#2A2A2A 0%,#1C1C1C 100%);
+  border-bottom:1px solid var(--line-soft);box-shadow:0 2px 10px rgba(0,0,0,.45)}
+.hn-nav{display:flex;gap:4px}
+.hn-nav a{font-family:var(--display);font-weight:600;font-size:18px;letter-spacing:.08em;
+  text-transform:uppercase;padding:14px 18px 11px;color:var(--dim);border-bottom:3px solid transparent}
+.hn-nav a.on{color:var(--ink);border-bottom-color:var(--gold)}
+@media (max-width:699px){
+  .hn-nav a{font-size:14px;padding:12px 14px 9px;letter-spacing:.06em}
+}
