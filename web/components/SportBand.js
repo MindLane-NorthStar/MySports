@@ -32,10 +32,12 @@ export default function SportBand({ sport, label, games, standings, showDay = fa
   const summary = useMemo(() => offServiceSummary(games), [games]);
   const offIds = useMemo(() => new Set(summary.off.map((g) => g.id)), [summary]);
   const pendingIds = useMemo(() => new Set(summary.pending.map((g) => g.id)), [summary]);
+  const tbdIds = useMemo(() => new Set(summary.tbd.map((g) => g.id)), [summary]);
 
-  // E5: only genuinely ineligible games are hidden. Market-pending games are exempt in BOTH toggle
-  // states, and the visible set is the original array minus `off`, so everything keeps its
-  // chronological position rather than being regrouped.
+  // E5 + 05 section 9: only genuinely ineligible games are hidden. Market-pending AND network-TBD
+  // games are exempt in BOTH toggle states, and the visible set is the original array minus `off`,
+  // so everything keeps its chronological position rather than being regrouped. Both carve-outs are
+  // free here: neither state is ever IN `off`, so subtracting `off` exempts them by construction.
   const shown = useMemo(
     () => (showAll ? games : (games || []).filter((g) => !offIds.has(g.id))),
     [showAll, games, offIds],
@@ -48,12 +50,18 @@ export default function SportBand({ sport, label, games, standings, showDay = fa
 
   if (!games?.length) return null;
 
+  // The badge is a class on the row WRAPPER and the text lives in globals.css - MatchupCard is
+  // locked and nothing here reaches inside it. The buckets are mutually exclusive by the if/else in
+  // offServiceSummary, so at most one cue class can ever apply and no card can render both badges.
   const rowClass = (g) =>
-    [pendingIds.has(g.id) ? 'pending-row' : null, offIds.has(g.id) ? 'offsvc-row' : null]
+    [tbdIds.has(g.id) ? 'networktbd-row' : null,
+     pendingIds.has(g.id) ? 'pending-row' : null,
+     offIds.has(g.id) ? 'offsvc-row' : null]
       .filter(Boolean).join(' ') || undefined;
 
   const row = (g) => (
-    <div key={g.id} className={rowClass(g)} data-market-tbd={pendingIds.has(g.id) || undefined}>
+    <div key={g.id} className={rowClass(g)} data-market-tbd={pendingIds.has(g.id) || undefined}
+         data-network-tbd={tbdIds.has(g.id) || undefined}>
       <MatchupCard game={g} standings={standings} showDay={showDay} onOpen={onOpen} />
     </div>
   );

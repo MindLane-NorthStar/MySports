@@ -1404,6 +1404,20 @@ input:focus-visible {
   border:1px solid var(--gold-dim);border-radius:3px;padding:2px 5px 1px}
 @media (max-width:699px){.pending-row::after{font-size:9px;padding:1px 4px 0}}
 
+/* ---- network TBD (05 section 9, prompt 24)
+ * The fourth state: nobody has announced who is airing this game. Same treatment as market-pending -
+ * never dimmed, never hidden - but its own word, because "market TBD" would assert a broadcaster
+ * exists whose regional split is undecided when none has been named. Charcoal rather than gold: gold
+ * is E5's colour and the two cues must not read as the same thing at a glance. Mutually exclusive
+ * with .pending-row by construction, so the two ::after tags can never collide.
+ * The cue is on the row WRAPPER; MatchupCard is locked and nothing here reaches inside it. */
+.networktbd-row{position:relative}
+.networktbd-row::after{content:'NETWORK TBD';position:absolute;top:6px;right:8px;z-index:2;pointer-events:none;
+  font-family:var(--display);font-weight:600;font-size:10px;letter-spacing:.14em;
+  color:var(--dim);background:rgba(27,27,27,.86);
+  border:1px solid var(--line-soft);border-radius:3px;padding:2px 5px 1px}
+@media (max-width:699px){.networktbd-row::after{font-size:9px;padding:1px 4px 0}}
+
 /* ---- per-sport bands (prompt 21)
  * Bands render in SPORTS order, not kickoff order, so the page reads in the product's order rather
  * than by whichever sport happened to start first. The header is band level - the card is untouched. */

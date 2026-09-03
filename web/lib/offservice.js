@@ -16,6 +16,14 @@
 // asserts a certainty the data does not have. Market-pending games are ALWAYS SHOWN, in every surface
 // and every toggle state, and are NEVER counted inside "not on your services". On NFL Sunday that is
 // the difference between hiding eleven of thirteen games and showing the slate with an honest caveat.
+//
+// AND A FOURTH (05 section 9, NETWORK TBD). E5 covers a game whose BROADCASTER is known and whose
+// Cleveland assignment is not. It cannot cover a game with no broadcast row at all, and must not be
+// stretched to: saying 'market pending' about an NFL week-18 game asserts a broadcaster exists whose
+// regional split is undecided, when no broadcaster has been named. That is a second false certainty.
+// So a game with zero active broadcast rows gets its own state, its own count and its own cue, and
+// the same carve-out from D4 - the season load put 529 games in it, and the app was calling every
+// one of them 'not on your services'.
 
 function eligibilityRow(game) {
   const e = game?.eligibility;
@@ -33,6 +41,28 @@ export function isMarketPending(game) {
   const row = eligibilityRow(game);
   if (!row) return false;
   return row.market_pending === true && row.eligible !== true;
+}
+
+/**
+ * NETWORK TBD (05 section 9): nobody has announced who is airing this game yet.
+ *
+ * ONE LINE, ONE PLACE. The state is a structural fact about the game - it has no active broadcast
+ * row - not a verdict to be read from a column, so unlike isMarketPending there is nothing in the
+ * database to defer to. Every surface imports THIS; none re-derives it.
+ *
+ * Eligible wins, exactly as it does for market-pending: if there is a way to watch it, nothing is
+ * TBD. In production that guard can never fire, because pipeline/reconcile.py derives `eligible`
+ * FROM the active rows and so eligible implies at least one of them - but the two sibling states
+ * must not behave differently under the same contradiction.
+ */
+export function isNetworkTbd(game) {
+  if (isEligible(game)) return false;
+  const rows = game?.broadcasts;
+  // NOT SELECTED is not a claim. Every listing surface embeds broadcasts through GAME_SELECT in
+  // web/lib/queries.js, but a surface that forgot would otherwise mark its whole day network-TBD -
+  // the same reasoning that makes an unjudged game shown rather than hidden.
+  if (!Array.isArray(rows)) return false;
+  return !rows.some((b) => b?.active !== false);
 }
 
 /** The reconciler's verdict for one game. Absent row -> treated as eligible (shown), never hidden. */
@@ -71,11 +101,16 @@ export function offServiceSummary(games, { maxOutlets = 3 } = {}) {
   const rows = Array.isArray(games) ? games : [];
   const on = [];
   const pending = [];
+  const tbd = [];
   const off = [];
   for (const g of rows) {
-    // Order matters: pending is tested FIRST, so a market-pending game can never fall into `off` and
-    // be counted as unwatchable. That is the whole carve-out.
-    if (isMarketPending(g)) pending.push(g);
+    // Order matters, and it carries both carve-outs: the two exempt states are tested BEFORE `off`,
+    // so neither can fall into it and be counted as unwatchable. network-TBD goes first of all
+    // because it is the structural fact - a stale row claiming market_pending on a game with no
+    // broadcast rows would otherwise assert a broadcaster that does not exist. The two cannot both
+    // be true anyway (pending needs an unverified row, TBD needs none), which a test pins.
+    if (isNetworkTbd(g)) tbd.push(g);
+    else if (isMarketPending(g)) pending.push(g);
     else if (isEligible(g)) on.push(g);
     else off.push(g);
   }
@@ -83,15 +118,17 @@ export function offServiceSummary(games, { maxOutlets = 3 } = {}) {
   return {
     on,
     pending,
+    tbd,
     off,
     total: rows.length,
     onCount: on.length,
     pendingCount: pending.length,
+    tbdCount: tbd.length,
     offCount: off.length,
     outlets: rankOutlets(off),
     pendingOutlets: rankOutlets(pending),
     line: countLine(rows.length, off.length, rankOutlets(off), maxOutlets),
-    lines: countLines(rows.length, on.length, pending, off, maxOutlets),
+    lines: countLines(rows.length, on.length, pending, off, tbd),
   };
 }
 
@@ -140,13 +177,15 @@ function outletClause(outlets, max) {
  * Returns { total, on, pending, off } of strings, with null for a state that has no games in it - a
  * zero line is noise, and "0 market pending" invites the reader to wonder what they missed.
  */
-export function countLines(total, onCount, pending, off) {
+export function countLines(total, onCount, pending, off, tbd) {
   const pendingCount = (pending || []).length;
+  const tbdCount = (tbd || []).length;
   const offCount = (off || []).length;
   return {
     total: `${total} ${total === 1 ? 'game' : 'games'}`,
     on: onCount ? `${onCount} available to you` : null,
     pending: pendingCount ? `${pendingCount} market pending` : null,
+    tbd: tbdCount ? `${tbdCount} network TBD` : null,
     off: offCount ? `${offCount} not on your services` : null,
   };
 }
@@ -167,7 +206,9 @@ export function countLines(total, onCount, pending, off) {
  * is his call to make with the trade-off named, not one an unattended run should make silently.
  */
 export function countSummary(lines) {
-  return [lines.total, lines.on, lines.pending, lines.off].filter(Boolean).join(' · ');
+  // Order is decreasing certainty, then the one decided negative: what he can watch, what has a
+  // broadcaster but no market yet, what has no broadcaster at all, and what is genuinely off.
+  return [lines.total, lines.on, lines.pending, lines.tbd, lines.off].filter(Boolean).join(' · ');
 }
 
 /** '83 games - 20 not on your services - CBS Sports Network, FOX and 26 more'. Null when nothing is hidden. */
