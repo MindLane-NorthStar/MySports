@@ -50,6 +50,18 @@ export function teamLogoUrl(teamId) {
 }
 
 /**
+ * A generated_grids asset key -> an absolute URL.
+ *
+ * generated_grids stores BARE KEYS (`grids/cfb/grid_2026-09-05.svg`), never absolute URLs, so that a
+ * custom domain in front of R2 does not strand every row already written. Consumers join the base.
+ * Absolute values are passed through unchanged, so a legacy row cannot break the page.
+ */
+export function gridAssetUrl(key) {
+  if (!key) return null;
+  return /^https?:\/\//i.test(key) ? key : `${ASSET_BASE_URL}${String(key).replace(/^\/+/, '')}`;
+}
+
+/**
  * The dark-context team logo (mobile addendum M12). TWO contexts, two files:
  *   - grid cap endcaps and light tint plates use teamLogoUrl()  - RAW, never lightness-adjusted;
  *   - a logo FLOATING on charcoal (listings line 1, the odds slot) uses this one.

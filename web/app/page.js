@@ -13,7 +13,7 @@ import Listing from '../components/Listing.js';
 import { DatePicker, SportFilter } from '../components/Filters.js';
 import { gamesForDay, newestGridFor, gridIndex, standingsForGames } from '../lib/queries.js';
 import { longDay, todayET, etTime } from '../lib/format.js';
-import { SPORTS, SPORT_LABEL } from '../lib/config.js';
+import { SPORTS, SPORT_LABEL, gridAssetUrl } from '../lib/config.js';
 import { RestError } from '../lib/rest.js';
 import { overlayForDay, applyOverlay } from '../lib/livescores.js';
 
@@ -23,10 +23,24 @@ async function ArchivedGrid({ sport, day }) {
   // Only offered when exactly one sport is selected: a grid is per (sport, day) by construction.
   if (!sport) return null;
   const grid = await newestGridFor(sport, day);
-  if (!grid?.svg_asset_url) return null;
+  const src = gridAssetUrl(grid?.svg_asset_url);
+  if (!src) {
+    // E10-adjacent, one line: desktop says plainly that no PC grid was rendered for this pair rather
+    // than falling back to a phone grid stretched across a desktop column.
+    return (
+      <p className="gridnone">
+        No archived PC grid for {SPORT_LABEL[sport] || sport} on {longDay(day)} yet — it is rendered
+        by the daily job once the slate is loaded.
+      </p>
+    );
+  }
   return (
     <figure className="gridpanel">
-      <img src={grid.svg_asset_url} alt={`${SPORT_LABEL[sport] || sport} archival grid for ${day}`} />
+      {/* The PC grid is drawn at 2862px for a 1398px-plus page (rendering contract v1.3). Fitting it
+          into a ~950px column is a 3x downscale, which is what read as "a blank black area" - the
+          card text vanishes and only the charcoal ground is left. It now renders at its own width
+          inside a horizontal scroller, which is how a PC grid is meant to be read. */}
+      <img src={src} alt={`${SPORT_LABEL[sport] || sport} archival grid for ${day}`} />
       <figcaption>
         Archived PC grid · {grid.generator_version || 'unknown'} · {grid.games_on_grid ?? '?'} on the grid
         {grid.games_tbd ? ` · ${grid.games_tbd} TBA` : ''}
@@ -84,8 +98,6 @@ export default async function TodayPage({ searchParams }) {
   const overlay = await overlayForDay(day, games, { today });
   games = applyOverlay(games, overlay.map);
 
-  const hasGrid = grids.some((g) => g.sport === sport && g.game_date === day);
-
   return (
     <main>
       <h1>{longDay(day)}</h1>
@@ -113,7 +125,7 @@ export default async function TodayPage({ searchParams }) {
 
       {!error && games.length ? <DataAsOf day={day} today={today} overlay={overlay} /> : null}
 
-      {hasGrid ? (
+      {sport && !error && games.length ? (
         <Suspense fallback={null}>
           <ArchivedGrid sport={sport} day={day} />
         </Suspense>

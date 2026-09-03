@@ -42,9 +42,16 @@ def sha256(path: Path) -> str:
 
 
 def asset_url(base: str, sport: str, name: str) -> str:
-    """Same key scheme as sync_assets.py --push-grids: grids/{sport}/{filename}, lowercased."""
-    key = f"grids/{sport}/{name}".lower()
-    return f"{base}/{key}" if base else key
+    """The BARE R2 KEY - grids/{sport}/{filename}, lowercased. `base` is accepted and ignored.
+
+    generated_grids stores keys, not absolute URLs, and every consumer joins ASSET_BASE_URL itself
+    (web/lib/config.js gridAssetUrl, web/scripts/smoke.mjs). Storing absolutes bakes today's bucket
+    hostname into rows that outlive it: the moment a custom domain is put in front of R2, every row
+    already written points at the old host and there is no way to tell a stale URL from a current one.
+    A key is the part that is actually stable. Standardised 2026-09-03; the 14 absolute rows written
+    before that were backfilled to keys in the same change.
+    """
+    return f"grids/{sport}/{name}".lower()
 
 
 def grid_rows(render_root: Path, base: str) -> list[tuple]:

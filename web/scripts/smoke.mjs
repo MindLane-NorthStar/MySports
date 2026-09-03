@@ -17,7 +17,7 @@
 // Exits non-zero on the first failure. Reads nothing secret: the anon key is publishable.
 
 import { rest, RestError } from '../lib/rest.js';
-import { SUPABASE_URL, ASSET_BASE_URL } from '../lib/config.js';
+import { SUPABASE_URL, ASSET_BASE_URL, gridAssetUrl } from '../lib/config.js';
 import { indexStandings, standingLine } from '../lib/standings.js';
 
 let failures = 0;
@@ -85,7 +85,9 @@ console.log('\n(c) generated_grids archive');
     `        newest ${newest.sport} ${newest.game_date}  ${newest.generator_version}  ${newest.svg_asset_url}`
   );
   try {
-    const res = await fetch(newest.svg_asset_url, {
+    // generated_grids stores BARE KEYS; the consumer joins ASSET_BASE_URL. Fetching the stored value
+    // raw is what made this check fail - `fetch('grids/mlb/...')` cannot even parse as a URL.
+    const res = await fetch(gridAssetUrl(newest.svg_asset_url), {
       headers: { 'User-Agent': 'Mozilla/5.0 mysports-smoke' },
     });
     assert(res.ok, 'the newest archived SVG resolves', `HTTP ${res.status}`);

@@ -1417,3 +1417,34 @@ input:focus-visible {
   .band-mark{height:18px}
   .band-title{font-size:15px}
 }
+
+/* ---- desktop shows the PC grid, not the mobile one (prompt 22)
+ * The mobile grid is a PHONE artefact - the Mobile Grid Addendum's deviations are explicitly
+ * phone-only (M5: "PC keeps v1.2 labels"). Above the breakpoint the desktop grid is the archived PC
+ * render. Gated in CSS at the same 699px the rest of the app uses, so there is no JS width state and
+ * no server/client hydration mismatch. */
+.mgrid-only { display: none; }
+@media (max-width: 699px) {
+  .mgrid-only { display: block; }
+  /* the jump chip only means anything when there is a grid below it to jump to */
+  .jumpbar { display: flex; }
+}
+@media (min-width: 700px) {
+  .jumpbar { display: none; }
+}
+
+/* The PC grid is drawn at 2862px for a 1398px-plus page. Crushing it into a ~950px column was a 3x
+ * downscale that erased the card text and left only the charcoal ground - the "blank black area".
+ * It renders at its own width in a horizontal scroller instead. */
+.gridpanel { overflow-x: auto; }
+@media (min-width: 700px) {
+  /* Natural width on desktop only. The earlier .gridpanel img rule sets width:100%, which is right on
+     a phone - there the archived SVG is a secondary artefact under the mobile grid - but on desktop it
+     is THE grid, and fitting 2862px into a ~1000px column is the 3x crush that erased it. */
+  .gridpanel img { width: auto; max-width: none; }
+}
+.gridnone {
+  color: var(--faint);
+  font-size: 12px;
+  margin: 18px 0 0;
+}

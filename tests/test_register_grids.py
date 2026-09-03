@@ -196,8 +196,8 @@ class RowContents(unittest.TestCase):
             root = Path(td)
             make_grid(root, "nfl", "2026-09-13", SVG_A, png=True, png2x=True)
             row = rows_quiet(root)[0][0]
-            self.assertEqual(row[PNG], f"{BASE}/grids/nfl/grid_2026-09-13.png")
-            self.assertEqual(row[PNG2X], f"{BASE}/grids/nfl/grid_2026-09-13@2x.png")
+            self.assertEqual(row[PNG], "grids/nfl/grid_2026-09-13.png")
+            self.assertEqual(row[PNG2X], "grids/nfl/grid_2026-09-13@2x.png")
 
     def test_an_empty_render_tree_produces_no_rows(self):
         with tempfile.TemporaryDirectory() as td:
@@ -213,26 +213,43 @@ class RowContents(unittest.TestCase):
             self.assertEqual(rows[0][DATE], "2026-09-04")
 
 
-# --------------------------------------------------------------------------- asset URLs
-class AssetUrls(unittest.TestCase):
-    def test_key_scheme_matches_sync_assets_push_grids(self):
-        self.assertEqual(asset_url(BASE, "mlb", "grid_2026-09-04.svg"),
-                         f"{BASE}/grids/mlb/grid_2026-09-04.svg")
+# --------------------------------------------------------------------------- asset keys
+class AssetKeys(unittest.TestCase):
+    """generated_grids stores BARE R2 KEYS (2026-09-03), never absolute URLs.
+
+    An absolute URL bakes today's bucket hostname into a row that outlives it - put a custom domain in
+    front of R2 and every row already written points at the old host, with nothing to distinguish a
+    stale URL from a current one. The key is the stable part; consumers join ASSET_BASE_URL
+    (web/lib/config.js gridAssetUrl, web/scripts/smoke.mjs). It also removed the class of bug behind
+    the long-standing smoke 29/30: one row was a key while the rest were absolute, so fetching the
+    newest row's value raw could not even parse as a URL.
+    """
+
+    def test_the_key_scheme_matches_sync_assets_push_grids(self):
+        self.assertEqual(asset_url(BASE, "mlb", "grid_2026-09-04.svg"), "grids/mlb/grid_2026-09-04.svg")
 
     def test_keys_are_lowercased(self):
-        # sync_assets.py lowercases every uploaded key; the stored URL has to match or it 404s
-        self.assertEqual(asset_url(BASE, "MLB", "GRID_2026-09-04.SVG"),
-                         f"{BASE}/grids/mlb/grid_2026-09-04.svg")
+        # sync_assets.py lowercases every uploaded key; the stored key has to match or it 404s
+        self.assertEqual(asset_url(BASE, "MLB", "GRID_2026-09-04.SVG"), "grids/mlb/grid_2026-09-04.svg")
 
-    def test_without_a_base_the_bare_key_is_stored(self):
-        self.assertEqual(asset_url("", "nba", "grid_2026-10-28.svg"), "grids/nba/grid_2026-10-28.svg")
+    def test_the_base_is_ignored_however_it_is_passed(self):
+        """The signature keeps `base` for its callers, but no base ever reaches the stored value."""
+        for base in (BASE, "", "https://cdn.example.test", "https://cdn.example.test/"):
+            self.assertEqual(asset_url(base, "nba", "grid_2026-10-28.svg"), "grids/nba/grid_2026-10-28.svg")
 
-    def test_row_urls_use_the_configured_base(self):
+    def test_row_urls_are_keys_regardless_of_the_configured_base(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             make_grid(root, "nba", "2026-10-28", SVG_A)
-            self.assertEqual(rows_quiet(root)[0][0][SVG], f"{BASE}/grids/nba/grid_2026-10-28.svg")
+            self.assertEqual(rows_quiet(root)[0][0][SVG], "grids/nba/grid_2026-10-28.svg")
             self.assertEqual(rows_quiet(root, "")[0][0][SVG], "grids/nba/grid_2026-10-28.svg")
+
+    def test_no_stored_value_is_ever_absolute(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            make_grid(root, "nfl", "2026-09-13", SVG_A, png=True, png2x=True)
+            for col in (SVG, PNG, PNG2X):
+                self.assertNotRegex(rows_quiet(root)[0][0][col], r"^https?://")
 
 
 # --------------------------------------------------------------------------- the live render tree
