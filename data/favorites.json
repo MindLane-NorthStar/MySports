@@ -1,0 +1,44 @@
+{
+  "_about": "Joe's teams (D6). TEAM ids, not names - a name would re-resolve on every read and could silently pick a different school. Games involving these teams float to the top of the listing under a YOUR TEAMS rule. Edit this file to change the list; no code change is needed. Ids follow the team convention: nfl-{espnId}, mlb-{statsapiId}, nba-{TRICODE}, nhl-{nhlId}, cfb bare CFBD ints. NOTE these are TEAM ids - game ids differ, and NBA game ids are nba-{espnEventId}.",
+  "_resolved": "2026-09-03, by EXACT match on teams.canonical_name within the sport - never substring, never fuzzy. Traps checked: Ohio (195, MAC Bobcats) is a different row from Ohio State (194); Panthers resolved within nfl so the Florida Panthers (nhl) cannot be picked; Ole Miss is filed as 'Ole Miss' (145), distinct from Mississippi State (344); Tennessee (2633) is the Volunteers, not Tennessee State/Tech/Middle Tennessee. MLB canonical_name is nickname-only by convention, so 'Cleveland Guardians' resolved on the nickname 'Guardians' and was cross-checked on abbreviation CLE.",
+  "teams": {
+    "nfl": [
+      "nfl-5",
+      "nfl-29"
+    ],
+    "mlb": [
+      "mlb-114"
+    ],
+    "nba": [
+      "nba-CLE"
+    ],
+    "nhl": [
+      "nhl-29",
+      "nhl-54",
+      "nhl-5"
+    ],
+    "cfb": [
+      "194",
+      "99",
+      "145",
+      "2633",
+      "195",
+      "278"
+    ]
+  },
+  "_names": {
+    "99": "LSU",
+    "145": "Ole Miss",
+    "194": "Ohio State",
+    "195": "Ohio",
+    "278": "Fresno State",
+    "2633": "Tennessee",
+    "nfl-5": "Cleveland Browns",
+    "nfl-29": "Carolina Panthers",
+    "mlb-114": "Guardians",
+    "nba-CLE": "Cleveland Cavaliers",
+    "nhl-29": "Columbus Blue Jackets",
+    "nhl-54": "Vegas Golden Knights",
+    "nhl-5": "Pittsburgh Penguins"
+  }
+}

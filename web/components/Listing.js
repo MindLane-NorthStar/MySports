@@ -14,6 +14,8 @@ import GameDetail from './GameDetail.js';
 import { indexStandings } from '../lib/standings.js';
 import { REFRESH_SECONDS } from '../lib/config.js';
 import { offServiceSummary } from '../lib/offservice.js';
+import { favoriteIds, splitFavorites } from '../lib/favorites.js';
+import favoritesDoc from '../../data/favorites.json';
 
 function anyInFlight(games) {
   const now = Date.now();
@@ -47,6 +49,11 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
   const shown = showAll ? games : offService.on;
   const offIds = useMemo(() => new Set(offService.off.map((g) => g.id)), [offService]);
 
+  // D6: Joe's teams float to the top of the listing. Both groups keep the order they arrived in, so
+  // each still reads chronologically - a promotion, not a re-sort.
+  const favIds = useMemo(() => favoriteIds(favoritesDoc), []);
+  const { favorites, rest } = useMemo(() => splitFavorites(shown, favIds), [shown, favIds]);
+
   const showGrid = Boolean(grid && sport && games.length);
   const gridId = `grid-${sport || 'all'}-${day || ''}`;
 
@@ -73,8 +80,24 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
         </p>
       ) : null}
 
+      {favorites.length ? (
+        <>
+          {/* The label and its rule live HERE, at band level - never on the card. The listings card
+              is closed (contract v1.6.4 + Mobile Grid Addendum v1.0). */}
+          <p className="favlabel">Your teams</p>
+          <div className="cards">
+            {favorites.map((g) => (
+              <div key={g.id} className={offIds.has(g.id) ? 'offsvc-row' : undefined}>
+                <MatchupCard game={g} standings={standings} showDay={showDay} onOpen={setOpen} />
+              </div>
+            ))}
+          </div>
+          <hr className="favrule" />
+        </>
+      ) : null}
+
       <div className="cards">
-        {shown.map((g) => (
+        {rest.map((g) => (
           // The dim lives on a WRAPPER, never on the card: the listings card is locked by contract
           // v1.6.4 and the Mobile Grid Addendum, and an off-service game is still that same card.
           <div key={g.id} className={offIds.has(g.id) ? 'offsvc-row' : undefined}>

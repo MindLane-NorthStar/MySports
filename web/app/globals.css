@@ -1375,3 +1375,10 @@ input:focus-visible {
 .offsvc-toggle:hover{color:var(--ink)}
 .offsvc-row{opacity:.45;filter:saturate(.7)}
 .offsvc-row:hover{opacity:.72}
+
+/* ---- favourites float (D6, prompt 20)
+ * Band-level only: the faint label and the hairline that separates Joe's teams from the rest of the
+ * day. Neither touches the card, which stays closed under contract v1.6.4. */
+.favlabel{font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--faint);margin:0 0 6px}
+.favrule{border:0;border-top:1px solid var(--line-soft);margin:14px 0}
