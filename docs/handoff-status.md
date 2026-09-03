@@ -1,19 +1,20 @@
-# MySports — Handoff Status (post-prompt-23, 2026-09-03)
+# MySports — Handoff Status (post-prompt-24, 2026-09-03)
 
 **This file now lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
 Read first for any session picking up MySports. Memory `/areas/mysports.md` + `/areas/mysports-build-log.md` + `/areas/mysports-ui-repair.md` carry the compressed truth. Companions: `claude/enhancement-register.md` — a project doc, not in the repo (check §7–§13 before re-raising ANY decision), **`docs/feature-study/05-home-page-decisions.md` (D1–D6, the D3 amendment, deployment facts, E5, and §9 NETWORK TBD — BINDING)**, `docs/rendering-contract.md` v1.6.5, `docs/rendering-contract-mobile.md` (Addendum v1.1), `claude/program-card-design-v1.md`.
 
 ## Repo state
-main, HEAD **b44893e**. **200 Python tests OK (skipped=1)**, **123/123 JS unit tests**, smoke **30/30**, qa-shots behavioural assertions **8/8**. Tree clean apart from always-untracked `assets/` and `artifacts/`.
+main, HEAD **10efae7**. **200 Python tests OK (skipped=1)**, **138/138 JS unit tests**, smoke **30/30**, qa-shots behavioural assertions **8/8**. Tree clean apart from always-untracked `assets/` and `artifacts/`.
 
 **Smoke 29/30 is CLOSED.** The `generated_grids` bare-key failure was fixed in prompt 22 by standardising on bare keys with consumers joining `ASSET_BASE_URL`.
 
+Prompt 24: `dff0725` docs + NETWORK TBD ruled (05 §9) → `f15449f` line-ending normalisation → `2024c21` reconciler: no out-of-market conclusion from an empty broadcast list (78 → 0) → `a1f7364` network TBD is its own state, never off-service, never hidden → `10efae7` grid note for games with no network to place.
 Prompt 23: `a382569` bootstrap_season loads games → `015da43` overlap rule both renderers → `7261189` week dropdown + current-week default → `b44893e` PostgREST row-cap fix.
 Prompt 22: `f42c364` four-column card restored → `234079c` Guardians TV mark → `24f9de8` desktop PC grid + bare keys → `8f64103` colour-band guard (no colour bug found) → `e826d23` chips, banner gap, one-line count.
 Prompt 21: `abaf8dc` → `da2388c` → `50f9180` → `f064172` → `4250aa9`.
 
-**CRLF caution — read before running git from Cowork's bridge shell.** `.gitattributes` declares `eol=lf` for `.py .md .json .svg .txt .yml .yaml .sql`, but **not for `.js .mjs .jsx .css .html`** — about 51 files, roughly half the repo's text. Five of them are CRLF on disk (`web/app/history/page.js`, `web/lib/marks.js`, `web/lib/raillabel.js`, `web/lib/standings.js`, `web/scripts/qa-shots.mjs`). Windows git normalises on read so the tree looks clean; **Linux git in the bridge VM reports all five as modified with a 479-line phantom diff of pure line-ending churn.** `git diff --ignore-cr-at-eol` returns empty, which is the check that tells the truth. **Never `git add`, `commit`, `checkout` or `stash` these from the bridge shell** — it would commit 479 lines of churn into every future blame. Fix queued as its own isolated commit in prompt 24.
+**CRLF hazard — CLOSED** by `f15449f` (prompt 24, stage 1b), which added `.js .mjs .jsx .css .html` to `.gitattributes` as `text eol=lf` and renormalised. All 51 files of those types are LF on disk and in the index, the bridge shell's 479-line phantom diff is gone, and `git diff --name-only` returns empty from either OS. No `--ignore-cr-at-eol` workaround is needed any more.
 
 ## DEPLOYED
 **https://my-sports-xi.vercel.app** — Vercel project `my-sports`, team `mindlane-northstar` (Pro), Root Directory `web`. **Leave Vercel Authentication on Standard Protection** (it exempts the production alias, keeps previews behind login). Do not buy Advanced Deployment Protection.
@@ -62,4 +63,5 @@ This is **ruled**: `docs/feature-study/05-home-page-decisions.md` **§9 — NETW
 18 **Team-name resolution is exact-match within sport, never substring or fuzzy** — and MLB canonical names are nickname-only ("Guardians"), so cross-check a second key such as `abbreviation`.
 19 **Never issue an unbounded PostgREST select.** It silently caps at 1,000 rows and returns no error — that cost prompt 23 a third of the season in the week picker, visible only because the database said 32 weeks and the page rendered 19. Use the paginating `restAll()` (`b44893e`). Pin regression tests to the **call site**, never a row count, or the test rots as the season grows.
 20 **Never edit a source file with a bare repeated string replace.** Prompt 22 corrupted `web/lib/offservice.js` that way and prompt 20 corrupted `data/render_policies.json`. Use line-anchored surgery or a parser, and assert only the intended region changed.
-21 **From the bridge shell, `git diff --ignore-cr-at-eol` is the only honest tree check** until `.gitattributes` covers `.js/.mjs/.jsx/.css/.html`. See the CRLF caution under Repo state.
+21 ~~From the bridge shell, `git diff --ignore-cr-at-eol` is the only honest tree check.~~ **RETIRED — the condition it waited on was met.** `f15449f` put `.js .mjs .jsx .css .html` in `.gitattributes`, so a plain `git diff` now tells the truth from either OS. Kept as a numbered stub so rules are never renumbered under a session that memorised them.
+22 **Before asserting what a component does, read the component and cite file and line — never the contract document that describes it.** Three prompts have shipped or nearly shipped a wrong premise this way: `bootstrap_season.yml` was believed to load a season when it loaded only teams; prompt 24 stage 4 was written on the premise that no-broadcast games vanished from the phone grid, when `MobileGrid.js` had always given them M7 cards; and register §13 justified the scrolling chip row on the claim that `.chiprow` already sets `overflow-x:auto`, which is true only of `docs/feature-study/mockups/home-page-candidates.html:16` and never of `web/app/globals.css:231`. A contract says what a component SHOULD do; only the file says what it DOES.
