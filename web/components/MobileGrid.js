@@ -25,6 +25,7 @@ import {
   viewingMinutes,
   tint,
 } from '../lib/gridmodel.js';
+import { splitOverlaps } from '../lib/overlap.js';
 import { teamLogoUrl } from '../lib/config.js';
 import { markStyle, hasMark } from '../lib/marks.js';
 import { etTime } from '../lib/format.js';
@@ -140,9 +141,23 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
       byNet.get(id).items.push(it);
     }
     const rows = [...byNet.values()].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
-    for (const r of rows) r.lanes = packLanes(r.items);
+    // OVERLAP RULE (contract v1.6.5): before packing lanes, let overlapping pairs on the SAME network
+    // split the difference so they share one row. Block lengths are policy, not measurement - every
+    // CFB game is drawn 210 minutes wide - so a 12:30 and a 3:30 on one network overlap by 30 minutes
+    // purely as an artefact of that estimate, and that artefact alone was generating an extra row.
+    //
+    // PRESENTATIONAL ONLY: the adjusted start/end drive the chip's x and width, and nothing else. The
+    // item keeps its game, so the detail panel still shows the real kickoff.
+    let guardHits = 0;
+    for (const r of rows) {
+      const { items, guarded } = splitOverlaps(r.items);
+      guardHits += guarded.length;
+      // carry the adjustment onto the render items, leaving every other field alone
+      r.items = r.items.map((it, k) => ({ ...it, start: items[k].start, end: items[k].end }));
+      r.lanes = packLanes(r.items);
+    }
 
-    return { rows, scale, ticks, cuts, pxPerMin, tbd, blockMins: mins, widest };
+    return { rows, scale, ticks, cuts, pxPerMin, tbd, blockMins: mins, widest, guardHits };
   }, [games, sport, measure, ready, standings]);
 
   // M6: pinch-to-zoom over the canvas; the rail is sticky inside it and so scales with it.

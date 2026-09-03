@@ -1,0 +1,98 @@
+{
+  "_about": "Shared fixtures for the overlap-split rule (Joe, 2026-09-03). Read by BOTH renderers' tests - tests/test_overlap.py for scripts/render_day.py and web/test/overlap.test.mjs for web/lib/gridmodel.js - so the archived PC grid and the live phone grid cannot drift apart on placement. All values are minutes since the viewing day's start; every case is one network row.",
+  "_rule": "Two programs on the same network row whose blocks overlap SPLIT THE DIFFERENCE: the earlier one's end and the later one's start each move by half the overlap, meeting at its midpoint, so they sit side by side in one row instead of forcing a second lane. Overlaps of 60 minutes or less split; more than 60 generates the second row as before. Three or more mutually overlapping programs fall back to lanes - a network airs one thing at a time, so a three-way overlap means the block estimates are wrong and squeezing three chips would hide that. If splitting would leave either chip under 60 minutes of rendered width, that pair falls back to a second row too: a chip too narrow to show its matchup is worse than an extra row.",
+  "_semantics": "PRESENTATIONAL ONLY. This changes the rendered block, never canonical_kickoff_at_utc, never block_minutes, never anything written to the database. The detail panel still shows real times. The midpoint uses floor((a.end + b.start) / 2) in both languages so the two renderers round identically.",
+  "max_split_min": 60,
+  "min_chip_min": 60,
+  "cases": [
+    {
+      "name": "no overlap - untouched",
+      "why": "Back-to-back blocks already tile; the rule must not nudge them.",
+      "items": [{ "id": "a", "start": 720, "end": 930 }, { "id": "b", "start": 930, "end": 1140 }],
+      "expect": [{ "id": "a", "start": 720, "end": 930 }, { "id": "b", "start": 930, "end": 1140 }],
+      "expect_split": [],
+      "expect_lanes": 1
+    },
+    {
+      "name": "15 minute overlap - splits",
+      "items": [{ "id": "a", "start": 720, "end": 930 }, { "id": "b", "start": 915, "end": 1125 }],
+      "expect": [{ "id": "a", "start": 720, "end": 922 }, { "id": "b", "start": 922, "end": 1125 }],
+      "expect_split": [["a", "b"]],
+      "expect_lanes": 1
+    },
+    {
+      "name": "30 minute overlap - splits (Joe's example: 12:30 and 3:30 both meet at 3:45)",
+      "why": "750 = 12:30, end 960 = 4:00; 930 = 3:30, end 1140 = 7:00. Midpoint 945 = 3:45.",
+      "items": [{ "id": "a", "start": 750, "end": 960 }, { "id": "b", "start": 930, "end": 1140 }],
+      "expect": [{ "id": "a", "start": 750, "end": 945 }, { "id": "b", "start": 945, "end": 1140 }],
+      "expect_split": [["a", "b"]],
+      "expect_lanes": 1
+    },
+    {
+      "name": "60 minute overlap - splits, the threshold is inclusive",
+      "items": [{ "id": "a", "start": 720, "end": 930 }, { "id": "b", "start": 870, "end": 1080 }],
+      "expect": [{ "id": "a", "start": 720, "end": 900 }, { "id": "b", "start": 900, "end": 1080 }],
+      "expect_split": [["a", "b"]],
+      "expect_lanes": 1
+    },
+    {
+      "name": "61 minute overlap - too much, second row",
+      "why": "One minute past the threshold falls back to lanes, unchanged.",
+      "items": [{ "id": "a", "start": 720, "end": 930 }, { "id": "b", "start": 869, "end": 1079 }],
+      "expect": [{ "id": "a", "start": 720, "end": 930 }, { "id": "b", "start": 869, "end": 1079 }],
+      "expect_split": [],
+      "expect_lanes": 2
+    },
+    {
+      "name": "three-way mutual overlap - lanes, never three squeezed chips",
+      "why": "A network airs one thing at a time; three overlapping blocks mean the estimates are wrong, and hiding that behind three narrow chips would be worse than showing the extra rows.",
+      "items": [
+        { "id": "a", "start": 720, "end": 930 },
+        { "id": "b", "start": 900, "end": 1110 },
+        { "id": "c", "start": 910, "end": 1120 }
+      ],
+      "expect": [
+        { "id": "a", "start": 720, "end": 930 },
+        { "id": "b", "start": 900, "end": 1110 },
+        { "id": "c", "start": 910, "end": 1120 }
+      ],
+      "expect_split": [],
+      "expect_lanes": 3
+    },
+    {
+      "name": "width guard - splitting would leave a chip under 60 minutes",
+      "why": "A 40-minute block overlapped by 30 would end up 25 minutes wide. Too narrow to show a matchup, so it takes the second row instead.",
+      "items": [{ "id": "a", "start": 720, "end": 760 }, { "id": "b", "start": 730, "end": 940 }],
+      "expect": [{ "id": "a", "start": 720, "end": 760 }, { "id": "b", "start": 730, "end": 940 }],
+      "expect_split": [],
+      "expect_lanes": 2,
+      "expect_guarded": [["a", "b"]]
+    },
+    {
+      "name": "two independent splittable pairs in one row",
+      "why": "The rule is pairwise and local; a later pair must not be disturbed by an earlier one.",
+      "items": [
+        { "id": "a", "start": 600, "end": 810 },
+        { "id": "b", "start": 780, "end": 990 },
+        { "id": "c", "start": 1200, "end": 1410 },
+        { "id": "d", "start": 1380, "end": 1590 }
+      ],
+      "expect": [
+        { "id": "a", "start": 600, "end": 795 },
+        { "id": "b", "start": 795, "end": 990 },
+        { "id": "c", "start": 1200, "end": 1395 },
+        { "id": "d", "start": 1395, "end": 1590 }
+      ],
+      "expect_split": [["a", "b"], ["c", "d"]],
+      "expect_lanes": 1
+    },
+    {
+      "name": "odd overlap floors the midpoint identically in both languages",
+      "why": "An odd-minute overlap must not round one way in Python and the other in JavaScript.",
+      "items": [{ "id": "a", "start": 720, "end": 931 }, { "id": "b", "start": 916, "end": 1126 }],
+      "expect": [{ "id": "a", "start": 720, "end": 923 }, { "id": "b", "start": 923, "end": 1126 }],
+      "expect_split": [["a", "b"]],
+      "expect_lanes": 1
+    }
+  ]
+}

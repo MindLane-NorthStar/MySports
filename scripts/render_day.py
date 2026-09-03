@@ -38,6 +38,8 @@ except Exception:
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # repo root, for pipeline.overlap
+from pipeline.overlap import split_overlaps   # the overlap rule, shared with the phone grid
 from PIL import Image as _Img
 
 ap = argparse.ArgumentParser()
@@ -434,18 +436,41 @@ for g in games:
     if primary in SIMULCAST and SIMULCAST[primary] not in badges: badges.append(SIMULCAST[primary]+"*")
     rec.update({"primary":primary,"badges":badges}); day.append(rec)
 
+# OVERLAP RULE (Joe, 2026-09-03; contract v1.6.5). Two programs on one network row whose blocks
+# overlap SPLIT THE DIFFERENCE - the earlier one's end and the later one's start each move by half the
+# overlap, meeting at its midpoint, so they share one row instead of forcing a second lane.
+#
+# This REPLACES a cruder rule that shortened only the earlier block to the next kickoff, handing it
+# 100% of the loss. Block lengths are policy, not measurement (every CFB game is drawn 210 minutes
+# wide), so an overlap is an artefact of the estimate and the cost belongs to both sides equally.
+#
+# PRESENTATIONAL ONLY: `dt` is untouched. `rs` is a render-only start, and the detail panel and every
+# written record still carry the real kickoff. The rule is shared with the phone grid through
+# pipeline/overlap.py and pinned to it by tests/fixtures/overlap_cases.json.
+GUARD_HITS = 0
+SPLIT_HITS = 0
 for r in ROW_ORDER:
-    gs = sorted([g for g in day if g["primary"]==r], key=lambda g: g["dt"])
-    for i,g in enumerate(gs):
-        nxt = next((h for h in gs[i+1:] if h["dt"]>g["dt"]), None)
-        if nxt: g["end_min"] = min(GAME_MIN, int((nxt["dt"]-g["dt"]).total_seconds()/60))
+    gs = sorted([g for g in day if g["primary"] == r], key=lambda g: g["dt"])
+    if not gs:
+        continue
+    origin = gs[0]["dt"]
+    mins = [int((g["dt"] - origin).total_seconds() / 60) for g in gs]
+    items = [{"start": m, "end": m + GAME_MIN} for m in mins]
+    adjusted, _split, guarded = split_overlaps(items)
+    GUARD_HITS += len(guarded); SPLIT_HITS += len(_split)
+    for g, it in zip(gs, adjusted):
+        g["rs"] = origin + timedelta(minutes=it["start"])     # render start (may sit after the kickoff)
+        g["end_min"] = it["end"] - it["start"]                # rendered width, in minutes
 
 def lanes(gs, use_end=True, mark=True):
     L = []
-    for g in sorted(gs, key=lambda g: g["dt"]):
+    for g in sorted(gs, key=lambda g: g.get("rs") or g["dt"]):
         for l in L:
-            dur = l[-1]["end_min"] if use_end else GAME_MIN
-            if (g["dt"]-l[-1]["dt"]).total_seconds()/60 >= dur: l.append(g); break
+            prev = l[-1]
+            dur = prev["end_min"] if use_end else GAME_MIN
+            # compare RENDERED starts, so a pair that split the difference packs into one lane
+            if ((g.get("rs") or g["dt"]) - (prev.get("rs") or prev["dt"])).total_seconds()/60 >= dur:
+                l.append(g); break
         else:
             if L and mark: g["alt"] = True
             L.append([g])
@@ -1003,7 +1028,7 @@ for row in rows:
     svg.append(f'<line x1="0" y1="{y}" x2="{W-PAD_X}" y2="{y}" stroke="#FFFFFF" stroke-opacity="0.24" stroke-width="1.5"/>')
     for lane in row["lanes"]:
         for g in lane:
-            x = xof(g["dt"]); w = g["end_min"]*PX-4
+            x = xof(g.get("rs") or g["dt"]); w = g["end_min"]*PX-4
             ac, hc = color(g["a"]["id"]), color(g["h"]["id"])
             draw_card(g, x, y, w, lh)
         y += lh
@@ -1080,7 +1105,7 @@ svg_path = out_dir / f"grid_{TARGET}.svg"
 svg_path.write_text("\n".join(svg), encoding="utf-8")
 # v1.6.1 sidecar: the counts this run actually produced, so scripts/register_grids.py can archive a grid
 # without re-deriving them from the SVG. Truthful by construction - same variables the console line prints.
-GENERATOR_VERSION = "v1.6.3"
+GENERATOR_VERSION = "v1.6.5"
 meta_path = out_dir / f"grid_{TARGET}.meta.json"
 meta_path.write_text(json.dumps({
     "sport": SPORT, "date": TARGET,
@@ -1089,7 +1114,7 @@ meta_path.write_text(json.dumps({
     "generatorVersion": GENERATOR_VERSION,
 }, indent=2) + chr(10), encoding="utf-8")
 for gname, dropped in DROP_LOG: print(f"  tray drop: {gname}: {dropped}")
-print(f"{GENERATOR_VERSION} [{SPORT}]: {len(day)} on grid · {len(tbd)} TBA · {len(omitted)} omitted · {W:.0f}x{H:.0f} -> {svg_path}"
+print(f"{GENERATOR_VERSION} [{SPORT}]: {len(day)} on grid · {len(tbd)} TBA · {len(omitted)} omitted · {SPLIT_HITS} split/{GUARD_HITS} guarded · {W:.0f}x{H:.0f} -> {svg_path}"
       + (" · enrichment loaded" if ENR else " · NO enrichment") + (" · MOCK" if USE_MOCK else ""))
 if ARGS.png or ARGS.export:
     try:

@@ -1,4 +1,4 @@
-# Mobile Grid Addendum — v1.0 (decided 2026-09-02)
+# Mobile Grid Addendum — v1.1 (decided 2026-09-02; overlap rule added 2026-09-03)
 
 **Scope: EVERY grid rendering in EVERY mobile view, for EVERY sport** — CFB, NFL, MLB, NBA, NHL, and any future sport — in the Today, Weeks, and History views alike. The PC/archival grid remains governed by `docs/rendering-contract.md` unamended; anything not listed below inherits that contract verbatim on mobile too.
 
@@ -27,3 +27,5 @@
 **M12. Team logos — two contexts (app-wide).** On cap endcaps and light tint plates: RAW, never lightness-adjusted (contract v1.3e). Floating on charcoal (listings, odds slot): the derive + lightness-floor chain. Network marks use the locked per-network recipe table + frozen ink-area normalization in card contexts; the rail keeps derive_dark_mark.
 
 **M13. Everything else** — block anatomy, cap gradients (tint 0.86→0.58), centered names with rank + record run, hairlines, seam gradient, pills tray with drop priority, marquee gold plate, ALT pills, eligibility buckets, row order, legend glyphs — identical to the PC contract. No other mobile deviations exist.
+
+**M14. Overlapping programs split the difference (v1.1, Joe 2026-09-03).** Two programs on the same network row whose blocks overlap by **60 minutes or less** each give up half the overlap - the earlier one's end and the later one's start meet at its midpoint - so they share ONE row rather than forcing a second lane. Over 60 minutes generates the second row as before; three or more mutually overlapping programs fall back to lanes; and if splitting would leave either chip under 60 minutes of rendered width, that pair takes the second row too. **Presentational only** - the drawn block moves, the kickoff never does, and the detail panel still shows real times. Identical to the PC contract's v1.6.5 rule and pinned to it by `tests/fixtures/overlap_cases.json`, which both renderers' test suites read. On CFB 2026-09-05 this takes the phone grid from 38 lanes to 36, with 2 pairs split and the width guard never firing.
