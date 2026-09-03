@@ -9,7 +9,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { isEligible, eligibilityReason, outletsFor, offServiceSummary, countLine, shortOutlet } from '../lib/offservice.js';
+import { isEligible, eligibilityReason, outletsFor, offServiceSummary, countLine, shortOutlet, countSummary } from '../lib/offservice.js';
 
 const game = (id, eligible, outlets = [], extra = {}) => ({
   id,
@@ -134,8 +134,8 @@ test('E5: a market-pending game is NEVER counted inside "not on your services"',
   const s = offServiceSummary([pend('1', ['FOX']), pend('2', ['CBS']), game('3', false, ['NFL+'])]);
   assert.equal(s.offCount, 1, 'only the genuinely ineligible game counts as off');
   assert.equal(s.pendingCount, 2);
-  assert.match(s.lines.off, /^1 not on your services/);
-  assert.match(s.lines.pending, /^2 market pending/);
+  assert.equal(s.lines.off, '1 not on your services');
+  assert.equal(s.lines.pending, '2 market pending');
 });
 
 test('E5: an eligible row is never pending even if the flag is set', () => {
@@ -165,22 +165,28 @@ test('E5: the Sept 13 shape renders the three-way count', () => {
     ...Array.from({ length: 8 }, (_, i) => game(`o${i}`, false, [i < 5 ? 'FOX' : 'CBS'])),
   ];
   const s = offServiceSummary(games);
+  // ONE line now, and no outlet lists - each revealed row names its own network. Every COUNT stays,
+  // because D4 and E5 both turn on counts this line carries.
   assert.equal(s.lines.total, '13 games');
-  assert.equal(s.lines.on, '2 on your services');
-  assert.equal(s.lines.pending, '3 market pending · FOX, CBS — map publishes ~Wed');
-  assert.equal(s.lines.off, '8 not on your services · FOX, CBS');
+  assert.equal(s.lines.on, '2 available to you');
+  assert.equal(s.lines.pending, '3 market pending');
+  assert.equal(s.lines.off, '8 not on your services');
+  assert.equal(countSummary(s.lines),
+    '13 games · 2 available to you · 3 market pending · 8 not on your services');
 });
 
 test('E5: a state with no games gets no line rather than a zero', () => {
   const l = countLines(2, 2, [], []);
-  assert.equal(l.on, '2 on your services');
+  assert.equal(l.on, '2 available to you');
   assert.equal(l.pending, null, '"0 market pending" invites the reader to wonder what they missed');
   assert.equal(l.off, null);
 });
 
-test('E5: the sponsor trim still applies to the pending line', () => {
-  const s = offServiceSummary([pend('1', ['ABTV, presented by Pechanga Resort Casino'])]);
-  assert.equal(s.lines.pending, '1 market pending · ABTV — map publishes ~Wed');
+test('E5: the sponsor trim still applies wherever outlets ARE listed', () => {
+  // The summary line no longer lists outlets, so the trim's remaining job is countLine - the form
+  // that still names them. A network name containing a comma must not make the list miscount.
+  assert.equal(countLine(3, 3, ['ABTV, presented by Pechanga Resort Casino', 'FOX']),
+    '3 games · 3 not on your services · ABTV, FOX');
 });
 
 test('E5: pending games survive BOTH toggle states', () => {
@@ -199,7 +205,20 @@ test('E5: a band with nothing hidden still has a total and an on-services line',
   // a fully-available band renders no counts at all beside a neighbour showing four lines.
   const s = offServiceSummary([game('1', true, ['ESPN']), game('2', true, ['ABC'])]);
   assert.equal(s.lines.total, '2 games');
-  assert.equal(s.lines.on, '2 on your services');
+  assert.equal(s.lines.on, '2 available to you');
   assert.equal(s.lines.pending, null);
   assert.equal(s.lines.off, null);
+});
+
+test('5c: the whole count is ONE line, zero-count segments omitted', () => {
+  assert.equal(countSummary(countLines(68, 62, [{}, {}], new Array(4).fill({}))),
+    '68 games · 62 available to you · 2 market pending · 4 not on your services');
+  // nothing hidden -> no pending or off segment, and no "0"
+  assert.equal(countSummary(countLines(11, 11, [], [])), '11 games · 11 available to you');
+  assert.doesNotMatch(countSummary(countLines(11, 11, [], [])), /0 /);
+});
+
+test('5c: the summary names no outlets - that was the verbose part', () => {
+  const s = offServiceSummary([game('1', false, ['Cardinals.TV']), game('2', false, ['Chicago Sports Network'])]);
+  assert.doesNotMatch(countSummary(s.lines), /Cardinals|Chicago|and \d+ more/);
 });

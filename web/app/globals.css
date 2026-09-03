@@ -1448,3 +1448,22 @@ input:focus-visible {
   font-size: 12px;
   margin: 18px 0 0;
 }
+
+/* ---- prompt 22 chrome: chip marks, tighter banner gap, one-line count */
+
+/* 5a. League marks on the sport chips. _dark variants: these float on charcoal, and v1.3e reserves
+ * the raw art for cap endcaps and light tint plates (addendum M12). "All" stays text - it is the one
+ * chip that is not a league. */
+.chip-league { display: inline-flex; align-items: center; gap: 6px; }
+.chip-mark { height: 15px; width: auto; object-fit: contain; flex: 0 0 auto; }
+@media (max-width: 699px) { .chip-mark { height: 13px; } }
+
+/* 5b. The banner-to-date gap was 46px at 1440: .shell padding-top 24px + the h1's own 22px top
+ * margin, stacked. The h1 is the first thing under the chrome, so its top margin is pure duplication
+ * of the shell's padding - zeroed at the source rather than cancelled with a negative margin. */
+.shell { padding-top: 18px; }
+main > h1:first-child { margin-top: 0; }
+
+/* 5c. One line, so it lays out as a line rather than a stack. */
+.offsvc { flex-direction: row; align-items: baseline; flex-wrap: wrap; gap: 10px; }
+.offsvc-line { color: var(--dim); }

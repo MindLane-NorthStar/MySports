@@ -140,19 +140,34 @@ function outletClause(outlets, max) {
  * Returns { total, on, pending, off } of strings, with null for a state that has no games in it - a
  * zero line is noise, and "0 market pending" invites the reader to wonder what they missed.
  */
-export function countLines(total, onCount, pending, off, maxOutlets = 3) {
-  const pendingOutlets = outletClause(rankOutlets(pending), maxOutlets);
-  const offOutlets = outletClause(rankOutlets(off), maxOutlets);
+export function countLines(total, onCount, pending, off) {
   const pendingCount = (pending || []).length;
   const offCount = (off || []).length;
   return {
     total: `${total} ${total === 1 ? 'game' : 'games'}`,
-    on: onCount ? `${onCount} on your services` : null,
-    pending: pendingCount
-      ? `${pendingCount} market pending${pendingOutlets ? ` · ${pendingOutlets}` : ''} — map publishes ~Wed`
-      : null,
-    off: offCount ? `${offCount} not on your services${offOutlets ? ` · ${offOutlets}` : ''}` : null,
+    on: onCount ? `${onCount} available to you` : null,
+    pending: pendingCount ? `${pendingCount} market pending` : null,
+    off: offCount ? `${offCount} not on your services` : null,
   };
+}
+
+/**
+ * The whole count as ONE line:
+ *   '68 games - 62 available to you - 2 market pending - 4 not on your services'
+ * A segment with a count of zero is omitted rather than printed as '0'.
+ *
+ * JOE ASKED FOR "62 available to YOU" AND FOR THE BLOCK TO SHRINK. Taken literally that would
+ * delete the other two counts - and both are his own rulings from the same day. D4 requires the
+ * count of what he CANNOT watch ("without it the page lies by omission"); E5 requires the
+ * market-pending count, the thing that stopped September 13 claiming eleven watchable games were
+ * unavailable. So this keeps every fact and drops the genuinely verbose part - the outlet lists,
+ * which each revealed row already names for itself.
+ *
+ * FLAGGED FOR HIS VETO: if he wants the bare '62 available to you' with the other counts gone, that
+ * is his call to make with the trade-off named, not one an unattended run should make silently.
+ */
+export function countSummary(lines) {
+  return [lines.total, lines.on, lines.pending, lines.off].filter(Boolean).join(' · ');
 }
 
 /** '83 games - 20 not on your services - CBS Sports Network, FOX and 26 more'. Null when nothing is hidden. */

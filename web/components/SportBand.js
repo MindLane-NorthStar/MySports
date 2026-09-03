@@ -18,7 +18,7 @@
 
 import { useMemo, useState } from 'react';
 import MatchupCard from './MatchupCard.js';
-import { offServiceSummary } from '../lib/offservice.js';
+import { offServiceSummary, countSummary } from '../lib/offservice.js';
 import { favoriteIds, splitFavorites } from '../lib/favorites.js';
 import favoritesDoc from '../../data/favorites.json';
 
@@ -73,10 +73,10 @@ export default function SportBand({ sport, label, games, standings, showDay = fa
           showed its header and jumped straight to cards while MLB below it listed four lines. */}
       {games.length ? (
         <div className="offsvc">
-          <span className="offsvc-total">{summary.lines.total}</span>
-          {summary.lines.on ? <span>{summary.lines.on}</span> : null}
-          {summary.lines.pending ? <span className="offsvc-pending">{summary.lines.pending}</span> : null}
-          {summary.lines.off ? <span>{summary.lines.off}</span> : null}
+          {/* ONE line, not four. The outlet lists are gone - they were the verbose part, and every
+              revealed row already names its own network. Each COUNT stays, because D4 and E5 both
+              turn on counts this line carries. */}
+          <span className="offsvc-line">{countSummary(summary.lines)}</span>
           {summary.offCount ? (
             <button type="button" className="offsvc-toggle" onClick={() => setShowAll((v) => !v)}
                     aria-expanded={showAll}>
