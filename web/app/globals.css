@@ -1355,9 +1355,17 @@ input:focus-visible {
 /* ================================================================ MAIN BANNER (home page) */
 /* The banner BLEEDS: its background reaches the very top edge under the translucent status bar,
  * which is the entire point of black-translucent. Only its CONTENT is pushed clear, with padding
- * rather than a margin so the gradient still paints behind the clock and battery. */
+ * rather than a margin so the gradient still paints behind the clock and battery.
+ *
+ * THE INSET ABSORBS THE ARTWORK'S OWN HEADROOM RATHER THAN STACKING ON IT. Joe's report from the
+ * installed app was that the status bar is legible and the banner reaches the top edge, but there
+ * is more space above the banner than needed. Measured at 390px by scanning for the wordmark's
+ * first ink row: the scatter SVG already carries 18px of empty gradient above the glyphs, so a
+ * 47px iPhone inset put the wordmark 65px down. Subtracting that 18px lands it at 47px - flush
+ * with the bottom of the status bar, with the artwork's own breathing room reused instead of
+ * doubled. max() keeps it at 0 in any browser where the inset is 0, so nothing changes off-iOS. */
 .banner{position:relative;overflow:hidden;border-bottom:1px solid var(--line-soft);
-  padding-top:env(safe-area-inset-top, 0px);
+  padding-top:max(0px, calc(env(safe-area-inset-top, 0px) - 18px));
   background:radial-gradient(90% 130% at 50% 10%,#3B3B3B 0%,#262626 55%,#161616 100%)}
 .bn-pc{position:relative}
 .bn-pc .scatter{display:block;width:100%;max-width:1400px;height:auto;margin:0 auto}
