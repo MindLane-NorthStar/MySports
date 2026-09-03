@@ -12,9 +12,10 @@ import { Suspense } from 'react';
 import Listing from '../components/Listing.js';
 import { DatePicker, SportFilter } from '../components/Filters.js';
 import { gamesForDay, newestGridFor, gridIndex, standingsForGames } from '../lib/queries.js';
-import { longDay, todayET } from '../lib/format.js';
+import { longDay, todayET, etTime } from '../lib/format.js';
 import { SPORTS, SPORT_LABEL } from '../lib/config.js';
 import { RestError } from '../lib/rest.js';
+import { overlayForDay, applyOverlay } from '../lib/livescores.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,31 @@ async function ArchivedGrid({ sport, day }) {
   );
 }
 
+/**
+ * E4 "data as of". One quiet line that says WHICH time it is showing.
+ *
+ * It must never imply live data when the overlay was skipped or failed, so the three cases read
+ * differently on purpose: a past day says so, a live check that returned nothing says so, and only
+ * an overlay that actually produced rows claims a live time. Silence would be worse than either -
+ * a page that shows a score with no provenance invites the reader to assume it is current.
+ */
+function DataAsOf({ day, today, overlay }) {
+  const live = overlay?.fetchedAt && overlay.sports?.length;
+  const joined = Object.values(overlay?.stats || {}).reduce((n, s) => n + (s.joined || 0), 0);
+  let tail;
+  if (day !== today) {
+    tail = 'no live check — this is not today';
+  } else if (!overlay?.sports?.length) {
+    tail = 'no live check needed — nothing on this day is still to be played';
+  } else if (!live || joined === 0) {
+    tail = 'the live check returned nothing, so scores are the database’s';
+  } else {
+    // etTime() already appends " ET" - do not add a second one.
+    tail = `live scores checked ${etTime(overlay.fetchedAt)}, ${joined} game${joined === 1 ? '' : 's'} updated`;
+  }
+  return <p className="footnote asof">Schedule, networks and finals from the database · {tail}.</p>;
+}
+
 export default async function TodayPage({ searchParams }) {
   const params = await searchParams;
   const day = /^\d{4}-\d{2}-\d{2}$/.test(params?.day || '') ? params.day : todayET();
@@ -50,6 +76,13 @@ export default async function TodayPage({ searchParams }) {
   } catch (e) {
     error = e instanceof RestError ? `${e.status} — ${e.body}` : String(e);
   }
+
+  // E1/E4: the live overlay, merged AFTER the database read so the database stays authoritative for
+  // everything the overlay does not carry. overlayForDay never throws and never rejects - a provider
+  // failure returns an empty overlay and these lines simply pass the database rows through.
+  const today = todayET();
+  const overlay = await overlayForDay(day, games, { today });
+  games = applyOverlay(games, overlay.map);
 
   const hasGrid = grids.some((g) => g.sport === sport && g.game_date === day);
 
@@ -77,6 +110,8 @@ export default async function TodayPage({ searchParams }) {
       ) : null}
 
       <Listing games={games} standingsRows={standingsRows} day={day} sport={sport} grid />
+
+      {!error && games.length ? <DataAsOf day={day} today={today} overlay={overlay} /> : null}
 
       {hasGrid ? (
         <Suspense fallback={null}>

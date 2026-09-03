@@ -71,12 +71,41 @@ export function todayET() {
  * Scores are only ever shown for a game that has actually started (the loader guarantees the
  * columns are null otherwise, and this does not second-guess that).
  */
+/**
+ * E1: the live clock and period for a game in progress, in the sport's own idiom.
+ *
+ *   ESPN sports (nfl, cfb, nba)  Q2 7:12      period number + status.displayClock
+ *   nhl                          P3 04:11     period + time remaining
+ *   mlb                          B4           inning half + inning; baseball has no clock
+ *
+ * Returns null unless the overlay actually supplied a clock or period, so the pill falls back to
+ * the word it has always shown rather than rendering a half-empty label.
+ *
+ * NHL uses P for period rather than the T in the brief's example ON PURPOSE: T is already taken by
+ * baseball's Top-of-the-inning here, and one letter meaning two things across sports on the same
+ * page is exactly the kind of ambiguity a scannable label cannot afford.
+ */
+export function liveClockLabel(game) {
+  if (game.result_status !== 'in_progress') return null;
+  const period = game.live_period;
+  const clock = game.live_clock;
+  if (period === null || period === undefined) return null;
+  if (game.sport === 'mlb') {
+    const half = typeof clock === 'string' && clock ? (clock[0].toUpperCase() === 'B' ? 'B' : 'T') : '';
+    return half ? `${half}${period}` : null;
+  }
+  const label = `${game.sport === 'nhl' ? 'P' : 'Q'}${period}`;
+  return clock ? `${label} ${clock}` : label;
+}
+
 export function resultLabel(game) {
   switch (game.result_status) {
     case 'final':
       return 'Final';
     case 'in_progress':
-      return 'Live';
+      // E1: the live clock REPLACES the word "Live" in the same pill - same element, same tone, no
+      // new anatomy. Falls back to "Live" whenever the overlay carried no clock.
+      return liveClockLabel(game) || 'Live';
     case 'postponed':
       return 'Postponed';
     case 'cancelled':

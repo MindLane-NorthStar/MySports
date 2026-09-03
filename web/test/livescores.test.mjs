@@ -249,3 +249,35 @@ test('the fetch is cached for 60 seconds so reloads share one upstream call', as
   });
   assert.deepEqual(seen, { revalidate: 60 });
 });
+
+// ---------------------------------------------------------------- E1: the pill's text substitution
+// format.js is plain JS with no JSX, so the live-label logic is directly testable even on a machine
+// where `next build` cannot run (Windows Application Control blocks the SWC binary here).
+import { resultLabel, liveClockLabel } from '../lib/format.js';
+
+test('E1: an ESPN sport shows quarter and clock in place of the word Live', () => {
+  const g = { sport: 'nfl', result_status: 'in_progress', live_period: 2, live_clock: '7:12' };
+  assert.equal(liveClockLabel(g), 'Q2 7:12');
+  assert.equal(resultLabel(g), 'Q2 7:12', 'the pill substitutes text; it does not gain an element');
+});
+
+test('E1: nhl uses P for period, not T, because T is baseball Top', () => {
+  const g = { sport: 'nhl', result_status: 'in_progress', live_period: 3, live_clock: '04:11' };
+  assert.equal(resultLabel(g), 'P3 04:11');
+});
+
+test('E1: mlb shows inning half and inning, with no clock', () => {
+  assert.equal(resultLabel({ sport: 'mlb', result_status: 'in_progress', live_period: 4, live_clock: 'Bottom' }), 'B4');
+  assert.equal(resultLabel({ sport: 'mlb', result_status: 'in_progress', live_period: 7, live_clock: 'Top' }), 'T7');
+});
+
+test('E1: falls back to the word Live when the overlay carried no clock', () => {
+  assert.equal(resultLabel({ sport: 'nfl', result_status: 'in_progress' }), 'Live');
+  assert.equal(resultLabel({ sport: 'nfl', result_status: 'in_progress', live_period: null }), 'Live');
+});
+
+test('E1: final and scheduled are unchanged', () => {
+  assert.equal(resultLabel({ sport: 'nfl', result_status: 'final', live_period: 4, live_clock: '0:00' }), 'Final');
+  assert.equal(resultLabel({ sport: 'nfl', result_status: 'scheduled' }), null);
+  assert.equal(resultLabel({ sport: 'mlb', result_status: 'postponed' }), 'Postponed');
+});
