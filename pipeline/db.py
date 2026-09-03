@@ -69,6 +69,13 @@ class DB:
             self.conn = psycopg.connect(dsn, autocommit=False, application_name="mysports-pipeline")
             with self.conn.cursor() as cur:
                 cur.execute("set search_path = mysports")
+            # Commit the search_path immediately, because SET IS TRANSACTIONAL: a later rollback()
+            # undoes it and every unqualified table name in the session stops resolving - the error
+            # then reads "relation \"programs\" does not exist", which looks like a missing migration
+            # rather than a lost setting. That is the failure mode that would silently disarm the
+            # rollback-then-mark-failed path in load.py's error handler, so the setting is made
+            # durable here once instead of being re-applied at each call site.
+            self.conn.commit()
 
     # -- core
     def run(self, sql: str, params: tuple | None = None, tag: str | None = None) -> None:

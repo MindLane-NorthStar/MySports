@@ -26,6 +26,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from pipeline.db import DB, ROOT, slug
+from pipeline.programs import sync_shadow_program
 from adapters.common import normalize_outlet   # alias table: CBSSN -> CBS Sports Network, CW -> The CW, USA Net -> USA Network ...
 
 ET = ZoneInfo("America/New_York")
@@ -59,7 +60,7 @@ def viewing_day(dt_utc: datetime, cutover_hour: int = 3):
 # every counter load_fixture reports; the mysports-db skip path returns this zeroed so TOTAL still prints in full
 ZERO_COUNTS = {"games": 0, "broadcasts": 0, "odds": 0, "records": 0, "records_on_game": 0,
                "probables": 0, "observations": 0, "observations_seen": 0, "observations_closed": 0,
-               "team_refs": 0, "venues": 0}
+               "team_refs": 0, "venues": 0, "programs": 0}
 # Joe 2026-09-01: ESPN box scores for cfb/nfl/nba (our ids ARE ESPN ids), league-native for nhl/mlb.
 # Raw URLs are never displayed - the completed event card is the click target.
 _BOXSCORE = {
@@ -174,6 +175,12 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
         if venue_id_sub:
             db.run("update games set venue_id = (select id from venues where name = %s and city = '' limit 1) where id = %s", (venue_id_sub, gid), tag="games.venue")
         counts["games"] += 1
+        # Spec v0.5 P.1: the game's shadow program row, maintained in the same load that upserts the
+        # game (loader-written, reconciler-invisible - the 0007/0008 doctrine). AFTER the venue link
+        # above, so the shadow copies a venue_id that is already set rather than one load behind.
+        # Idempotent: pipeline/programs.py writes nothing when nothing changed.
+        sync_shadow_program(db, gid, away.get("team"), home.get("team"), sport, start)
+        counts["programs"] += 1
         _st = g.get("status")
         if _st is not None and not isinstance(_st, str):   # an adapter sending the wrong type must not
             print(f"  warn: {gid} status is {type(_st).__name__}, not str - result_status left null")
