@@ -1060,6 +1060,9 @@ input:focus-visible {
 }
 
 /* M9: footer pills wrap; the omitted pill is never dropped */
+/* 05 section 9: the grid's own note for games it has no network row to place. Quieter than a pill -
+ * it is a statement about what is missing, not a label on something present. */
+.mgrid-note{margin:6px 0 0;color:var(--faint);font-size:12px}
 .mgrid-foot {
   display: flex;
   flex-wrap: wrap;

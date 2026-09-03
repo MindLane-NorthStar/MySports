@@ -32,6 +32,10 @@ import { etTime } from '../lib/format.js';
 import { cardName, cardBroadcast } from './MatchupCard.js';
 import { recordText, standingFor } from '../lib/standings.js';
 import { railLabel } from '../lib/raillabel.js';
+// 05 section 9: the SAME predicate the listings use. The grid must not re-derive it - two
+// definitions of "nobody has announced this" would drift, and the band's count line and the
+// grid's note would then disagree about the same games on the same screen.
+import { isNetworkTbd } from '../lib/offservice.js';
 
 const SCALE = 0.8; // M1: all grid content renders at 80% of contract design size
 const SEAM_PX = 30; // the dashed cut occupies this much of the axis (M3)
@@ -157,7 +161,17 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
       r.lanes = packLanes(r.items);
     }
 
-    return { rows, scale, ticks, cuts, pxPerMin, tbd, blockMins: mins, widest, guardHits };
+    // The tbd bucket has always held two different problems: a game whose KICKOFF is unknown and a
+    // game whose NETWORK is unknown. Both are unplaceable, but only one of them is the
+    // announcement horizon, and the footer was reporting them as one number - "46 kickoff /
+    // network TBA" on 2026-11-14, when 45 of those had a known kickoff and no broadcaster at all.
+    // Partitioned here so the grid can name each in its own words. Every game stays in `tbd` and
+    // still gets its M7 card; this splits the COUNT, not the list.
+    const netTbd = tbd.filter((g) => isNetworkTbd(g));
+    const kickTbd = tbd.filter((g) => !isNetworkTbd(g));
+
+    return { rows, scale, ticks, cuts, pxPerMin, tbd, netTbd, kickTbd,
+             blockMins: mins, widest, guardHits };
   }, [games, sport, measure, ready, standings]);
 
   // M6: pinch-to-zoom over the canvas; the rail is sticky inside it and so scales with it.
@@ -192,7 +206,7 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
     };
   }, [zoom]);
 
-  const { rows, scale, ticks, cuts, tbd } = model;
+  const { rows, scale, ticks, cuts, tbd, netTbd, kickTbd } = model;
   const blockH = BLOCK_H * SCALE;
   const trayH = TRAY_H * SCALE;
   const laneH = blockH + trayH + LANE_GAP * SCALE;
@@ -338,9 +352,22 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
       {/* M9: footer pills wrap; the omitted pill is never dropped */}
       <div className="mgrid-foot">
         <span className="pill">{onGrid} on the grid</span>
-        {tbd.length ? <span className="pill">{tbd.length} kickoff / network TBA</span> : null}
+        {kickTbd.length ? <span className="pill">{kickTbd.length} kickoff TBA</span> : null}
         <span className="pill">every game is kept - nothing is deleted</span>
       </div>
+
+      {/* 05 section 9, the grid consequence. A network-TBD game CANNOT take a grid position - the
+          grid is organised into network rows and there is no network to put it on - so the count
+          line can say "45 network TBD" while the lanes hold five. One quiet line in the grid's own
+          voice closes that gap. "on the grid" means what the pill beside it already means: placed
+          in a lane. The games themselves are above, as M7 cards, and still tappable.
+          No placeholder row and no invented "TBD" network lane - a grid row is a channel you can
+          tune to, and inventing one would break that contract. Omitted when the count is zero. */}
+      {netTbd.length ? (
+        <p className="mgrid-note">
+          {netTbd.length} {netTbd.length === 1 ? 'game' : 'games'} not on the grid · network TBD
+        </p>
+      ) : null}
     </section>
   );
 }
