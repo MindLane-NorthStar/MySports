@@ -1,14 +1,16 @@
-# MySports — Handoff Status (post-prompt-24, 2026-09-03)
+# MySports — Handoff Status (post-prompt-26, 2026-09-03)
 
 **This file now lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
 Read first for any session picking up MySports. Memory `/areas/mysports.md` + `/areas/mysports-build-log.md` + `/areas/mysports-ui-repair.md` carry the compressed truth. Companions: **`docs/enhancement-register.md`** — the repo copy is the source (prompt 26); §1–§13 are still only in the Claude project and Joe is supplying them, so check there before re-raising ANY decision, **`docs/feature-study/05-home-page-decisions.md` (D1–D6, the D3 amendment, deployment facts, E5, and §9 NETWORK TBD — BINDING)**, `docs/rendering-contract.md` v1.6.5, `docs/rendering-contract-mobile.md` (Addendum v1.1), `claude/program-card-design-v1.md`.
 
 ## Repo state
-main, HEAD **10efae7**. **200 Python tests OK (skipped=1)**, **138/138 JS unit tests**, smoke **30/30**, qa-shots behavioural assertions **8/8**. Tree clean apart from always-untracked `assets/` and `artifacts/`.
+main, HEAD **e9100cb**. **200 Python tests OK (skipped=1)**, **138/138 JS unit tests**, smoke **30/30**, qa-shots behavioural assertions **8/8**. Tree clean apart from always-untracked `assets/` and `artifacts/`.
 
 **Smoke 29/30 is CLOSED.** The `generated_grids` bare-key failure was fixed in prompt 22 by standardising on bare keys with consumers joining `ASSET_BASE_URL`.
 
+Prompt 26: `ab291b5` count line / mobile order / chip inversion ruled → `ac5b8c9` active chip inverted (charcoal + gold border) → `ceb3fdf` count line becomes airing/TBD/unavailable → `d2777fa` WWE + UFC empty copy → `ba05819` iOS standalone (black-translucent + safe-area) → `e9100cb` Weeks chips shortened, chip marks 20px.
+Prompt 25: `990518f` docs + rule 22 → `2e41a51` chip row scrolls, marks only, four new sports → `4d2012e` a11y (aria-pressed, group names, 44px targets) → `8eb324d` --faint lifted → `a5c588f` week control, toggle count, duplicate sentence.
 Prompt 24: `dff0725` docs + NETWORK TBD ruled (05 §9) → `f15449f` line-ending normalisation → `2024c21` reconciler: no out-of-market conclusion from an empty broadcast list (78 → 0) → `a1f7364` network TBD is its own state, never off-service, never hidden → `10efae7` grid note for games with no network to place.
 Prompt 23: `a382569` bootstrap_season loads games → `015da43` overlap rule both renderers → `7261189` week dropdown + current-week default → `b44893e` PostgREST row-cap fix.
 Prompt 22: `f42c364` four-column card restored → `234079c` Guardians TV mark → `24f9de8` desktop PC grid + bare keys → `8f64103` colour-band guard (no colour bug found) → `e826d23` chips, banner gap, one-line count.
