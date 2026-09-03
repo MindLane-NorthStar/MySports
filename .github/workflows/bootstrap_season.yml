@@ -5,10 +5,15 @@ on:
     inputs:
       season: { description: "Season start year", required: true, default: "2026" }
       sports: { description: "Comma list: cfb,nfl,nhl,nba,mlb", required: true, default: "cfb,nfl,nhl,nba,mlb" }
+      cfb_weeks: { description: "CFB regular-season week range, e.g. 1-15", required: false, default: "1-15" }
+      nfl_weeks: { description: "NFL regular-season week range, e.g. 1-18", required: false, default: "1-18" }
 jobs:
   bootstrap:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Raised from 30: reconcile --all now walks a whole season (~1,200 games) rather than the 375 that
+    # existed when this workflow only loaded teams. If it still times out, split by sport - reconciling
+    # LESS is not the answer, because a half-reconciled season is worse than a slow one.
+    timeout-minutes: 90
     env:
       CFBD_API_KEY: ${{ secrets.CFBD_API_KEY }}
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
@@ -38,6 +43,39 @@ jobs:
       - run: python scripts/sync_assets.py --push
       - name: Reference data -> mysports.* (idempotent)
         run: python -m pipeline.bootstrap
+      # THE STEP THIS WORKFLOW WAS MISSING. It fetched teams and logos and then loaded whatever
+      # fixtures happened to be on disk, which is exactly why only CFB weeks 1 and 8 and NFL week 1
+      # ever existed. Both adapters already take --week; nothing but this loop was needed.
+      #
+      # A WEEK THAT RETURNS NO GAMES IS LOGGED AND SKIPPED, NEVER FATAL. The range is a guess - a
+      # season's real week count moves with bowl scheduling and flex - so the loop has to survive
+      # overshooting it. `|| true` on the fetch, and the run continues.
+      - name: Fetch every requested week's games (regular season only)
+        run: |
+          IFS=, read -ra SP <<< "${{ github.event.inputs.sports }}"
+          season="${{ github.event.inputs.season }}"
+          expand() {  # "1-15" or "1,3,5" -> a space-separated list
+            local spec="$1"
+            if [[ "$spec" == *-* ]]; then seq "${spec%%-*}" "${spec##*-}"; else echo "$spec" | tr ',' ' '; fi
+          }
+          for S in "${SP[@]}"; do
+            case $S in
+              cfb)
+                for W in $(expand "${{ github.event.inputs.cfb_weeks }}"); do
+                  echo "::group::cfb week $W"
+                  python -m adapters.cfbd --year "$season" --week "$W" --season-type regular                     || echo "cfb week $W: no games or fetch failed - skipped"
+                  echo "::endgroup::"
+                done ;;
+              nfl)
+                for W in $(expand "${{ github.event.inputs.nfl_weeks }}"); do
+                  echo "::group::nfl week $W"
+                  python -m adapters.espn --league nfl --season "$season" --week "$W"                     || echo "nfl week $W: no games or fetch failed - skipped"
+                  echo "::endgroup::"
+                done ;;
+              *) echo "$S: no week loop (date-driven sport); teams/logos only" ;;
+            esac
+          done
+
       - name: Load every fixture on disk (evidence only)
         run: python -m pipeline.load --all --workflow bootstrap_season
       - name: Reconcile canonical facts (Milestone 2 — every game)
