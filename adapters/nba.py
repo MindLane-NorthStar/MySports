@@ -149,6 +149,12 @@ def build_from_espn(raw: dict[str, Any], root: Path, *, season: int, day_filter:
             if sim and not any(m["outlet"] == sim["outlet"] for m in media):
                 media.append(sim)
         recs = {k: r.get("summary") for k, c in sides.items() for r in (c.get("records") or []) if r.get("type") == "total"}
+        # GAME-ID DIVERGENCE (see adapters/nba.py's league-file path below, and
+        # tests/test_nba_game_ids.py). This path mints nba-{espnEventId} - the 9-digit ESPN id. THIS
+        # IS THE FORM THE DATABASE HOLDS and the form web/lib/livescores.js joins its live-score
+        # overlay on. The league-file path uses NBA's own gameId instead; the two cannot be
+        # reconciled because neither payload carries the other's id. Change the loader's source and
+        # every NBA overlay join fails SILENTLY.
         games.append({"id": f"nba-{ev.get('id')}", "sport": "nba", "season": season, "week": None,
                       "startDate": start, "startTimeET": et_display(start), "startTimeTBD": tbd,
                       "neutralSite": bool(comp.get("neutralSite")), "venue": (comp.get("venue") or {}).get("fullName"),
@@ -217,6 +223,11 @@ def build_from_league(raw: dict[str, Any], root: Path, *, season: int, day_filte
                 sim = _simulcast_row(s, carriage, other["abbreviation"], start, tbd, available, unavailable)
                 if sim and not any(m["outlet"] == sim["outlet"] for m in media):
                     media.append(sim)
+            # GAME-ID DIVERGENCE (see the ESPN path above, and tests/test_nba_game_ids.py). This
+            # path mints nba-{nbaGameId} - the league's own 10-digit id, e.g. nba-0022600001 - which
+            # is NOT what the database holds and NOT what web/lib/livescores.js joins on. Loading NBA
+            # from this path would leave every NBA card without a live score and raise no error at
+            # all. If this ever becomes the loader's source, the overlay's id mapping must move with it.
             games.append({"id": f"nba-{g.get('gameId')}", "sport": "nba", "season": season, "week": g.get("weekNumber"),
                           "startDate": start, "startTimeET": et_display(start), "startTimeTBD": tbd,
                           "neutralSite": bool(g.get("neutralSite")) if g.get("neutralSite") is not None else False,
