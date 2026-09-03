@@ -64,7 +64,16 @@
 
   --ink: #f2f2f0;
   --dim: #9aa0a8;
-  --faint: #6a7078;
+  /* Lifted from #6a7078 in prompt 25. The old value failed WCAG AA at every background in
+     the app and failed even the 3:1 non-text floor on the card top (2.43:1), while carrying
+     16 sites including the MLB probable-pitcher line and .mgrid-note - the grid's only
+     explanation of what happened to network-TBD games. Now 3.63:1 on the card top, 4.82:1
+     on the card bottom, 5.14:1 on charcoal.
+     WHY NOT FURTHER: true AA on the card top needs #989fa8, which is 4.55:1 there against
+     --dim's own 4.62:1 - the two tokens become the same colour and the third step dies.
+     --dim is only 4.62:1 on that ground itself, so there is no room for a step above it
+     without moving --dim or lightening the gradient's top end. Both are Joe's call. */
+  --faint: #868d96;
 
   --gold: #f0c850;
   --gold-dim: #8a7530;
