@@ -263,3 +263,8 @@ inside each band.
 changes which games each count line covers, and prompt 26 §10 is already changing what that line
 says; landing both in one unattended run means a mid-run stop leaves it unclear whether a wrong
 number came from the merge or from the reorder.
+**Scope clarification (added at implementation).** §11 governs the **Today page (`/`)** only. `/weeks`
+and `/history` group rows by day, and hoisting a favourite out of its day would destroy the thing
+those pages exist to show — a calendar. They keep the in-band float they have today, which on those
+pages floats within a day rather than within a sport. D6's float is therefore retired on `/` and
+retained on `/weeks` and `/history`.
