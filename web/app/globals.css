@@ -1467,3 +1467,28 @@ main > h1:first-child { margin-top: 0; }
 /* 5c. One line, so it lays out as a line rather than a stack. */
 .offsvc { flex-direction: row; align-items: baseline; flex-wrap: wrap; gap: 10px; }
 .offsvc-line { color: var(--dim); }
+
+/* ---- week select (prompt 23)
+ * A real <select> wearing the chip's visual language: the chip is the wrapper, the select is the
+ * control. One line at every width, where a chip per week became a wrapped block of 33 by mid-season,
+ * and on a phone it opens the platform picker. */
+.chip-select { padding: 0; display: inline-flex; align-items: center; overflow: hidden; }
+.chip-select select {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  padding: 6px 26px 6px 12px;
+  cursor: pointer;
+  max-width: 100%;
+}
+.chip-select select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.chip-select select option,
+.chip-select select optgroup { color: #111; background: #fff; }
+.chip-select::after {
+  content: '';
+  width: 0; height: 0; margin-left: -18px; margin-right: 8px; pointer-events: none;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+}

@@ -125,3 +125,42 @@ export function daySpan(start, end) {
   for (let d = start; d <= end; d = addDays(d, 1)) out.push(d);
   return out;
 }
+
+/**
+ * Which week the Weeks page should land on when the URL carries no `?w=`.
+ *
+ * It used to default to `all[0]`, which is why the page opened on CFB Week 1 in September - the
+ * first entry of a season-ordered list is the season's beginning, not its present.
+ *
+ * The order is deliberate, and the second rule is the one that matters:
+ *
+ *   1. the entry whose span CONTAINS today's ET viewing day;
+ *   2. if several do, the one whose START IS LATEST. Season weeks genuinely overlap - CFB week 1
+ *      spans Aug 29 to Sep 7 while NFL week 1 begins inside it - and on such a day the week that
+ *      began most recently is the one a viewer means by "this week";
+ *   3. if none contains today, the NEXT UPCOMING - in the off-season the useful answer is what is
+ *      about to happen, not what happened in January;
+ *   4. if none is upcoming, the MOST RECENT PAST.
+ *
+ * Pure: `today` is passed in, never read from the clock here, so it is testable and so the server
+ * and client cannot disagree about what day it is.
+ *
+ * @param {Array<{key:string,start:string,end:string}>} weeks
+ * @param {string} today  'YYYY-MM-DD' ET viewing day
+ * @returns {string|null} the key to select, or null when there are no weeks
+ */
+export function currentWeekKey(weeks, today) {
+  const all = Array.isArray(weeks) ? weeks.filter((w) => w && w.key) : [];
+  if (!all.length) return null;
+  if (!today) return all[0].key;
+
+  const containing = all.filter((w) => w.start <= today && today <= w.end);
+  if (containing.length) {
+    return containing.reduce((best, w) => (w.start > best.start ? w : best)).key;
+  }
+  const upcoming = all.filter((w) => w.start > today);
+  if (upcoming.length) {
+    return upcoming.reduce((best, w) => (w.start < best.start ? w : best)).key;
+  }
+  return all.reduce((best, w) => (w.start > best.start ? w : best)).key;
+}

@@ -9,14 +9,15 @@
 
 import Link from 'next/link';
 import Listing from '../../components/Listing.js';
+import WeekSelect from '../../components/WeekSelect.js';
 import {
   weekIndexRows,
   gamesForRange,
   gamesForSeasonWeek,
   standingsForGames,
 } from '../../lib/queries.js';
-import { calendarWeeksFrom, seasonWeeksFrom, daySpan, isoWeekNumber } from '../../lib/weeks.js';
-import { daySpanLabel, shortDay } from '../../lib/format.js';
+import { calendarWeeksFrom, seasonWeeksFrom, daySpan, isoWeekNumber, currentWeekKey } from '../../lib/weeks.js';
+import { daySpanLabel, shortDay, todayET } from '../../lib/format.js';
 import { SPORT_LABEL } from '../../lib/config.js';
 import { RestError } from '../../lib/rest.js';
 
@@ -51,39 +52,32 @@ function WeekDays({ days, grouped, standingsRows }) {
 /**
  * ONE week at a time. The locked card is a three-line card, so every loaded week at once would be a
  * page tens of thousands of pixels tall - past the point where anyone scrolls it, and past what a
- * browser will even rasterize. The week MODEL is unchanged; only how many of them are on screen is.
+ * browser will even rasterize. The week MODEL is unchanged; only how many are on screen is.
+ *
+ * The picker itself is now a grouped <select> (components/WeekSelect.js) rather than a chip per week:
+ * a season holds 33 of them once loaded, and 33 chips is a wrapped block, not a control.
  */
-function WeekPicker({ weeks, view, selected, label }) {
-  if (weeks.length < 2) return null;
-  return (
-    <div className="controls">
-      <span className="control-label">Week</span>
-      <div className="chiprow">
-        {weeks.map((w) => (
-          <Link
-            key={w.key}
-            className="chip"
-            data-active={w.key === selected}
-            href={`/weeks?view=${view}&w=${encodeURIComponent(w.key)}`}
-          >
-            {label(w)}
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
+
+// SPORT_LABEL is the display name ("College Football"), and the old label did .split(' ')[0] on it -
+// which is exactly why the picker read "College wk 1". The week label wants the short sport tag.
+const SPORT_TAG = { cfb: 'CFB', nfl: 'NFL', nba: 'NBA', nhl: 'NHL', mlb: 'MLB' };
 
 async function CalendarWeeks({ index, pick }) {
   const all = calendarWeeksFrom(index).map((w) => ({ ...w, key: w.start }));
   if (!all.length) return <p className="empty">No games loaded.</p>;
-  const selected = all.find((w) => w.key === pick) || all[0];
+  // Default to the CURRENT week, not all[0] - see currentWeekKey. Applied to the calendar view as
+  // well as the season one: leaving one landing on today and the other on January reads as a bug.
+  const selected = all.find((w) => w.key === pick) || all.find((w) => w.key === currentWeekKey(all, todayET())) || all[0];
   const weeks = [selected];
   const loaded = await Promise.all(weeks.map((w) => gamesForRange(w.start, w.end)));
   const standings = await Promise.all(loaded.map((g) => standingsForGames(g)));
   return (
     <>
-      <WeekPicker weeks={all} view="calendar" selected={selected.key} label={(w) => `Wk ${isoWeekNumber(w.start)}`} />
+      <WeekSelect
+        view="calendar"
+        selected={selected.key}
+        options={all.map((w) => ({ key: w.key, label: `Week ${isoWeekNumber(w.start)} · ${daySpanLabel(w.start, w.end)}` }))}
+      />
       {weeks.map((w, i) => {
         const grouped = byDay(loaded[i], w.days);
         return (
@@ -91,10 +85,6 @@ async function CalendarWeeks({ index, pick }) {
             <div className="weekblock-head">
               <h3>Week {isoWeekNumber(w.start)}</h3>
               <span className="span">{daySpanLabel(w.start, w.end)}</span>
-              <span className="span">
-                {w.count} {w.count === 1 ? 'game' : 'games'} ·{' '}
-                {w.sports.map((s) => SPORT_LABEL[s] || s.toUpperCase()).join(', ')}
-              </span>
             </div>
             <WeekDays days={w.days} grouped={grouped} standingsRows={standings[i]} />
           </section>
@@ -107,17 +97,22 @@ async function CalendarWeeks({ index, pick }) {
 async function SeasonWeeks({ index, pick }) {
   const all = seasonWeeksFrom(index).map((w) => ({ ...w, key: `${w.sport}-${w.season}-${w.week}` }));
   if (!all.length) return <p className="empty">No NFL or college football weeks loaded.</p>;
-  const selected = all.find((w) => w.key === pick) || all[0];
+  // Default to the CURRENT week, not all[0] - see currentWeekKey. Applied to the calendar view as
+  // well as the season one: leaving one landing on today and the other on January reads as a bug.
+  const selected = all.find((w) => w.key === pick) || all.find((w) => w.key === currentWeekKey(all, todayET())) || all[0];
   const weeks = [selected];
   const loaded = await Promise.all(weeks.map((w) => gamesForSeasonWeek(w.sport, w.season, w.week)));
   const standings = await Promise.all(loaded.map((g) => standingsForGames(g)));
   return (
     <>
-      <WeekPicker
-        weeks={all}
+      <WeekSelect
         view="season"
         selected={selected.key}
-        label={(w) => `${(SPORT_LABEL[w.sport] || w.sport).split(' ')[0]} wk ${w.week}`}
+        options={all.map((w) => ({
+          key: w.key,
+          group: SPORT_LABEL[w.sport] || w.sport.toUpperCase(),
+          label: `${SPORT_TAG[w.sport] || w.sport.toUpperCase()} Week ${w.week} · ${daySpanLabel(w.start, w.end)}`,
+        }))}
       />
       {weeks.map((w, i) => {
         const days = daySpan(w.start, w.end);
@@ -128,12 +123,7 @@ async function SeasonWeeks({ index, pick }) {
               <h3>
                 {SPORT_LABEL[w.sport] || w.sport.toUpperCase()} · Week {w.week}
               </h3>
-              <span className="span">
-                {daySpanLabel(w.start, w.end)} <em>(derived from the games)</em>
-              </span>
-              <span className="span">
-                {w.count} {w.count === 1 ? 'game' : 'games'} · {days.length} days
-              </span>
+              <span className="span">{daySpanLabel(w.start, w.end)}</span>
             </div>
             <WeekDays days={days} grouped={grouped} standingsRows={standings[i]} />
           </section>
@@ -159,12 +149,6 @@ export default async function WeeksPage({ searchParams }) {
   return (
     <main>
       <h1>Weeks</h1>
-      <p className="sub">
-        Two different weeks, kept apart on purpose: the calendar week is ISO Monday–Sunday over the
-        viewing day; the season week is the provider’s own label, and its span is derived from the
-        games that carry it.
-      </p>
-
       <div className="controls">
         <span className="control-label">View</span>
         <div className="chiprow">
