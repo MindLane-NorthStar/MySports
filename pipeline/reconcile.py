@@ -258,7 +258,15 @@ def reconcile_game(db: DB, game: dict[str, Any], rows: list[dict[str, Any]], bcs
     elif state == "authority_conflict":
         reason = "authority conflict - not placed"
     elif not active:
-        reason = "no telecast observed" if sport == "cfb" else "no national telecast - out of market"
+        # NETWORK TBD (05 section 9). This branch fires only when there are ZERO active broadcast
+        # rows, so there is nothing here to draw a market conclusion FROM - and the old non-cfb arm
+        # drew one anyway, on 78 rows: nfl 24 + nhl 38 + nba 16, every non-cfb bare game. NFL week 18
+        # is 100% bare because the league flex-schedules it, so the app was stating Joe could not
+        # receive a full slate that nobody has assigned yet. One honest reason for every sport,
+        # matching cfb's existing string rather than inventing a fifth. The web layer derives the
+        # network-TBD state from the emptiness itself and must not have to compensate for a wrong
+        # string written here.
+        reason = "no telecast observed"
     else:
         reason = "not receivable: " + ", ".join(f"{b.get('service_id')}={b.get('access_status')}" for b in active)
     # E5 market-pending. Computed HERE, beside eligibility, because it is the same decision seen from
