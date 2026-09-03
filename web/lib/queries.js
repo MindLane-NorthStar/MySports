@@ -39,6 +39,10 @@ const GAME_SELECT = [
   'away:teams!games_away_team_id_fkey(id,canonical_name,short_name,display_name,abbreviation,primary_color,secondary_color,conference:conferences(name))',
   'broadcasts:game_broadcasts(service_id,delivery_surface,feed_side,is_primary,access_status,carriage_certainty,active,label,network:networks_services(id,canonical_name,type,default_sort_order))',
   'odds:game_odds(provider,spread,total,home_moneyline,away_moneyline,fetched_at)',
+  // D4/E3: the reconciler's OWN eligibility verdict, embedded rather than re-derived. A second
+  // rule in JS would drift from pipeline/reconcile.py and from the renderer's "not on your
+  // services" count. Embedded on the FK, so this costs no extra round trip.
+  'eligibility:viewer_game_eligibility(eligible,reason,eligible_via_network_id)',
 ].join(',');
 
 const ORDER = 'order=canonical_kickoff_at_utc.asc.nullslast,id.asc';

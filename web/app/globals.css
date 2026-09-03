@@ -1362,3 +1362,16 @@ input:focus-visible {
 @media (max-width:699px){
   .hn-nav a{font-size:14px;padding:12px 14px 9px;letter-spacing:.06em}
 }
+
+/* ---- off-service games (D4/E3, prompt 20)
+ * The count line is deliberately quiet but always present: hiding games and saying nothing would be
+ * a page that lies by omission. The dim lives on a WRAPPER around the card, never on the card - the
+ * listings card is locked (contract v1.6.4 + Mobile Grid Addendum v1.0). */
+.offsvc{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+  color:var(--faint);font-size:12px;margin:-2px 0 10px}
+.offsvc-toggle{background:none;border:0;padding:0;cursor:pointer;
+  font-family:var(--body);font-size:12px;color:var(--gold);text-decoration:underline;
+  text-underline-offset:2px}
+.offsvc-toggle:hover{color:var(--ink)}
+.offsvc-row{opacity:.45;filter:saturate(.7)}
+.offsvc-row:hover{opacity:.72}

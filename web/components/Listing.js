@@ -13,6 +13,7 @@ import MobileGrid from './MobileGrid.js';
 import GameDetail from './GameDetail.js';
 import { indexStandings } from '../lib/standings.js';
 import { REFRESH_SECONDS } from '../lib/config.js';
+import { offServiceSummary } from '../lib/offservice.js';
 
 function anyInFlight(games) {
   const now = Date.now();
@@ -35,6 +36,17 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
     return () => clearInterval(id);
   }, [games, router]);
 
+  // D4/E3. Off-service games are hidden by DEFAULT but never silently: the count line always states
+  // the totals and names where the missed games went, and the toggle reveals them dimmed. Applying
+  // this in Listing rather than per page covers Today, /weeks and /history with one implementation.
+  const [showAll, setShowAll] = useState(false);
+  const offService = useMemo(() => offServiceSummary(games), [games]);
+  // Revealing keeps CHRONOLOGICAL order by rendering the original array, not on-then-off. Concatenating
+  // the two groups would shunt every off-service game to the bottom and stop the day reading as a
+  // timeline, which is the one thing a listing has to keep doing.
+  const shown = showAll ? games : offService.on;
+  const offIds = useMemo(() => new Set(offService.off.map((g) => g.id)), [offService]);
+
   const showGrid = Boolean(grid && sport && games.length);
   const gridId = `grid-${sport || 'all'}-${day || ''}`;
 
@@ -51,15 +63,29 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
         </div>
       ) : null}
 
+      {offService.line ? (
+        <p className="offsvc">
+          <span>{offService.line}</span>
+          <button type="button" className="offsvc-toggle" onClick={() => setShowAll((v) => !v)}
+                  aria-expanded={showAll}>
+            {showAll ? 'Hide them' : 'Show all'}
+          </button>
+        </p>
+      ) : null}
+
       <div className="cards">
-        {games.map((g) => (
-          <MatchupCard key={g.id} game={g} standings={standings} showDay={showDay} onOpen={setOpen} />
+        {shown.map((g) => (
+          // The dim lives on a WRAPPER, never on the card: the listings card is locked by contract
+          // v1.6.4 and the Mobile Grid Addendum, and an off-service game is still that same card.
+          <div key={g.id} className={offIds.has(g.id) ? 'offsvc-row' : undefined}>
+            <MatchupCard game={g} standings={standings} showDay={showDay} onOpen={setOpen} />
+          </div>
         ))}
       </div>
 
       {showGrid ? (
         <div id={gridId}>
-          <MobileGrid games={games} sport={sport} day={day} standings={standings} onOpen={setOpen} />
+          <MobileGrid games={shown} sport={sport} day={day} standings={standings} onOpen={setOpen} />
         </div>
       ) : null}
 
