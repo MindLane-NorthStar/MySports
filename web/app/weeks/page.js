@@ -150,12 +150,18 @@ export default async function WeeksPage({ searchParams }) {
     <main>
       <h1>Weeks</h1>
       <div className="controls">
-        <span className="control-label">View</span>
-        <div className="chiprow">
-          <Link className="chip" data-active={view === 'calendar'} href="/weeks?view=calendar">
+        {/* Same as the Sport row: the bare <span>View</span> was decoration wired to nothing, so
+            the group carries the name instead. These are <Link>s, not buttons, so the state is
+            aria-current="page" rather than aria-pressed - the view IS the page you are on. */}
+        <div className="chiprow" role="group" aria-label="View">
+          <Link className="chip" data-active={view === 'calendar'}
+                aria-current={view === 'calendar' ? 'page' : undefined}
+                href="/weeks?view=calendar">
             Calendar week · all sports
           </Link>
-          <Link className="chip" data-active={view === 'season'} href="/weeks?view=season">
+          <Link className="chip" data-active={view === 'season'}
+                aria-current={view === 'season' ? 'page' : undefined}
+                href="/weeks?view=season">
             Season week · NFL &amp; CFB
           </Link>
         </div>

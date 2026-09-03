@@ -244,8 +244,15 @@ input[type='search'] {
   scrollbar-width: thin;
 }
 
+/* 4c TAP TARGETS. Measured from the shipped CSS these were ~26px (.chip), ~15px
+ * (.offsvc-toggle) and ~22px (.mgrid-nav button) against a ~44px guideline. Height is added as
+ * min-height plus centring - no border, background or type change - so the visible weight of every
+ * control is exactly what it was. On .chip the growth is scoped to <=699px: pointer precision
+ * makes 26px fine with a mouse, and stage 2's acceptance is that desktop is unchanged above the
+ * breakpoint, which is the same line the rest of the app treats as its touch context. */
 .chip {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   /* Flex children shrink by default, which inside a nowrap scroller would compress every chip
      until the marks squashed instead of the row scrolling. */
   flex: 0 0 auto;
@@ -258,6 +265,10 @@ input[type='search'] {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.03em;
+}
+
+@media (max-width: 699px) {
+  .chip { min-height: 44px; }
 }
 
 .chip[data-active='true'] {
@@ -740,6 +751,9 @@ input:focus-visible {
   border: 1px solid var(--line-soft);
   border-radius: 999px;
   padding: 3px 10px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -1392,7 +1406,10 @@ input:focus-visible {
  * listings card is locked (contract v1.6.4 + Mobile Grid Addendum v1.0). */
 .offsvc{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
   color:var(--faint);font-size:12px;margin:-2px 0 10px}
+/* The most important of the three: a 15px target gating access to every filtered game. It has no
+   background and no border, so the whole 44px is invisible - nothing about it looks different. */
 .offsvc-toggle{background:none;border:0;padding:0;cursor:pointer;
+  display:inline-flex;align-items:center;min-height:44px;
   font-family:var(--body);font-size:12px;color:var(--gold);text-decoration:underline;
   text-underline-offset:2px}
 .offsvc-toggle:hover{color:var(--ink)}

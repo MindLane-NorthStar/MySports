@@ -47,17 +47,26 @@ export function SportFilter({ sport, available }) {
   const shown = available && available.length ? SPORTS.filter((s) => available.includes(s)) : SPORTS;
   return (
     <>
-      <span className="control-label">Sport</span>
-      <div className="chiprow">
-        <button type="button" className="chip" data-active={!sport} onClick={() => setParam('sport', null)}>
+      {/* The <span>Sport</span> that used to sit here was a bare span wired to nothing - not a
+          <label for>, so it carried no accessible name and only read as a detached word above the
+          chips. role="group" + aria-label IS the name it was pretending to be, and it names the
+          row rather than floating beside it. The Day label above stays: it is visible work in
+          front of a control whose own text is a date. */}
+      <div className="chiprow" role="group" aria-label="Sport">
+        <button type="button" className="chip" data-active={!sport} aria-pressed={!sport}
+                onClick={() => setParam('sport', null)}>
           All
         </button>
+        {/* data-active stays - it is the styling hook the gold plate depends on. aria-pressed is
+            added ALONGSIDE it, never instead: selection was carried entirely by CSS, so a screen
+            reader heard "NFL, button" with no way to know which filter was active. */}
         {shown.map((s) => (
           <button
             key={s}
             type="button"
             className="chip chip-league"
             data-active={sport === s}
+            aria-pressed={sport === s}
             aria-label={SPORT_LABEL[s] || s}
             onClick={() => setParam('sport', s === sport ? null : s)}
           >
