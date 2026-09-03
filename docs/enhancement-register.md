@@ -164,3 +164,68 @@ This amends §13's selected-chip rule only. Marks-only chips, the chip roster, t
 
 1. **The ground figure.** §14 predicted the active CFP mark would land "near `cfp_dark`'s 10.05:1". That figure was measured against `--spot-2` `#1b1b1b`. The chip's actual ground is `.chip`'s panel gradient, so it lands at **7.41:1 (top) / 9.52:1 (bottom)**. Same conclusion, correct ground. Every `_dark` mark on the chip gradient, top/bottom: cfp 7.41/9.52 · nfl 4.09/5.38 · nba 5.05/6.70 · **nhl 2.25/2.94** · mlb 3.61/4.78 · nascar 7.59/10.04 · indycar 4.99/6.60 · ufc 3.14/4.12 · wwe 8.48/11.06.
 2. **"Gold border *and* gold text" is achievable on exactly one chip.** `All` is the only text chip; the nine logo chips carry an `<img>`, and an image takes no colour, so they get the border alone. It reads unmistakably against charcoal neighbours by eye and ships as ruled, but **the safeguard does not reach the chips it was written for.** The locked reference resolves it the same way — `.spbtn.on` is `border-color: gold` plus an inset gold ring, while `.spbtn.all.on` additionally takes gold text — so the shipped asymmetry matches the reference rather than departing from it. Left as shipped. If the active state ever reads as ambiguous on a phone, the reference's **inset gold ring** (`box-shadow: 0 0 0 1px var(--gold) inset`) is the second cue to add, and it costs no layout.
+
+---
+
+## 15. SPORT TILES — 2026-09-03. Fixed soft-cornered squares, marks filling the box.
+
+Joe, after seeing prompt 26's chip screenshots: *"NASCAR button is too wide. Try to standardize
+button size as much as possible and make the buttons more of a soft-cornered square than an oval.
+The button shapes appear to be determined by the logo — I'd like to fix them all as soft rounded
+corner squares."* And: *"All of the major sport logos — NFL, MLB, NBA, CFB — they're rendering too
+small within the button. Make them as large as you can without them getting too close to the button
+edge."*
+
+**This is contract repair, not new design.** `docs/design/mobile_demo.html` already specifies a fixed
+40 × 40 tile with `padding:5px`, a soft radius, and `max-width/max-height:100%; object-fit:contain`
+on the mark. The shipped app had grown logo-shaped pills whose width was set by the mark's aspect
+ratio, which is what made NASCAR three times wider than its neighbours.
+
+**Ruling.** The sport filter row uses a fixed square tile — 44 × 44 at ≤699 px (preserving prompt
+25's tap target), 36 × 36 on desktop — with a soft radius and the mark sized only by the box. The
+tile class is `.spbtn`, matching the reference. `.chip` is untouched: it still carries the `/weeks`
+View chips and the week `<select>`, which are text and cannot be square.
+
+**The trade-off, named.** In a fixed square, a wide mark fits by its width and renders short. NBA,
+CFP, NFL and NHL gain roughly 80% in height — exactly what was asked. **MLB does not:** its mark is
+~1.9:1, so a square box caps it and it stays about where it was. It reads fuller only because the
+surrounding air is gone. NASCAR at 6:1 is the extreme case, and if the render shows it illegible the
+single sanctioned exception is a double-width tile for marks wider than 3:1 — NASCAR and UFC only,
+two sizes total, nothing else.
+
+This supersedes §13's implied pill shape and §14a's assumption that mark height is set by a fixed
+`height` rule. §14's inverted active state (charcoal plate, gold border) is unchanged and applies to
+the tile exactly as it applied to the chip.
+
+### 15a. As built (prompt 28, `25ba786`)
+
+Measured rather than predicted. `box-sizing` is `border-box` globally, so a 44 px tile with 1 px
+borders and 4 px padding gives a **34 × 34** mark box, not the 36 × 36 the ruling assumed — every
+gain below is therefore about 5.5% under the figure above, and the four named marks gain **+70%**,
+not +80%. Directions all hold.
+
+| Mark | rendered in the 34 px box | was 20 px tall |
+|---|---|---|
+| NBA | 15 × 34 | +70% |
+| CFP | 23.5 × 34 | +70% |
+| NFL | 24.8 × 34 | +70% |
+| NHL | 29.9 × 34 | +70% |
+| WWE | 34 × 30.9 | +55% |
+| IndyCar | 34 × 23.7 | +19% |
+| MLB | 34 × 17.9 | **−2.1 px, unchanged as predicted** |
+| UFC | 34 × 11.8 | −41% |
+| NASCAR | 34 × 5.7 | −72% |
+
+**Radius 10 px**, chosen by rendering 4, 10 and 14 px: Joe asked for "soft" twice, and at the
+reference's 4 px (set for its smaller 40 px tile) the corner reads as a hard square with a chamfer.
+**Padding stayed at 4 px** — no mark crowds the border or the corner, checked at 8× on the three
+tightest (NASCAR, UFC, MLB), so there was no reason to step up and shrink marks Joe asked to enlarge.
+
+**NASCAR is legible as a strict square and the double-width exception was NOT taken.** It is the
+smallest mark on the row, but readable; and at 88 px the exception reintroduces exactly what Joe
+objected to — a NASCAR tile visibly wider than its neighbours. Both versions are rendered in
+`artifacts/qa/2026-09-03-p28/` (`tiles-390.png` and `tiles-wide-390.png`) so the choice stays his.
+
+The row narrowed from 631 px to **494 px** at every mobile width while the marks got bigger — the
+pills were wide, not the art. Squaring also made §14's active state *more* legible, because the gold
+border traces the full outline of a square where a pill rounded it away.

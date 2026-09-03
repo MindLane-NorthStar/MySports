@@ -1,14 +1,15 @@
-# MySports — Handoff Status (post-prompt-27, 2026-09-03)
+# MySports — Handoff Status (post-prompt-28, 2026-09-03)
 
 **This file now lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
 Read first for any session picking up MySports. Memory `/areas/mysports.md` + `/areas/mysports-build-log.md` + `/areas/mysports-ui-repair.md` carry the compressed truth. Companions: **`docs/enhancement-register.md`** — the repo copy is the source (prompt 26); §1–§13 are still only in the Claude project and Joe is supplying them, so check there before re-raising ANY decision, **`docs/feature-study/05-home-page-decisions.md` (D1–D6, the D3 amendment, deployment facts, E5, and §9 NETWORK TBD — BINDING)**, `docs/rendering-contract.md` v1.6.5, `docs/rendering-contract-mobile.md` (Addendum v1.1), `claude/program-card-design-v1.md`.
 
 ## Repo state
-main, HEAD **5f43dd5**. **200 Python tests OK (skipped=1)**, **146/146 JS unit tests**, smoke **30/30**, qa-shots behavioural assertions **8/8**. Tree clean apart from always-untracked `assets/` and `artifacts/`.
+main, HEAD **99bda44**. **200 Python tests OK (skipped=1)**, **146/146 JS unit tests**, smoke **30/30**, qa-shots behavioural assertions **8/8**. Tree clean apart from always-untracked `assets/` and `artifacts/`.
 
 **Smoke 29/30 is CLOSED.** The `generated_grids` bare-key failure was fixed in prompt 22 by standardising on bare keys with consumers joining `ASSET_BASE_URL`.
 
+Prompt 28: `25ba786` sport tiles become fixed soft-cornered squares with marks filling the box (register §15) → `99bda44` banner inset absorbs the artwork's 18px headroom.
 Prompt 27: `bb7b73f` the three authorities land in the repo, §11 scoped to Today → `0e3e336` YOUR TEAMS → grid → bands on `/` (05 §11 built) → `5f43dd5` empty states pronounce the sport once.
 Prompt 26: `ab291b5` count line / mobile order / chip inversion ruled → `ac5b8c9` active chip inverted (charcoal + gold border) → `ceb3fdf` count line becomes airing/TBD/unavailable → `d2777fa` WWE + UFC empty copy → `ba05819` iOS standalone (black-translucent + safe-area) → `e9100cb` Weeks chips shortened, chip marks 20px.
 Prompt 25: `990518f` docs + rule 22 → `2e41a51` chip row scrolls, marks only, four new sports → `4d2012e` a11y (aria-pressed, group names, 44px targets) → `8eb324d` --faint lifted → `a5c588f` week control, toggle count, duplicate sentence.
@@ -49,6 +50,7 @@ This is **ruled**: `docs/feature-study/05-home-page-decisions.md` **§9 — NETW
 6. **Privacy gate before the Cavs season (late October):** production is a public URL. Confirm no loaded broadcast row publishes the unannounced WUAB/RESN arrangement.
 
 ## Open — carry into prompt 28 / v1.7
+- **The banner's standalone top gap was corrected in prompt 28 (`99bda44`) and needs Joe's phone to confirm.** `.banner`'s padding-top now subtracts the artwork's own 18px of headroom from the safe-area inset instead of stacking on it, so the wordmark sits flush with the bottom of the status bar rather than 18px below it. Chromium has no safe area, so this was verified only by substituting a literal 47px into the shipped expression. If it now reads too tight, it is a one-number change.
 - **The design builders are still project-only.** `build_demo.py`, `app_template.html`, `build_banner.py` and `markkit.py` produce the locked design references and are NOT under version control — confirmed absent from the working tree at `89614ec`. `docs/design/mobile_demo.html` is a TEMPLATE (`__DATA__`, `__TODAY__`, `__GRIDSVG__` and the rest are filled by `build_demo.py`), so the repo copy cannot be rebuilt from the repo. Cowork owes them; a filing item, not a defect.
 - **`--faint` reaches 3.63:1 on the card top and true AA is unreachable there** without moving `--dim` or lightening `--panel-top`. Prompt 25 measured it; the smallest same-hue grey that reaches 4.5:1 on `--panel-top` is `#989fa8`, and `--dim` is 4.62:1 on that same ground — 0.06 apart, the same colour to the eye, so the third step of the hierarchy would cease to exist. **Joe's call, accepted. Not a defect to re-raise.**
 - **The mobile page order (`05-home-page-decisions.md` §11) is BUILT** as of prompt 27 (`0e3e336`): YOUR TEAMS → grid → bands on `/`, D6's in-band float retired there and retained on `/weeks` and `/history` per §11's scope clarification, the `Grid ↓` chip retired, and the section arithmetic pinned by `web/test/pageorder.test.mjs`.
