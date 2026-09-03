@@ -16,6 +16,7 @@ migration history records the same names.
 | 0007_final_scores.sql | applied 2026-09-02 | `games` gains `home_score`, `away_score`, `result_status` (checked: scheduled/in_progress/final/postponed/cancelled), `boxscore_url`, `completed_at` — all nullable, additive; `grant select, insert on generated_grids` + sequence usage to `mysports_writer`. **Scores are loader-written provider facts, not reconciled observations** — one structured provider per sport reports objective post-game results, so spec §9.6 deliberately does not apply and the reconciler never reads or writes these columns. |
 | 0008_standings_and_probables.sql | applied 2026-09-02 ~13:35 ET (Claude Code, `scripts/apply_migration.py`, after CSV backups of `team_records` (30 rows) and `games` (295 rows) and a rolled-back dry run) | `team_records` gains `ot_losses`, `points`, `division_rank`, `games_back`; `games` gains `probable_home_pitcher` / `probable_away_pitcher`; `teams` gains `display_name`. All nullable, additive, no row rewritten - counts identical before and after (team_records 30, games 295, teams 808, 29 tables). Standings and probables are **loader-written provider facts, not reconciled observations** - same reasoning as 0007's scores. |
 | 0009_programs_supertype.sql | applied 2026-09-02 ~19:50 ET (Claude Code, `scripts/apply_migration.py`, after CSV backups of `games` (375 rows) and `game_broadcasts` (442 rows) and a rolled-back dry run) | Spec v0.5 §P, the **programs supertype**. `sport` enum gains `nascar`, `indycar`, `ufc`, `wwe`, `aew`; new enums `program_type` (game/race_session/fight_card/weekly_show/special_event/studio_show) and `source_tier` (announced/reported); new tables `programs`, `studio_shows`, `studio_show_instances` (all three empty, RLS on, `anon_read`); `games` gains nullable FK `program_id`; `game_broadcasts` gains `window_start`, `window_end`, `simulcast_linear`. **Additive only** - nothing dropped, narrowed or retyped, no existing row touched: 375 games and 442 broadcast rows before and after, `access_status` unchanged at 7 values. Architecture only; the app and grids behave identically. |
+| 0010_market_pending.sql | applied 2026-09-03 ~00:45 ET (Claude Code, `scripts/apply_migration.py`, after a CSV backup of `viewer_game_eligibility` (375 rows) and a rolled-back dry run) | E5 (`docs/feature-study/05-home-page-decisions.md` §8). `viewer_game_eligibility` gains **`market_pending boolean`**, nullable with NO default so "never computed" stays distinguishable from "computed false". **Additive only** - one column, nothing dropped or rewritten, 375 rows before and after. Backfilled in the same change: 375 computed, 0 null, **15 pending**. |
 
 Applied state after 0005 (verified through the connector): 29 tables in `mysports`, all owned by `mysports_owner`, RLS on all 29, `anon_read` on 26 (not on source_snapshots, source_observations, refresh_runs), 20 enums, seed rows: 1 market, 1 viewer profile, 5 render policies, 10 sources; `public` still 36 tables. Migration history: mysports_0001 … mysports_0006.
 
@@ -26,6 +27,45 @@ ever created in `public`; new tables get RLS + an `anon_read` policy in the same
 that rewrites existing rows (0006), take a `pg_dump --schema=mysports -t mysports.<table>` of the affected table.
 
 ---
+
+## 0010: what market_pending means, and why it is nullable
+
+**The column answers "is this game ineligible only because nobody has published the map yet?"** On NFL
+Sunday 2026-09-13 the app said *11 not on your services - on FOX and CBS*, networks Joe has. The count
+was not wrong about how many he can watch, but it asserted a certainty the data did not have:
+`market_coverage` was empty, because the 506sports regional maps do not publish until roughly the
+Monday before. Those games were not unavailable; they were **not assigned yet** - and the same state
+recurs every Monday-to-Wednesday of the season.
+
+**Three shapes distinguish "unknown" from "unavailable" in this data**, and only the first is a gap:
+
+| `access_status` | with | means |
+|---|---|---|
+| `unverified` | `blackout_rule = NONE`, viewer market | regional window, **no map entry yet** - UNKNOWN |
+| `out_of_market` | `blackout_rule = OUT_OF_MARKET` | decided: the map (or the league) says no |
+| `unavailable` | `market_id` null | decided: a service the viewer does not subscribe to |
+
+The rule reads `access_status = 'unverified'` rather than a list of call letters, because the adapters
+already write exactly that at the point where a game sits in a regional window with no entry
+(`adapters/espn.py`'s NFL regional path, `adapters/mlb.py`'s). A hardcoded FOX/CBS list would be a
+second, weaker copy of the same fact, and would miss the next network that starts splitting regionally.
+The set lives in `data/authority_rules.json` under `eligibility.market_pending_access`, beside
+`eligible_access`, so it is tunable without a commit.
+
+**NULLABLE ON PURPOSE.** `null` = never computed, `false` = computed and not pending, `true` = pending.
+A `default false` would have silently asserted "computed, not pending" for all 375 pre-existing rows and
+made the backfill unverifiable. The backfill turned every null into a real verdict; the nullability is
+what let that be checked afterwards.
+
+**Self-resolving.** Once the map loads into `market_coverage`, a row exists for that (game, network,
+viewer market), the reconciler re-decides, and the game becomes eligible or genuinely out-of-market with
+no manual step. `market_pending` is computed in `pipeline/reconcile.py` beside `eligible` - one
+implementation, never a second one in the app.
+
+Verdicts at backfill (2026-09-03): 09-13 **11 of 11** ineligible pending (the maps genuinely have not
+published), 09-05 2 of 20, 09-03 2 of 8, and 0 on 09-02, 09-04, 10-01 and 10-28. The rule discriminates
+rather than blanket-labelling, which was the acceptance condition.
+
 
 ## 0009: the two semantics that are easy to get wrong
 

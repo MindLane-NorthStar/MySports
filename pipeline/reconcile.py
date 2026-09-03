@@ -134,6 +134,52 @@ def to_observations(rows: list[dict[str, Any]], game: dict[str, Any]) -> tuple[l
 
 
 # ----------------------------------------------------------------------------- one game
+# ----------------------------------------------------------------------------- E5 market-pending
+def market_covered(db, game_id: str, network_id: str) -> bool:
+    """Does market_coverage hold a row for this (game, network) in the VIEWER's market?
+
+    This is the half of the rule that makes the state self-resolving. While the 506sports map is
+    unpublished there is no row, so the game stays pending; the moment the map loads a row exists and
+    the game is decided normally - eligible, or genuinely out of market - with no manual step and no
+    second visit from anybody.
+    """
+    if not network_id:
+        return False
+    rows = db.fetch(
+        "select 1 from market_coverage mc join markets m on m.id = mc.market_id "
+        "where mc.game_id = %s and mc.network_id = %s and m.is_viewer_market limit 1",
+        (game_id, network_id))
+    return bool(rows)
+
+
+def is_market_pending(db, game_id: str, eligible: bool, active: list, rules: dict) -> bool:
+    """E5: ineligible ONLY because the regional assignment has not published yet.
+
+    AN ELIGIBLE GAME IS NEVER MARKET PENDING - if there is a way to watch it, nothing is pending.
+
+    The "market-dependent network" test is READ FROM THE DATA rather than from a list of call letters:
+    the adapters already write access_status='unverified' at precisely the point where a game sits in
+    a regional window with no map entry (adapters/espn.py's NFL regional path, adapters/mlb.py's). A
+    hardcoded FOX/CBS list would be a second, weaker copy of that fact, and it would silently miss the
+    next network that starts splitting regionally.
+
+    Deliberately NOT gated on a list of sports. The 'unverified' marker is only ever produced by a
+    regional-window path, so a sport list would restate the same fact less reliably and could exclude
+    a sport that starts using regional windows later.
+    """
+    if eligible:
+        return False
+    pending_access = set(rules["eligibility"].get("market_pending_access") or ())
+    if not pending_access:
+        return False
+    for b in active:
+        if b.get("access_status") not in pending_access:
+            continue
+        if not market_covered(db, game_id, b.get("service_id")):
+            return True      # unassigned AND no map to assign it - the honest answer is "not yet"
+    return False
+
+
 def reconcile_game(db: DB, game: dict[str, Any], rows: list[dict[str, Any]], bcs: list[dict[str, Any]], rules: dict[str, Any],
                    rails: dict[str, list[str]], now: datetime, stats: Counter, log: list[str]) -> None:
     gid, sport = game["id"], game["sport"]
@@ -215,10 +261,18 @@ def reconcile_game(db: DB, game: dict[str, Any], rows: list[dict[str, Any]], bcs
         reason = "no telecast observed" if sport == "cfb" else "no national telecast - out of market"
     else:
         reason = "not receivable: " + ", ".join(f"{b.get('service_id')}={b.get('access_status')}" for b in active)
+    # E5 market-pending. Computed HERE, beside eligibility, because it is the same decision seen from
+    # the other side - and a second implementation in the app would drift from this one exactly as a
+    # JS eligibility rule would have.
+    market_pending = is_market_pending(db, gid, eligible, active, rules)
     db.upsert("viewer_game_eligibility", [{"game_id": gid, "viewer_profile_id": PROFILE_ID, "eligible": eligible, "eligible_via_network_id": via_net,
-                                          "eligible_via_service_ids": via_srv, "reason": reason, "computed_at": now, "entitlement_version": rules["rule_version"]}],
-              "game_id, viewer_profile_id", ["eligible", "eligible_via_network_id", "eligible_via_service_ids", "reason", "computed_at", "entitlement_version"], tag="viewer_game_eligibility")
+                                          "eligible_via_service_ids": via_srv, "reason": reason, "market_pending": market_pending,
+                                          "computed_at": now, "entitlement_version": rules["rule_version"]}],
+              "game_id, viewer_profile_id", ["eligible", "eligible_via_network_id", "eligible_via_service_ids", "reason", "market_pending",
+                                             "computed_at", "entitlement_version"], tag="viewer_game_eligibility")
     stats["eligible" if eligible else "not_eligible"] += 1
+    if market_pending:
+        stats["market_pending"] += 1
 
 
 # ----------------------------------------------------------------------------- main
