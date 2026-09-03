@@ -10,10 +10,20 @@ Two guarantees are load-bearing here and both are cheap to break:
 2. An unrecognized provider status maps to NULL, never to 'final' - a wrong 'final' freezes
    completed_at and boxscore_url on a game that has not been played.
 
-Every adapter mapper is exercised over the raw provider snapshots this repo actually saved
-(artifacts/validation/*_raw.json - the overnight run found no artifacts/raw/ directory; these are the
-saved snapshots the adapters replay with --from-file) plus hand-built minimal dicts for the states no
-snapshot happens to contain. No database, no network, Windows-portable.
+Every adapter mapper is exercised over the raw provider snapshots TRACKED IN tests/fixtures/, plus
+hand-built minimal dicts for the states no snapshot happens to contain. No database, no network,
+Windows-portable.
+
+These used to be read from artifacts/validation/, which is gitignored - so on a clean checkout the
+files were absent, load_raw() raised SkipTest, and the suite still reported OK with those mappers
+SILENTLY UNTESTED. Passing because a machine happens to hold an untracked file is not passing. The
+snapshots now live in tests/fixtures/ and are resolved relative to THIS FILE, never the working
+directory, so the result does not depend on where the runner was invoked from.
+
+There is deliberately NO fallback to artifacts/: a missing fixture is now a hard error, because a
+"use the other location if present" branch is exactly how the hole would reappear. The same bytes
+are read by web/test/livescores.test.mjs, so the JavaScript overlay and these Python mappers cannot
+silently disagree about a provider payload (D3 amendment, 2026-09-03).
 """
 from __future__ import annotations
 
@@ -31,7 +41,7 @@ from adapters import espn, nba, nhl  # noqa: E402
 from adapters.common import result_status, score_int  # noqa: E402
 from pipeline.load import boxscore_url  # noqa: E402
 
-RAW = ROOT / "artifacts" / "validation"
+RAW = Path(__file__).resolve().parent / "fixtures"   # relative to THIS FILE, not the cwd
 
 
 def quiet(fn, *a, **kw):
@@ -43,9 +53,14 @@ def quiet(fn, *a, **kw):
 
 
 def load_raw(name):
+    """Read a tracked provider snapshot. A missing file is an ERROR, never a skip.
+
+    Skipping was the old behaviour and it hid the problem: the fixtures lived under gitignored
+    artifacts/, so a clean checkout skipped these mappers and still reported OK.
+    """
     p = RAW / name
     if not p.exists():
-        raise unittest.SkipTest(f"{name} not present")
+        raise FileNotFoundError(f"tracked fixture missing: {p} (it should be committed under tests/fixtures/)")
     return json.loads(p.read_text(encoding="utf-8"))
 
 
@@ -90,7 +105,7 @@ class BoxscoreTemplates(unittest.TestCase):
 # --------------------------------------------------------------------------- ESPN (nfl / cfb shape)
 class EspnStatusMapper(unittest.TestCase):
     def test_saved_nfl_snapshot_scheduled_games_carry_no_scores(self):
-        raw = load_raw("nfl_2026_week1_raw.json")
+        raw = load_raw("espn_nfl_scoreboard_raw.json")
         events = raw["events"]
         self.assertTrue(events, "snapshot has no events")
         seen = set()
@@ -150,7 +165,7 @@ class EspnStatusMapper(unittest.TestCase):
 # --------------------------------------------------------------------------- NBA (ESPN + league file)
 class NbaStatusMapper(unittest.TestCase):
     def test_saved_nba_snapshot_maps_cleanly(self):
-        raw = load_raw("nba_2026_2026-10-25_raw.json")
+        raw = load_raw("nba_scoreboard_raw.json")
         self.assertTrue(raw["events"])
         for e in raw["events"]:
             comp = e["competitions"][0]
@@ -189,7 +204,7 @@ class NbaStatusMapper(unittest.TestCase):
 # --------------------------------------------------------------------------- NHL (league gameState)
 class NhlStatusMapper(unittest.TestCase):
     def test_saved_nhl_snapshot_maps_cleanly(self):
-        raw = load_raw("nhl_2026_2026-10-01_raw.json")
+        raw = load_raw("nhl_schedule_raw.json")
         games = [g for wk in raw.get("gameWeek", []) for g in wk.get("games", [])]
         self.assertTrue(games, "snapshot has no games")
         for g in games:
@@ -232,7 +247,7 @@ class MlbStatusMapper(unittest.TestCase):
                 "awayScore": score_int((teams.get("away") or {}).get("score"), st)}, warn
 
     def test_saved_mlb_snapshot_finals_carry_integer_scores(self):
-        raw = load_raw("mlb_2026_2026-08-31_raw.json")
+        raw = load_raw("mlb_schedule_raw.json")
         games = [g for d in raw.get("dates", []) for g in d.get("games", [])]
         self.assertTrue(games, "snapshot has no games")
         finals = 0
@@ -296,9 +311,15 @@ class CfbdStatusMapper(unittest.TestCase):
         self.assertIsNone(out["awayScore"])
 
     def test_saved_cfbd_snapshot_maps_cleanly(self):
+        # A DIFFERENT gap from the artifacts/ one fixed on 2026-09-03, and it keeps its skip on
+        # purpose. This snapshot was never saved anywhere in the repo's history - not in
+        # artifacts/validation/, not anywhere - so there is nothing to promote into tests/fixtures/.
+        # The skip is therefore honest ("we have no CFBD snapshot") rather than a fallback hiding a
+        # tracked file. Recording a CFBD week snapshot would close it; until then this reports as a
+        # skip so the missing coverage stays visible instead of silently passing.
         p = RAW / "cfbd_2026_week1_games.json"
         if not p.exists():
-            self.skipTest("cfbd week1 snapshot not present")
+            self.skipTest("cfbd week1 snapshot not present (never recorded; see comment)")
         games = json.loads(p.read_text(encoding="utf-8"))
         self.assertTrue(games)
         for g in games[:200]:
