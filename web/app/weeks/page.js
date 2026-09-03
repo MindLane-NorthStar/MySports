@@ -157,12 +157,12 @@ export default async function WeeksPage({ searchParams }) {
           <Link className="chip" data-active={view === 'calendar'}
                 aria-current={view === 'calendar' ? 'page' : undefined}
                 href="/weeks?view=calendar">
-            Calendar week · all sports
+            Calendar week
           </Link>
           <Link className="chip" data-active={view === 'season'}
                 aria-current={view === 'season' ? 'page' : undefined}
                 href="/weeks?view=season">
-            Season week · NFL &amp; CFB
+            Season week
           </Link>
         </div>
       </div>

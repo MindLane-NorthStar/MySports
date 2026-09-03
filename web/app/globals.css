@@ -1539,7 +1539,13 @@ input:focus-visible {
  * chip that is not a league. */
 .chip-league { display: inline-flex; align-items: center; gap: 6px; }
 .chip-mark { height: 15px; width: auto; object-fit: contain; flex: 0 0 auto; }
-@media (max-width: 699px) { .chip-mark { height: 13px; } }
+/* 20px, not 13px. Register section 13's width table - the one the scrolling row was sized
+ * against - was computed at a 21px chip height, and this rule was rendering marks at 13px, so
+ * every mark has been running well under the basis the row was designed for. That is why the
+ * 44px accessible pill reads empty around a small mark. width stays auto: NASCAR's wordmark is
+ * ~6x as wide as it is tall and constraining width would squash it. Desktop keeps 15px in a 29px
+ * pill, where the proportion was never wrong. */
+@media (max-width: 699px) { .chip-mark { height: 20px; } }
 
 /* 5b. The banner-to-date gap was 46px at 1440: .shell padding-top 24px + the h1's own 22px top
  * margin, stacked. The h1 is the first thing under the chrome, so its top margin is pure duplication
