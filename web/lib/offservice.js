@@ -10,6 +10,30 @@
 // The count line is not decoration. Filtering games out and saying nothing would be a page that lies
 // by omission - the viewer would see 63 games on a 83-game Saturday and have no idea the other 20
 // existed. So the rule is: hide them by default, but always say how many and where they went.
+//
+// E5 ADDS A THIRD STATE, and it is exempt from all of that. A regional game whose market assignment
+// has not published yet is neither watchable nor off-service: saying "not on your services" about it
+// asserts a certainty the data does not have. Market-pending games are ALWAYS SHOWN, in every surface
+// and every toggle state, and are NEVER counted inside "not on your services". On NFL Sunday that is
+// the difference between hiding eleven of thirteen games and showing the slate with an honest caveat.
+
+function eligibilityRow(game) {
+  const e = game?.eligibility;
+  return Array.isArray(e) ? e[0] : e;
+}
+
+/**
+ * E5: ineligible ONLY because the regional map has not published yet.
+ *
+ * Read from viewer_game_eligibility.market_pending, which pipeline/reconcile.py computes. Not derived
+ * here - a second implementation would drift from the reconciler exactly as a JS eligibility rule
+ * would have. null means the reconciler has not judged this row, which is not the same as false.
+ */
+export function isMarketPending(game) {
+  const row = eligibilityRow(game);
+  if (!row) return false;
+  return row.market_pending === true && row.eligible !== true;
+}
 
 /** The reconciler's verdict for one game. Absent row -> treated as eligible (shown), never hidden. */
 export function isEligible(game) {
@@ -46,20 +70,40 @@ export function outletsFor(game) {
 export function offServiceSummary(games, { maxOutlets = 3 } = {}) {
   const rows = Array.isArray(games) ? games : [];
   const on = [];
+  const pending = [];
   const off = [];
-  for (const g of rows) (isEligible(g) ? on : off).push(g);
+  for (const g of rows) {
+    // Order matters: pending is tested FIRST, so a market-pending game can never fall into `off` and
+    // be counted as unwatchable. That is the whole carve-out.
+    if (isMarketPending(g)) pending.push(g);
+    else if (isEligible(g)) on.push(g);
+    else off.push(g);
+  }
 
-  // Rank outlets by how many missed games they carry, so the line names the ones that actually cost
-  // the viewer something rather than whichever RSN happened to sort first.
+  return {
+    on,
+    pending,
+    off,
+    total: rows.length,
+    onCount: on.length,
+    pendingCount: pending.length,
+    offCount: off.length,
+    outlets: rankOutlets(off),
+    pendingOutlets: rankOutlets(pending),
+    line: countLine(rows.length, off.length, rankOutlets(off), maxOutlets),
+    lines: countLines(rows.length, on.length, pending, off, maxOutlets),
+  };
+}
+
+/** Outlets ranked by how many of these games they carry - the ones that actually cost something. */
+export function rankOutlets(games) {
   const tally = new Map();
-  for (const g of off) {
+  for (const g of games || []) {
     for (const name of outletsFor(g)) tally.set(name, (tally.get(name) || 0) + 1);
   }
-  const outlets = [...tally.entries()]
+  return [...tally.entries()]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([name]) => name);
-
-  return { on, off, total: rows.length, offCount: off.length, outlets, line: countLine(rows.length, off.length, outlets, maxOutlets) };
 }
 
 /**
@@ -76,16 +120,46 @@ export function shortOutlet(name) {
     .trim();
 }
 
+/** Up to `max` short outlet names plus "and N more"; '' when there are none. */
+function outletClause(outlets, max) {
+  const named = [...new Set((outlets || []).map(shortOutlet).filter(Boolean))];
+  if (named.length === 0) return '';
+  const head = named.slice(0, max);
+  const rest = named.length - head.length;
+  return rest > 0 ? `${head.join(', ')} and ${rest} more` : head.join(', ');
+}
+
+/**
+ * The three-way count, as separate lines (E5 §8 shape):
+ *
+ *     13 games
+ *       2 on your services
+ *       3 market pending - FOX, CBS - map publishes ~Wed
+ *       8 not on your services - FOX, CBS
+ *
+ * Returns { total, on, pending, off } of strings, with null for a state that has no games in it - a
+ * zero line is noise, and "0 market pending" invites the reader to wonder what they missed.
+ */
+export function countLines(total, onCount, pending, off, maxOutlets = 3) {
+  const pendingOutlets = outletClause(rankOutlets(pending), maxOutlets);
+  const offOutlets = outletClause(rankOutlets(off), maxOutlets);
+  const pendingCount = (pending || []).length;
+  const offCount = (off || []).length;
+  return {
+    total: `${total} ${total === 1 ? 'game' : 'games'}`,
+    on: onCount ? `${onCount} on your services` : null,
+    pending: pendingCount
+      ? `${pendingCount} market pending${pendingOutlets ? ` · ${pendingOutlets}` : ''} — map publishes ~Wed`
+      : null,
+    off: offCount ? `${offCount} not on your services${offOutlets ? ` · ${offOutlets}` : ''}` : null,
+  };
+}
+
 /** '83 games - 20 not on your services - CBS Sports Network, FOX and 26 more'. Null when nothing is hidden. */
 export function countLine(total, offCount, outlets, maxOutlets = 3) {
   if (!offCount) return null;
   const head = `${total} ${total === 1 ? 'game' : 'games'}`;
   const missed = `${offCount} not on your services`;
-  const named = [...new Set((outlets || []).map(shortOutlet).filter(Boolean))].slice(0, maxOutlets);
-  if (named.length === 0) return `${head} · ${missed}`;
-  const rest = [...new Set((outlets || []).map(shortOutlet).filter(Boolean))].length - named.length;
-  // "and 26 more" rather than a 28-outlet wall: on an MLB night nearly every missed game is its own
-  // out-of-market RSN, and listing them all would bury the number that matters.
-  const tail = rest > 0 ? `${named.join(', ')} and ${rest} more` : named.join(', ');
-  return `${head} · ${missed} · ${tail}`;
+  const tail = outletClause(outlets, maxOutlets);
+  return tail ? `${head} · ${missed} · ${tail}` : `${head} · ${missed}`;
 }

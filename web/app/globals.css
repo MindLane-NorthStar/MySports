@@ -1382,3 +1382,18 @@ input:focus-visible {
 .favlabel{font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:.18em;
   text-transform:uppercase;color:var(--faint);margin:0 0 6px}
 .favrule{border:0;border-top:1px solid var(--line-soft);margin:14px 0}
+
+/* ---- market pending (E5, prompt 21)
+ * A regional game whose map has not published yet is neither watchable nor off-service, so it is
+ * never dimmed like an off-service row and never hidden. The cue is a quiet gold "MARKET TBD" tag on
+ * the row WRAPPER - MatchupCard is locked and nothing here reaches inside it. */
+.offsvc{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  color:var(--faint);font-size:12px;margin:-2px 0 10px}
+.offsvc-total{color:var(--dim);font-weight:600}
+.offsvc-pending{color:var(--gold-dim)}
+.pending-row{position:relative}
+.pending-row::after{content:'MARKET TBD';position:absolute;top:6px;right:8px;z-index:2;pointer-events:none;
+  font-family:var(--display);font-weight:600;font-size:10px;letter-spacing:.14em;
+  color:var(--gold);background:rgba(27,27,27,.86);
+  border:1px solid var(--gold-dim);border-radius:3px;padding:2px 5px 1px}
+@media (max-width:699px){.pending-row::after{font-size:9px;padding:1px 4px 0}}

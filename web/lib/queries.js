@@ -42,7 +42,7 @@ const GAME_SELECT = [
   // D4/E3: the reconciler's OWN eligibility verdict, embedded rather than re-derived. A second
   // rule in JS would drift from pipeline/reconcile.py and from the renderer's "not on your
   // services" count. Embedded on the FK, so this costs no extra round trip.
-  'eligibility:viewer_game_eligibility(eligible,reason,eligible_via_network_id)',
+  'eligibility:viewer_game_eligibility(eligible,reason,eligible_via_network_id,market_pending)',
 ].join(',');
 
 const ORDER = 'order=canonical_kickoff_at_utc.asc.nullslast,id.asc';

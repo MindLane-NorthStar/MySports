@@ -43,16 +43,28 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
   // this in Listing rather than per page covers Today, /weeks and /history with one implementation.
   const [showAll, setShowAll] = useState(false);
   const offService = useMemo(() => offServiceSummary(games), [games]);
-  // Revealing keeps CHRONOLOGICAL order by rendering the original array, not on-then-off. Concatenating
-  // the two groups would shunt every off-service game to the bottom and stop the day reading as a
-  // timeline, which is the one thing a listing has to keep doing.
-  const shown = showAll ? games : offService.on;
   const offIds = useMemo(() => new Set(offService.off.map((g) => g.id)), [offService]);
+  const pendingIds = useMemo(() => new Set(offService.pending.map((g) => g.id)), [offService]);
+
+  // E5: MARKET-PENDING GAMES ARE EXEMPT FROM FILTER-BY-DEFAULT, in both toggle states. Only genuinely
+  // ineligible games are hidden, so the visible set is "everything except off" collapsed back into the
+  // ORIGINAL order - not on-then-pending, which would shunt eleven of NFL Sunday's thirteen games to
+  // the bottom and stop the day reading as a timeline.
+  const shown = useMemo(
+    () => (showAll ? games : (games || []).filter((g) => !offIds.has(g.id))),
+    [showAll, games, offIds],
+  );
 
   // D6: Joe's teams float to the top of the listing. Both groups keep the order they arrived in, so
   // each still reads chronologically - a promotion, not a re-sort.
   const favIds = useMemo(() => favoriteIds(favoritesDoc), []);
   const { favorites, rest } = useMemo(() => splitFavorites(shown, favIds), [shown, favIds]);
+
+  // The cue and the dim both live on the WRAPPER. MatchupCard is locked (contract v1.6.4 + Mobile
+  // Grid Addendum v1.0), so nothing here reaches inside it.
+  const rowClass = (g) =>
+    [pendingIds.has(g.id) ? 'pending-row' : null, offIds.has(g.id) ? 'offsvc-row' : null]
+      .filter(Boolean).join(' ') || undefined;
 
   const showGrid = Boolean(grid && sport && games.length);
   const gridId = `grid-${sport || 'all'}-${day || ''}`;
@@ -70,14 +82,19 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
         </div>
       ) : null}
 
-      {offService.line ? (
-        <p className="offsvc">
-          <span>{offService.line}</span>
-          <button type="button" className="offsvc-toggle" onClick={() => setShowAll((v) => !v)}
-                  aria-expanded={showAll}>
-            {showAll ? 'Hide them' : 'Show all'}
-          </button>
-        </p>
+      {offService.lines.pending || offService.lines.off ? (
+        <div className="offsvc">
+          <span className="offsvc-total">{offService.lines.total}</span>
+          {offService.lines.on ? <span>{offService.lines.on}</span> : null}
+          {offService.lines.pending ? <span className="offsvc-pending">{offService.lines.pending}</span> : null}
+          {offService.lines.off ? <span>{offService.lines.off}</span> : null}
+          {offService.offCount ? (
+            <button type="button" className="offsvc-toggle" onClick={() => setShowAll((v) => !v)}
+                    aria-expanded={showAll}>
+              {showAll ? 'Hide them' : 'Show all'}
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       {favorites.length ? (
@@ -87,7 +104,7 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
           <p className="favlabel">Your teams</p>
           <div className="cards">
             {favorites.map((g) => (
-              <div key={g.id} className={offIds.has(g.id) ? 'offsvc-row' : undefined}>
+              <div key={g.id} className={rowClass(g)} data-market-tbd={pendingIds.has(g.id) || undefined}>
                 <MatchupCard game={g} standings={standings} showDay={showDay} onOpen={setOpen} />
               </div>
             ))}
@@ -100,7 +117,7 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
         {rest.map((g) => (
           // The dim lives on a WRAPPER, never on the card: the listings card is locked by contract
           // v1.6.4 and the Mobile Grid Addendum, and an off-service game is still that same card.
-          <div key={g.id} className={offIds.has(g.id) ? 'offsvc-row' : undefined}>
+          <div key={g.id} className={rowClass(g)} data-market-tbd={pendingIds.has(g.id) || undefined}>
             <MatchupCard game={g} standings={standings} showDay={showDay} onOpen={setOpen} />
           </div>
         ))}

@@ -113,3 +113,83 @@ test('trimming collapses outlets that differ only by sponsor', () => {
   const line = countLine(3, 3, ['Reds.TV', 'Reds.TV Presented by Somebody', 'FOX']);
   assert.equal(line, '3 games · 3 not on your services · Reds.TV, FOX');
 });
+
+// ---------------------------------------------------------------- E5: market pending is a THIRD state
+import { isMarketPending, countLines } from '../lib/offservice.js';
+
+const pend = (id, outlets = []) => ({
+  id,
+  eligibility: [{ eligible: false, market_pending: true, reason: 'not receivable: fox=unverified' }],
+  broadcasts: outlets.map((n) => ({ active: true, network: { canonical_name: n } })),
+});
+
+test('E5: a market-pending game is neither eligible nor off-service', () => {
+  const s = offServiceSummary([game('1', true, ['ABC']), pend('2', ['FOX']), game('3', false, ['CBS Sports Network'])]);
+  assert.deepEqual(s.on.map((g) => g.id), ['1']);
+  assert.deepEqual(s.pending.map((g) => g.id), ['2']);
+  assert.deepEqual(s.off.map((g) => g.id), ['3']);
+});
+
+test('E5: a market-pending game is NEVER counted inside "not on your services"', () => {
+  const s = offServiceSummary([pend('1', ['FOX']), pend('2', ['CBS']), game('3', false, ['NFL+'])]);
+  assert.equal(s.offCount, 1, 'only the genuinely ineligible game counts as off');
+  assert.equal(s.pendingCount, 2);
+  assert.match(s.lines.off, /^1 not on your services/);
+  assert.match(s.lines.pending, /^2 market pending/);
+});
+
+test('E5: an eligible row is never pending even if the flag is set', () => {
+  // eligible wins - if there is a way to watch it, nothing is pending.
+  assert.equal(isMarketPending({ eligibility: [{ eligible: true, market_pending: true }] }), false);
+});
+
+test('E5: market_pending null or false is not pending', () => {
+  assert.equal(isMarketPending({ eligibility: [{ eligible: false, market_pending: null }] }), false);
+  assert.equal(isMarketPending({ eligibility: [{ eligible: false, market_pending: false }] }), false);
+  assert.equal(isMarketPending({ id: 'x' }), false, 'no eligibility row at all');
+});
+
+test('E5: a game with NO eligibility row is shown, uncounted, and not pending', () => {
+  const s = offServiceSummary([{ id: 'x' }]);
+  assert.equal(s.onCount, 1, 'unjudged is shown');
+  assert.equal(s.pendingCount, 0);
+  assert.equal(s.offCount, 0);
+});
+
+test('E5: the Sept 13 shape renders the three-way count', () => {
+  const games = [
+    game('a', true, ['NBC']), game('b', true, ['ESPN']),
+    pend('c', ['FOX']), pend('d', ['CBS']), pend('e', ['FOX']),
+    // 5 FOX + 3 CBS, not 4/4: a tie breaks alphabetically, so an even split would assert the
+    // tiebreak rather than the ranking this line is supposed to show.
+    ...Array.from({ length: 8 }, (_, i) => game(`o${i}`, false, [i < 5 ? 'FOX' : 'CBS'])),
+  ];
+  const s = offServiceSummary(games);
+  assert.equal(s.lines.total, '13 games');
+  assert.equal(s.lines.on, '2 on your services');
+  assert.equal(s.lines.pending, '3 market pending · FOX, CBS — map publishes ~Wed');
+  assert.equal(s.lines.off, '8 not on your services · FOX, CBS');
+});
+
+test('E5: a state with no games gets no line rather than a zero', () => {
+  const l = countLines(2, 2, [], []);
+  assert.equal(l.on, '2 on your services');
+  assert.equal(l.pending, null, '"0 market pending" invites the reader to wonder what they missed');
+  assert.equal(l.off, null);
+});
+
+test('E5: the sponsor trim still applies to the pending line', () => {
+  const s = offServiceSummary([pend('1', ['ABTV, presented by Pechanga Resort Casino'])]);
+  assert.equal(s.lines.pending, '1 market pending · ABTV — map publishes ~Wed');
+});
+
+test('E5: pending games survive BOTH toggle states', () => {
+  // The visible set is "everything except off"; pending is in it either way. This mirrors what
+  // Listing computes, and is the property the whole carve-out rests on.
+  const games = [game('1', true), pend('2'), game('3', false)];
+  const s = offServiceSummary(games);
+  const offIds = new Set(s.off.map((g) => g.id));
+  const collapsed = games.filter((g) => !offIds.has(g.id));
+  assert.deepEqual(collapsed.map((g) => g.id), ['1', '2'], 'default state keeps pending');
+  assert.deepEqual(games.map((g) => g.id), ['1', '2', '3'], 'show-all keeps everything, in order');
+});
