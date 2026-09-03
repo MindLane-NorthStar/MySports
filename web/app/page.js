@@ -23,15 +23,22 @@ export const dynamic = 'force-dynamic';
 // empty state would answer them with a list of dates for OTHER sports - which reads as a bug
 // rather than as a season that has not started. Each says why it is empty and when data arrives.
 //
-// NASCAR and IndyCar carry register section 13's own copy. UFC and WWE do not have copy in section
-// 13, and the register is a Claude project doc rather than a repo file, so rather than inventing a
-// schedule claim - the exact failure working rule 22 exists to prevent - they state only what is
-// verifiable: no adapter has loaded them. FLAGGED for Joe to supply the real copy.
+// NASCAR and IndyCar carry register section 13's own copy: each has an EXTERNAL GATE - a playoff
+// start, a schedule publication - so each can name a date without inventing one.
+//
+// WWE and UFC run continuously, so there is no date to name that would not be invented. Cowork
+// supplied their copy in prompt 26 stage 4, and rights facts were deliberately NOT used - "streams
+// on Paramount+", "Raw is on Netflix" are verifiable today but go stale silently inside an empty
+// state nobody re-reads, and production is a public URL. What is left that stays true is that the
+// data is not loaded, plus the shape of what will arrive.
+//
+// FLAGGED FOR JOE'S VETO: "are coming" makes a soft promise with no date. The alternatives were a
+// bare "no games" (section 13 rules it out), a date (invented), and a rights claim (rots).
 const SPORT_EMPTY = {
   nascar: 'NASCAR arrives with the playoffs, September 6.',
   indycar: "IndyCar's 2026 season ends this month; the 2027 schedule publishes in October.",
-  ufc: 'No UFC events have been loaded yet - the adapter that fetches them has not been built.',
-  wwe: 'No WWE events have been loaded yet - the adapter that fetches them has not been built.',
+  ufc: 'UFC is not loaded yet. The numbered events and Fight Nights are coming.',
+  wwe: 'WWE is not loaded yet. Raw, SmackDown and the premium live events are coming.',
 };
 
 async function ArchivedGrid({ sport, day }) {
