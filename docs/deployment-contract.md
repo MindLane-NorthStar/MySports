@@ -99,7 +99,7 @@ Rules: object keys are lowercase; PNG logos are the ESPN/CFBD 500 px originals (
 | `CFBD_API_KEY` | CollegeFootballData bearer token | laptop `.env`; GitHub Actions secret | Joe |
 | `SUPABASE_DB_URL` | `postgresql://mysports_writer.ztnppejmdwmhqstqsfks:<pw>@<session-pooler-host>:5432/postgres?sslmode=require` — the shared pooler in session mode; the username carries the project ref after a dot. **The host must be copied from Dashboard → Connect → Session pooler** (expected `aws-1-us-east-2.pooler.supabase.com`, confirmed in the dialog; the docs' `aws-0` example is a different cluster and answers `tenant/user not found`). (Free-plan direct connections are IPv6-only, and GitHub Actions and Vercel are IPv4-only, so the pooler is mandatory, not a preference.) | laptop `.env`; GitHub Actions secret | Joe (§7) |
 | `SUPABASE_URL` | `https://ztnppejmdwmhqstqsfks.supabase.co` | `.env`; Actions; Vercel (`NEXT_PUBLIC_SUPABASE_URL`) | Cowork (public value) |
-| `SUPABASE_PUBLISHABLE_KEY` | anon/publishable key | Vercel (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`); `.env` for local web dev | Joe copies from Dashboard → Project Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon/publishable key | Vercel; `web/.env.local` for local web dev | Joe copies from Dashboard → Project Settings → API. **Has a committed default in `web/lib/config.js`**, so the build does not depend on it |
 | `R2_ACCOUNT_ID` | Cloudflare account id | `.env`; Actions | Joe |
 | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | R2 API token scoped to `mysports-assets`, Object Read & Write | `.env`; Actions | Joe (§7) |
 | `R2_BUCKET_ASSETS` / `R2_BUCKET_DATA` | `mysports-assets` / `mysports-data` | `.env`; Actions | Cowork |
@@ -114,14 +114,14 @@ Rules: no service-role key anywhere in v1 (nothing needs it); `.env` is git-igno
 
 | Workflow | Trigger | Does |
 |---|---|---|
-| `schedule_refresh.yml` | Mon/Wed/Fri **11:00 UTC** (07:00 EDT / 06:00 EST) + manual dispatch | runs every in-season adapter, reconciles (Milestone 2), writes `mysports.*`, records `refresh_runs` |
+| `schedule_refresh.yml` | **daily 11:00 UTC** (07:00 EDT / 06:00 EST) + manual dispatch | runs every in-season adapter, reconciles (Milestone 2), writes `mysports.*`, records `refresh_runs` |
 | `render_all.yml` | daily **09:30 UTC** in season (05:30 EDT) + after a successful refresh + manual | renders the viewing day(s), uploads `grids/` to R2, syncs the local cache |
 | `bootstrap_season.yml` | manual only | Milestone 1 season load |
 | `backup_schema.yml` | Sundays 12:00 UTC | `pg_dump --schema=mysports` → `backups/`, prune to 8 |
 
 Spec §15.2 failure rules apply unchanged: never delete canonical data, never publish an empty schedule, keep last-known-good grids in R2 (the upload is atomic per file; a failed run leaves yesterday's file in place).
 
-Budget: ~4 runs/week × ~3 min + daily renders ≈ 60–90 minutes/month against a 2,000-minute allowance.
+Budget: ~7 runs/week × ~3 min + daily renders ≈ 100–130 minutes/month against a 2,000-minute allowance. (Was ~60–90 when the refresh ran Mon/Wed/Fri; going daily adds three runs a week, ≈ 9 min/week ≈ 39 min/month. Still an order of magnitude inside the allowance.)
 
 ---
 
@@ -141,7 +141,7 @@ Budget: ~4 runs/week × ~3 min + daily renders ≈ 60–90 minutes/month against
 4. **Create the R2 API token.** Cloudflare Dashboard → **R2 Object Storage** → **Manage R2 API Tokens** → **Create API token** → name `mysports-actions`, permission **Object Read & Write**, buckets **mysports-assets** and **mysports-data** only → Create → copy the Access Key ID, Secret Access Key, and the account id shown on that page.
 5. **Local `.env`.** Add the five lines: `SUPABASE_DB_URL=...` (§4 pattern with the password from step 1), `R2_ACCOUNT_ID=`, `R2_ACCESS_KEY_ID=`, `R2_SECRET_ACCESS_KEY=`, `ASSET_BASE_URL=` (from step 3). `.env.example` in the repo lists every name.
 6. **GitHub secrets.** github.com/MindLane-NorthStar/MySports → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**, one each: `CFBD_API_KEY`, `SUPABASE_DB_URL`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`.
-7. (Milestone 4) Vercel project env vars: the three `NEXT_PUBLIC_*` values.
+7. (Milestone 4) **Vercel project env vars — recommended, NOT blocking.** There are **four** `NEXT_PUBLIC_*` values: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_SCHEMA`, `NEXT_PUBLIC_ASSET_BASE_URL`. **Every one has a committed default in `web/lib/config.js`, so a Vercel build cannot fail for want of them** — a clean checkout builds and runs with no secret provisioning at all. Set them in the Vercel dashboard anyway, so that a future key rotation is a dashboard change rather than a code change and a redeploy.
 
 ---
 
@@ -174,6 +174,7 @@ Budget: ~4 runs/week × ~3 min + daily renders ≈ 60–90 minutes/month against
 
 ## 12. Change log
 
+- **v1.0.3 (2026-09-02, ~21:55 ET):** three corrections where this contract had drifted from the shipped code. **In all three the code was right and the contract was stale, so the contract moved.** (a) §4 named `SUPABASE_PUBLISHABLE_KEY` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; the app has always read **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** (`web/lib/config.js`, `web/.env.local.example`). A deployer following the old row would have set a variable nothing reads and seen the committed default silently used instead. (b) §5 said `schedule_refresh.yml` runs Mon/Wed/Fri; its cron has been `0 11 * * *` — **daily** — since 2026-09-03, for the reason recorded in the workflow's own header: `render_all` already runs daily in season, so a Mon/Wed/Fri refresh meant four days a week were rendered from stale rows. Budget line recomputed. (c) §7 step 7 said "the three `NEXT_PUBLIC_*` values"; there are **four**, and every one has a committed default in `web/lib/config.js`, so they are **not blocking for the first deploy** — step 7 now says so explicitly, and reframes setting them as future-proofing a key rotation rather than a prerequisite. No code changed.
 - **v1.0.2 (2026-09-01, ~11:15 ET):** pooler host is no longer hard-coded as `aws-0`; it is whatever Dashboard → Connect → Session pooler shows. Found when the first live load failed with Supavisor `tenant/user … not found` (role verified present via `pg_authid`).
 - **v1.0.1 (2026-09-01, 09:00 ET):** `.env.example` placeholder `PASSWORD` → `<PASSWORD>` after the commit secret gate correctly fired on it (Claude Code stopped, reset, nothing pushed); §4 rule added. `.gitattributes` gains `*.yml`, `*.yaml`, `*.sql`.
 - **v1.0 (2026-09-01):** applied. Migration `mysports_0001_schema_and_roles` needed one line beyond the draft — `grant mysports_owner to postgres` — because Supabase's `postgres` role is not a superuser and `create schema … authorization` requires membership (first attempt failed cleanly with 42501, nothing partially created). Buckets created via the Cloudflare connector. R2 public access is per bucket, hence the second bucket `mysports-data` for private material.
