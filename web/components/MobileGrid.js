@@ -23,6 +23,7 @@ import {
   clockShort,
   packLanes,
   viewingMinutes,
+  tint,
 } from '../lib/gridmodel.js';
 import { teamLogoUrl } from '../lib/config.js';
 import { markStyle, hasMark } from '../lib/marks.js';
@@ -34,15 +35,6 @@ import { railLabel } from '../lib/raillabel.js';
 const SCALE = 0.8; // M1: all grid content renders at 80% of contract design size
 const SEAM_PX = 30; // the dashed cut occupies this much of the axis (M3)
 
-/** tint(hex, f) - the contract's cap gradient endpoints, 0.86 -> 0.58 (M13). */
-function tint(hex, f) {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
-  const [r, g, b] = m
-    ? [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16))
-    : [110, 116, 124];
-  const mix = (c) => Math.round(c * f + 255 * (1 - f) * 0.08);
-  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
-}
 
 /** Text measurement in the REAL fonts - M2 requires the widest line be measured, not estimated. */
 function useTextMeasurer() {

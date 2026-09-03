@@ -169,3 +169,22 @@ export function packLanes(items) {
   }
   return lanes;
 }
+
+/**
+ * tint(hex, f) - the contract's cap gradient endpoints, 0.86 -> 0.58 (Mobile Grid Addendum M13).
+ *
+ * Lives here rather than in MobileGrid because it is grid MODEL, not markup - and because a component
+ * full of JSX cannot be imported by a plain `node --test` run, which is what kept this untested.
+ *
+ * The grey [110,116,124] fallback is the tell that a team colour never arrived: if a payload change
+ * ever drops primary_color, every band goes that flat grey, which is almost indistinguishable from
+ * the charcoal ground at a glance. web/test/gridbands.test.mjs pins it.
+ */
+export function tint(hex, f) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  const [r, g, b] = m
+    ? [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16))
+    : [110, 116, 124];
+  const mix = (c) => Math.round(c * f + 255 * (1 - f) * 0.08);
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+}
