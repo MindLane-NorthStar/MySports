@@ -280,9 +280,23 @@ input[type='search'] {
   .chip { min-height: 44px; }
 }
 
+/* REGISTER §14: the active chip is INVERTED - a charcoal plate with a gold border, not a gold
+ * fill. Prompt 25 measured every league mark composited on the real gold plate and five of ten
+ * read under 3:1; CFP, which §13 itself chose for the CFB chip, was 100% of its opaque ink under
+ * 3:1 with a best case of 1.61:1 - a ghost. That is not fixable with a _dark treatment, because
+ * cfp_dark already reads 10.05:1 on charcoal; the RAW art is light-on-light.
+ * Inverting means every chip floats on charcoal in both states and takes _dark always: one mark
+ * state instead of two, no new art, and every future league mark is only ever asked to read on
+ * one ground. Contract v1.3e's light-plate rule is unchanged and still governs grid caps and
+ * light tint plates (addendum M12) - it simply no longer applies to chips.
+ * The background is INHERITED from .chip, not restated: the panel gradient is already the
+ * charcoal ground, and repeating it here would be a second place to keep in sync.
+ * Border WIDTH is untouched at 1px (.chip sets it) so the box is identical in both states - a
+ * chip that grew on selection would make the whole row jump. Gold border AND gold text, never
+ * border alone: §14 names a quieter active state as this ruling's cost, so the two cues carry it
+ * together. */
 .chip[data-active='true'] {
-  color: #1b1b1b;
-  background: var(--gold);
+  color: var(--gold);
   border-color: var(--gold);
 }
 

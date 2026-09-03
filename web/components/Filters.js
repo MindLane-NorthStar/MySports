@@ -75,10 +75,9 @@ export function SportFilter({ sport, available }) {
                 College football uses the CFP mark, matching the band headers and the home banner.
                 alt="" because the label beside it already carries the meaning - a screen reader should
                 hear "NFL" once, not twice. */}
-            {/* CONTRACT v1.3e / addendum M12, both contexts on one control: an inactive chip is
-                charcoal, so it takes the _dark variant; the ACTIVE chip is a gold plate, which is a
-                light ground, so it takes the RAW art. Filtering the dark mark to black instead just
-                flattened light marks into solid blocks - the MLB roundel became a black rectangle. */}
+            {/* SINGLE CONTEXT per register §14: the active chip is a charcoal plate with a gold
+                border, not a gold fill, so every chip floats on charcoal in both states and takes
+                _dark always. There is no state branch here any more. */}
             {/* Section 13: the mark IS the chip - no text beside it. Ten chips of mark-plus-word do
                 not fit 390px at any sane size, and the marks are the thing Joe recognises. The label
                 moves to aria-label on the BUTTON: removing visible text removes the accessible name,
@@ -87,7 +86,7 @@ export function SportFilter({ sport, available }) {
                 126px at 21px tall and constraining width would squash it (section 13's measurements). */}
             <img
               className="chip-mark"
-              src={`/leagues/${CHIP_MARK[s] || s}${sport === s ? '' : '_dark'}.png`}
+              src={`/leagues/${CHIP_MARK[s] || s}_dark.png`}
               alt=""
               loading="lazy"
             />
