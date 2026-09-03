@@ -1397,3 +1397,17 @@ input:focus-visible {
   color:var(--gold);background:rgba(27,27,27,.86);
   border:1px solid var(--gold-dim);border-radius:3px;padding:2px 5px 1px}
 @media (max-width:699px){.pending-row::after{font-size:9px;padding:1px 4px 0}}
+
+/* ---- per-sport bands (prompt 21)
+ * Bands render in SPORTS order, not kickoff order, so the page reads in the product's order rather
+ * than by whichever sport happened to start first. The header is band level - the card is untouched. */
+.band{margin:0 0 26px}
+.band-head{display:flex;align-items:center;gap:9px;margin:0 0 8px;
+  padding-bottom:6px;border-bottom:1px solid var(--line-soft)}
+.band-mark{height:22px;width:auto;flex:0 0 auto}
+.band-title{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink);margin:0}
+@media (max-width:699px){
+  .band-mark{height:18px}
+  .band-title{font-size:15px}
+}

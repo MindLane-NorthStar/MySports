@@ -109,7 +109,7 @@ export default async function TodayPage({ searchParams }) {
         </p>
       ) : null}
 
-      <Listing games={games} standingsRows={standingsRows} day={day} sport={sport} grid />
+      <Listing games={games} standingsRows={standingsRows} day={day} sport={sport} grid bands />
 
       {!error && games.length ? <DataAsOf day={day} today={today} overlay={overlay} /> : null}
 

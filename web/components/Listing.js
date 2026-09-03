@@ -8,14 +8,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import MatchupCard from './MatchupCard.js';
+import SportBand from './SportBand.js';
 import MobileGrid from './MobileGrid.js';
 import GameDetail from './GameDetail.js';
 import { indexStandings } from '../lib/standings.js';
-import { REFRESH_SECONDS } from '../lib/config.js';
+import { REFRESH_SECONDS, SPORTS, SPORT_LABEL } from '../lib/config.js';
 import { offServiceSummary } from '../lib/offservice.js';
-import { favoriteIds, splitFavorites } from '../lib/favorites.js';
-import favoritesDoc from '../../data/favorites.json';
 
 function anyInFlight(games) {
   const now = Date.now();
@@ -27,7 +25,7 @@ function anyInFlight(games) {
   });
 }
 
-export default function Listing({ games, standingsRows, day, sport, generatedAt, showDay = false, grid = false }) {
+export default function Listing({ games, standingsRows, day, sport, generatedAt, showDay = false, grid = false, bands = false }) {
   const [open, setOpen] = useState(null);
   const router = useRouter();
   const standings = useMemo(() => indexStandings(standingsRows), [standingsRows]);
@@ -38,36 +36,31 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
     return () => clearInterval(id);
   }, [games, router]);
 
-  // D4/E3. Off-service games are hidden by DEFAULT but never silently: the count line always states
-  // the totals and names where the missed games went, and the toggle reveals them dimmed. Applying
-  // this in Listing rather than per page covers Today, /weeks and /history with one implementation.
-  const [showAll, setShowAll] = useState(false);
-  const offService = useMemo(() => offServiceSummary(games), [games]);
-  const offIds = useMemo(() => new Set(offService.off.map((g) => g.id)), [offService]);
-  const pendingIds = useMemo(() => new Set(offService.pending.map((g) => g.id)), [offService]);
+  // Bands render in SPORTS order (cfb, nfl, nba, nhl, mlb), not in kickoff order - the order is the
+  // product's, so a quiet sport does not jump the page because it happened to start first. Only
+  // sports with games that day appear.
+  const grouped = useMemo(() => {
+    if (!bands) return null;
+    const by = new Map();
+    for (const g of games || []) {
+      if (!by.has(g.sport)) by.set(g.sport, []);
+      by.get(g.sport).push(g);
+    }
+    const known = SPORTS.filter((s) => by.has(s));
+    const extra = [...by.keys()].filter((s) => !SPORTS.includes(s)).sort();
+    return [...known, ...extra].map((s) => [s, by.get(s)]);
+  }, [bands, games]);
 
-  // E5: MARKET-PENDING GAMES ARE EXEMPT FROM FILTER-BY-DEFAULT, in both toggle states. Only genuinely
-  // ineligible games are hidden, so the visible set is "everything except off" collapsed back into the
-  // ORIGINAL order - not on-then-pending, which would shunt eleven of NFL Sunday's thirteen games to
-  // the bottom and stop the day reading as a timeline.
-  const shown = useMemo(
-    () => (showAll ? games : (games || []).filter((g) => !offIds.has(g.id))),
-    [showAll, games, offIds],
-  );
-
-  // D6: Joe's teams float to the top of the listing. Both groups keep the order they arrived in, so
-  // each still reads chronologically - a promotion, not a re-sort.
-  const favIds = useMemo(() => favoriteIds(favoritesDoc), []);
-  const { favorites, rest } = useMemo(() => splitFavorites(shown, favIds), [shown, favIds]);
-
-  // The cue and the dim both live on the WRAPPER. MatchupCard is locked (contract v1.6.4 + Mobile
-  // Grid Addendum v1.0), so nothing here reaches inside it.
-  const rowClass = (g) =>
-    [pendingIds.has(g.id) ? 'pending-row' : null, offIds.has(g.id) ? 'offsvc-row' : null]
-      .filter(Boolean).join(' ') || undefined;
-
+  // The grid stays bound to a SINGLE selected sport, exactly as before - bands do not each get one.
   const showGrid = Boolean(grid && sport && games.length);
   const gridId = `grid-${sport || 'all'}-${day || ''}`;
+
+  // The mobile grid follows what the bands actually show: everything except genuinely ineligible
+  // games. Computed here because the grid spans bands.
+  const gridGames = useMemo(() => {
+    const off = new Set(offServiceSummary(games).off.map((g) => g.id));
+    return (games || []).filter((g) => !off.has(g.id));
+  }, [games]);
 
   // LISTINGS FIRST, in every view and for every sport (Joe's ruling 2026-09-03). The grid is the
   // second thing on the page, not the first: a phone opens to what is on, and the grid is one tap
@@ -82,50 +75,21 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
         </div>
       ) : null}
 
-      {offService.lines.pending || offService.lines.off ? (
-        <div className="offsvc">
-          <span className="offsvc-total">{offService.lines.total}</span>
-          {offService.lines.on ? <span>{offService.lines.on}</span> : null}
-          {offService.lines.pending ? <span className="offsvc-pending">{offService.lines.pending}</span> : null}
-          {offService.lines.off ? <span>{offService.lines.off}</span> : null}
-          {offService.offCount ? (
-            <button type="button" className="offsvc-toggle" onClick={() => setShowAll((v) => !v)}
-                    aria-expanded={showAll}>
-              {showAll ? 'Hide them' : 'Show all'}
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-
-      {favorites.length ? (
-        <>
-          {/* The label and its rule live HERE, at band level - never on the card. The listings card
-              is closed (contract v1.6.4 + Mobile Grid Addendum v1.0). */}
-          <p className="favlabel">Your teams</p>
-          <div className="cards">
-            {favorites.map((g) => (
-              <div key={g.id} className={rowClass(g)} data-market-tbd={pendingIds.has(g.id) || undefined}>
-                <MatchupCard game={g} standings={standings} showDay={showDay} onOpen={setOpen} />
-              </div>
-            ))}
-          </div>
-          <hr className="favrule" />
-        </>
-      ) : null}
-
-      <div className="cards">
-        {rest.map((g) => (
-          // The dim lives on a WRAPPER, never on the card: the listings card is locked by contract
-          // v1.6.4 and the Mobile Grid Addendum, and an off-service game is still that same card.
-          <div key={g.id} className={rowClass(g)} data-market-tbd={pendingIds.has(g.id) || undefined}>
-            <MatchupCard game={g} standings={standings} showDay={showDay} onOpen={setOpen} />
-          </div>
-        ))}
-      </div>
+      {bands ? (
+        grouped.map(([s, rows]) => (
+          <SportBand key={s} sport={s} label={SPORT_LABEL[s] || s} games={rows}
+                     standings={standings} showDay={showDay} onOpen={setOpen} />
+        ))
+      ) : (
+        // /weeks and /history keep their flat structure - the same component, header off, so the
+        // count line, the toggle, the favourites float and the row wrappers have one implementation.
+        <SportBand sport={sport} label={null} games={games} standings={standings}
+                   showDay={showDay} onOpen={setOpen} showHeader={false} />
+      )}
 
       {showGrid ? (
         <div id={gridId}>
-          <MobileGrid games={shown} sport={sport} day={day} standings={standings} onOpen={setOpen} />
+          <MobileGrid games={gridGames} sport={sport} day={day} standings={standings} onOpen={setOpen} />
         </div>
       ) : null}
 
