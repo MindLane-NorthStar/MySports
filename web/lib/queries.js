@@ -182,6 +182,41 @@ export async function standingsFor(teamIds, seasons) {
   );
 }
 
+/**
+ * College football poll ranks for a set of clubs, weeks and seasons (migration 0003, loaded by
+ * pipeline/rankings.py). Only CFB has polls, so a page with no college game makes no request.
+ *
+ * Both AP and CFP come back and lib/standings.js rankFor() applies Joe's precedence - CFP first, then
+ * AP. The Coaches poll is stored but deliberately not requested: nothing renders it, and asking for
+ * rows the card will discard is a bigger response for no reason.
+ */
+export async function rankingsFor(teamIds, seasons, weeks) {
+  const ids = [...new Set((teamIds || []).filter(Boolean))];
+  const yrs = [...new Set((seasons || []).filter((s) => Number.isInteger(s)))];
+  const wks = [...new Set((weeks || []).filter((w) => Number.isInteger(w)))];
+  if (!ids.length || !yrs.length || !wks.length) return [];
+  return rest(
+    `rankings?select=team_id,season,week,poll_type,rank` +
+      `&team_id=in.${inList(ids)}&season=in.(${yrs.join(',')})&week=in.(${wks.join(',')})` +
+      `&poll_type=in.(AP,CFP)`
+  );
+}
+
+/** The rank index for a page's games, in one round trip. CFB only - no other sport has a poll. */
+export async function rankingsForGames(games) {
+  const ids = [];
+  const seasons = [];
+  const weeks = [];
+  for (const g of games || []) {
+    if (g.sport !== 'cfb') continue;
+    if (g.home?.id) ids.push(g.home.id);
+    if (g.away?.id) ids.push(g.away.id);
+    if (Number.isInteger(g.season)) seasons.push(g.season);
+    if (Number.isInteger(g.week)) weeks.push(g.week);
+  }
+  return rankingsFor(ids, seasons, weeks);
+}
+
 /** The standings index for a page's games, in one round trip. */
 export async function standingsForGames(games) {
   const ids = [];

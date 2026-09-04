@@ -7,7 +7,7 @@
 
 import Listing from '../../components/Listing.js';
 import { SearchBox, SportFilter } from '../../components/Filters.js';
-import { finalGames, matchesSearch, standingsForGames } from '../../lib/queries.js';
+import { finalGames, matchesSearch, standingsForGames, rankingsForGames } from '../../lib/queries.js';
 import { SPORT_LABEL, resolveSportParam } from '../../lib/config.js';
 import { RestError } from '../../lib/rest.js';
 
@@ -20,10 +20,13 @@ export default async function HistoryPage({ searchParams }) {
 
   let games = [];
   let standingsRows = [];
+  let rankingsRows = [];
   let error = null;
   try {
     games = await finalGames({ sport });
-    standingsRows = await standingsForGames(games);
+    [standingsRows, rankingsRows] = await Promise.all([
+      standingsForGames(games), rankingsForGames(games),
+    ]);
   } catch (e) {
     error = e instanceof RestError ? `${e.status} — ${e.body}` : String(e);
   }
@@ -66,7 +69,7 @@ export default async function HistoryPage({ searchParams }) {
         </p>
       ) : null}
 
-      <Listing games={shown} standingsRows={standingsRows} showDay />
+      <Listing games={shown} standingsRows={standingsRows} rankingsRows={rankingsRows} showDay />
     </main>
   );
 }

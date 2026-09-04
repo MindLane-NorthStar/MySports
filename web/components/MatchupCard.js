@@ -1,23 +1,31 @@
-// The LOCKED listings card (prompt 14 §3.4) - Today and Weeks, every sport.
+// The listings card (prompt 14 §3.4, restacked by Joe's C1 ruling) - Today, Weeks and History.
 //
-//   [ time ] [ away tcol ] @ [ home tcol ]   [ MARK ]   [ favoured logo + ML ]
-//            network text                                [ O/U ]
+//   [ time ] [ away tcol ]   [ MARK ]   [ favoured logo + ML ]
+//   [ date ] [ home tcol ]              [ O/U ]
+//            venue
 //
 // FOUR columns: time | body | processed mark | right slot. The mark sits BETWEEN the matchup and the
-// slot, in its own column, vertically centred on line 2 - not inside the body and not left of the
-// matchup, which is where it had drifted to.
+// slot, in its own column, vertically centred - not inside the body and not left of the matchup.
 //
-// tcol line 1  logo (DARK variant - it floats on charcoal, addendum M12) + name
-// tcol line 2  record + standing, OMITTED ENTIRELY when there is none
+// C1: THE TWO TEAMS STACK, away above home. They used to sit side by side and share the body's width
+// between them, which is why prompt 31 measured .mbody at 152px against the ~250px two names need and
+// left flex-wrap in place to stop names truncating. Stacking makes that permanent instead of
+// conditional: each name now has the whole body width to itself at every viewport, rather than only
+// at the widths where the row happened to wrap.
+//
+// tcol line 1  logo (DARK variant - it floats on charcoal, addendum M12) + name + RECORD
+// tcol line 2  where that record places the club - the rest of the standing line
 // tcol line 3  MLB only: the probable starter, or 'Starter TBA'
 //
-// The '@' HUGS the away name: it sits in the content flow between the away column and the home logo,
-// not in a fixed centre column, so the matchup reads as one sentence rather than a table row.
+// C2 moved the record up onto line 1. Each line renders only when it has something to say; a club with
+// no record shows no record, and the line below it still shows the division. See lib/standings.js.
+//
+// The venue line stays at the foot of the body, under both teams.
 
 import { etTime, teamColor, dayParts, slotContent } from '../lib/format.js';
 import { teamLogoDarkUrl } from '../lib/config.js';
 import { markStyle, showsMark } from '../lib/marks.js';
-import { standingLine, standingFor } from '../lib/standings.js';
+import { standingParts, standingFor, rankFor } from '../lib/standings.js';
 
 // The three-line stack the network mark is sized against: 22 + 16 + 16.
 const STACK_H = 54;
@@ -47,18 +55,24 @@ export function nameSize(name) {
  * The column is `flex: 0 1 auto; min-width: 0`, so the '@' still hugs: the stack is only as wide as
  * its content, and the two stacks close around the '@' rather than sitting in fixed halves.
  */
-function TeamStack({ team, teamId, sport, standings, season, probable, showProbable }) {
+function TeamStack({ team, teamId, sport, standings, rankings, season, week, probable, showProbable }) {
   const name = cardName(team, teamId);
-  const row = standings ? standingFor(standings, team?.id || teamId, season) : null;
-  const line = standingLine(row, sport, team?.conference?.name);
+  const id = team?.id || teamId;
+  const row = standings ? standingFor(standings, id, season) : null;
+  // CFB only: the poll rank, CFP before AP. Every other sport passes null and never reaches a poll.
+  const rank = sport === 'cfb' && rankings ? rankFor(rankings, id, season, week) : null;
+  const { record, rest } = standingParts(row, sport, team?.conference?.name, rank);
   return (
     <div className="tcol">
       <div className="tl1">
-        <img src={teamLogoDarkUrl(team?.id || teamId)} alt="" loading="lazy" />
+        <img src={teamLogoDarkUrl(id)} alt="" loading="lazy" />
         <b style={{ fontSize: `${nameSize(name)}px` }}>{name}</b>
+        {/* C2: the record joins the name. It does not shrink with the name - it is short, and a
+            squeezed "70-71" would be unreadable long before a squeezed team name is. */}
+        {record ? <span className="tl1-rec">{record}</span> : null}
       </div>
-      {/* Absent means ABSENT: no blank line is reserved for a record that does not exist. */}
-      {line ? <div className="tcol-rec">{line}</div> : null}
+      {/* Absent means ABSENT, per line: no blank row is reserved for anything that does not exist. */}
+      {rest ? <div className="tcol-rec">{rest}</div> : null}
       {showProbable ? <div className="tcol-pitch">{probable || 'Starter TBA'}</div> : null}
     </div>
   );
@@ -93,7 +107,7 @@ export function favourite(game) {
   return null;
 }
 
-export default function MatchupCard({ game, standings, showDay = false, onOpen }) {
+export default function MatchupCard({ game, standings, rankings, showDay = false, onOpen }) {
   const { home, away, sport } = game;
   const b = cardBroadcast(game);
   const mark = showsMark(b) ? markStyle(b.service_id, STACK_H) : null;
@@ -129,16 +143,21 @@ export default function MatchupCard({ game, standings, showDay = false, onOpen }
         <div className="duel hug">
           <TeamStack
             team={away} teamId={game.away_team_id} sport={sport} standings={standings}
-            season={game.season} probable={game.probable_away_pitcher} showProbable={isMlb}
+            rankings={rankings} season={game.season} week={game.week}
+            probable={game.probable_away_pitcher} showProbable={isMlb}
           />
-          {/* B1: NOTHING between the stacks on an ordinary game - away-then-home carries it, and
-              Joe asked for the @ to go. `vs` STAYS for neutral sites, because there the order
-              carries nothing: 20 games in the loaded season are neutral (11 CFB, 9 NFL), and
-              dropping the marker outright would render an NFL game in London as a home game. */}
+          {/* NOTHING between the stacks on an ordinary game - away-above-home carries it, and Joe
+              asked for the @ to go. `vs` STAYS for neutral sites, because there the order carries
+              nothing: 20 games in the loaded season are neutral (11 CFB, 9 NFL), and dropping the
+              marker outright would render an NFL game in London as a home game. Stacked, it is a
+              short row of its own between the two teams rather than a hug between two columns -
+              which is if anything clearer, because a neutral site is a fact about the fixture and
+              now reads on its own line. */}
           {game.neutral_site ? <span className="at">vs</span> : null}
           <TeamStack
             team={home} teamId={game.home_team_id} sport={sport} standings={standings}
-            season={game.season} probable={game.probable_home_pitcher} showProbable={isMlb}
+            rankings={rankings} season={game.season} week={game.week}
+            probable={game.probable_home_pitcher} showProbable={isMlb}
           />
         </div>
 

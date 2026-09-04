@@ -492,26 +492,28 @@ input[type='search'] {
    the home logo, deliberately NOT a fixed centre column, so the two sides read as one sentence. */
 /* Two team columns hugging an '@'. align-items:flex-start keeps both stacks topped on line 1, so a
    team with no record line does not float its name against one that has two. */
-/* flex-wrap STAYS, and prompt 31 measured why rather than assuming.
+/* C1: THE TWO TEAMS STACK - away above home. This is the two-row matchup prompt 31 measured the
+ * need for and was told was out of scope.
  *
- * The locked reference does not wrap - mobile_demo.html:97-99 hold one line and let the stacks
- * shrink - and Joe is right that the `@` dropping to its own row looks inconsistent. Removing the
- * wrap does hold the line, and the `@` stays put. But this card's .mbody is only 152px at 390px,
- * and two team names plus two logos plus the `@` need roughly 250px, so the shrink has nowhere to
- * stop: 122 of 124 names on the 2026-09-05 slate truncated, "South Alabama" showing 41px of 110.
- * At 360px it was 124 of 124. That trades a cosmetic inconsistency for names nobody can read, so
- * the wrap is left in place and the measurement goes to Joe.
+ * Prompt 31's finding was that .mbody is 152px at 390px while two names side by side need about
+ * 250px, so with wrap removed 122 of 124 names on the 2026-09-05 slate truncated. Its fix was to
+ * KEEP flex-wrap, which stacked the teams at narrow widths and left them side by side at wide ones -
+ * the right pixels for the wrong reason, because the layout then depended on the viewport.
  *
- * Widening the body is the real fix and it is not this prompt's to make: stage 6 freed 22px on the
- * desktop time column but only ~2px on mobile, and the two-row stacked matchup is explicitly out
- * of scope. */
+ * flex-direction: column makes it unconditional. Every name has the full body width at every width,
+ * so nameSize()'s tiered shrink almost never fires and truncation stops being a question.
+ *
+ * align-items: stretch, NOT flex-start, and that is the load-bearing line. On a column flex the cross
+ * axis is horizontal, so flex-start would size each .tcol to its own content - the old hug - and the
+ * names would get no more room than before. stretch is what actually hands each stack the full width.
+ *
+ * Cards get taller. That was known and accepted when the shape was chosen. */
 .duel {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: stretch;
   min-width: 0;
-  flex-wrap: wrap;
   gap: 6px;
-  row-gap: 1px;
 }
 
 /* ONE COLUMN PER TEAM: name line, record line, probable line - each under its own team. `flex:0 1 auto`
@@ -569,7 +571,19 @@ input[type='search'] {
   font-weight: 600;
 }
 
-/* line 2 - record + standing. Absent means ABSENT: the element is not rendered at all, never blank. */
+/* C2: the record, beside the name on line 1. flex 0 0 auto - it never shrinks and never wraps; it is
+   four to eight characters, and the name beside it is the thing with room to give. Baseline-ish
+   alignment comes free from .tl1's align-items:center. */
+.tl1-rec {
+  flex: 0 0 auto;
+  color: var(--dim);
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* line 2 - where that record places the club. Absent means ABSENT: not rendered at all, never blank. */
 .tcol-rec {
   color: var(--dim);
   font-size: 11.5px;

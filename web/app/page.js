@@ -11,7 +11,7 @@
 import { Suspense } from 'react';
 import Listing from '../components/Listing.js';
 import { DatePicker, SportFilter } from '../components/Filters.js';
-import { gamesForDay, newestGridFor, gridIndex, standingsForGames } from '../lib/queries.js';
+import { gamesForDay, newestGridFor, gridIndex, standingsForGames, rankingsForGames } from '../lib/queries.js';
 import { longDay, todayET, etTime } from '../lib/format.js';
 import { SPORT_LABEL, gridAssetUrl, resolveSportParam } from '../lib/config.js';
 import { RestError } from '../lib/rest.js';
@@ -128,10 +128,15 @@ export default async function TodayPage({ searchParams }) {
   let games = [];
   let grids = [];
   let standingsRows = [];
+  let rankingsRows = [];
   let error = null;
   try {
     [games, grids] = await Promise.all([gamesForDay(day, sport), gridIndex()]);
-    standingsRows = await standingsForGames(games);
+    // One round trip each, in parallel. rankingsForGames returns [] with no CFB game on the page,
+    // and an empty id list short-circuits before any request is made.
+    [standingsRows, rankingsRows] = await Promise.all([
+      standingsForGames(games), rankingsForGames(games),
+    ]);
   } catch (e) {
     error = e instanceof RestError ? `${e.status} — ${e.body}` : String(e);
   }
@@ -169,7 +174,8 @@ export default async function TodayPage({ searchParams }) {
         </p>
       ) : null}
 
-      <Listing games={games} standingsRows={standingsRows} day={day} sport={sport} grid bands />
+      <Listing games={games} standingsRows={standingsRows} rankingsRows={rankingsRows}
+               day={day} sport={sport} grid bands />
 
       {!error && games.length ? <DataAsOf day={day} today={today} overlay={overlay} /> : null}
 

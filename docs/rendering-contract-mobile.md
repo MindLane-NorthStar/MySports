@@ -1,4 +1,4 @@
-# Mobile Grid Addendum — v1.3 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04)
+# Mobile Grid Addendum — v1.4 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04)
 
 **Scope: EVERY grid rendering in EVERY mobile view, for EVERY sport** — CFB, NFL, MLB, NBA, NHL, and any future sport — in the Today, Weeks, and History views alike. The PC/archival grid remains governed by `docs/rendering-contract.md` unamended; anything not listed below inherits that contract verbatim on mobile too.
 
@@ -32,6 +32,22 @@
 
 **M17. The name run is fitted, not fixed (2026-09-04).** `nameSize` was a hardcoded `Math.max(8, 15 * 0.8)` — 12px that measured nothing, so a long run simply truncated. It is now the **largest size at which the whole `{rank} NAME (record)` run fits the block's name span**, measured per card with the same canvas context M2 uses, capped at the contract's 26px × M1's 0.8 (**20.8px**) and floored at 14px × 0.8 (**11.2px**). Geometry is frozen: block widths, lane counts, cap sizes and tray heights are unchanged, and a larger name never widens a block.
 
-**M13. Everything else** — block anatomy, cap gradients (tint 0.86→0.58), centered names with rank + record run, hairlines, seam gradient, pills tray with drop priority, marquee gold plate, ALT pills, eligibility buckets, row order, legend glyphs — identical to the PC contract. ~~No other mobile deviations exist.~~ **That sentence was true when written and is not now — see M15 and M16.**
+**M13. Everything else** — block anatomy, ~~cap gradients (tint 0.86→0.58)~~ **(superseded by M17)**, centered names with rank + record run, hairlines, seam gradient, pills tray with drop priority, marquee gold plate, ALT pills, eligibility buckets, row order, legend glyphs — identical to the PC contract. ~~No other mobile deviations exist.~~ **That sentence was true when written and is not now — see M15 and M16.**
 
 **M14. Overlapping programs split the difference (v1.1, Joe 2026-09-03).** Two programs on the same network row whose blocks overlap by **60 minutes or less** each give up half the overlap - the earlier one's end and the later one's start meet at its midpoint - so they share ONE row rather than forcing a second lane. Over 60 minutes generates the second row as before; three or more mutually overlapping programs fall back to lanes; and if splitting would leave either chip under 60 minutes of rendered width, that pair takes the second row too. **Presentational only** - the drawn block moves, the kickoff never does, and the detail panel still shows real times. Identical to the PC contract's v1.6.5 rule and pinned to it by `tests/fixtures/overlap_cases.json`, which both renderers' test suites read. On CFB 2026-09-05 this takes the phone grid from 38 lanes to 36, with 2 pairs split and the width guard never firing.
+
+**M17. The endcap is FLAT at tint 0.72 (2026-09-04, Joe's ruling).** M13 inherited the PC contract's
+vertical gradient, `tint(0.86)` top to `tint(0.58)` bottom. That range spans from the worst value for
+logo legibility to a good one, so half of every cap was painted at the one tint that hides logos.
+Measured over the **310** teams with local art, mean logo ink lost against the cap: flat band colour
+**27.4%**, flat 0.86 **25.2%**, the gradient **14.4%**, flat 0.58 **13.6%**, **flat 0.72 12.9%**.
+
+**Flat, not merely re-tinted**, and that is the other half of the ruling: prompt 36's D1 wanted cap and
+name row to read as one continuous surface and was vetoed because a flat *band colour* made nine logos
+vanish outright. A flat *tint* moves toward that surface without the veto's cost.
+
+**It is not free.** Three logos have no readable edge at 0.72 against one under the gradient: SMU is
+gone either way, and **Tennessee** and **UCLA** regress from 43.7% and 81.2% of their ink lost to
+100%, because each is a solid block of the team's own primary. Sixteen more teams lose five points or
+more. Recorded here rather than used to overturn the ruling; the PC grid (`scripts/render_day.py`) is
+untouched and keeps §3's gradient, exactly as M15 leaves §3's darkening loop to the PC.

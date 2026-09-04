@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import SportBand from './SportBand.js';
 import MobileGrid from './MobileGrid.js';
 import GameDetail from './GameDetail.js';
-import { indexStandings } from '../lib/standings.js';
+import { indexStandings, indexRankings } from '../lib/standings.js';
 import { REFRESH_SECONDS, SPORTS, SPORT_LABEL } from '../lib/config.js';
 import { offServiceSummary } from '../lib/offservice.js';
 import { favoriteIds, splitFavorites } from '../lib/favorites.js';
@@ -27,11 +27,15 @@ function anyInFlight(games) {
   });
 }
 
-export default function Listing({ games, standingsRows, day, sport, generatedAt, showDay = false,
-                                  grid = false, bands = false, heading = null, headingClass = 'favlabel' }) {
+export default function Listing({ games, standingsRows, rankingsRows, day, sport, generatedAt,
+                                  showDay = false, grid = false, bands = false, heading = null,
+                                  headingClass = 'favlabel' }) {
   const [open, setOpen] = useState(null);
   const router = useRouter();
   const standings = useMemo(() => indexStandings(standingsRows), [standingsRows]);
+  // C3: college football's line 2 is a POLL rank, so the card needs the polls as well as the table.
+  // Empty for every page with no CFB game on it, which is most of them.
+  const rankings = useMemo(() => indexRankings(rankingsRows), [rankingsRows]);
 
   useEffect(() => {
     if (!anyInFlight(games)) return undefined;
@@ -98,12 +102,12 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
         <>
           {favorites.length ? (
             <SportBand sport={null} label="Your teams" sectionLabel="Your teams" games={favorites}
-                       standings={standings} showDay={showDay} onOpen={setOpen}
+                       standings={standings} rankings={rankings} showDay={showDay} onOpen={setOpen}
                        showHeader={false} floatFavorites={false} />
           ) : null}
           {grouped.map(([s, rows]) => (
             <SportBand key={s} sport={s} label={SPORT_LABEL[s] || s} games={rows}
-                       standings={standings} showDay={showDay} onOpen={setOpen}
+                       standings={standings} rankings={rankings} showDay={showDay} onOpen={setOpen}
                        floatFavorites={false} />
           ))}
         </>
@@ -114,7 +118,7 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
         // sport bands use, and the count joins it identically. It used to be an <h3> outside this
         // component, which is why the count could only sit below it.
         <SportBand sport={sport} label={null} games={games} standings={standings}
-                   showDay={showDay} onOpen={setOpen} showHeader={false}
+                   rankings={rankings} showDay={showDay} onOpen={setOpen} showHeader={false}
                    sectionLabel={heading} headingClass={headingClass} />
       )}
 

@@ -31,8 +31,16 @@
      WCAG AA at every background it landed on. Synced so this file does not specify a colour the
      app deliberately stopped using. --live added for the in-progress rung below. */
   --ink:#F2F2F0; --dim:#9AA0A8; --faint:#868D96; --gold:#F0C850; --gold-dim:#8A7530;
-  --live:#7FD1A3;
-  --disp:"Barlow Condensed","Arial Narrow",sans-serif; --body:"Barlow","Segoe UI",Arial,sans-serif;
+  --live:#7FD1A3; --alert:#E8918D;
+  /* C4 drift check (prompt 29's rule). --body said "Barlow" here while the app has shipped INTER
+     since it was written, which is the worst kind of drift in a reference used for measurement: every
+     text width taken from this file was being read in the wrong face. Synced. --alert added for the
+     same reason - the app carries it and this file did not.
+     Barlow Condensed is unchanged and is still the display face; only the body face was wrong.
+     The app also carries a grid-only --line-grid (#4a505a, B2); this file is not tokenised for the
+     grid and uses the literal in .mgaxis / .mgrow instead. */
+  --disp:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
 }
 *{box-sizing:border-box}
 html{color-scheme:dark}
@@ -103,19 +111,23 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .mcard .mid{min-width:0; display:flex; flex-direction:column; gap:4px}
 .duel{display:grid; grid-template-columns:1fr auto 1fr; gap:2px 4px; align-items:center}
 .duel.fixcol .atbig{justify-self:end; margin-right:2px}
-/* KNOWN DIVERGENCE, updated by prompt 35. This file holds one line and lets the stacks shrink; the
-   shipped app keeps flex-wrap on .duel. Prompt 31 measured removing it and rejected the result - 122
-   of 124 names truncated at 390px. Prompt 35 then took the `@` off ordinary games, which frees ~28px
-   and, more to the point, changes what a wrap LOOKS like: with no symbol between them the away stack
-   simply sits above the home stack, which reads as a designed two-row matchup rather than a stranded
-   glyph. So the wrap is now deliberate rather than merely tolerated, and the truncation it avoids is
-   the same. `vs` still renders inline on the 20 neutral-site games, where the marker carries the
-   information that away-then-home cannot. */
-.duel.hug{display:flex; align-items:flex-start; gap:6px}
-.duel.hug .tcol{flex:0 1 auto; min-width:0}
-.duel.hug .atbig{flex:0 0 auto}
+/* C1: THE DIVERGENCE IS CLOSED - the two teams STACK, away above home, and the reference and the app
+   now agree. The history is worth keeping because it explains why this took three prompts: this file
+   held one line and let the stacks shrink; prompt 31 measured that in the app and rejected it, 122 of
+   124 names truncated at 390px, so the app kept flex-wrap; prompt 35 took the `@` off ordinary games,
+   which made a wrapped card read as a designed two-row matchup rather than a stranded glyph. Joe then
+   ruled the stack outright, so what was a wrap that happened at narrow widths is now the layout at
+   every width. align-items:stretch is the load-bearing part - on a column flex the cross axis is
+   horizontal, and without it each stack would size to its own content and gain no width at all.
+   `vs` still renders on the 20 neutral-site games, now as its own short row between the two teams. */
+.duel.hug{display:flex; flex-direction:column; align-items:stretch; gap:6px}
+.duel.hug .tcol{min-width:0}
+.duel.hug .atbig{flex:0 0 auto; align-self:flex-start}
 .tcol{display:flex; flex-direction:column; gap:2px; min-width:0}
 .tcol .tl1{display:flex; align-items:center; gap:6px; font-weight:600; font-size:15px; line-height:1.15}
+/* C2: the record sits beside the name on line 1. It never shrinks - it is a handful of digits, and
+   the name next to it is the thing with room to give. */
+.tcol .tl1 .rec{flex:0 0 auto; font-size:11.5px; font-weight:500; color:var(--dim); white-space:nowrap}
 .tcol .tl1 img{height:26px; width:26px; object-fit:contain; flex:0 0 auto}
 .tcol .tl1 span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .tcol .tl1 span.nm2{font-size:12.5px}
@@ -288,10 +300,18 @@ function tcol(g, t, side){
     (p && p[side==="home"?"h":"a"]) ? `<span class="tl3">${esc(p[side==="home"?"h":"a"])}</span>`
                                     : `<span class="tl3 tba">Starter TBA</span>`;
   const nmcls = t.name.length>19 ? " class=\"nm3\"" : t.name.length>13 ? " class=\"nm2\"" : "";
-  const rec = STAND[t.id] ? `<span class="tl2">${esc(STAND[t.id])}</span>` : "";
+  // C2: the standing string splits at the first separator - the record goes up beside the name and
+  // the placement stays on line 2. The app does this properly in lib/standings.js standingParts();
+  // here the fixture only ever carries the MLB shape ("70-68, 2nd AL Central"), so a split is enough.
+  const st = STAND[t.id] || "";
+  const cut = st.indexOf(",");
+  const recTxt = cut === -1 ? st : st.slice(0, cut);
+  const restTxt = cut === -1 ? "" : st.slice(cut + 1).trim();
+  const rec = recTxt ? `<span class="rec">${esc(recTxt)}</span>` : "";
+  const rest = restTxt ? `<span class="tl2">${esc(restTxt)}</span>` : "";
   return `<span class="tcol">
-    <span class="tl1">${t.logo?`<img src="${t.logo}" alt="">`:""}<span${nmcls}>${esc(t.name)}</span></span>
-    ${rec}
+    <span class="tl1">${t.logo?`<img src="${t.logo}" alt="">`:""}<span${nmcls}>${esc(t.name)}</span>${rec}</span>
+    ${rest}
     ${pit}
   </span>`;
 }

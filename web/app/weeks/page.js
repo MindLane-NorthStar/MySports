@@ -23,6 +23,7 @@ import {
   gamesForRange,
   gamesForSeasonWeek,
   standingsForGames,
+  rankingsForGames,
 } from '../../lib/queries.js';
 import { calendarWeeksFrom, seasonWeeksFrom, daySpan, currentWeekKey, usesSeasonWeeks } from '../../lib/weeks.js';
 import { daySpanWeekdays, shortDay, todayET } from '../../lib/format.js';
@@ -43,7 +44,7 @@ function byDay(games, days) {
  * listing design for every listings view. The week MODEL is untouched: which days belong to a week,
  * and where its span comes from, is still lib/weeks.js.
  */
-function WeekDays({ days, grouped, standingsRows }) {
+function WeekDays({ days, grouped, standingsRows, rankingsRows }) {
   return (
     <>
       {days.map((d) =>
@@ -52,8 +53,8 @@ function WeekDays({ days, grouped, standingsRows }) {
             {/* C3: the day heading renders THROUGH Listing -> SportBand now, so it shares the header
                 row with the count exactly as a sport band does. It was an <h3> here, which is why
                 the count could only ever sit on the line below it. */}
-            <Listing games={grouped[d]} standingsRows={standingsRows} day={d}
-                     heading={shortDay(d)} headingClass="weekday-head" />
+            <Listing games={grouped[d]} standingsRows={standingsRows} rankingsRows={rankingsRows}
+                     day={d} heading={shortDay(d)} headingClass="weekday-head" />
           </div>
         ) : null
       )}
@@ -94,6 +95,7 @@ async function CalendarWeeks({ index, pick, sport }) {
   const weeks = [selected];
   const loaded = await Promise.all(weeks.map((w) => gamesForRange(w.start, w.end, sport)));
   const standings = await Promise.all(loaded.map((g) => standingsForGames(g)));
+  const ranks = await Promise.all(loaded.map((g) => rankingsForGames(g)));
   return (
     <>
       {/* C1: no ISO week number, in the picker or in the heading. It was a number nobody navigates
@@ -111,7 +113,8 @@ async function CalendarWeeks({ index, pick, sport }) {
               <h3>{daySpanWeekdays(w.start, w.end)}</h3>
             </div>
             {loaded[i].length ? (
-              <WeekDays days={w.days} grouped={grouped} standingsRows={standings[i]} />
+              <WeekDays days={w.days} grouped={grouped} standingsRows={standings[i]}
+                        rankingsRows={ranks[i]} />
             ) : (
               <p className="empty">{emptyFor(sport)}</p>
             )}
@@ -133,6 +136,7 @@ async function SeasonWeeks({ index, pick, sport }) {
   const weeks = [selected];
   const loaded = await Promise.all(weeks.map((w) => gamesForSeasonWeek(w.sport, w.season, w.week)));
   const standings = await Promise.all(loaded.map((g) => standingsForGames(g)));
+  const ranks = await Promise.all(loaded.map((g) => rankingsForGames(g)));
   return (
     <>
       <WeekSelect
@@ -154,7 +158,8 @@ async function SeasonWeeks({ index, pick, sport }) {
                 {SPORT_TAG[w.sport] || w.sport.toUpperCase()} Week {w.week} · {daySpanWeekdays(w.start, w.end)}
               </h3>
             </div>
-            <WeekDays days={days} grouped={grouped} standingsRows={standings[i]} />
+            <WeekDays days={days} grouped={grouped} standingsRows={standings[i]}
+                     rankingsRows={ranks[i]} />
           </section>
         );
       })}

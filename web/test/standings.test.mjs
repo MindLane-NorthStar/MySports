@@ -1,7 +1,7 @@
 // web/lib/standings.js - the poll-rank resolver, and the record/standing split the listings card reads.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { indexRankings, rankFor } from '../lib/standings.js';
+import { indexRankings, rankFor, standingParts, standingLine } from '../lib/standings.js';
 
 const row = (team_id, poll_type, rank, { season = 2026, week = 1 } = {}) =>
   ({ team_id, season, week, poll_type, rank });
@@ -57,4 +57,87 @@ test('a CFP row that is malformed falls through to a sound AP row', () => {
     row('228', 'AP', 7, { week: 12 }),
   ]);
   assert.equal(rankFor(ix, '228', 2026, 12), 7);
+});
+
+// ---------------------------------------------------------------- C3: Joe's per-sport line rules
+
+const rec = (o) => ({ wins: 0, losses: 0, ties: 0, ot_losses: null, points: null,
+                      division_rank: null, games_back: null, ...o });
+
+test('MLB is unchanged: record on line 1, place and games back on line 2', () => {
+  const p = standingParts(rec({ wins: 70, losses: 70, division_rank: 2, games_back: 3 }),
+                          'mlb', 'American League Central');
+  assert.equal(p.record, '70-70');
+  assert.equal(p.rest, '2nd AL Central · 3.0 GB');
+});
+
+test('NHL keeps its POINTS, because the league publishes no games back', () => {
+  // games_back is null on all 96 NHL rows and points is set on all 96. Joe's spec says "games back";
+  // his ruling on top of it says points, and the data is why.
+  const p = standingParts(rec({ wins: 55, losses: 16, ot_losses: 11, points: 104, division_rank: 2 }),
+                          'nhl', 'Atlantic');
+  assert.equal(p.record, '55-16-11');
+  assert.equal(p.rest, '104 pts · 2nd Atlantic');
+});
+
+test('NBA places by CONFERENCE and shows games back', () => {
+  // division_rank carries the conference seed (0008), and 0011 seeded the conference rows that let
+  // shortGroup() fold 'Eastern Conference' to 'East'.
+  const p = standingParts(rec({ wins: 52, losses: 30, division_rank: 4, games_back: 2 }),
+                          'nba', 'Eastern Conference');
+  assert.equal(p.record, '52-30');
+  assert.equal(p.rest, '4th East · 2.0 GB');
+});
+
+test('NFL places by division', () => {
+  const p = standingParts(rec({ wins: 3, losses: 0, division_rank: 1 }), 'nfl', 'AFC East');
+  assert.equal(p.record, '3-0');
+  assert.equal(p.rest, '1st AFC East');
+});
+
+test('an all-zero record is NO record, and the division still shows', () => {
+  // Every NFL club reads 0-0 until Sep 9. That is the absence of a season, not a start to one.
+  const p = standingParts(rec({ wins: 0, losses: 0, division_rank: null }), 'nfl', 'AFC North');
+  assert.equal(p.record, null);
+  assert.equal(p.rest, 'AFC North');
+});
+
+test('no standings row at all still names the conference', () => {
+  // The NHL and NBA case today: their games are season 2026 while their team_records are 2025, so
+  // nothing matches and the card must still say which division the club is in.
+  assert.deepEqual(standingParts(null, 'nhl', 'Atlantic'), { record: null, rest: 'Atlantic' });
+  assert.deepEqual(standingParts(null, 'nba', 'Eastern Conference'), { record: null, rest: 'East' });
+});
+
+test('no row and no conference renders nothing at all', () => {
+  assert.deepEqual(standingParts(null, 'nfl', null), { record: null, rest: null });
+});
+
+test('CFB precedence: the poll rank wins, and it is the only thing on line 2', () => {
+  // Joe's spec is a chain of alternatives, not a combination: rank, ELSE place, ELSE conference.
+  assert.equal(standingParts(null, 'cfb', 'ACC', 7).rest, '#7');
+  assert.equal(standingParts(rec({ division_rank: 3 }), 'cfb', 'ACC', 7).rest, '#7',
+               'a rank outranks a conference placement');
+});
+
+test('CFB with no rank falls to place in conference, then to the conference name', () => {
+  assert.equal(standingParts(rec({ wins: 8, losses: 1, division_rank: 3 }), 'cfb', 'ACC', null).rest, '3rd ACC');
+  assert.equal(standingParts(rec({ wins: 8, losses: 1 }), 'cfb', 'ACC', null).rest, 'ACC');
+  assert.equal(standingParts(null, 'cfb', 'Mid-American', null).rest, 'Mid-American');
+  assert.equal(standingParts(null, 'cfb', null, null).rest, null);
+});
+
+test('the CFB rank comes from the resolver, so CFP beats AP end to end', () => {
+  const ix = indexRankings([
+    { team_id: '228', season: 2026, week: 12, poll_type: 'AP', rank: 7 },
+    { team_id: '228', season: 2026, week: 12, poll_type: 'CFP', rank: 4 },
+  ]);
+  assert.equal(standingParts(null, 'cfb', 'ACC', rankFor(ix, '228', 2026, 12)).rest, '#4');
+});
+
+test('standingLine still joins both pieces, because the detail panel renders one wide line', () => {
+  const row = rec({ wins: 70, losses: 70, division_rank: 2, games_back: 3 });
+  assert.equal(standingLine(row, 'mlb', 'American League Central'), '70-70 · 2nd AL Central · 3.0 GB');
+  assert.equal(standingLine(null, 'nfl', 'AFC North'), 'AFC North');
+  assert.equal(standingLine(null, 'nfl', null), null);
 });

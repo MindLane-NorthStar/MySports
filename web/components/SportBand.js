@@ -29,7 +29,7 @@ import { sportMarkUrl } from '../lib/config.js';
 // carries the marker instead. /weeks and /history keep the float on - section 11 is scoped to `/`,
 // because those two group by DAY and lifting a favourite out of its day destroys the calendar they
 // exist to be. Defaults preserve their behaviour exactly.
-export default function SportBand({ sport, label, games, standings, showDay = false, onOpen,
+export default function SportBand({ sport, label, games, standings, rankings, showDay = false, onOpen,
                                     showHeader = true, floatFavorites = true, sectionLabel = null,
                                     headingClass = 'favlabel' }) {
   const [showAll, setShowAll] = useState(false);
@@ -90,7 +90,7 @@ export default function SportBand({ sport, label, games, standings, showDay = fa
   const row = (g) => (
     <div key={g.id} className={rowClass(g)} data-market-tbd={pendingIds.has(g.id) || undefined}
          data-network-tbd={tbdIds.has(g.id) || undefined}>
-      <MatchupCard game={g} standings={standings} showDay={showDay} onOpen={onOpen} />
+      <MatchupCard game={g} standings={standings} rankings={rankings} showDay={showDay} onOpen={onOpen} />
     </div>
   );
 
