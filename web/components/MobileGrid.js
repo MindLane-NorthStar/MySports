@@ -36,6 +36,7 @@ import {
   packLanes,
   viewingMinutes,
   tint,
+  bandFor,
 } from '../lib/gridmodel.js';
 import { splitOverlaps } from '../lib/overlap.js';
 import { teamLogoUrl } from '../lib/config.js';
@@ -94,11 +95,16 @@ function teamLine(game, side, standings) {
   const stored = side === 'home' ? game.home_record : game.away_record;
   const row = standings ? standingFor(standings, t?.id, game.season) : null;
   const rec = stored || (row ? recordText(row, game.sport) : null);
+  // CONTRACT §3: "never (0-0)". A team that has not played tells the reader nothing, and on a
+  // week-1 slate it is every team - the Steelers block read "FALCONS0-0 / @STEELERS0-0" before
+  // this. Suppression was specified and never implemented on the phone.
+  const shownRec = rec && !/^0-0(-0)?$/.test(rec.trim()) ? rec : null;
   return {
     rank: Number.isInteger(rank) && rank > 0 ? String(rank) : null,
     name: (cardName(t, side === 'home' ? game.home_team_id : game.away_team_id) || '').toUpperCase(),
-    record: rec || null,
+    record: shownRec,
     color: t?.primary_color,
+    color2: t?.secondary_color,
     id: t?.id,
   };
 }
@@ -335,7 +341,7 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
                       trayH={trayH}
                       standings={standings}
                       onOpen={onOpen}
-                    />
+                    measure={measure} />
                   ))
                 )}
               </div>
@@ -404,20 +410,67 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
 }
 
 /** One block: cap endcaps with RAW logos on tint gradients, centred names, hairline, seam, tray. */
-function Block({ item, scale, top, blockH, trayH, standings, onOpen }) {
+
+/**
+ * C5, Joe: "I want the text as large as it can be without abbreviating or affecting geometry."
+ *
+ * Three constraints in priority order: geometry is frozen, nothing abbreviates, and subject to those
+ * the type is as large as possible. So this returns the LARGEST size at which the whole
+ * `{rank} NAME (record)` run fits the span, per card - which is what §3 and render_day.py's
+ * `fs = max(18, fs*span/total)` both do. It measures the text; it does not estimate from character
+ * counts. The measurer is the same canvas context M2 already uses - one measuring path, not two.
+ *
+ * Cap: the contract's 26px x M1's 0.8 scale. Floor: the contract's 14px x 0.8.
+ */
+const NAME_MAX = 26 * 0.8;   // 20.8
+const NAME_MIN = 14 * 0.8;   // 11.2
+
+export function fitNameSize(measure, sides, span, marker = '@ ') {
+  if (!measure || !(span > 0)) return NAME_MIN;
+  const face = (px) => `700 ${Math.round(px * 100) / 100}px 'Barlow Condensed', 'Arial Narrow', sans-serif`;
+  // .mname carries letter-spacing: 0.02em, which measureText does NOT include - it has to be added
+  // per character or every run measures narrow and the fit overflows. That is what a first pass did.
+  const piece = (text, fs) => measure(text, face(fs)) + 0.02 * fs * text.length;
+  const runWidth = (side, fs, withMarker) => {
+    let w = piece(side.name, fs);
+    if (side.rank) w += piece(`${side.rank} `, fs);
+    if (withMarker) w += piece(marker, fs);
+    // the record renders at 60% of the name size (contract §3), so it is measured there
+    if (side.record) w += piece(` ${side.record}`, fs * 0.6);
+    return w;
+  };
+  for (let fs = NAME_MAX; fs >= NAME_MIN; fs -= 0.2) {
+    // the HOME row carries the marker, the away row does not
+    const fits = sides.every((sd, i) => runWidth(sd, fs, i === 1) <= span);
+    if (fits) return Math.round(fs * 10) / 10;
+  }
+  return NAME_MIN;
+}
+
+function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) {
   const { game } = item;
   const x = scale.toX(item.start);
   const w = Math.max(46, scale.toX(item.end) - x - 4);
   const away = teamLine(game, 'away', standings);
   const home = teamLine(game, 'home', standings);
   const cap = Math.min(blockH, w / 3);
+  // C2: each half of the block gets its team's band and ink.
+  const awayBand = bandFor(away.color, away.color2);
+  const homeBand = bandFor(home.color, home.color2);
   const b = item.broadcast;
   // Contract §3 / legend: MARQUEE = BOTH RANKED, or a TIER-1 rivalry. Not "is ranked #1", which is
   // what this used to test - render_day.py's rule is `bool(ra and rh) or bool(rv and rv[1] == 1)`.
   const bothRanked = Number.isInteger(game.home_rank) && Number.isInteger(game.away_rank);
   const tierOne = Boolean(game.is_rivalry) && Number(game.rivalry?.tier) === 1;
   const marquee = bothRanked || tierOne;
-  const nameSize = Math.max(8, 15 * 0.8);
+  // C5: the largest size at which the WHOLE run fits, per card, measured - not a hardcoded 12px.
+  // The span is the block minus both caps; the contract's 26px and 14px scaled by M1's 0.8.
+  // The span is .mnames minus the centring slack. Measured against the DOM rather than derived:
+  // a 240px block has 59px caps, .mnames renders 120 and .mname's usable client width is 114,
+  // so the run has (w - 2*cap - 8) to live in. Deriving it as w - 2*cap overflows by exactly
+  // that slack, which a first pass did.
+  const span = Math.max(0, w - 2 * cap - 8);
+  const nameSize = fitNameSize(measure, [away, home], span, game.neutral_site ? 'vs ' : '@ ');
 
   const odds = (game.odds || [])[0];
   const pills = [];
@@ -443,13 +496,16 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen }) {
           className="mcap"
           style={{
             width: cap,
-            background: `linear-gradient(180deg, ${tint(away.color, 0.86)}, ${tint(away.color, 0.58)})`,
+            // C3: the cap tints the BAND colour, not the primary. Under Joe's rule the band is the
+            // secondary on 259 of 340 teams, so tinting the primary would put black caps around a gold
+            // Steelers band - two unrelated colours in one block.
+            background: `linear-gradient(180deg, ${tint(awayBand.band, 0.86)}, ${tint(awayBand.band, 0.58)})`,
           }}
         >
           <img src={teamLogoUrl(away.id)} alt="" loading="lazy" />
         </div>
         <div className="mnames">
-          <div className="mname" style={{ fontSize: nameSize }}>
+          <div className="mname" style={{ fontSize: nameSize, background: awayBand.band, color: awayBand.ink }}>
             {away.rank ? <span className="mrank">{away.rank}</span> : null}
             {away.name}
             {away.record ? <span className="mrec">{away.record}</span> : null}
@@ -457,7 +513,7 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen }) {
           <div className="mhair" style={{ width: '86%' }} />
           {/* contract §3: the home band reads "@ {rank} {TEAM}". The '@' is what marks the band as
               the home side and does NOT depend on rank data, which is null for most games. */}
-          <div className="mname" style={{ fontSize: nameSize }}>
+          <div className="mname" style={{ fontSize: nameSize, background: homeBand.band, color: homeBand.ink }}>
             <span className="mat">{game.neutral_site ? 'vs' : '@'}</span>
             {home.rank ? <span className="mrank">{home.rank}</span> : null}
             {home.name}
@@ -468,7 +524,7 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen }) {
           className="mcap"
           style={{
             width: cap,
-            background: `linear-gradient(180deg, ${tint(home.color, 0.86)}, ${tint(home.color, 0.58)})`,
+            background: `linear-gradient(180deg, ${tint(homeBand.band, 0.86)}, ${tint(homeBand.band, 0.58)})`,
           }}
         >
           <img src={teamLogoUrl(home.id)} alt="" loading="lazy" />

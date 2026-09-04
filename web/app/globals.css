@@ -987,8 +987,13 @@ input:focus-visible {
 }
 
 /* the '@' that marks the home band of a grid block (contract §3) */
+/* C4: rank and the marker take the BAND'S ink, not a fixed token. On charcoal --gold and --faint
+   worked; on an arbitrary team colour gold is invisible on a gold team - and gold bands are now
+   common (Steelers, Michigan, Iowa, Jaguars) - while --faint disappears entirely. §3 is silent on
+   rank colour, which means it takes the band ink like the rest of the line. Gold keeps its meaning
+   everywhere else in the app: the marquee, the rivalry pill, the kickoff time. */
 .mname .mat {
-  color: var(--faint);
+  color: inherit;
   margin-right: 3px;
 }
 
@@ -1127,15 +1132,18 @@ input:focus-visible {
 }
 
 .mname .mrank {
-  color: var(--gold);
+  color: inherit;
   margin-right: 3px;
 }
 
 /* record run: 60% opacity at 82% of the name size (contract v1.1) */
 .mname .mrec {
-  opacity: 0.6;
-  font-size: 82%;
-  margin-left: 4px;
+  /* CONTRACT §3: "a secondary run at 60% size and 82% ink opacity". The shipped values were
+     INVERTED - opacity .6 and font-size 82% - bigger and fainter than specified, exactly backwards
+     for a secondary run. The comment above restated them swapped too, which is presumably how it
+     survived review. Colour is inherited: the record is always the band's neutral. */
+  font-size: 60%;
+  opacity: 0.82;
 }
 
 .mhair {

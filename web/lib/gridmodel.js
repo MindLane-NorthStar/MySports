@@ -170,6 +170,100 @@ export function packLanes(items) {
   return lanes;
 }
 
+
+/* ---------------------------------------------------------------- CONTRACT §3, MOBILE BAND RULE
+ *
+ * JOE'S RULING (2026-09-04), replacing §3's band-and-ink rule on the phone: whichever of a team's two
+ * colours is LIGHTER paints the band, and the darker one is the ink. Where that pair is not legible,
+ * the band still keeps the team colour and only the INK is neutralised.
+ *
+ * WHY §3 AS WRITTEN CANNOT STAND HERE. §3 says the band is always the PRIMARY, with white-or-charcoal
+ * ink and a x0.82 darkening loop to rescue white. That was written for the printed PC grid on white
+ * paper. On the phone every block sits on a dark ground, and measured across the 357 teams that play
+ * this season, the primary-always band lands under 3:1 against that ground on 251 of them and under
+ * 1.5:1 on 107 - dark shapes on a dark ground. Joe's rule: 47 and 16, average 9.06:1 against 2.75:1.
+ * That is a contract defect on this surface, not a preference.
+ *
+ * THERE IS NO DARKENING. The x0.82 loop existed to rescue white ink on a too-dark band; here the band
+ * is always the lighter colour and the ink adapts to it, so bands render at exactly the brand colour,
+ * never modified. If this function ever seems to need the loop, something else is wrong.
+ *
+ * THE FALLBACK IS A DELIBERATE READING OF JOE'S WORDS, flagged for veto. He said "swap out white or
+ * charcoal for the secondary colour". Read literally that puts the neutral INTO the pair and re-applies
+ * "lighter paints the band" - which makes white the band on 94 teams, because white is lighter than
+ * every team colour, and leaves only 14 of 108 fallback cards showing any team colour at all.
+ * Neutralising the INK instead keeps a team colour on all 108. Same words, better served.
+ */
+const BAND_INK = '#f2f2f0';        // --ink
+const BAND_CHARCOAL = '#101214';
+export const BAND_MIN_RATIO = 3.0; // the names are large text, where 3:1 is WCAG AA
+
+function chan(v) {
+  const c = v / 255;
+  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+}
+
+function rgbOf(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+/** Real sRGB relative luminance - not a luminance shortcut and not a tint() approximation. */
+export function luminance(hex) {
+  const c = rgbOf(hex);
+  if (!c) return null;
+  return 0.2126 * chan(c[0]) + 0.7152 * chan(c[1]) + 0.0722 * chan(c[2]);
+}
+
+/** WCAG contrast ratio. Returns null if either colour is unparseable. */
+export function contrastRatio(a, b) {
+  const la = luminance(a);
+  const lb = luminance(b);
+  if (la === null || lb === null) return null;
+  const hi = Math.max(la, lb);
+  const lo = Math.min(la, lb);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/**
+ * One team's band and the ink that goes on it.
+ *
+ * @returns {{band: string, ink: string, inkIsNeutral: boolean, ratio: number}}
+ */
+export function bandFor(primaryHex, secondaryHex) {
+  // The grey fallback on a missing primary is the same one tint() uses, and gridbands.test.mjs pins it.
+  const p = rgbOf(primaryHex) ? String(primaryHex).trim() : '#6e747c';
+  const s = rgbOf(secondaryHex) ? String(secondaryHex).trim() : null;
+
+  const lp = luminance(p);
+  const ls = s === null ? null : luminance(s);
+
+  // 1. Both present and the pair is legible -> lighter paints, darker inks. Unmodified, both of them.
+  if (s !== null) {
+    const pair = contrastRatio(p, s);
+    if (pair !== null && pair >= BAND_MIN_RATIO) {
+      const band = ls > lp ? s : p;
+      const ink = ls > lp ? p : s;
+      return { band, ink, inkIsNeutral: false, ratio: pair };
+    }
+  }
+
+  // 2. Otherwise the band STILL keeps the lighter team colour and only the ink is neutralised.
+  const band = s !== null && ls > lp ? s : p;
+  const rInk = contrastRatio(BAND_INK, band);
+  const rChar = contrastRatio(BAND_CHARCOAL, band);
+  const useInk = rInk >= rChar;
+  return {
+    band,
+    ink: useInk ? BAND_INK : BAND_CHARCOAL,
+    inkIsNeutral: true,
+    ratio: useInk ? rInk : rChar,
+  };
+}
+
+
 /**
  * tint(hex, f) - the contract's cap gradient endpoints, 0.86 -> 0.58 (Mobile Grid Addendum M13).
  *

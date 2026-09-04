@@ -388,7 +388,24 @@ function buildMobileGrid(style){
       const nm=(t,g2,side)=>{const pre=side==="home"?"@ ":""; const full=pre+t.name, ab=pre+(side==="home"?g2.habbr:g2.aabbr);
         return (w-52)<full.length*6.2?esc(ab.toUpperCase()):esc(full.toUpperCase());};
       const cap=(t,side)=>`<span class="mgcap ${side==="home"?"h":"a"}" style="background:linear-gradient(180deg,${tint(t.c1,.86)},${tint(t.c1,.58)})">${t.raw?`<img src="${t.raw}" alt="">`:""}</span>`;   // RAW per contract v1.3e
-      const band=(t,side)=>`<span class="mgband ${side==="home"?"h":"a"}" style="background:${t.c1}"><span class="nm" style="color:${ink(t.c1)}">${nm(t,g,side)}</span></span>`;
+      // CONTRACT v1.6.8 (2026-09-04): the LIGHTER of the two team colours paints the band, unmodified,
+      // and the darker one is the ink. Where that pair falls under 3:1 the band KEEPS the team colour
+      // and only the ink is neutralised to --ink or charcoal, whichever measures higher. This used to
+      // be `background:${t.c1}` with a simple luminance threshold for the ink - §3 as written, which on
+      // a dark ground leaves 251 of 357 teams under 3:1 against it. No x0.82 darkening on the phone.
+      const lin1=v=>{v/=255;return v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4;};
+      const lumOf=h=>{const n=parseInt(String(h||"").replace("#",""),16);
+        return 0.2126*lin1((n>>16)&255)+0.7152*lin1((n>>8)&255)+0.0722*lin1(n&255);};
+      const cr=(a,b)=>{const x=lumOf(a),y=lumOf(b);return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05);};
+      const bandFor=(p1,s1)=>{
+        const ok=h=>/^#?[0-9a-f]{6}$/i.test(String(h||"").trim());
+        const P=ok(p1)?p1:"#6e747c", S=ok(s1)?s1:null;
+        if(S && cr(P,S)>=3.0){const b=lumOf(S)>lumOf(P)?S:P; return {band:b, ink:b===S?P:S};}
+        const b=(S && lumOf(S)>lumOf(P))?S:P;
+        return {band:b, ink: cr("#f2f2f0",b)>=cr("#101214",b)?"#f2f2f0":"#101214"};
+      };
+      const band=(t,side)=>{const B=bandFor(t.c1,t.c2);
+        return `<span class="mgband ${side==="home"?"h":"a"}" style="background:${B.band}"><span class="nm" style="color:${B.ink}">${nm(t,g,side)}</span></span>`;};
       const od=g.odds?`<span class="od">O/U ${esc(g.odds.ou)}${w>=150?` · ${esc(g.odds.fav)}`:""}</span>`:"";
       return `<span class="mgblk" style="left:${l.toFixed(0)}px;width:${w.toFixed(0)}px">${cap(a,"away")}${band(a,"away")}${band(h,"home")}${cap(h,"home")}<span class="mgseamline" style="background:linear-gradient(90deg,${a.c1},${h.c1})"></span><span class="mgtray"><span>${esc(timeOf(g))}</span>${od}</span></span>`;}).join("");
     return `<div class="mgrow"><span class="mglab">${lab}</span>${blocks}</div>`;}).join("");
