@@ -3,6 +3,14 @@
 // Pure functions, no DOM: the component measures text and hands the widest line in, so the same
 // arithmetic can be exercised without a browser.
 
+// The per-team cap surface and art (Joe's candidate-D ruling, 2026-09-04). Generated from the logos
+// at render size by scripts/build_cap_table.py; read here, never derived here.
+import capTable from './cap-table.json' with { type: 'json' };
+
+const CAP_TABLE = capTable.teams || {};
+/** The tinted level. With candidate D this is one of TWO cap surfaces, not the global one. */
+export const CAP_TINT = 0.72;
+
 /** Contract design geometry (docs/rendering-contract.md §3). */
 export const BLOCK_H = 74;
 export const TRAY_H = 28;
@@ -274,6 +282,50 @@ export function bandFor(primaryHex, secondaryHex) {
  * ever drops primary_color, every band goes that flat grey, which is almost indistinguishable from
  * the charcoal ground at a glance. web/test/gridbands.test.mjs pins it.
  */
+/**
+ * The band rule GENERALISED to any surface (Joe's candidate-D ruling, 2026-09-04).
+ *
+ * bandFor() answers "what ink goes on the band". Once the name rows take the CAP's surface - which
+ * is the band on some teams and tint(band, 0.72) on others - the same question has to be answerable
+ * for whichever of the two a team actually got. This is that function, and on `surface === band` it
+ * reproduces bandFor().ink exactly. `tests/test_cap_table.py` pins that over every real colour pair
+ * and cap-table.test.mjs pins it again here; if the two ever drift, the name row and the cap stop
+ * agreeing about the text colour and a block renders unreadable ink on a surface that measured fine.
+ *
+ * Of the team's two colours take the one with the higher ratio against the surface; use it when that
+ * clears 3:1 and is not the surface itself, otherwise the better of --ink and charcoal.
+ */
+export function inkFor(surfaceHex, primaryHex, secondaryHex) {
+  let best = null;
+  for (const c of [primaryHex, secondaryHex]) {
+    if (rgbOf(c) === null) continue;
+    const r = contrastRatio(c, surfaceHex);
+    if (r !== null && (best === null || r > best.ratio)) best = { ink: c, ratio: r };
+  }
+  if (best && best.ratio >= BAND_MIN_RATIO
+      && String(best.ink).trim().toLowerCase() !== String(surfaceHex).trim().toLowerCase()) {
+    return { ink: best.ink, ratio: best.ratio, neutral: false };
+  }
+  const rInk = contrastRatio(BAND_INK, surfaceHex);
+  const rChar = contrastRatio(BAND_CHARCOAL, surfaceHex);
+  return rInk >= rChar
+    ? { ink: BAND_INK, ratio: rInk, neutral: true }
+    : { ink: BAND_CHARCOAL, ratio: rChar, neutral: true };
+}
+
+/**
+ * One team's cap surface level and art, from the generated table.
+ *
+ * The table is built by scripts/build_cap_table.py from the logos themselves, measured at render
+ * size - it is not a runtime rule and must never become one, because the measurement needs the
+ * pixels. An id the table does not carry falls back to TODAY'S behaviour (0.72, raw art), so a team
+ * that arrives before the table is regenerated renders exactly as it does now rather than breaking.
+ */
+export function capFor(teamId) {
+  const row = teamId == null ? null : CAP_TABLE[String(teamId)];
+  return row ? { tint: row.tint, art: row.art } : { tint: CAP_TINT, art: 'raw' };
+}
+
 export function tint(hex, f) {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
   const [r, g, b] = m

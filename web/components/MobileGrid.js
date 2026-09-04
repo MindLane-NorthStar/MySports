@@ -37,9 +37,12 @@ import {
   viewingMinutes,
   bandFor,
   tint,
+  inkFor,
+  capFor,
+  CAP_TINT,
 } from '../lib/gridmodel.js';
 import { splitOverlaps } from '../lib/overlap.js';
-import { teamLogoUrl, sportMarkUrl, SPORT_LABEL } from '../lib/config.js';
+import { teamLogoUrl, teamLogoDarkUrl, sportMarkUrl, SPORT_LABEL } from '../lib/config.js';
 import { markStyle, hasMark } from '../lib/marks.js';
 import { etTime, longDay } from '../lib/format.js';
 import { cardName, cardBroadcast } from './MatchupCard.js';
@@ -52,9 +55,8 @@ import { isNetworkTbd } from '../lib/offservice.js';
 
 const SCALE = 0.8; // M1: all grid content renders at 80% of contract design size
 const SEAM_PX = 30; // the dashed cut occupies this much of the axis (M3)
-// B5: the endcap tint, FLAT (Joe's ruling 2026-09-04). One value, used by both caps, so the cap can
-// never again be painted partly at a tint that hides logos. See the note at the cap for the numbers.
-const CAP_TINT = 0.72;
+// CAP_TINT now comes from gridmodel beside capFor(), because it is one of TWO cap surfaces rather
+// than the single global value B5 shipped. See the note at the cap.
 
 
 /** Text measurement in the REAL fonts - M2 requires the widest line be measured, not estimated. */
@@ -514,6 +516,16 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
   // C2: each half of the block gets its team's band and ink.
   const awayBand = bandFor(away.color, away.color2);
   const homeBand = bandFor(home.color, home.color2);
+  // CANDIDATE D: the cap's surface is per team - the band itself, or its 0.72 tint - and the NAME ROW
+  // takes that same surface, so cap and names are one continuous field on every block. The ink then
+  // has to be re-derived for whichever surface this team got, which is what inkFor() is for; on a
+  // band-surface team it returns exactly bandFor().ink, so nothing changes for the 198 flat teams.
+  const awayCap = capFor(away.id);
+  const homeCap = capFor(home.id);
+  const awaySurface = awayCap.tint === 1 ? awayBand.band : tint(awayBand.band, CAP_TINT);
+  const homeSurface = homeCap.tint === 1 ? homeBand.band : tint(homeBand.band, CAP_TINT);
+  const awayInk = inkFor(awaySurface, away.color, away.color2).ink;
+  const homeInk = inkFor(homeSurface, home.color, home.color2).ink;
   const b = item.broadcast;
   // Contract §3 / legend: MARQUEE = BOTH RANKED, or a TIER-1 rivalry. Not "is ranked #1", which is
   // what this used to test - render_day.py's rule is `bool(ra and rh) or bool(rv and rv[1] == 1)`.
@@ -550,35 +562,24 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
       {marquee ? <span className="mplate" /> : null}
       <div className="mblock-body" style={{ height: blockH }}>
         <div
-          className="mcap"
+          className="mcap mcap-away"
           style={{
             width: cap,
-            // B5: ONE FLAT TINT AT 0.72, which is Joe's ruling and the measurement agrees with it.
-            //
-            // D1 wanted the cap to become the flat BAND colour so cap and name read as one surface,
-            // and measurement vetoed that: a logo drawn in the team's own brand colour cannot survive
-            // a cap painted that same colour, and nine vanished outright. But the gradient it kept -
-            // 0.86 at the top down to 0.58 - spans from the WORST non-flat value to a good one. Over
-            // the 310 teams with local art, mean logo ink lost: flat 0.86 -> 25.2%, flat 0.58 ->
-            // 13.6%, flat 0.72 -> 12.9%, the shipped gradient -> 14.4%, flat band colour -> 27.4%.
-            // 0.72 is the best of them and, being flat, it also moves toward the continuous surface
-            // D1 was after. Half the cap is no longer painted at the one value that hides logos.
-            //
-            // IT IS NOT FREE, and the losers are named rather than averaged away. Three logos have no
-            // readable edge at 0.72 against one under the gradient: SMU (gone either way), plus
-            // TENNESSEE and UCLA, which go from 43.7% and 81.2% lost to 100%. Both are a solid block
-            // of the team's own primary, so the flatter the cap the less of them survives - the same
-            // failure D1 hit, milder. Recorded for Joe rather than used to overturn his ruling.
-            //
-            // C3 still holds: it tints the BAND, not the primary, so a gold Steelers band does not
-            // get black caps.
-            background: tint(awayBand.band, CAP_TINT),
+            // CANDIDATE D (Joe's ruling on the cap study, 2026-09-04). The cap surface is chosen PER
+            // TEAM from web/lib/cap-table.json: the band itself where that team's logo still reads on
+            // it, otherwise tint(band, 0.72). B5's single global 0.72 is superseded - it was the best
+            // one value for everybody, which is a different thing from the right value for anybody.
+            // The art is chosen the same way: the raw file, or the existing _dark file where it reads
+            // materially better on the surface that was picked. Neither is derived here; the table is
+            // measured from the pixels at render size, which a runtime rule cannot do.
+            background: awaySurface,
           }}
         >
-          <img src={teamLogoUrl(away.id)} alt="" loading="lazy" />
+          <img src={awayCap.art === 'dark' ? teamLogoDarkUrl(away.id) : teamLogoUrl(away.id)}
+               alt="" loading="lazy" />
         </div>
         <div className="mnames">
-          <div className="mname" style={{ fontSize: nameSize, background: awayBand.band, color: awayBand.ink }}>
+          <div className="mname" style={{ fontSize: nameSize, background: awaySurface, color: awayInk }}>
             {away.rank ? <span className="mrank">{away.rank}</span> : null}
             {away.name}
             {away.record ? <span className="mrec">{away.record}</span> : null}
@@ -589,7 +590,7 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
           <div className="mhair" />
           {/* contract §3: the home band reads "@ {rank} {TEAM}". The '@' is what marks the band as
               the home side and does NOT depend on rank data, which is null for most games. */}
-          <div className="mname" style={{ fontSize: nameSize, background: homeBand.band, color: homeBand.ink }}>
+          <div className="mname" style={{ fontSize: nameSize, background: homeSurface, color: homeInk }}>
             <span className="mat">{game.neutral_site ? 'vs' : '@'}</span>
             {home.rank ? <span className="mrank">{home.rank}</span> : null}
             {home.name}
@@ -597,13 +598,14 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
           </div>
         </div>
         <div
-          className="mcap"
+          className="mcap mcap-home"
           style={{
             width: cap,
-            background: tint(homeBand.band, CAP_TINT),
+            background: homeSurface,
           }}
         >
-          <img src={teamLogoUrl(home.id)} alt="" loading="lazy" />
+          <img src={homeCap.art === 'dark' ? teamLogoDarkUrl(home.id) : teamLogoUrl(home.id)}
+               alt="" loading="lazy" />
         </div>
       </div>
       {/* D2: the BAND colours, not the primaries. This was the last place in the block still

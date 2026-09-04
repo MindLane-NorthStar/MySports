@@ -1214,16 +1214,30 @@ input:focus-visible {
   align-items: stretch;
 }
 
-/* cap endcaps carry the RAW logo on the team-tinted gradient (contract v1.3e / addendum M12).
-   D1 proposed flattening this to the band colour so the cap and the name row became one field. The
-   measurement vetoed it: flat roughly doubles the logo ink that vanishes into its own cap (14.9% ->
-   27.1% mean over 307 teams) and takes nine logos to zero readable edge. The names went continuous;
-   the cap did not. See the note in MobileGrid.js Block(). */
+/* CANDIDATE D (Joe, 2026-09-04). The endcap's surface and its art are chosen PER TEAM from
+   web/lib/cap-table.json - the band itself where the logo reads on it, else tint(band, 0.72) - and
+   the name rows take the same surface, so cap and names are one continuous field. D1's flat-band
+   version was vetoed on measurement because a logo in its own brand colour vanishes into a cap
+   painted that colour; the table answers that per team instead of globally, which is what makes the
+   band safe for the 198 teams whose art survives it. Both backgrounds arrive inline from Block(). */
 .mcap {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* THE 1px SEAM at the cap/name boundary (the ruling's "1pt"; 1 CSS px is 3 device px at DPR 3).
+   An INSET BOX-SHADOW, deliberately, not a border: a border would take a pixel out of the cap's own
+   box and move the geometry the contract freezes. A shadow paints inside the box and moves nothing.
+   It is drawn on the cap's inner edge only - away cap on its right, home cap on its left - so the
+   two seams sit either side of the name column and the block's outer edges stay clean. */
+.mcap-away {
+  box-shadow: inset -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.mcap-home {
+  box-shadow: inset 1px 0 rgba(0, 0, 0, 0.3);
 }
 
 .mcap img {
