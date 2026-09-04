@@ -146,3 +146,47 @@ test('every rung returns the same shape, so the renderer needs no special cases'
     assert.deepEqual(Object.keys(slotContent(g, f)).sort(), [...keys].sort());
   }
 });
+
+// ---------------------------------------------------- A game cannot be LIVE indefinitely (prompt 35)
+import { isStaleLive, STALE_LIVE_HOURS } from '../lib/format.js';
+
+const HOUR = 3600 * 1000;
+const at = (hoursAgo) => new Date(Date.now() - hoursAgo * HOUR).toISOString();
+
+test('a fresh in-progress game still renders LIVE', () => {
+  const g = { result_status: 'in_progress', canonical_kickoff_at_utc: at(2), away_score: 3, home_score: 1 };
+  assert.equal(isStaleLive(g), false);
+  assert.equal(slotContent(g).kind, 'score', 'the score stack, exactly as before');
+});
+
+test('an in-progress game hours past any plausible finish does NOT claim LIVE', () => {
+  // The twelve stuck MLB rows are more than 48 hours past kickoff.
+  const g = { result_status: 'in_progress', canonical_kickoff_at_utc: at(50), away_score: 9, home_score: 1 };
+  assert.equal(isStaleLive(g), true);
+  const s = slotContent(g);
+  assert.equal(s.kind, 'stale');
+  assert.equal(s.row3, 'Final pending');
+  assert.equal(s.row2, null, 'and it shows no score, which may be incomplete');
+});
+
+test('the threshold sits above the longest real game, not on top of it', () => {
+  const justUnder = { result_status: 'in_progress', canonical_kickoff_at_utc: at(STALE_LIVE_HOURS - 0.5) };
+  const justOver = { result_status: 'in_progress', canonical_kickoff_at_utc: at(STALE_LIVE_HOURS + 0.5) };
+  assert.equal(isStaleLive(justUnder), false, 'an MLB marathon is still live');
+  assert.equal(isStaleLive(justOver), true);
+  assert.ok(STALE_LIVE_HOURS >= 8, 'longest MLB games run about seven hours');
+});
+
+test('a final is untouched however old it is', () => {
+  const g = { result_status: 'final', canonical_kickoff_at_utc: at(500), away_score: 6, home_score: 3 };
+  assert.equal(isStaleLive(g), false);
+  assert.equal(slotContent(g).row3, 'Final');
+});
+
+test('a null or unparseable kickoff does not crash and is not stale', () => {
+  for (const k of [null, undefined, '', 'not-a-date']) {
+    assert.equal(isStaleLive({ result_status: 'in_progress', canonical_kickoff_at_utc: k }), false);
+  }
+  assert.equal(isStaleLive(null), false);
+  assert.equal(isStaleLive({}), false);
+});

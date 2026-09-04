@@ -152,6 +152,14 @@ export function slotContent(game, fav = null) {
              row3: resultLabel(game), tone: 'sched' };
   }
 
+  // 1b. In progress, but hours past any plausible finish. It must not keep claiming LIVE, and it
+  //     must not show a score that may be incomplete either - four of the twelve stale rows read
+  //     0 - 0, which is what an abandoned in-progress row looks like. One quiet row, no number.
+  if (isStaleLive(game)) {
+    return { kind: 'stale', markSide: null, tied: false, row2: null,
+             row3: 'Final pending', tone: 'sched' };
+  }
+
   // 2. A played or playing game with both numbers. hasScore reads game.result_status directly, so
   //    it is guarded here rather than made null-safe there - every other caller passes a game.
   if (game && hasScore(game)) {
@@ -195,6 +203,33 @@ export function slotContent(game, fav = null) {
   // 5. Everything else - about four future games in five. The dash replaces the word "Sched", which
   //    restated what the gold kickoff time two columns to the left already said.
   return { kind: 'none', markSide: null, tied: false, row2: null, row3: '—', tone: 'none' };
+}
+
+
+/**
+ * A game cannot be LIVE indefinitely.
+ *
+ * Twelve MLB rows sit at result_status='in_progress' with kickoffs on 2026-09-01, so the card claimed
+ * LIVE for days. This is the DISPLAY guard; the rows themselves are a database write and are held for
+ * Joe.
+ *
+ * THE THRESHOLD IS NOT MEASURED FROM completed_at, and the brief's suggestion to do that does not
+ * survive contact with the column. completed_at is the PIPELINE's write timestamp, not the moment the
+ * game ended: across the loaded finals it reads 70.64-80.64 hours for CFB and up to 26.37 for MLB,
+ * which are refresh lags, not games. Its MLB minimum, 2.99 hours, is the only figure in it that looks
+ * like a real ball game.
+ *
+ * So the cut comes from the sport instead, with margin: the longest MLB games on record run about
+ * seven hours, and a weather-delayed football game reaches six. EIGHT HOURS clears both and still
+ * catches the twelve stale rows by a factor of six - they are more than 48 hours past kickoff.
+ */
+export const STALE_LIVE_HOURS = 8;
+
+export function isStaleLive(game, now = Date.now()) {
+  if (game?.result_status !== 'in_progress') return false;
+  const t = Date.parse(game?.canonical_kickoff_at_utc ?? '');
+  if (!Number.isFinite(t)) return false;   // no kickoff is not evidence of staleness
+  return now - t > STALE_LIVE_HOURS * 3600 * 1000;
 }
 
 
