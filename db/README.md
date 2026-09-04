@@ -17,6 +17,7 @@ migration history records the same names.
 | 0008_standings_and_probables.sql | applied 2026-09-02 ~13:35 ET (Claude Code, `scripts/apply_migration.py`, after CSV backups of `team_records` (30 rows) and `games` (295 rows) and a rolled-back dry run) | `team_records` gains `ot_losses`, `points`, `division_rank`, `games_back`; `games` gains `probable_home_pitcher` / `probable_away_pitcher`; `teams` gains `display_name`. All nullable, additive, no row rewritten - counts identical before and after (team_records 30, games 295, teams 808, 29 tables). Standings and probables are **loader-written provider facts, not reconciled observations** - same reasoning as 0007's scores. |
 | 0009_programs_supertype.sql | applied 2026-09-02 ~19:50 ET (Claude Code, `scripts/apply_migration.py`, after CSV backups of `games` (375 rows) and `game_broadcasts` (442 rows) and a rolled-back dry run) | Spec v0.5 §P, the **programs supertype**. `sport` enum gains `nascar`, `indycar`, `ufc`, `wwe`, `aew`; new enums `program_type` (game/race_session/fight_card/weekly_show/special_event/studio_show) and `source_tier` (announced/reported); new tables `programs`, `studio_shows`, `studio_show_instances` (all three empty, RLS on, `anon_read`); `games` gains nullable FK `program_id`; `game_broadcasts` gains `window_start`, `window_end`, `simulcast_linear`. **Additive only** - nothing dropped, narrowed or retyped, no existing row touched: 375 games and 442 broadcast rows before and after, `access_status` unchanged at 7 values. Architecture only; the app and grids behave identically. |
 | 0010_market_pending.sql | applied 2026-09-03 ~00:45 ET (Claude Code, `scripts/apply_migration.py`, after a CSV backup of `viewer_game_eligibility` (375 rows) and a rolled-back dry run) | E5 (`docs/feature-study/05-home-page-decisions.md` §8). `viewer_game_eligibility` gains **`market_pending boolean`**, nullable with NO default so "never computed" stays distinguishable from "computed false". **Additive only** - one column, nothing dropped or rewritten, 375 rows before and after. Backfilled in the same change: 375 computed, 0 null, **15 pending**. |
+| 0011_division_seed.sql | applied 2026-09-04 (Claude Code, `scripts/apply_migration.py`, after a rolled-back dry run that reported **pre-existing=14, inserted=0, assigned=0**) | The division / conference seed for NFL, NHL and NBA, **reconciling the repo with a write Cowork had already applied through the Supabase connector** (10 conference rows, 94 teams). 14 `conferences` rows - 8 NFL divisions, 4 NHL divisions, 2 NBA **conferences** - and the 94 `teams.conference_id` assignments that go with them. Fully idempotent: `on conflict (id) do nothing` on the insert, `where conference_id is null` on the assignment, which is what kept MLB's 6 divisions and CFB's 73 conferences untouched. Applying it to the live database is a **no-op** (counts identical before and after: 93 conferences; cfb 684/684, mlb 30/30, nba 30/30, nfl 32/32, nhl 32/32 assigned); applying it to a fresh database reproduces the same state. **NBA is seeded at conference level on purpose** - see 0008: `division_rank` holds ESPN's conference `playoffSeed` (1..15), so `nba-eastern-conference` / `nba-western-conference` are the rows that seed actually indexes into.
 
 Applied state after 0005 (verified through the connector): 29 tables in `mysports`, all owned by `mysports_owner`, RLS on all 29, `anon_read` on 26 (not on source_snapshots, source_observations, refresh_runs), 20 enums, seed rows: 1 market, 1 viewer profile, 5 render policies, 10 sources; `public` still 36 tables. Migration history: mysports_0001 … mysports_0006.
 
@@ -181,3 +182,44 @@ recorded rather than worked around:
 * ESPN does **not** supply two of the spot-check answers the rule assumed: LIU is `Long Island`, not
   `LIU`, and Georgia State is abbreviated to `Georgia St` rather than staying spelled out. Neither was
   overridden by hand - the rule as written is what ran.
+
+
+---
+
+## 0011: the four NHL rows that already existed, and the assignment that went missing
+
+Cowork sent 14 conference rows and **10 inserted**. The four that were already there are the NHL
+divisions - `nhl-atlantic`, `nhl-metropolitan`, `nhl-central`, `nhl-pacific` - and they are **not stale
+rows from a failed attempt**. Each now carries eight clubs. Nothing in this migration deletes or renames
+them, and nothing should.
+
+**Where they came from.** `pipeline/bootstrap.py`'s `teams_and_conferences()` mints a conference id as
+`f"{sport}-{slug(conference)}"` straight from the per-team `conference` field of
+`artifacts/validation/<sport>_2026_teams.json`. The NHL provider publishes those four names as its
+DIVISIONS (`adapters/nhl.py` `fetch_standings_teams()` -> `divisionName`, 8 clubs each, verified live),
+so a bootstrap run over a teams file that still carried them produced exactly these four ids.
+
+**When.** `track_commit_timestamp` is off on this project, so there is no commit clock to read. The rows'
+`xmin` is **9260**, which brackets cleanly between two dated `refresh_runs` rows - 9254 at
+`2026-09-01 22:46:54Z` and 9268 at `2026-09-01 23:22:17Z`. So they were written in that 35-minute window
+on 2026-09-01, **before** the MLB conference seed (xmin 9344) and the CFB seed (9344-9517), and long
+before Cowork's insert (xmin 9693, just after a `schedule_refresh` at `2026-09-04 14:43:54Z`). The four
+NHL rows are the oldest conference rows in the table.
+
+**Why the assignment went missing while the rows survived - and the live risk this leaves.**
+`adapters/nhl.py` builds its teams file with `standings = None if offline else _safe(fetch_standings_teams)`,
+and `_safe` swallows any exception and returns `None`. When that happens `div_by` is empty, every team
+gets `conference: null`, and the file is written anyway. The current
+`artifacts/validation/nhl_2026_teams.json` (2026-09-01 20:32 local, i.e. **after** the window above) is
+exactly that file: `conference` is null on all 32 teams, and so is `nhlConference`.
+
+`teams_and_conferences()` lists `conference_id` among its upsert's update columns, so the next bootstrap
+run wrote those nulls **back over** the NHL assignments - while leaving the conference rows themselves in
+place, because nothing deletes a conference. That is the entire story: rows without teams from
+2026-09-01 to Cowork's re-assignment on 2026-09-04.
+
+**It can happen again.** A single transient NHL API failure during a `--teams-only` run will regenerate
+the file with null conferences and wipe all 32 assignments a second time. The durable fix is for
+`build_teams` to refuse to write a teams file whose conferences are entirely null (or for the upsert to
+stop nulling a populated `conference_id`), and that is a `pipeline/` change, deliberately out of scope
+here. Recorded rather than worked around.

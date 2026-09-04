@@ -31,6 +31,11 @@ def main(argv: list[str]) -> int:
     sql = path.read_text(encoding="utf-8")
     import psycopg
     with psycopg.connect(dsn, autocommit=False, application_name="mysports-migrate") as conn:
+        # Surface the file's own RAISE NOTICE output. A dry run executes and rolls back, so the ONLY
+        # evidence it can leave behind is what the migration printed while it ran - without this the
+        # rolled-back verification is invisible and "--dry-run passed" means nothing more than "no
+        # exception". 0011 relies on it to report its insert/assign counts.
+        conn.add_notice_handler(lambda diag: print(f"  NOTICE: {diag.message_primary}"))
         with conn.cursor() as cur:
             cur.execute(sql)
         if dry:
