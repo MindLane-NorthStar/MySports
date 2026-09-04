@@ -440,6 +440,19 @@ input[type='search'] {
    the home logo, deliberately NOT a fixed centre column, so the two sides read as one sentence. */
 /* Two team columns hugging an '@'. align-items:flex-start keeps both stacks topped on line 1, so a
    team with no record line does not float its name against one that has two. */
+/* flex-wrap STAYS, and prompt 31 measured why rather than assuming.
+ *
+ * The locked reference does not wrap - mobile_demo.html:97-99 hold one line and let the stacks
+ * shrink - and Joe is right that the `@` dropping to its own row looks inconsistent. Removing the
+ * wrap does hold the line, and the `@` stays put. But this card's .mbody is only 152px at 390px,
+ * and two team names plus two logos plus the `@` need roughly 250px, so the shrink has nowhere to
+ * stop: 122 of 124 names on the 2026-09-05 slate truncated, "South Alabama" showing 41px of 110.
+ * At 360px it was 124 of 124. That trades a cosmetic inconsistency for names nobody can read, so
+ * the wrap is left in place and the measurement goes to Joe.
+ *
+ * Widening the body is the real fix and it is not this prompt's to make: stage 6 freed 22px on the
+ * desktop time column but only ~2px on mobile, and the two-row stacked matchup is explicitly out
+ * of scope. */
 .duel {
   display: flex;
   align-items: flex-start;
@@ -465,6 +478,11 @@ input[type='search'] {
   align-items: center;
   gap: 7px;
   line-height: 22px;
+  /* The shrink has to be allowed at EVERY level of the chain or it stops at the first one that
+     refuses. .tcol carries min-width:0 already; without it here too, .tl1 keeps its max-content
+     width and the name inside it never gets a narrower box to ellipsis into - it just draws over
+     the next column. */
+  min-width: 0;
 }
 
 .tl1 img {
@@ -474,10 +492,19 @@ input[type='search'] {
   flex: 0 0 auto;
 }
 
+/* flex 0 1, not 0 0. The name USED to refuse to shrink, which was coherent only while .duel wrapped:
+   a name that would not fit took a second row instead, taking the `@` with it. With wrap gone it has
+   to be able to give way, and it needs min-width:0 to go below its content plus the ellipsis the
+   reference has carried all along (mobile_demo.html:103). nameSize() steps the type 15 -> 12.5 -> 11
+   first; this only engages when even 11px will not fit, which no real matchup in the loaded season
+   reaches. */
 .tl1 b {
   font-weight: 600;
   white-space: nowrap;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .at {
