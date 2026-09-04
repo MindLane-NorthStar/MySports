@@ -521,10 +521,25 @@ input[type='search'] {
 }
 
 /* right slot: favoured team's dark logo + moneyline over O/U, else the state */
+/* CONTRACT v1.6.6: the slot is a COLUMN of three rows - mark, number, word - in that order in
+ * every state, so a mixed Saturday of scores and lines does not alternate between two
+ * silhouettes in the same column. It was a horizontal cluster.
+ *
+ * NOTHING GETS TALLER, and the gap is why 3px rather than the 9/5 it was. Measured at 5afb9b3:
+ * the binding cards are odds cards with no records, 66.3px of content box at BOTH widths (8 of 73
+ * three-row cards on mobile, 40 of 43 on desktop). An odds stack is mark + 15.39 + 15.94 + 2*gap,
+ * so at 3px it is 57.3px on mobile and 61.3px on desktop - 9.0px and 5.0px of headroom. The score
+ * stack is taller (73.5 mobile / 77.8 desktop) but only ever lands on cards with 84.3px or more.
+ *
+ * justify-self and the minmax(58px, auto) track are UNTOUCHED: the 58px floor is what keeps team
+ * names aligned down the page, and without it every card's matchup column would be a different
+ * width and the list would go ragged. */
 .mslot {
   display: flex;
-  align-items: center;
-  gap: 9px;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
   justify-self: end;
   text-align: right;
 }
@@ -563,6 +578,26 @@ input[type='search'] {
 
 .mslot-state[data-tone='live'] {
   color: var(--live);
+}
+
+/* Rung 5, about four future games in five: an em dash where the word "Sched" used to be. Sched
+   restated what the gold kickoff time two columns to the left already said, so it was chrome
+   reporting a fact the row had already given. --faint, not --dim: this row is the quietest thing
+   on the card by design. */
+.mslot-state[data-tone='none'] {
+  color: var(--faint);
+}
+
+/* Row 1 when the score is level. Sized to sit in the mark's place so the column keeps its
+   rhythm; it is still a word where every other card has a mark, which is the named cost. */
+.mslot-tied {
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  line-height: 20px;
 }
 
 .mscore {
@@ -1317,9 +1352,9 @@ input:focus-visible {
   }
   .mslot {
     max-width: 84px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 5px;
+    /* flex-wrap is gone with the column: rows stack by direction now, not by running out of
+       width, and wrap on a column axis would start a second COLUMN. */
+    gap: 3px;
   }
   .mslot img {
     width: 20px;

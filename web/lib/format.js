@@ -115,6 +115,79 @@ export function resultLabel(game) {
   }
 }
 
+/**
+ * THE RIGHT SLOT'S PRIORITY LADDER (contract v1.6.6).
+ *
+ * Pure, and deliberately not inline in the component: the ordering below is the whole point of this
+ * function, and an ordering that lives in JSX can only be tested through a DOM.
+ *
+ * `fav` is passed IN rather than derived here - favourite() lives in MatchupCard.js, which imports
+ * this module, so deriving it here would close a circular import for no gain.
+ *
+ * WHAT THIS FIXES. The shipped card ran score -> odds -> status, with the odds branch gated only on
+ * `!score`. A postponed game has no score, so once odds were posted the card printed the moneyline
+ * and never printed the postponement - and the status branch below it was unreachable. Zero games in
+ * the loaded season are postponed, so it had never fired; it would have gone live on the first
+ * rain-out. The locked reference (docs/design/mobile_demo.html, rcol()) already tested result_status
+ * before odds; the shipped card had inverted it. Exceptions outrank odds.
+ *
+ * Rungs 1, 3 and 5 return a single row. The slot never reserves an empty one.
+ */
+export function slotContent(game, fav = null) {
+  const status = game?.result_status ?? null;
+
+  // 1. An exception outranks everything, odds included.
+  if (status === 'postponed' || status === 'cancelled') {
+    return { kind: 'exception', markSide: null, tied: false, row2: null,
+             row3: resultLabel(game), tone: 'sched' };
+  }
+
+  // 2. A played or playing game with both numbers. hasScore reads game.result_status directly, so
+  //    it is guarded here rather than made null-safe there - every other caller passes a game.
+  if (game && hasScore(game)) {
+    const a = game.away_score;
+    const h = game.home_score;
+    const tied = a === h;
+    const tone = status === 'final' ? 'final' : 'live';
+    return {
+      kind: 'score',
+      // The WINNER's mark, not the home side's. Null when level - the row carries the word TIED.
+      markSide: tied ? null : (h > a ? 'home' : 'away'),
+      tied,
+      // Higher number first, whichever side that is. When level the numbers are the same, so the
+      // away-home order is kept rather than reversed for no reason.
+      row2: tied ? `${a} - ${h}` : `${Math.max(a, h)} - ${Math.min(a, h)}`,
+      row3: resultLabel(game),
+      tone,
+    };
+  }
+
+  // 3. Playing, but the provider has not sent numbers yet.
+  if (status === 'in_progress') {
+    return { kind: 'live', markSide: null, tied: false, row2: null,
+             row3: resultLabel(game), tone: 'live' };
+  }
+
+  // 4. Scheduled, with a line. Restacked to the same three rows as a score, so a mixed Saturday does
+  //    not alternate between two silhouettes in the same column.
+  if (status === 'scheduled' && fav) {
+    const total = fav.odds?.total;
+    return {
+      kind: 'odds',
+      markSide: fav.side,
+      tied: false,
+      row2: fav.ml === null ? '-' : (fav.ml > 0 ? `+${fav.ml}` : String(fav.ml)),
+      row3: total != null ? `O/U ${Number(total)}` : null,
+      tone: 'sched',
+    };
+  }
+
+  // 5. Everything else - about four future games in five. The dash replaces the word "Sched", which
+  //    restated what the gold kickoff time two columns to the left already said.
+  return { kind: 'none', markSide: null, tied: false, row2: null, row3: '—', tone: 'none' };
+}
+
+
 export function hasScore(game) {
   return (
     (game.result_status === 'final' || game.result_status === 'in_progress') &&

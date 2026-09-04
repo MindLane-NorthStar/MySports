@@ -14,7 +14,7 @@
 // The '@' HUGS the away name: it sits in the content flow between the away column and the home logo,
 // not in a fixed centre column, so the matchup reads as one sentence rather than a table row.
 
-import { etTime, resultLabel, hasScore, teamColor, shortDay } from '../lib/format.js';
+import { etTime, teamColor, shortDay, slotContent } from '../lib/format.js';
 import { teamLogoDarkUrl } from '../lib/config.js';
 import { markStyle, showsMark } from '../lib/marks.js';
 import { standingLine, standingFor } from '../lib/standings.js';
@@ -98,17 +98,14 @@ export function favourite(game) {
   return null;
 }
 
-function signed(n) {
-  return n > 0 ? `+${n}` : String(n);
-}
-
 export default function MatchupCard({ game, standings, showDay = false, onOpen }) {
   const { home, away, sport } = game;
   const b = cardBroadcast(game);
   const mark = showsMark(b) ? markStyle(b.service_id, STACK_H) : null;
   const fav = favourite(game);
-  const state = resultLabel(game);
-  const score = hasScore(game) ? `${game.away_score} - ${game.home_score}` : null;
+  // Contract v1.6.6: the right slot's five rungs, decided once in a pure function so the
+  // ORDERING can be tested without a DOM. See web/lib/format.js.
+  const slot = slotContent(game, fav);
   const isMlb = sport === 'mlb';
 
   const body = (
@@ -153,33 +150,24 @@ export default function MatchupCard({ game, standings, showDay = false, onOpen }
         <span className="mnet-mark mnet-mark-empty" aria-hidden="true" />
       )}
 
-      <div className="mslot">
-        {score ? <span className="mscore">{score}</span> : null}
-        {fav && !score ? (
-          <>
-            <img src={teamLogoDarkUrl(fav.side === 'home' ? home?.id : away?.id)} alt="" loading="lazy" />
-            <span>
-              <span className="mslot-ml">{fav.ml === null ? '-' : signed(fav.ml)}</span>
-              {fav.odds?.total != null ? (
-                <span className="mslot-ou" style={{ display: 'block' }}>
-                  O/U {Number(fav.odds.total)}
-                </span>
-              ) : null}
-            </span>
-          </>
+      {/* THREE ROWS, ALWAYS IN THE SAME ORDER: mark, number, word. Rungs 1, 3 and 5 return one
+          row rather than three - the slot never reserves an empty one. Every branch below is a
+          render of `slot`; the decision itself is not made here. */}
+      <div className="mslot" data-kind={slot.kind}>
+        {slot.markSide ? (
+          <img src={teamLogoDarkUrl(slot.markSide === 'home' ? home?.id : away?.id)} alt="" loading="lazy" />
+        ) : slot.tied ? (
+          // A word where every other card has a mark. Joe chose this over a blank row and over
+          // showing both marks, with that cost named at decision time.
+          <span className="mslot-tied">Tied</span>
         ) : null}
-        {!fav && !score ? (
-          <span
-            className="mslot-state"
-            data-tone={game.result_status === 'final' ? 'final' : game.result_status === 'in_progress' ? 'live' : 'sched'}
-          >
-            {state || 'Sched'}
-          </span>
+        {slot.row2 ? (
+          <span className={slot.kind === 'score' ? 'mscore' : 'mslot-ml'}>{slot.row2}</span>
         ) : null}
-        {score ? (
-          <span className="mslot-state" data-tone={game.result_status === 'final' ? 'final' : 'live'}>
-            {state}
-          </span>
+        {slot.row3 ? (
+          slot.kind === 'odds'
+            ? <span className="mslot-ou">{slot.row3}</span>
+            : <span className="mslot-state" data-tone={slot.tone}>{slot.row3}</span>
         ) : null}
       </div>
     </>
