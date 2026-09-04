@@ -688,18 +688,10 @@ input[type='search'] {
   object-fit: contain;
 }
 
-.mslot-ml {
-  font-size: 14px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-}
-
-.mslot-ou {
-  color: var(--dim);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
+/* .mslot-ml and .mslot-ou are DELETED. They gave the odds rung a 14px row 2 and an 11px row 3
+   where the score rung used 17px and 13px, so a priced card's slot stood 57.3px tall against a
+   final's 69.5px - two silhouettes in the column v1.6.6 said had one. Both states now render
+   .mscore and .mslot-state, so there is no second set of sizes left to drift. */
 
 .mslot-state {
   font-family: var(--display);
