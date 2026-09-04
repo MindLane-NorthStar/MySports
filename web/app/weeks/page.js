@@ -1,13 +1,21 @@
 // WEEKS - the two-week-concept model, side by side, as day-column LISTINGS. Never a grid: a grid is
 // one archived rendering of one day, and it lives on the Today page.
 //
-//   ?view=calendar (default) - ISO Monday-Sunday over viewing_day, all sports together.
-//   ?view=season             - NFL / CFB provider week labels, each with its span DERIVED from the
-//                              games carrying that label. CFB week 1 spans Aug 29 -> Sep 7 2026:
-//                              ten days across two calendar weeks, because that is what the
-//                              provider labelled, and the app does not second-guess the provider.
+// C2: THE SPORT CHOOSES THE WEEK CONCEPT. ?view= is gone. The same chip row the Today page uses now
+// sits under the heading, and the week model follows from what it selects - because which concept of
+// "week" is right was never the user's decision to make, it is a property of the sport:
+//
+//   no chip / a sport with no provider weeks - ISO Monday-Sunday over viewing_day.
+//   nfl or cfb (usesSeasonWeeks)             - provider week labels, each with its span DERIVED from
+//                                              the games carrying that label. CFB week 1 spans
+//                                              Aug 29 -> Sep 7 2026: ten days across two calendar
+//                                              weeks, because that is what the provider labelled,
+//                                              and the app does not second-guess the provider.
+//
+// ?w= still names the week and is still the source of truth for WHICH one. A ?w= left over from a
+// different sport simply does not match, and the page falls back to that sport's current week - which
+// is where you want to land anyway, so the stale key is a feature rather than a case to guard.
 
-import Link from 'next/link';
 import Listing from '../../components/Listing.js';
 import WeekSelect from '../../components/WeekSelect.js';
 import {
@@ -16,9 +24,10 @@ import {
   gamesForSeasonWeek,
   standingsForGames,
 } from '../../lib/queries.js';
-import { calendarWeeksFrom, seasonWeeksFrom, daySpan, isoWeekNumber, currentWeekKey } from '../../lib/weeks.js';
-import { daySpanLabel, shortDay, todayET } from '../../lib/format.js';
-import { SPORT_LABEL } from '../../lib/config.js';
+import { calendarWeeksFrom, seasonWeeksFrom, daySpan, currentWeekKey, usesSeasonWeeks } from '../../lib/weeks.js';
+import { daySpanWeekdays, shortDay, todayET } from '../../lib/format.js';
+import { SportFilter } from '../../components/Filters.js';
+import { SPORT_LABEL, resolveSportParam } from '../../lib/config.js';
 import { RestError } from '../../lib/rest.js';
 
 export const dynamic = 'force-dynamic';
@@ -65,31 +74,47 @@ function WeekDays({ days, grouped, standingsRows }) {
 // which is exactly why the picker read "College wk 1". The week label wants the short sport tag.
 const SPORT_TAG = { cfb: 'CFB', nfl: 'NFL', nba: 'NBA', nhl: 'NHL', mlb: 'MLB' };
 
-async function CalendarWeeks({ index, pick }) {
+/**
+ * What a week with no rows says. A chip can legitimately select a sport that has nothing loaded -
+ * Racing has zero rows in the database today - and the honest sentence is that none are LOADED, not
+ * that none are scheduled. The app cannot tell the difference and must not imply that it can.
+ */
+function emptyFor(sport) {
+  return sport
+    ? `No ${SPORT_LABEL[sport] || sport} games loaded for this week.`
+    : 'No games loaded for this week.';
+}
+
+async function CalendarWeeks({ index, pick, sport }) {
   const all = calendarWeeksFrom(index).map((w) => ({ ...w, key: w.start }));
   if (!all.length) return <p className="empty">No games loaded.</p>;
   // Default to the CURRENT week, not all[0] - see currentWeekKey. Applied to the calendar view as
   // well as the season one: leaving one landing on today and the other on January reads as a bug.
   const selected = all.find((w) => w.key === pick) || all.find((w) => w.key === currentWeekKey(all, todayET())) || all[0];
   const weeks = [selected];
-  const loaded = await Promise.all(weeks.map((w) => gamesForRange(w.start, w.end)));
+  const loaded = await Promise.all(weeks.map((w) => gamesForRange(w.start, w.end, sport)));
   const standings = await Promise.all(loaded.map((g) => standingsForGames(g)));
   return (
     <>
+      {/* C1: no ISO week number, in the picker or in the heading. It was a number nobody navigates
+          by - "Week 35" answers a question no one asked, while the dates answer the one they did. */}
       <WeekSelect
-        view="calendar"
+        sport={sport}
         selected={selected.key}
-        options={all.map((w) => ({ key: w.key, label: `Week ${isoWeekNumber(w.start)} · ${daySpanLabel(w.start, w.end)}` }))}
+        options={all.map((w) => ({ key: w.key, label: daySpanWeekdays(w.start, w.end) }))}
       />
       {weeks.map((w, i) => {
         const grouped = byDay(loaded[i], w.days);
         return (
           <section className="weekblock" key={w.start}>
             <div className="weekblock-head">
-              <h3>Week {isoWeekNumber(w.start)}</h3>
-              <span className="span">{daySpanLabel(w.start, w.end)}</span>
+              <h3>{daySpanWeekdays(w.start, w.end)}</h3>
             </div>
-            <WeekDays days={w.days} grouped={grouped} standingsRows={standings[i]} />
+            {loaded[i].length ? (
+              <WeekDays days={w.days} grouped={grouped} standingsRows={standings[i]} />
+            ) : (
+              <p className="empty">{emptyFor(sport)}</p>
+            )}
           </section>
         );
       })}
@@ -97,8 +122,10 @@ async function CalendarWeeks({ index, pick }) {
   );
 }
 
-async function SeasonWeeks({ index, pick }) {
-  const all = seasonWeeksFrom(index).map((w) => ({ ...w, key: `${w.sport}-${w.season}-${w.week}` }));
+async function SeasonWeeks({ index, pick, sport }) {
+  const all = seasonWeeksFrom(index)
+    .filter((w) => !sport || w.sport === sport)
+    .map((w) => ({ ...w, key: `${w.sport}-${w.season}-${w.week}` }));
   if (!all.length) return <p className="empty">No NFL or college football weeks loaded.</p>;
   // Default to the CURRENT week, not all[0] - see currentWeekKey. Applied to the calendar view as
   // well as the season one: leaving one landing on today and the other on January reads as a bug.
@@ -109,12 +136,12 @@ async function SeasonWeeks({ index, pick }) {
   return (
     <>
       <WeekSelect
-        view="season"
+        sport={sport}
         selected={selected.key}
         options={all.map((w) => ({
           key: w.key,
           group: SPORT_LABEL[w.sport] || w.sport.toUpperCase(),
-          label: `${SPORT_TAG[w.sport] || w.sport.toUpperCase()} Week ${w.week} · ${daySpanLabel(w.start, w.end)}`,
+          label: `${SPORT_TAG[w.sport] || w.sport.toUpperCase()} Week ${w.week} · ${daySpanWeekdays(w.start, w.end)}`,
         }))}
       />
       {weeks.map((w, i) => {
@@ -124,9 +151,8 @@ async function SeasonWeeks({ index, pick }) {
           <section className="weekblock" key={`${w.sport}-${w.season}-${w.week}`}>
             <div className="weekblock-head">
               <h3>
-                {SPORT_LABEL[w.sport] || w.sport.toUpperCase()} · Week {w.week}
+                {SPORT_TAG[w.sport] || w.sport.toUpperCase()} Week {w.week} · {daySpanWeekdays(w.start, w.end)}
               </h3>
-              <span className="span">{daySpanLabel(w.start, w.end)}</span>
             </div>
             <WeekDays days={days} grouped={grouped} standingsRows={standings[i]} />
           </section>
@@ -138,8 +164,12 @@ async function SeasonWeeks({ index, pick }) {
 
 export default async function WeeksPage({ searchParams }) {
   const params = await searchParams;
-  const view = params?.view === 'season' ? 'season' : 'calendar';
+  const sport = resolveSportParam(params?.sport);
   const pick = typeof params?.w === 'string' ? params.w : null;
+  // The one line that replaces ?view=. usesSeasonWeeks is the existing answer to "does this sport
+  // have provider week labels", already used by the week model - so the page DERIVES the concept
+  // from the sport rather than keeping a second, hand-set copy of the same fact in the URL.
+  const seasonMode = Boolean(sport) && usesSeasonWeeks(sport);
 
   let index = [];
   let error = null;
@@ -152,30 +182,19 @@ export default async function WeeksPage({ searchParams }) {
   return (
     <main>
       <h1>Weeks</h1>
+      {/* C2: the Today page's own chip row, IMPORTED rather than reimplemented - useSetParam reads
+          usePathname(), so SportFilter was never coupled to "/" and needed no fork to land here.
+          ALL stays the first control, as the full-width bar above the tiles. */}
       <div className="controls">
-        {/* Same as the Sport row: the bare <span>View</span> was decoration wired to nothing, so
-            the group carries the name instead. These are <Link>s, not buttons, so the state is
-            aria-current="page" rather than aria-pressed - the view IS the page you are on. */}
-        <div className="chiprow" role="group" aria-label="View">
-          <Link className="chip" data-active={view === 'calendar'}
-                aria-current={view === 'calendar' ? 'page' : undefined}
-                href="/weeks?view=calendar">
-            Calendar week
-          </Link>
-          <Link className="chip" data-active={view === 'season'}
-                aria-current={view === 'season' ? 'page' : undefined}
-                href="/weeks?view=season">
-            Season week
-          </Link>
-        </div>
+        <SportFilter sport={sport} />
       </div>
 
       {error ? (
         <p className="error">Could not read the database: {error}</p>
-      ) : view === 'season' ? (
-        <SeasonWeeks index={index} pick={pick} />
+      ) : seasonMode ? (
+        <SeasonWeeks index={index} pick={pick} sport={sport} />
       ) : (
-        <CalendarWeeks index={index} pick={pick} />
+        <CalendarWeeks index={index} pick={pick} sport={sport} />
       )}
     </main>
   );

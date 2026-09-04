@@ -775,15 +775,17 @@ button.mcard:hover {
   margin-bottom: 12px;
 }
 
+/* C1: this heading IS the span now - "Mon Aug 24 - Sun Aug 30, 2026" - so the separate .span rule
+   beside it is gone with the element it styled.
+   24px is not 13 x 1.5. The B1 multiplier would have left it at 19.5px, UNDER the 21px day heading
+   directly beneath it, and a week heading smaller than the days it contains reads as a mistake. It
+   sits between h1 (30px) and the day heading (21px), which is the order the page actually nests in. */
 .weekblock-head h3 {
   margin: 0;
   color: var(--ink);
-  font-size: 13px;
-}
-
-.weekblock-head .span {
-  color: var(--dim);
-  font-size: 12px;
+  font-family: var(--display);
+  font-size: 24px;
+  letter-spacing: 0.01em;
 }
 
 /* ----------------------------------------------------------------- archived grid */

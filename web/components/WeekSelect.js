@@ -6,7 +6,7 @@
 // mid-season. A native select stays one line at every width, and on a phone it opens the platform's
 // own picker, which is a better list than anything rendered here.
 //
-// THE URL REMAINS THE SOURCE OF TRUTH. Changing the select NAVIGATES to /weeks?view=...&w=<key>, so
+// THE URL REMAINS THE SOURCE OF TRUTH. Changing the select NAVIGATES to /weeks?sport=...&w=<key>, so
 // ?w= deep links, browser back/forward and a shared link all keep working exactly as they did with
 // the links. The select is a navigation control wearing a chip, not a piece of client state.
 //
@@ -15,7 +15,7 @@
 
 import { useRouter } from 'next/navigation';
 
-export default function WeekSelect({ options, selected, view, label = 'Week' }) {
+export default function WeekSelect({ options, selected, sport = null, label = 'Week' }) {
   const router = useRouter();
   if (!options?.length) return null;
 
@@ -33,14 +33,20 @@ export default function WeekSelect({ options, selected, view, label = 'Week' }) 
         {label}
       </label>
       {/* NOT data-active. The gold plate is the SELECTED-chip style, and this control renders
-          directly beneath the gold "Season week" chip - two stacked gold pills read as two
+          directly beneath the gold SELECTED SPORT chip - two stacked gold pills read as two
           selected chips. This is a trigger you open, so it takes the inactive chip style; the
           caret (.chip-select::after) inherits currentColor and follows automatically. */}
       <span className="chip chip-select">
         <select
           id="week-select"
           value={selected ?? ''}
-          onChange={(e) => router.push(`/weeks?view=${view}&w=${encodeURIComponent(e.target.value)}`)}
+          // C2: the sport rides the URL now, not ?view=. The week FORMAT is derived from the sport,
+          // so a user-facing view switch would be a second control saying the same thing.
+          onChange={(e) =>
+            router.push(
+              `/weeks?${sport ? `sport=${encodeURIComponent(sport)}&` : ''}w=${encodeURIComponent(e.target.value)}`,
+            )
+          }
         >
           {grouped
             ? groups.map((g) => (

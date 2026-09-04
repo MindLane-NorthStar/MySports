@@ -25,8 +25,10 @@ const VIEWS = [
   { name: 'today-nhl', path: '/?day=2026-10-01&sport=nhl' },
   { name: 'today-nba', path: '/?day=2026-10-28&sport=nba' },
   { name: 'today-all', path: '/?day=2026-09-03' },
-  { name: 'weeks-calendar', path: '/weeks?view=calendar' },
-  { name: 'weeks-season', path: '/weeks?view=season' },
+  // C2: ?view= is gone - the SPORT chooses the week concept now. No chip is the calendar week over
+  // every sport; nfl is a season-week sport, so its own chip is what puts the page in season weeks.
+  { name: 'weeks-calendar', path: '/weeks' },
+  { name: 'weeks-season', path: '/weeks?sport=nfl' },
   { name: 'history', path: '/history' },
 ];
 

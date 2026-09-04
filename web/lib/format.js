@@ -65,6 +65,24 @@ export function daySpanLabel(start, end) {
   )}, ${end.slice(0, 4)}`;
 }
 
+/**
+ * 'Mon Aug 24 - Sun Aug 30, 2026' - a span with the weekday on BOTH ends.
+ *
+ * A SIBLING rather than a change to daySpanLabel. All four of daySpanLabel's callers live in
+ * weeks/page.js and all four want this form, so changing it in place would have compiled - but it is
+ * exported and generically named, and silently changing what an exported formatter returns is how the
+ * next surface gets a shape it never asked for. daySpanLabel keeps its en-dash bare-month form.
+ *
+ * DAY_SHORT already emits 'Mon, Aug 24' - weekday, month and day together - so this drops its comma
+ * rather than composing a second month/day, which would have read 'Mon Aug 24 Aug 24'.
+ */
+export function daySpanWeekdays(start, end) {
+  if (!start) return '';
+  const one = (d) => DAY_SHORT.format(new Date(`${d}T00:00:00Z`)).replace(',', '');
+  if (!end || end === start) return `${one(start)}, ${start.slice(0, 4)}`;
+  return `${one(start)} - ${one(end)}, ${end.slice(0, 4)}`;
+}
+
 /** Today's date in ET as 'YYYY-MM-DD' - the default the Today page opens on. */
 export function todayET() {
   const parts = new Intl.DateTimeFormat('en-CA', {
