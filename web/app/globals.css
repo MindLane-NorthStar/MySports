@@ -1456,7 +1456,26 @@ input:focus-visible {
 .force-mobile .bn-pc{display:none}.force-mobile .bn-mobile{display:block}
 
 /* ================================================================ NAVBAR BANNER (subpages) */
-.navbar{position:relative;display:flex;align-items:center;gap:22px;height:60px;padding:0 22px;
+/* THE COMPACT BAR TAKES THE SAFE AREA TOO. Joe, on the installed app: "the 'Weeks' and 'History'
+ * tabs ... go to the smaller navbar banner. That banner is behind the bezel and the clock and
+ * battery on iPhone." Confirmed: globals.css carried exactly ONE safe-area-inset-top rule, the one
+ * prompt 28 put on .banner, and Chrome.js renders NavBanner on every route except `/` - so Weeks
+ * and History have run under the clock since the app went standalone.
+ *
+ * Joe's ruling: extend the BAR'S OWN background upward, not a separate strip. So the inset becomes
+ * padding and the existing gradient covers it, exactly as .banner does.
+ *
+ * ABSORB, DO NOT STACK. Measured at 390px by scanning for the bar's first ink: the content already
+ * sits 17px down inside a 50px bar, so a raw 47px inset would put it 64px down and leave 17px of
+ * dead space under the clock. Subtracting that 17 lands it flush at 47.
+ *
+ * height is calc(bar + inset), NOT min-height. box-sizing is border-box, so a fixed height would let
+ * the padding eat the content box; but min-height let the content's natural 53.3px win and grew the
+ * bar 3px on EVERY route even with no safe area. calc keeps the content box at exactly the height it
+ * has always been and adds only what the status bar needs. */
+.navbar{position:relative;display:flex;align-items:center;gap:22px;
+  --nav-safe:max(0px, calc(env(safe-area-inset-top, 0px) - 17px));
+  height:calc(60px + var(--nav-safe));padding:var(--nav-safe) 22px 0;
   background:linear-gradient(180deg,#2A2A2A 0%,#1C1C1C 100%);border-bottom:1px solid var(--line-soft);
   box-shadow:0 2px 10px rgba(0,0,0,.45)}
 .nb-brand{display:flex;align-items:center;gap:12px;flex:0 0 auto}
@@ -1469,7 +1488,8 @@ input:focus-visible {
 .nb-ctx b{color:var(--gold);font-weight:600}
 .nb-ctx .pill{padding:3px 9px 2px;border:1px solid var(--gold-dim);border-radius:3px;color:var(--gold);font-size:12px;letter-spacing:.12em}
 .nb-ctx .muted{font-family:var(--body);font-size:12px;letter-spacing:.02em;text-transform:none;color:var(--faint)}
-.navbar.mobile{height:50px;padding:0 12px;gap:10px}
+/* The mobile overrides restate padding, so each one has to carry the inset or it would reset it. */
+.navbar.mobile{height:calc(50px + var(--nav-safe));padding:var(--nav-safe) 12px 0;gap:10px}
 .navbar.mobile .nb-tv{height:34px}
 .navbar.mobile .nb-wm{font-size:21px}
 .navbar.mobile .nb-nav{margin-left:auto;gap:0}
@@ -1478,7 +1498,7 @@ input:focus-visible {
 .navbar.mobile.ctx .nb-nav{display:none}
 .navbar.mobile.ctx .nb-ctx{display:flex;margin-left:auto;font-size:13px}
 @media (max-width:699px){
-  .navbar:not(.mobile){height:50px;padding:0 12px;gap:10px}
+  .navbar:not(.mobile){height:calc(50px + var(--nav-safe));padding:var(--nav-safe) 12px 0;gap:10px}
   .navbar:not(.mobile) .nb-tv{height:34px}
   .navbar:not(.mobile) .nb-wm{font-size:21px}
   .navbar:not(.mobile) .nb-nav{margin-left:auto;gap:0}
