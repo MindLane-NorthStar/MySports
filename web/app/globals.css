@@ -1741,13 +1741,22 @@ input:focus-visible {
   .sportbar > .spbtn-bar { font-size: 17px; }
   /* The tiles share the row. width/min-width/min-height are cleared so aspect-ratio governs and
      the tile is genuinely square at whatever width eight of them work out to. */
+  /* A DEFINITE HEIGHT, and the width flexes. This shipped as `aspect-ratio: 1/1` with
+     `min-height: 0` and `flex-basis: 0`, which meant the tile's height came solely from an aspect
+     ratio resolved against a main size that starts at zero and is only established by flex growth.
+     Chromium resolved that; WebKit collapsed it, and with min-height gone there was no floor to
+     catch it - Joe saw "tiny little gray chips with nothing in them" on the phone, and the marks
+     inherited the collapse through max-height: 100%.
+
+     Fixing it by pinning the height removes the browser-dependent step rather than compensating
+     for it. Tiles are ~40x44 instead of exactly square, which is invisible at this size, and it
+     RESTORES the 44px tap target §16 traded away - a net gain, not a compromise. */
   .sportrow > .spbtn {
     flex: 1 1 0;
     width: auto;
     min-width: 0;
-    height: auto;
-    min-height: 0;
-    aspect-ratio: 1 / 1;
+    height: 44px;
+    min-height: 44px;
   }
 }
 
