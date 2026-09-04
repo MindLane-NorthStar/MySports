@@ -223,3 +223,54 @@ the file with null conferences and wipe all 32 assignments a second time. The du
 `build_teams` to refuse to write a teams file whose conferences are entirely null (or for the upsert to
 stop nulling a populated `conference_id`), and that is a `pipeline/` change, deliberately out of scope
 here. Recorded rather than worked around.
+
+
+---
+
+## The twelve stale MLB rows, and why the plan for them was wrong (2026-09-04)
+
+Twelve `games` rows sat at `result_status = 'in_progress'` with kickoffs on 2026-09-01 - days past any
+possible finish. Prompt 35 shipped the display guard (`isStaleLive`, 8 hours, renders `Final pending`)
+and held the database write for Joe. He approved it as a split: the rows carrying a plausible score
+would be flipped to `final`, and the rows reading 0 - 0 would be re-fetched instead, because flipping
+those would freeze a wrong 0-0 into the record permanently.
+
+**The split's premise did not survive the re-fetch.** Asking statsapi about all twelve - not only the
+empty-looking ones - returned a real Final for every one, and **all twelve stored scores were wrong**:
+
+| game | stored | actual final |
+|---|---|---|
+| Mariners at Red Sox | 9 - 1 | **9 - 6** |
+| Tigers at Twins | 1 - 1 | **2 - 15** |
+| Giants at Pirates | 5 - 11 | **12 - 13** |
+| Athletics at Rangers | 0 - 1 | **5 - 8** |
+| Marlins at Royals | 2 - 0 | **6 - 3** |
+| Blue Jays at Guardians | 1 - 2 | **1 - 6** |
+| Braves at Nationals | 2 - 5 | **5 - 9** |
+| Padres at Reds | 2 - 2 | **3 - 4** |
+| Mets at Rays | 2 - 5 | **2 - 6** |
+| Brewers at Cubs | 0 - 0 | **9 - 4** |
+| White Sox at Astros | 0 - 0 | **5 - 1** |
+| Orioles at Rockies | 0 - 0 | **2 - 4** |
+
+Every stored score was a **mid-game snapshot**, so the reasoning behind the 0-0 carve-out applied to the
+whole set: flipping the nine "plausible" rows to `final` while keeping their scores would have published
+nine wrong finals and closed the door on ever noticing. **A plausible-looking score is not a correct
+one.** Two of the nine even said so out loud - 2 - 2 and 1 - 1 are not possible MLB regular-season
+finals - but the other seven looked perfectly reasonable and were equally wrong.
+
+So the rule Joe gave for the 0-0 rows was applied to all twelve: the provider decides.
+`scripts/backfill_stale_finals.py` re-fetches, writes `result_status`, `away_score` and `home_score`
+from statsapi, and leaves untouched (and reports) any row the provider does not call Final. It writes
+nothing else - `completed_at` and `boxscore_url` stay as the pipeline wrote them - and it is guarded
+`and result_status = 'in_progress'`, so re-running is a no-op.
+
+Result: 12 updated, **0 rows left `in_progress`**, `games` 1,384 rows before and after (backup
+`artifacts/backups/games_2026-09-04T163552Z.csv`). There is **no provider gap** - the data was always
+there to be asked for. `isStaleLive` consequently catches nothing today and is deliberately kept: it
+guards a class of pipeline failure, not those twelve rows.
+
+**The gap this leaves open is the pipeline one, still out of scope and still unfixed:**
+`schedule_refresh` fails on the RENDER job with `FileNotFoundError: artifacts/validation/mlb_2026_teams.json`,
+which is why these statuses were never updated in the first place. Reconciling the rows does not stop it
+happening again tomorrow.

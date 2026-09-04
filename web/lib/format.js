@@ -170,9 +170,12 @@ export function slotContent(game, fav = null) {
              row3: resultLabel(game), tone: 'sched' };
   }
 
-  // 1b. In progress, but hours past any plausible finish. It must not keep claiming LIVE, and it
-  //     must not show a score that may be incomplete either - four of the twelve stale rows read
-  //     0 - 0, which is what an abandoned in-progress row looks like. One quiet row, no number.
+  // 1b. In progress, but hours past any plausible finish. It must not keep claiming LIVE, and it must
+  //     not show the score either, because a stale row's score is a MID-GAME SNAPSHOT rather than a
+  //     partial-looking final. When the twelve were reconciled on 2026-09-04 all twelve stored scores
+  //     turned out wrong, and not only the three reading 0 - 0: Mariners at Red Sox was stored 9 - 1
+  //     and finished 9 - 6. Suppressing every stale score, not just the empty-looking ones, is what
+  //     made this guard right rather than lucky. One quiet row, no number.
   if (isStaleLive(game)) {
     return { kind: 'stale', markSide: null, tied: false, row2: null,
              row3: 'Final pending', tone: 'sched' };
@@ -227,9 +230,11 @@ export function slotContent(game, fav = null) {
 /**
  * A game cannot be LIVE indefinitely.
  *
- * Twelve MLB rows sit at result_status='in_progress' with kickoffs on 2026-09-01, so the card claimed
- * LIVE for days. This is the DISPLAY guard; the rows themselves are a database write and are held for
- * Joe.
+ * Twelve MLB rows sat at result_status='in_progress' with kickoffs on 2026-09-01, so the card claimed
+ * LIVE for days. Those twelve were reconciled against statsapi on 2026-09-04
+ * (scripts/backfill_stale_finals.py) and are all `final` now, so this guard currently catches nothing.
+ * IT STAYS ANYWAY: it is the display's answer to a class of pipeline failure, not to those twelve rows,
+ * and the next dropped status update will need it before anyone notices the data.
  *
  * THE THRESHOLD IS NOT MEASURED FROM completed_at, and the brief's suggestion to do that does not
  * survive contact with the column. completed_at is the PIPELINE's write timestamp, not the moment the
@@ -238,8 +243,8 @@ export function slotContent(game, fav = null) {
  * like a real ball game.
  *
  * So the cut comes from the sport instead, with margin: the longest MLB games on record run about
- * seven hours, and a weather-delayed football game reaches six. EIGHT HOURS clears both and still
- * catches the twelve stale rows by a factor of six - they are more than 48 hours past kickoff.
+ * seven hours, and a weather-delayed football game reaches six. EIGHT HOURS clears both and caught the
+ * twelve stale rows by a factor of six - they were more than 48 hours past kickoff.
  */
 export const STALE_LIVE_HOURS = 8;
 
