@@ -103,11 +103,14 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .mcard .mid{min-width:0; display:flex; flex-direction:column; gap:4px}
 .duel{display:grid; grid-template-columns:1fr auto 1fr; gap:2px 4px; align-items:center}
 .duel.fixcol .atbig{justify-self:end; margin-right:2px}
-/* KNOWN DIVERGENCE, recorded rather than silently tolerated (prompt 31). This file holds one line
-   and lets the stacks shrink; the shipped app keeps flex-wrap on .duel. Removing it there was
-   measured and rejected: the app's .mbody is 152px at 390px, and two names plus logos plus the @
-   need ~250px, so 122 of 124 names on the 2026-09-05 slate truncated. The app's card is narrower
-   than this reference assumes; widening it is Joe's call. */
+/* KNOWN DIVERGENCE, updated by prompt 35. This file holds one line and lets the stacks shrink; the
+   shipped app keeps flex-wrap on .duel. Prompt 31 measured removing it and rejected the result - 122
+   of 124 names truncated at 390px. Prompt 35 then took the `@` off ordinary games, which frees ~28px
+   and, more to the point, changes what a wrap LOOKS like: with no symbol between them the away stack
+   simply sits above the home stack, which reads as a designed two-row matchup rather than a stranded
+   glyph. So the wrap is now deliberate rather than merely tolerated, and the truncation it avoids is
+   the same. `vs` still renders inline on the 20 neutral-site games, where the marker carries the
+   information that away-then-home cannot. */
 .duel.hug{display:flex; align-items:flex-start; gap:6px}
 .duel.hug .tcol{flex:0 1 auto; min-width:0}
 .duel.hug .atbig{flex:0 0 auto}
@@ -334,7 +337,7 @@ function card(g, key){
   return `<button class="mcard" data-g="${key}">
     <span class="t">${esc(timeOf(g))}<small>ET</small></span>
     <span class="mid">
-      <span class="duel ${ATSTYLE}">${tcol(g,a,"away")}<span class="atbig">@</span>${tcol(g,h,"home")}</span>
+      <span class="duel ${ATSTYLE}">${tcol(g,a,"away")}${g.neutral_site ? `<span class="atbig">vs</span>` : ""}${tcol(g,h,"home")}</span>
       <span class="lnet">${esc(g.network??"—")}</span>
     </span>
     ${(AVAIL.has(g.network)&&NETLOGOS[g.network])?

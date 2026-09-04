@@ -30,7 +30,6 @@ export default function NavBanner({ sport, week, day }) {
             {day}
           </span>
         ) : null}
-        <span className="muted">all times ET · Cleveland</span>
       </div>
     </header>
   );

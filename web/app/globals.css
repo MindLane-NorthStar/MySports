@@ -222,6 +222,12 @@ h3 {
   align-items: center;
   gap: 10px;
   width: 100%;
+  /* B3: the count drops to its OWN line rather than being squeezed into whatever is left beside
+     the date. The longest label - "68 College Football broadcasts" - is 146px at 360px and 176px
+     at 390px, and in both cases that is the whole remaining width, so the text wrapped inside a
+     squeezed box. Wrapping the FLEX instead keeps it on one line and right-aligned under the
+     date. One property; it does nothing at all on days whose count is short. */
+  flex-wrap: wrap;
 }
 
 .daycount {
@@ -1419,7 +1425,12 @@ input:focus-visible {
     /* FOUR columns on the phone too. The reference this card is locked to IS the mobile demo, and it
        carries the mark column - dropping to three here was part of the same drift that moved the mark
        inside the body at desktop width. Only the columns get tighter. */
-    grid-template-columns: 54px minmax(0, 1fr) auto minmax(46px, auto);
+    /* B4: 56px, not 54. Prompt 31 took the ET suffix off every clock, and the widest time text
+       fell from 77.3px to 55.9px - 1.9px over this track, so "12:00 PM" still wrapped to two
+       lines for want of two pixels. Spending 2 of the 22 that prompt 31 freed costs the matchup
+       under 1.5% of its 152px and unwraps every time on the page. The DESKTOP column stays at
+       78px: it is not crowding anything and narrowing it would be change for its own sake. */
+    grid-template-columns: 56px minmax(0, 1fr) auto minmax(46px, auto);
     column-gap: 9px;
     padding: 10px 10px 10px 13px;
   }

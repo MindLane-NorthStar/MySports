@@ -128,7 +128,11 @@ export default function MatchupCard({ game, standings, showDay = false, onOpen }
             team={away} teamId={game.away_team_id} sport={sport} standings={standings}
             season={game.season} probable={game.probable_away_pitcher} showProbable={isMlb}
           />
-          <span className="at">{game.neutral_site ? 'vs' : '@'}</span>
+          {/* B1: NOTHING between the stacks on an ordinary game - away-then-home carries it, and
+              Joe asked for the @ to go. `vs` STAYS for neutral sites, because there the order
+              carries nothing: 20 games in the loaded season are neutral (11 CFB, 9 NFL), and
+              dropping the marker outright would render an NFL game in London as a home game. */}
+          {game.neutral_site ? <span className="at">vs</span> : null}
           <TeamStack
             team={home} teamId={game.home_team_id} sport={sport} standings={standings}
             season={game.season} probable={game.probable_home_pitcher} showProbable={isMlb}
