@@ -96,6 +96,68 @@ for (const dev of DEVICES) {
   );
   await page.screenshot({ path: join(outDir, 'mobile__grid-panned.png'), fullPage: false });
 
+  // M4 UNDER ZOOM (prompt 30). The rule above only ever tested zoom 1, which is why the transform bug
+  // survived: `transform: scale(zoom)` on .mgrid-canvas made it the containing block for the sticky
+  // rail inside it, so the rail resolved against the scaled content and slid across the screen. Joe
+  // found it on the installed app; Chromium reproduces it at +124.6px right of the scroller at zoom
+  // 2.5. Zoom is a layout width now, and these three levels are the guard.
+  for (const z of [1, 2.5, 0.6]) {
+    // Reload between levels: the pinch handler is RELATIVE to the current zoom, so without this a
+    // "0.6" pass after a "2.5" pass would land somewhere in between and the label would be a lie.
+    if (z !== 1) {
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('.mgrid-canvas', { timeout: 30000 });
+      await page.waitForTimeout(800);
+    }
+    if (z !== 1) {
+      await page.locator('.mgrid-canvas').evaluate((canvas, zz) => {
+        const r = canvas.getBoundingClientRect();
+        const cy = r.top + 100;
+        const mk = (d) => [
+          new Touch({ identifier: 1, target: canvas, clientX: 100, clientY: cy }),
+          new Touch({ identifier: 2, target: canvas, clientX: 100 + d, clientY: cy }),
+        ];
+        canvas.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: mk(200) }));
+        canvas.dispatchEvent(new TouchEvent('touchmove', { bubbles: true, cancelable: true, touches: mk(Math.max(6, Math.round(200 * zz))) }));
+        canvas.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [] }));
+      }, z);
+      await page.waitForTimeout(350);
+    }
+    await page.locator('.mgrid-scroll').evaluate((el) => { el.scrollLeft = el.scrollWidth; });
+    await page.waitForTimeout(300);
+    const m = await page.evaluate(() => {
+      const s = document.querySelector('.mgrid-scroll');
+      const cv = document.querySelector('.mgrid-canvas');
+      const rail = document.querySelector('.mrail-cell');
+      return {
+        delta: rail.getBoundingClientRect().left - s.getBoundingClientRect().left,
+        painted: Math.round(cv.getBoundingClientRect().width),
+        laidOut: cv.offsetWidth,
+        scrolled: Math.round(s.scrollLeft),
+      };
+    });
+    record(
+      `M4: rail pinned at the scroller edge at zoom ${z}`,
+      Math.abs(m.delta) < 1.5 && m.scrolled > 0,
+      `delta ${m.delta.toFixed(1)}px, scrollLeft ${m.scrolled}`
+    );
+    record(
+      `M6: canvas painted width equals its laid-out width at zoom ${z}`,
+      Math.abs(m.painted - m.laidOut) <= 1,
+      `${m.painted} vs ${m.laidOut}`
+    );
+    if (z === 2.5) {
+      // The GRID element, not the viewport: the page is scrolled to the top, so a viewport shot here
+      // would photograph the banner and prove nothing about the rail.
+      const grid = await page.$('.mgrid');
+      if (grid) await grid.screenshot({ path: join(outDir, 'mobile__grid-zoom-max-right-edge.png') });
+    }
+  }
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.mgrid', { timeout: 30000 });
+  await page.waitForTimeout(800);
+
+
   // M2 - computed PX means no team name ever wraps to a second line
   const wraps = await page.$$eval('.mgrid .mname', (nodes) =>
     nodes

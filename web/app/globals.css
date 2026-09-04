@@ -759,9 +759,11 @@ input:focus-visible {
 }
 
 /* ================================================================= MOBILE GRID (M1-M13)
- * docs/rendering-contract-mobile.md. The canvas scrolls under a permanently fixed rail; pinch-zoom
- * scales the canvas by a CSS transform and the rail scales with it, so the rail is pinned at every
- * zoom level (M4/M6).
+ * docs/rendering-contract-mobile.md. The canvas scrolls under a permanently fixed rail. Pinch-zoom
+ * multiplies the scale model's pxPerMin, so the canvas is genuinely wider at higher zoom rather
+ * than being painted larger - which is what lets the sticky rail hold the scrollport at every zoom
+ * level (M4/M6). It was a CSS transform on .mgrid-canvas until prompt 30, and that transform made
+ * the canvas the rail's containing block, so the rail slid across the screen under pinch.
  */
 .mgrid {
   position: relative;
@@ -831,13 +833,18 @@ input:focus-visible {
   touch-action: pan-x pan-y;
 }
 
+/* No transform lives here any more, so neither does transform-origin or the will-change that hinted
+ * at it. Both existed only for the `scale(zoom)` that broke M4 by making this element the
+ * containing block for the sticky rail inside it. Zoom is a layout width now - see MobileGrid.js. */
 .mgrid-canvas {
   position: relative;
-  transform-origin: 0 0;
-  will-change: transform;
 }
 
-/* M4: the rail is sticky at x=0 inside the scroller, so panning moves only the schedule */
+/* M4: the rail is sticky at x=0 inside the scroller, so panning moves only the schedule - AT EVERY
+   ZOOM LEVEL. That last part is only true while nothing between this element and .mgrid-scroll
+   carries a transform: a transformed ancestor would become its containing block and the rail would
+   resolve against the scaled content instead of the scrollport, which is exactly the bug prompt 30
+   fixed. Do not add one. */
 .mrail-cell,
 .mgrid-axis-rail {
   position: sticky;

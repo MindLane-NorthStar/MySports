@@ -7,8 +7,20 @@
 // about block anatomy still holds (M13); only the rules named M1-M12 differ.
 //
 // Layout: one horizontal scroller. The network rail is `position: sticky; left: 0` INSIDE it, so
-// panning moves only the schedule (M4). Pinch-zoom scales the whole canvas with a CSS transform and
-// the rail rides along, which is what "pinned at every zoom level" means (M6).
+// panning moves only the schedule (M4). ZOOM DRIVES THE SCALE MODEL, not a CSS transform: pinching
+// multiplies pxPerMin, so the canvas's real laid-out width, every block's left/width and the axis
+// ticks all grow together through layout (M6).
+//
+// IT USED TO BE `transform: scale(zoom)` ON THE CANVAS, and that broke M4. A transformed element
+// becomes the containing block for its descendants, so the sticky rail resolved against the scaled
+// canvas instead of the scrollport and travelled with the content - Joe saw it slide out from the
+// left edge and across the grid on his phone. Measured in Chromium before the change, after
+// panning fully right: the rail sat +124.6px right of the scroller at zoom 2.5 and -272.8px left
+// at 0.6, against 0px at zoom 1. Compositing hints (will-change, translateZ) change WHEN that
+// appears, never whether it does.
+//
+// The same transform caused prompt 25's other finding - scrollWidth stayed at the unzoomed layout
+// width, leaving ~418px of dead scroll past the end at zoom 0.6. One cause, both symptoms, one fix.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -170,11 +182,16 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
     const netTbd = tbd.filter((g) => isNetworkTbd(g));
     const kickTbd = tbd.filter((g) => !isNetworkTbd(g));
 
-    return { rows, scale, ticks, cuts, pxPerMin, tbd, netTbd, kickTbd,
+    // `segments` and `pxPerMin` come out so the zoomed scale can be rebuilt WITHOUT re-running any
+    // of the above. The costly part of this memo is M2's text measurement, one measure() per team
+    // line, and it does not depend on zoom - neither does the overlap split or the lane packing,
+    // which both work in MINUTES. Keeping them on these deps is what makes a pinch frame cheap.
+    return { rows, scale, ticks, cuts, pxPerMin, segments, tbd, netTbd, kickTbd,
              blockMins: mins, widest, guardHits };
   }, [games, sport, measure, ready, standings]);
 
-  // M6: pinch-to-zoom over the canvas; the rail is sticky inside it and so scales with it.
+  // M6: pinch-to-zoom over the canvas. The rail is sticky in the SCROLLER, which now has no
+  // transformed ancestor, so it holds the left edge natively at every level.
   const [zoom, setZoom] = useState(1);
   const scrollRef = useRef(null);
   const pinch = useRef(null);
@@ -206,7 +223,16 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
     };
   }, [zoom]);
 
-  const { rows, scale, ticks, cuts, tbd, netTbd, kickTbd } = model;
+  const { rows, ticks, cuts, tbd, netTbd, kickTbd } = model;
+
+  // THE ZOOM. makeScale is O(segments) - a handful of entries - so rebuilding it on every pinch
+  // frame is arithmetic, not layout work, and everything expensive stays in the memo above.
+  // Scaling pxPerMin rather than the painted pixels is what keeps scrollWidth honest: the canvas
+  // really is this wide, so the scroller has nothing to disagree with.
+  const scale = useMemo(
+    () => makeScale(model.segments, model.pxPerMin * zoom, SEAM_PX),
+    [model.segments, model.pxPerMin, zoom],
+  );
   const blockH = BLOCK_H * SCALE;
   const trayH = TRAY_H * SCALE;
   const laneH = blockH + trayH + LANE_GAP * SCALE;
@@ -243,9 +269,10 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
       ) : null}
 
       <div className="mgrid-scroll" ref={scrollRef}>
+        {/* No transform. The width below is the real, laid-out width at this zoom. */}
         <div
           className="mgrid-canvas"
-          style={{ transform: `scale(${zoom})`, width: `calc(var(--rail-w) + ${scale.width}px)` }}
+          style={{ width: `calc(var(--rail-w) + ${scale.width}px)` }}
         >
           {/* M5: hour-only gold shorthand labels. Gridlines stay on :15. */}
           <div className="mgrid-axis">
