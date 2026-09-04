@@ -19,7 +19,7 @@
 import { useMemo, useState } from 'react';
 import MatchupCard from './MatchupCard.js';
 import { offServiceSummary, countSummary } from '../lib/offservice.js';
-import { favoriteIds, splitFavorites } from '../lib/favorites.js';
+import { favoriteIds, isFavorite, splitFavorites } from '../lib/favorites.js';
 import favoritesDoc from '../../data/favorites.json';
 
 // College football has no mark of its own in web/public/leagues; the banner uses the CFP mark for the
@@ -44,15 +44,25 @@ export default function SportBand({ sport, label, games, standings, showDay = fa
   // games are exempt in BOTH toggle states, and the visible set is the original array minus `off`,
   // so everything keeps its chronological position rather than being regrouped. Both carve-outs are
   // free here: neither state is ever IN `off`, so subtracting `off` exempts them by construction.
+  const favIds = useMemo(() => favoriteIds(favoritesDoc), []);
+
+  // A FAVOURITED TEAM'S GAME IS NEVER HIDDEN, in either toggle state. Market-pending and network-TBD
+  // are already exempt by construction; favourites join them by name.
+  //
+  // Without this the game vanished from the page entirely, and the page said so without showing it.
+  // On `/` the favourites are hoisted to a page-level section from the UNFILTERED day (Listing.js),
+  // which is correct - but this section then applied D4's filter to the very games it was handed for
+  // being favourites, and they were already gone from their sport's band. Measured on 2026-09-12:
+  // YOUR TEAMS read "5 airing · 1 unavailable" and rendered five rows, and Fresno State - a favourite
+  // - appeared nowhere on the page.
   const shown = useMemo(
-    () => (showAll ? games : (games || []).filter((g) => !offIds.has(g.id))),
-    [showAll, games, offIds],
+    () => (showAll ? games : (games || []).filter((g) => !offIds.has(g.id) || isFavorite(g, favIds))),
+    [showAll, games, offIds, favIds],
   );
 
   // D6's in-band float, retained for /weeks and /history. On `/` this is switched off and the page
   // hoists favourites into their own section instead (05 section 11), so `favorites` is empty and
   // `rest` is everything - one flat list, no marker and no trailing rule.
-  const favIds = useMemo(() => favoriteIds(favoritesDoc), []);
   const split = useMemo(() => splitFavorites(shown, favIds), [shown, favIds]);
   const favorites = floatFavorites ? split.favorites : [];
   const rest = floatFavorites ? split.rest : shown;
