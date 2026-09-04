@@ -1586,6 +1586,65 @@ input:focus-visible {
 
 /* ---- prompt 22 chrome: chip marks, tighter banner gap, one-line count */
 
+/* ---- REGISTER §16: THE SPORT FILTER BLOCK - an ALL bar over a row of tiles.
+ *
+ * The row does NOT scroll. §13 had it scrolling because ten fixed 44px marks could not fit 390px;
+ * §16 removes two members (ALL to its own bar, NASCAR+IndyCar to one Racing chip) and lets the
+ * remaining eight SHARE the row's width instead of each claiming 44px. Eight flexed tiles fit at
+ * every width by construction, so there is nothing left to swipe - which is what Joe asked for.
+ *
+ * NAMED COST, accepted: a flexed tile is no longer a fixed 44px. Eight of them at 390px land near
+ * 40px, under prompt 25's tap target. min-height is explicitly cleared below so the tile stays
+ * SQUARE at that size rather than being 40 wide and 44 tall - a smaller honest square beats a
+ * rectangle pretending to be a square.
+ *
+ * .chiprow is deliberately NOT reused here. It still carries /weeks' two View chips, and prompt 25
+ * already shipped a 3px clip on that page by changing a shared class - so the tile row gets its
+ * own. */
+.sportbar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+  /* Desktop: the tiles stay a fixed 36px, so the block shrinks to the row's natural width and the
+     bar matches it. Eight tiles stretched across 1100px would be absurd. Mobile overrides to full
+     width below, where the tiles flex instead. */
+  width: max-content;
+  max-width: 100%;
+}
+
+.sportrow {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+/* The bar is a tile that is as wide as the row. Everything else about it - plate, border, radius,
+   active state - comes from .spbtn, so there is one definition of what these controls look like.
+   The descendant selector is deliberate: .spbtn sets an explicit width in both breakpoints, and a
+   single-class rule would lose to it on source order. */
+.sportbar > .spbtn-bar {
+  width: auto;
+  align-self: stretch;
+  min-width: 0;
+  font-size: 15px;
+}
+
+@media (max-width: 699px) {
+  .sportbar { width: auto; }
+  .sportbar > .spbtn-bar { font-size: 17px; }
+  /* The tiles share the row. width/min-width/min-height are cleared so aspect-ratio governs and
+     the tile is genuinely square at whatever width eight of them work out to. */
+  .sportrow > .spbtn {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 1 / 1;
+  }
+}
+
 /* ---- REGISTER §15: THE SPORT TILES.
  *
  * CONTRACT REPAIR, not new design. docs/design/mobile_demo.html specifies a FIXED SQUARE tile
@@ -1614,7 +1673,10 @@ input:focus-visible {
   min-height: 36px;
   padding: 4px;
   border-radius: 10px;
-  border: 1px solid var(--line-soft);
+  /* §16: --line, not --line-soft. Joe chose keep-every-tile over invisible, and at 40px a
+     hairline in the softer token reads as no edge at all. This is the value the locked reference
+     uses on .spbtn. */
+  border: 1px solid var(--line);
   background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
   color: var(--dim);
   cursor: pointer;

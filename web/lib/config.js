@@ -36,6 +36,32 @@ export const ASSET_BASE_URL = (
 // All, and still renders on the grid on its networks - it just does not get a chip.
 export const SPORTS = ['cfb', 'nfl', 'nba', 'nhl', 'mlb', 'nascar', 'indycar', 'ufc', 'wwe'];
 
+// REGISTER §16. The CHIP ROSTER is not the sport list: `racing` is one chip standing over two
+// enum values. There is no `racing` in the database and there must not be - PostgREST answers
+// `sport=eq.racing` with a 400, `invalid input value for enum sport`, verified against the live
+// database. So the token is expanded to real sports before any query is built (queries.js), and
+// SPORTS above stays exactly what the enum accepts.
+export const SPORT_FILTERS = ['cfb', 'nfl', 'nba', 'nhl', 'mlb', 'racing', 'ufc', 'wwe'];
+
+const FILTER_EXPANDS = { racing: ['nascar', 'indycar'] };
+
+/** A filter token -> the enum sports it covers. A plain sport expands to itself. */
+export function expandSport(token) {
+  if (!token) return [];
+  return FILTER_EXPANDS[token] || (SPORTS.includes(token) ? [token] : []);
+}
+
+/**
+ * The sport a URL param selects, or null for all sports.
+ *
+ * Accepts both a chip token and a bare enum sport, so a hand-typed or bookmarked `?sport=nascar`
+ * keeps working even though NASCAR no longer has a chip of its own.
+ */
+export function resolveSportParam(value) {
+  if (!value) return null;
+  return SPORT_FILTERS.includes(value) || SPORTS.includes(value) ? value : null;
+}
+
 export const SPORT_LABEL = {
   cfb: 'College Football',
   nfl: 'NFL',
@@ -44,6 +70,7 @@ export const SPORT_LABEL = {
   mlb: 'MLB',
   nascar: 'NASCAR',
   indycar: 'IndyCar',
+  racing: 'Racing',
   ufc: 'UFC',
   wwe: 'WWE',
 };

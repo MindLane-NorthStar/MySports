@@ -13,7 +13,7 @@ import Listing from '../components/Listing.js';
 import { DatePicker, SportFilter } from '../components/Filters.js';
 import { gamesForDay, newestGridFor, gridIndex, standingsForGames } from '../lib/queries.js';
 import { longDay, todayET, etTime } from '../lib/format.js';
-import { SPORTS, SPORT_LABEL, gridAssetUrl } from '../lib/config.js';
+import { SPORT_LABEL, gridAssetUrl, resolveSportParam } from '../lib/config.js';
 import { RestError } from '../lib/rest.js';
 import { overlayForDay, applyOverlay } from '../lib/livescores.js';
 
@@ -39,6 +39,11 @@ export const dynamic = 'force-dynamic';
 // four used to repeat it - "No games on this viewing day for UFC. UFC is not loaded yet." - and
 // that includes IndyCar, whose possessive "IndyCar's" doubled it just as plainly as the rest.
 const SPORT_EMPTY = {
+  // §16: one chip over two sports, so one line carrying BOTH facts - they resolve on different
+  // clocks, so neither can stand in for the other. nascar and indycar keep their own lines for a
+  // hand-typed ?sport=nascar, which still resolves even though the chip is gone.
+  racing: 'It is not loaded yet. NASCAR arrives with the playoffs, September 6; '
+    + "IndyCar's 2026 season ends this month, with the 2027 schedule in October.",
   nascar: 'It arrives with the playoffs, September 6.',
   indycar: 'The 2026 season ends this month; the 2027 schedule publishes in October.',
   ufc: 'It is not loaded yet — the numbered events and Fight Nights are coming.',
@@ -104,7 +109,7 @@ function DataAsOf({ day, today, overlay }) {
 export default async function TodayPage({ searchParams }) {
   const params = await searchParams;
   const day = /^\d{4}-\d{2}-\d{2}$/.test(params?.day || '') ? params.day : todayET();
-  const sport = SPORTS.includes(params?.sport) ? params.sport : null;
+  const sport = resolveSportParam(params?.sport);
 
   let games = [];
   let grids = [];

@@ -4,7 +4,7 @@
 // and let the server component re-fetch. No client-side data access anywhere in this app.
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { SPORTS, SPORT_LABEL } from '../lib/config.js';
+import { SPORT_FILTERS, SPORT_LABEL } from '../lib/config.js';
 
 function useSetParam() {
   const router = useRouter();
@@ -37,14 +37,18 @@ export function DatePicker({ day }) {
 // web/public/leagues has no `cfb` asset; the CFP mark is what the band headers and the banner use
 // for college football, so the chips follow rather than inventing a second convention.
 // The four added in prompt 25 map to themselves; every file is present in web/public/leagues.
+// `racing` is one chip over two sports (§16) and has its own composited mark: NASCAR's wordmark
+// over IndyCar's badge. nascar/indycar keep their marks for a hand-typed ?sport=nascar.
 const CHIP_MARK = {
   cfb: 'cfp', nfl: 'nfl', nba: 'nba', nhl: 'nhl', mlb: 'mlb',
-  nascar: 'nascar', indycar: 'indycar', ufc: 'ufc', wwe: 'wwe',
+  racing: 'racing', nascar: 'nascar', indycar: 'indycar', ufc: 'ufc', wwe: 'wwe',
 };
 
 export function SportFilter({ sport, available }) {
   const setParam = useSetParam();
-  const shown = available && available.length ? SPORTS.filter((s) => available.includes(s)) : SPORTS;
+  const shown = available && available.length
+    ? SPORT_FILTERS.filter((s) => available.includes(s))
+    : SPORT_FILTERS;
   return (
     <>
       {/* The <span>Sport</span> that used to sit here was a bare span wired to nothing - not a
@@ -52,11 +56,16 @@ export function SportFilter({ sport, available }) {
           chips. role="group" + aria-label IS the name it was pretending to be, and it names the
           row rather than floating beside it. The Day label above stays: it is visible work in
           front of a control whose own text is a date. */}
-      <div className="chiprow" role="group" aria-label="Sport">
-        <button type="button" className="spbtn spbtn-all" data-active={!sport} aria-pressed={!sport}
-                onClick={() => setParam('sport', null)}>
+      {/* §16: ALL leaves the tile row and becomes a full-width bar directly above it, one tile
+          tall, edges flush with the row beneath. It is the largest control on the page, which is
+          the point - and it takes a member out of the tile row, which is half of what let the row
+          stop scrolling. role="group" is on the WRAPPER so All is inside the named group. */}
+      <div className="sportbar" role="group" aria-label="Sport">
+        <button type="button" className="spbtn spbtn-all spbtn-bar" data-active={!sport}
+                aria-pressed={!sport} onClick={() => setParam('sport', null)}>
           All
         </button>
+        <div className="sportrow">
         {/* data-active stays - it is the styling hook the gold plate depends on. aria-pressed is
             added ALONGSIDE it, never instead: selection was carried entirely by CSS, so a screen
             reader heard "NFL, button" with no way to know which filter was active. */}
@@ -95,6 +104,7 @@ export function SportFilter({ sport, available }) {
             />
           </button>
         ))}
+        </div>
       </div>
     </>
   );

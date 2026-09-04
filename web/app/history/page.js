@@ -8,14 +8,14 @@
 import Listing from '../../components/Listing.js';
 import { SearchBox, SportFilter } from '../../components/Filters.js';
 import { finalGames, matchesSearch, standingsForGames } from '../../lib/queries.js';
-import { SPORTS, SPORT_LABEL } from '../../lib/config.js';
+import { SPORT_LABEL, resolveSportParam } from '../../lib/config.js';
 import { RestError } from '../../lib/rest.js';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HistoryPage({ searchParams }) {
   const params = await searchParams;
-  const sport = SPORTS.includes(params?.sport) ? params.sport : null;
+  const sport = resolveSportParam(params?.sport);
   const q = (params?.q || '').slice(0, 80);
 
   let games = [];

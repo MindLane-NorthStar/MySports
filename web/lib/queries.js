@@ -2,7 +2,7 @@
 // See docs/app-skeleton.md for the route -> query mapping.
 
 import { rest, inList, restAll } from './rest.js';
-import { SPORTS } from './config.js';
+import { expandSport } from './config.js';
 
 // The column list every game card needs. Teams are embedded through the two FKs on games; the
 // broadcast rows are embedded through game_broadcasts -> networks_services.
@@ -47,8 +47,16 @@ const GAME_SELECT = [
 
 const ORDER = 'order=canonical_kickoff_at_utc.asc.nullslast,id.asc';
 
+/**
+ * §16: the filter token is expanded HERE, never in a component, because this is the last place
+ * before the wire. `racing` covers two enum values; anything else covers itself. PostgREST answers
+ * `sport=eq.racing` with a 400 - `invalid input value for enum sport` - so an unexpanded token
+ * would surface as an error page rather than an empty state.
+ */
 function sportFilter(sport) {
-  return sport && SPORTS.includes(sport) ? `&sport=eq.${sport}` : '';
+  const list = expandSport(sport);
+  if (!list.length) return '';
+  return list.length === 1 ? `&sport=eq.${list[0]}` : `&sport=in.(${list.join(',')})`;
 }
 
 /** Every game on one viewing day, optionally one sport. */
@@ -96,9 +104,14 @@ export async function finalGames({ limit = 200, sport } = {}) {
  * means the most recently generated row for that key.
  */
 export async function newestGridFor(sport, day) {
+  // generated_grids.sport is the SAME enum, so this needs the same expansion - `eq.racing` is a
+  // 400 here too, and this call sits inside a Suspense where a throw would take the page with it.
+  const list = expandSport(sport);
+  if (!list.length) return null;
+  const clause = list.length === 1 ? `sport=eq.${list[0]}` : `sport=in.(${list.join(',')})`;
   const rows = await rest(
     `generated_grids?select=sport,game_date,svg_asset_url,png_asset_url,generated_at,generator_version,games_on_grid,games_tbd,games_omitted` +
-      `&sport=eq.${sport}&game_date=eq.${day}&order=generated_at.desc,id.desc&limit=1`
+      `&${clause}&game_date=eq.${day}&order=generated_at.desc,id.desc&limit=1`
   );
   return rows[0] || null;
 }
