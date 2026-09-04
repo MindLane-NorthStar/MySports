@@ -103,7 +103,9 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 
 /* ---------- game cards: matchup+records / pitchers / network, odds at right ---------- */
 .mrows{display:flex; flex-direction:column; gap:6px; padding:0 12px 14px}
-.mcard{position:relative; display:grid; grid-template-columns:44px minmax(0,1fr) auto minmax(58px,auto); gap:8px; align-items:center;
+/* Joe 2026-09-04: the right half is TWO FIXED tracks, so the mark column and the slot each hold
+   one centreline down a mixed list. They were `auto` and `minmax(58px,auto)` here as in the app. */
+.mcard{position:relative; display:grid; grid-template-columns:44px minmax(0,1fr) 92px 100px; gap:8px; align-items:center;
   padding:10px 10px 12px; border:1px solid var(--line-soft); border-radius:4px; text-align:left;
   background:linear-gradient(180deg, rgba(49,54,61,.6), rgba(30,33,38,.6)); overflow:hidden; width:100%}
 .mcard .t{font-family:var(--disp); font-weight:600; font-size:15px; color:var(--gold); line-height:1.1; align-self:start; padding-top:2px}
@@ -138,24 +140,34 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .atbig{font-family:var(--disp); font-weight:600; font-size:22px; color:var(--faint); padding:0 2px;
   align-self:start; line-height:26px}
 .lnet{font-size:11px; color:var(--faint)}
-.mcard .midlogo{justify-self:center; display:flex; align-items:center; align-self:start; filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
-.mcard .midlogo img{height:100%; width:auto; object-fit:contain}
-.mcard .midlogo.nlfull{height:54px; margin-top:7px}   /* full 3-line height, centered on line 2 */
-.mcard .midlogo.nlfull img{max-width:96px}
-.mcard .midlogo.nl23{height:36px; margin-top:16px}    /* 2/3 of 3-line height, centered on line 2 */
-.mcard .midlogo.nl23 img{max-width:72px}
-.mcard .midlogo.none{visibility:hidden; width:0}
+/* The network mark is fitted to a FIXED 84x44 box and centred both ways - no hf, no auto width.
+   nlfull/nl23 were the two hf-driven heights (54px and 36px, "2/3 of the three-line stack"); both
+   are retired, because on this surface that rule produced 22-45px heights and 39.7-92px widths and
+   left the column's left edge ragged by 57px. The frozen manifest still governs the banner and the
+   grid rail. .none keeps the track: visibility only, never width:0, or the slot slides left on any
+   card whose network has no published mark. */
+.mcard .midlogo{justify-self:center; align-self:center; display:flex; align-items:center; justify-content:center;
+  width:84px; height:44px; filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
+.mcard .midlogo img{width:84px; height:44px; object-fit:contain}
+.mcard .midlogo.nlfull, .mcard .midlogo.nl23{height:44px; margin-top:0}
+.mcard .midlogo.nlfull img, .mcard .midlogo.nl23 img{max-width:84px}
+.mcard .midlogo.none{visibility:hidden}
 /* CONTRACT v1.6.6: the slot is a COLUMN of three rows - mark, number, word - in that order in
    every state. It was a horizontal cluster with O/U hung underneath. Rungs 1, 3 and 5 emit one
    row, never three; the slot does not reserve an empty one. */
-.rcol{justify-self:end; text-align:right; align-self:center;
-  display:flex; flex-direction:column; align-items:flex-end; gap:3px}
-.rcol .wmark{height:18px; width:18px; object-fit:contain}
+/* CENTRED, not flush right (Joe 2026-09-04, reversing v1.6.6): rows 1-3 share one vertical
+   centreline with the fixed track, so the column reads as a column down a mixed list. */
+.rcol{justify-self:stretch; text-align:center; align-self:center;
+  display:flex; flex-direction:column; align-items:center; gap:3px}
+.rcol .wmark{height:44px; width:44px; object-fit:contain}
 .rcol .oline{font-family:var(--disp); font-weight:600; font-size:13px; color:var(--ink); font-variant-numeric:tabular-nums; white-space:nowrap}
+/* ONE set of row sizes for every state. `.sc` and `.ou` gave the odds rung its own smaller rows,
+   which is what made the slot two silhouettes while v1.6.6 claimed it was one. */
 .rcol .oline.sc{font-size:15px; font-weight:700}
-.rcol .oline.ou{color:var(--dim); font-size:12px}
+.rcol .oline.ou{color:var(--dim); font-size:15px; font-weight:700}
 /* A word where every other card has a mark. Named cost of the TIED ruling. */
-.rcol .tied{font-family:var(--disp); font-weight:700; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); line-height:18px}
+/* TIED is sized to the row-1 box so the column does not jog when a game is level. */
+.rcol .tied{font-family:var(--disp); font-weight:700; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); line-height:44px}
 .rcol .st{font-family:var(--disp); font-weight:600; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--dim)}
 .rcol .st.fin{color:#141414; background:var(--gold); padding:2px 7px 1px; border-radius:2px}
 .rcol .st.live{color:var(--live)}
