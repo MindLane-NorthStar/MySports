@@ -23,12 +23,17 @@ export function DatePicker({ day }) {
   const setParam = useSetParam();
   return (
     <>
-      <span className="control-label">Day</span>
+      {/* A REAL <label for>, not the bare span it was. Prompt 25 deleted the Sport and View spans
+          for being decoration wired to nothing; this one does visible work in front of a control
+          whose own text is a date, so it stays - and now it is wired. aria-label is gone with it:
+          an aria-label would OVERRIDE the visible label and lose the word "Day" to a screen
+          reader, which is the opposite of the point. */}
+      <label className="control-label" htmlFor="viewing-day">Day</label>
       <input
+        id="viewing-day"
         type="date"
         value={day}
         onChange={(e) => setParam('day', e.target.value)}
-        aria-label="Viewing day"
       />
     </>
   );

@@ -207,10 +207,28 @@ h3 {
   text-transform: uppercase;
 }
 
+/* .sub is gone from the Today page - its count moved beside the date picker as .daycount. The rule
+   stays because /weeks and /history still use it. */
 .sub {
   color: var(--dim);
   font-size: 13px;
   margin: 0 0 18px;
+}
+
+/* The day row: the Day label and its date input on the left, the count on the right. margin-left
+   auto rather than space-between so the label and input stay together as one control. */
+.dayrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.daycount {
+  margin-left: auto;
+  color: var(--dim);
+  font-size: 13px;
+  text-align: right;
 }
 
 .controls {
@@ -219,6 +237,15 @@ h3 {
   align-items: center;
   gap: 10px;
   margin: 16px 0 20px;
+}
+
+/* Today's controls stack: the sport block, then the day row. Its OWN class, not a change to
+   .controls - that is shared with /weeks, /history and WeekSelect, where the children are meant
+   to sit side by side. Turning the shared rule into a column would have stacked WeekSelect's
+   label above its <select>. */
+.controls-stack {
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .control-label {
