@@ -34,14 +34,19 @@ export const ASSET_BASE_URL = (
 //
 // AEW is deliberately absent (section 13, amending section 9). It still loads, still appears under
 // All, and still renders on the grid on its networks - it just does not get a chip.
-export const SPORTS = ['cfb', 'nfl', 'nba', 'nhl', 'mlb', 'nascar', 'indycar', 'ufc', 'wwe'];
+// Joe's order (prompt 35 A2): NFL, CFB, MLB, NBA, NHL, Racing, UFC, WWE. This list is the ENUM
+// sports, so it carries nascar and indycar where the chip row carries one Racing tile; it is kept
+// in the same order so the page's bands read in the order the chips do (Listing.js orders bands
+// from it). Order affects DISPLAY only - the two other consumers, expandSport here and
+// Listing.js's grouping, are membership tests.
+export const SPORTS = ['nfl', 'cfb', 'mlb', 'nba', 'nhl', 'nascar', 'indycar', 'ufc', 'wwe'];
 
 // REGISTER §16. The CHIP ROSTER is not the sport list: `racing` is one chip standing over two
 // enum values. There is no `racing` in the database and there must not be - PostgREST answers
 // `sport=eq.racing` with a 400, `invalid input value for enum sport`, verified against the live
 // database. So the token is expanded to real sports before any query is built (queries.js), and
 // SPORTS above stays exactly what the enum accepts.
-export const SPORT_FILTERS = ['cfb', 'nfl', 'nba', 'nhl', 'mlb', 'racing', 'ufc', 'wwe'];
+export const SPORT_FILTERS = ['nfl', 'cfb', 'mlb', 'nba', 'nhl', 'racing', 'ufc', 'wwe'];
 
 const FILTER_EXPANDS = { racing: ['nascar', 'indycar'] };
 
