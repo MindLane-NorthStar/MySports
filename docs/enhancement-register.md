@@ -229,3 +229,36 @@ objected to — a NASCAR tile visibly wider than its neighbours. Both versions a
 The row narrowed from 631 px to **494 px** at every mobile width while the marks got bigger — the
 pills were wide, not the art. Squaring also made §14's active state *more* legible, because the gold
 border traces the full outline of a square where a pill rounded it away.
+
+---
+
+## 16. RACING — 2026-09-03. One chip over two sports, and the ALL bar takes its own row.
+
+**This amends §9's Q1 and §13's chip roster.** §9 recorded Joe choosing individual chips per sport and
+explicitly rejecting grouped "Racing" and "Wrestling" chips. Joe reversed that for racing only, and the
+contradiction was named before acting: NASCAR and IndyCar now share one chip.
+
+**Presentation only — there is no schema change.** `sport` keeps `nascar` and `indycar` as separate
+enum values and the database is untouched. The Racing chip filters on both. Chosen over a true merge
+because neither sport has data loaded yet, nothing has to be undone if they are split again, and a
+`racing` enum value would make IndyCar a fourth "series" alongside NASCAR's Cup, O'Reilly and Truck —
+a shape that describes the chip row rather than the sport.
+
+**The mark** is a new square composite: NASCAR's wordmark across the top, IndyCar's badge below. This
+is what makes the chip work at all — §13 measured NASCAR alone at 126 px against a 21 px height, a 6:1
+wordmark that a square tile crushes to a few pixels of height. Stacked, both marks read. A double-width
+racing tile was built and rejected by measurement: in a 2:1 box NASCAR claims the width and squeezes
+IndyCar smaller, so it is worse, not better.
+
+**The ALL bar.** "All" leaves the tile row and becomes a full-width bar directly above it, one tile
+tall. Two consequences Joe wanted: All becomes the largest control on the page, and the tile row loses
+two members — All itself, and one of the two racing chips.
+
+**The row no longer scrolls, and that is the point.** §13 ruled the row scrolls horizontally because ten
+marks could not fit. Eight tiles can, if they share the row's width instead of each claiming a fixed
+44 px. **The tiles now flex to fill the row exactly**, so the row fits at every width by construction
+and the horizontal scroll is gone — Joe: *"I find [it] very annoying."*
+
+**Cost, named and accepted.** Flexing to fit means the tile is no longer a fixed 44 px. On a 390 px
+phone eight tiles land near 40 px, under the 44 px tap target prompt 25 established. That is the trade
+Joe chose: a slightly smaller target on every tile, in exchange for never swiping to reach a sport.
