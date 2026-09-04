@@ -608,13 +608,17 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
                alt="" loading="lazy" />
         </div>
       </div>
-      {/* D2: the BAND colours, not the primaries. This was the last place in the block still
-          reading team.primary_color directly - so a Steelers block had a gold band, gold caps and a
-          black seam, which looked like a rendering fault rather than a design. Untinted, for the
-          same reason the caps are: the seam is the block's own edge, not a shadow of it. */}
+      {/* D2 said this takes the BAND colours rather than the primaries, because the seam is the
+          block's own edge and not a shadow of it. That reasoning is unchanged; what the block PAINTS
+          has changed. After candidate D each half is its surface - the band on some teams, its 0.72
+          tint on others - so a seam drawn from the bands is a strip of a colour the block above it no
+          longer uses. Measured on the live slates: 31 of 53 blocks drew a seam LIGHTER than the
+          surface it sits under, and the Steelers were the clearest - a full-gold rgb(255,182,18)
+          strip beneath a rgb(189,137,19) cap, which reads as a rendering fault rather than an edge.
+          So it follows the surfaces. Same rule as D2, applied to what the block is now made of. */}
       <div
         className="mseam"
-        style={{ background: `linear-gradient(90deg, ${awayBand.band}, ${homeBand.band})` }}
+        style={{ background: `linear-gradient(90deg, ${awaySurface}, ${homeSurface})` }}
       />
       <div className="mtray" style={{ height: trayH - 2 }}>
         <span className="mtray-left">
