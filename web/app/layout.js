@@ -47,6 +47,10 @@ export default function RootLayout({ children }) {
           <p className="footnote">
             Every game is kept in the database — nothing is deleted. Reads are anon, read-only, live.
           </p>
+          {/* Prompt 31: the ET suffix came off every clock in the app, so the fact is stated once
+              here instead. Its OWN line, per Joe's choice, and italic is the only thing separating
+              it from the footnote above. */}
+          <p className="footnote footnote-tz">All times are Eastern.</p>
         </div>
       </body>
     </html>

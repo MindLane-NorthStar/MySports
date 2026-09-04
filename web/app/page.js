@@ -114,7 +114,7 @@ function DataAsOf({ day, today, overlay }) {
   } else if (!live || joined === 0) {
     tail = 'the live check returned nothing, so scores are the database’s';
   } else {
-    // etTime() already appends " ET" - do not add a second one.
+    // etTime() no longer appends " ET" (prompt 31) - the footnote in layout.js carries it once.
     tail = `live scores checked ${etTime(overlay.fetchedAt)}, ${joined} game${joined === 1 ? '' : 's'} updated`;
   }
   return <p className="footnote asof">Schedule, networks and finals from the database · {tail}.</p>;

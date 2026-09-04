@@ -28,12 +28,22 @@ const DAY_SHORT = new Intl.DateTimeFormat('en-US', {
 
 const MONTH_DAY = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
 
-/** Kickoff instant -> '7:05 PM ET', or 'TBD' when the time is not set. */
+/**
+ * Kickoff instant -> '7:05 PM', or 'TBD' when the time is not set.
+ *
+ * NO " ET" SUFFIX since prompt 31 - Joe's ruling. It was appended on every clock on every surface,
+ * which is four repetitions of a fact that never varies: the card's time column, the grid block's
+ * tray, the detail panel and the data-as-of line all call THIS function, so removing it here
+ * removes it everywhere. One italic footnote at the page bottom carries it instead.
+ *
+ * DISPLAY_TIMEZONE in lib/config.js is untouched. The app still renders Eastern; it just says so
+ * once rather than on every row.
+ */
 export function etTime(instant, kickoffStatus) {
   if (kickoffStatus === 'tbd' || !instant) return 'TBD';
   const d = new Date(instant);
   if (Number.isNaN(d.getTime())) return 'TBD';
-  return `${TIME.format(d)} ET`;
+  return TIME.format(d);
 }
 
 /** 'YYYY-MM-DD' -> 'Monday, August 31, 2026'. Day strings are calendar dates, formatted in UTC. */

@@ -760,6 +760,9 @@ button.mcard:hover {
   margin-top: 8px;
 }
 
+/* The timezone line: same footnote treatment, italic the only difference. */
+.footnote-tz { font-style: italic; }
+
 .footnote {
   color: var(--faint);
   font-size: 11.5px;
