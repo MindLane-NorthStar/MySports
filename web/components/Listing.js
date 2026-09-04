@@ -6,7 +6,7 @@
 // M11's near-live refresh lives here too: while any game on the page is inside its window, the route
 // is revalidated every REFRESH_SECONDS. A page with nothing in flight does not poll at all.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import SportBand from './SportBand.js';
 import MobileGrid from './MobileGrid.js';
@@ -31,6 +31,24 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
                                   showDay = false, grid = false, bands = false, heading = null,
                                   headingClass = 'favlabel' }) {
   const [open, setOpen] = useState(null);
+
+  /**
+   * Close the detail panel AND drop the focus the tap left on the card.
+   *
+   * `.mcard` is a <button>, so tapping one focuses it; when the panel closes, focus returns there and
+   * `button.mcard:focus-visible` paints its 2px gold outline. Joe read that ring as a state on the
+   * card - a favourite flag, an on-now marker - which is exactly what it looks like when it appears
+   * after a tap and stays. Blurring on close clears it.
+   *
+   * The rule itself is untouched: a keyboard user tabbing onto a card still gets the ring, because
+   * :focus-visible fires on that path and nothing blurs it. Only the tap-then-close path is cleared,
+   * and only when the focused element is actually the card.
+   */
+  const closePanel = useCallback(() => {
+    const el = typeof document !== 'undefined' ? document.activeElement : null;
+    if (el && el instanceof HTMLElement && el.classList.contains('mcard')) el.blur();
+    setOpen(null);
+  }, []);
   const router = useRouter();
   const standings = useMemo(() => indexStandings(standingsRows), [standingsRows]);
   // C3: college football's line 2 is a POLL rank, so the card needs the polls as well as the table.
@@ -136,7 +154,7 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
 
       {/* position: fixed, so it takes no part in the flex ordering above. */}
       {open ? (
-        <GameDetail game={open} standings={standings} generatedAt={generatedAt} onClose={() => setOpen(null)} />
+        <GameDetail game={open} standings={standings} generatedAt={generatedAt} onClose={closePanel} />
       ) : null}
     </div>
   );
