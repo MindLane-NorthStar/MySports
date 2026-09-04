@@ -23,12 +23,12 @@
 // The venue line stays at the foot of the body, under both teams.
 
 import { etTime, teamColor, dayParts, slotContent } from '../lib/format.js';
-import { teamLogoDarkUrl } from '../lib/config.js';
-import { markStyle, showsMark } from '../lib/marks.js';
+import { teamLogoDarkUrl, markUrl } from '../lib/config.js';
+import { showsMark } from '../lib/marks.js';
 import { standingParts, standingFor, rankFor } from '../lib/standings.js';
 
-// The three-line stack the network mark is sized against: 22 + 16 + 16.
-const STACK_H = 54;
+// STACK_H (54 = 22 + 16 + 16) is gone with markStyle(): the network mark is no longer sized against
+// the three-line stack, it is fitted to a fixed box per breakpoint in CSS.
 
 /** display_name is the media-standard short form; short_name is the fallback. Never the full name. */
 export function cardName(team, fallbackId) {
@@ -111,7 +111,8 @@ export function favourite(game) {
 export default function MatchupCard({ game, standings, rankings, showDay = false, onOpen }) {
   const { home, away, sport } = game;
   const b = cardBroadcast(game);
-  const mark = showsMark(b) ? markStyle(b.service_id, STACK_H) : null;
+  // Just the URL. The mark's box is CSS now, per breakpoint, so the card never computes hf.
+  const mark = showsMark(b) ? markUrl(b.service_id) : null;
   const fav = favourite(game);
   // Contract v1.6.6: the right slot's five rungs, decided once in a pure function so the
   // ORDERING can be tested without a DOM. See web/lib/format.js.
@@ -172,11 +173,14 @@ export default function MatchupCard({ game, standings, rankings, showDay = false
         </div>
       </div>
 
-      {/* THE MARK IS ITS OWN CARD COLUMN, between the matchup and the right slot - not inside the
-          body, where it had drifted to sit left of the matchup. Height is 2/3 of the three-line stack
-          scaled by the frozen manifest hf (markStyle), and the column centres it on line 2. */}
+      {/* THE MARK IS ITS OWN CARD COLUMN, between the matchup and the right slot, and the column is
+          a FIXED TRACK now (Joe, 2026-09-04) - 62px on the phone, 92px above it, with the mark fitted
+          to a 56x40 / 84x44 box and centred both ways. The hf-scaled height this used to carry is
+          gone from the card: the frozen manifest still governs the banner and the grid rail, but on
+          this surface it produced 22-45px heights and 39.7-92px widths, which is exactly the ragged
+          column the ruling removes. Sizing lives in CSS so the two breakpoints stay in one place. */}
       {mark ? (
-        <img className="mnet-mark" src={mark.src} height={mark.height} alt="" loading="lazy" />
+        <img className="mnet-mark" src={mark} alt="" loading="lazy" />
       ) : (
         <span className="mnet-mark mnet-mark-empty" aria-hidden="true" />
       )}
@@ -192,13 +196,13 @@ export default function MatchupCard({ game, standings, rankings, showDay = false
           // showing both marks, with that cost named at decision time.
           <span className="mslot-tied">Tied</span>
         ) : null}
-        {slot.row2 ? (
-          <span className={slot.kind === 'score' ? 'mscore' : 'mslot-ml'}>{slot.row2}</span>
-        ) : null}
+        {/* ONE SET OF ROW CLASSES FOR EVERY STATE. The odds rung used to render row 2 at 14px and
+            row 3 at 11px where the score rung used 17px and 13px, so the slot was 57.3px tall on a
+            priced game and 69.5px on a final - two silhouettes in the column v1.6.6 claimed had one.
+            Stage 1 measured that; this is where it stops. */}
+        {slot.row2 ? <span className="mscore">{slot.row2}</span> : null}
         {slot.row3 ? (
-          slot.kind === 'odds'
-            ? <span className="mslot-ou">{slot.row3}</span>
-            : <span className="mslot-state" data-tone={slot.tone}>{slot.row3}</span>
+          <span className="mslot-state" data-tone={slot.tone}>{slot.row3}</span>
         ) : null}
       </div>
     </>

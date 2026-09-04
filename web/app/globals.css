@@ -404,7 +404,12 @@ input[type='search'] {
      matchup. The time column stays 78px rather than the reference's 44px because this app renders
      "12:00 PM ET" where the reference renders a stacked "12:35 / ET" - narrowing it would wrap the
      time, and time formatting is not in scope here. */
-  grid-template-columns: 78px minmax(0, 1fr) auto minmax(58px, auto);
+  /* Joe's ruling 2026-09-04: the right half is TWO FIXED tracks - mark, then slot - so both
+     columns hold one centreline down a mixed list. They were `auto` and `minmax(58px, auto)`, which
+     are sized by content and therefore moved per card: stage 1 measured the mark track swinging
+     41-92px here and dragging the matchup column with it by the same 57.1px. Numbers live in
+     web/lib/cardGeometry.js and the tests read them from there. */
+  grid-template-columns: 78px minmax(0, 1fr) 92px 100px;
   gap: 14px;
   align-items: center;
   padding: 10px 14px 10px 17px;
@@ -618,18 +623,24 @@ input[type='search'] {
 /* Column 3 of the card: BETWEEN the matchup and the right slot. Centred on line 2 by centring in the
    card row - height arrives inline as 2/3 of the three-line stack times the frozen manifest hf. The
    empty variant reserves the column so cards with and without a mark keep the same slot geometry. */
+/* The mark is fitted to a FIXED BOX and centred both ways - no hf, no auto width. The frozen
+   ink-area factors still govern the banner and the grid rail; on this card they produced 22-45px
+   heights and 39.7-92px widths, which is the ragged column the ruling removes. */
 .mnet-mark {
   grid-column: 3;
   align-self: center;
   justify-self: center;
-  width: auto;
+  width: 84px;
+  height: 44px;
   object-fit: contain;
-  max-width: 92px;
 }
 
+/* THE EMPTY COLUMN KEEPS ITS FOOTPRINT. It rendered at width 0, which let the slot slide left on
+   any card whose network has no published mark - the Sep 1 Brewers @ Cubs card, where TBS's art is
+   still missing. visibility:hidden, never display:none or width:0: the track is fixed now, but the
+   element must still occupy it so nothing downstream re-centres. */
 .mnet-mark-empty {
-  display: block;
-  width: 0;
+  visibility: hidden;
 }
 
 .mnet-text {
@@ -654,19 +665,26 @@ input[type='search'] {
  * justify-self and the minmax(58px, auto) track are UNTOUCHED: the 58px floor is what keeps team
  * names aligned down the page, and without it every card's matchup column would be a different
  * width and the list would go ragged. */
+/* CENTRED, not flush right. This reverses v1.6.6, which set the slot flush to the card's right
+   padding; Joe's ruling is that rows 1, 2 and 3 share one vertical centreline with the track, so the
+   column reads as a column down a mixed list. `justify-self: stretch` lets the flex box fill the
+   fixed track, which is what gives the rows a centreline to sit on. */
 .mslot {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   gap: 3px;
-  justify-self: end;
-  text-align: right;
+  justify-self: stretch;
+  text-align: center;
 }
 
+/* Row 1 at 44px. Stage 1 measured every team logo's longest side rendering within 1.1x of every
+   other in the old box, so the box - not normalisation - was the whole of the fix; 44px is the
+   largest that fits the shortest card's slot without growing it (60.8px of headroom, 16.8px spare). */
 .mslot img {
-  width: 24px;
-  height: 24px;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
 }
 
@@ -717,7 +735,9 @@ input[type='search'] {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--dim);
-  line-height: 20px;
+  /* Sized to the row-1 box so the column does not jog when a game is level. It was 20px against a
+     24px image here, a 4px step stage 1 found by reading the code and could not render. */
+  line-height: 44px;
 }
 
 .mscore {
@@ -1589,32 +1609,35 @@ input:focus-visible {
        lines for want of two pixels. Spending 2 of the 22 that prompt 31 freed costs the matchup
        under 1.5% of its 152px and unwraps every time on the page. The DESKTOP column stays at
        78px: it is not crowding anything and narrowing it would be change for its own sake. */
-    grid-template-columns: 56px minmax(0, 1fr) auto minmax(46px, auto);
+    grid-template-columns: 56px minmax(0, 1fr) 62px 88px;
     column-gap: 9px;
     padding: 10px 10px 10px 13px;
   }
-  /* the mark shrinks with the card rather than crowding the slot */
+  /* the mark's fixed box on the phone; the track is 62px and the box sits centred inside it */
   .mcard .mnet-mark {
-    max-width: 62px;
+    width: 56px;
+    height: 40px;
   }
   .mcard .mtime {
     font-size: 15px;
   }
   .mslot {
-    max-width: 84px;
-    /* flex-wrap is gone with the column: rows stack by direction now, not by running out of
-       width, and wrap on a column axis would start a second COLUMN. */
+    /* max-width is GONE. It capped the slot at 84px while the widest real row - an NBA
+       "116 - 104" at 17px - measures 86.06px, so a three-digit score would have overflowed its
+       own slot. The fixed 88px track replaces it.
+       flex-wrap stays absent: rows stack by direction now, not by running out of width, and wrap
+       on a column axis would start a second COLUMN. */
     gap: 3px;
   }
   .mslot img {
-    width: 20px;
-    height: 20px;
+    width: 44px;
+    height: 44px;
+  }
+  .mslot-tied {
+    line-height: 44px;
   }
   .mslot-state {
     font-size: 13px;
-  }
-  .mnet-mark {
-    max-width: 64px;
   }
 }
 
