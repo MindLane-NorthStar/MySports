@@ -391,7 +391,11 @@ function buildMobileGrid(style){
       const ink=c=>lum(c)<150?"#FFFFFF":"#101214";
       const nm=(t,g2,side)=>{const pre=side==="home"?"@ ":""; const full=pre+t.name, ab=pre+(side==="home"?g2.habbr:g2.aabbr);
         return (w-52)<full.length*6.2?esc(ab.toUpperCase()):esc(full.toUpperCase());};
-      const cap=(t,side)=>`<span class="mgcap ${side==="home"?"h":"a"}" style="background:linear-gradient(180deg,${tint(t.c1,.86)},${tint(t.c1,.58)})">${t.raw?`<img src="${t.raw}" alt="">`:""}</span>`;   // RAW per contract v1.3e
+      // B5: ONE FLAT TINT AT 0.72, matching the app. The gradient ran 0.86 -> 0.58, so half the cap
+      // was painted at the single worst value for logo legibility: measured over 310 teams, mean
+      // logo ink lost is 25.2% at a flat 0.86 against 12.9% at a flat 0.72. Flat is also a step
+      // toward the continuous cap-and-name surface D1 was after.
+      const cap=(t,side)=>`<span class="mgcap ${side==="home"?"h":"a"}" style="background:${tint(t.c1,.72)}">${t.raw?`<img src="${t.raw}" alt="">`:""}</span>`;   // RAW per contract v1.3e
       // CONTRACT v1.6.8 (2026-09-04): the LIGHTER of the two team colours paints the band, unmodified,
       // and the darker one is the ink. Where that pair falls under 3:1 the band KEEPS the team colour
       // and only the ink is neutralised to --ink or charcoal, whichever measures higher. This used to

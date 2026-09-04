@@ -52,6 +52,9 @@ import { isNetworkTbd } from '../lib/offservice.js';
 
 const SCALE = 0.8; // M1: all grid content renders at 80% of contract design size
 const SEAM_PX = 30; // the dashed cut occupies this much of the axis (M3)
+// B5: the endcap tint, FLAT (Joe's ruling 2026-09-04). One value, used by both caps, so the cap can
+// never again be painted partly at a tint that hides logos. See the note at the cap for the numbers.
+const CAP_TINT = 0.72;
 
 
 /** Text measurement in the REAL fonts - M2 requires the widest line be measured, not estimated. */
@@ -550,18 +553,26 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
           className="mcap"
           style={{
             width: cap,
-            // D1 STOPS HERE, ON EVIDENCE. The cap was going to become the flat band colour so it and
-            // the name row read as one surface. Measured over the 307 teams whose art is in the local
-            // mirror, that roughly DOUBLES the logo ink that disappears into the cap it sits on -
-            // 14.9% -> 27.1% mean, teams losing half their logo 14 -> 46, teams with no readable edge
-            // anywhere 3 -> 9. Nine logos vanish outright (Clemson, Ole Miss, SMU, Washington State,
-            // Cardinals, Giants, Phillies, Pirates, Raptors), because a logo drawn in the team's own
-            // brand colour cannot survive a cap painted that same colour. The names below DID become
-            // one continuous surface; the cap keeps its tint gradient until Joe rules otherwise.
+            // B5: ONE FLAT TINT AT 0.72, which is Joe's ruling and the measurement agrees with it.
+            //
+            // D1 wanted the cap to become the flat BAND colour so cap and name read as one surface,
+            // and measurement vetoed that: a logo drawn in the team's own brand colour cannot survive
+            // a cap painted that same colour, and nine vanished outright. But the gradient it kept -
+            // 0.86 at the top down to 0.58 - spans from the WORST non-flat value to a good one. Over
+            // the 310 teams with local art, mean logo ink lost: flat 0.86 -> 25.2%, flat 0.58 ->
+            // 13.6%, flat 0.72 -> 12.9%, the shipped gradient -> 14.4%, flat band colour -> 27.4%.
+            // 0.72 is the best of them and, being flat, it also moves toward the continuous surface
+            // D1 was after. Half the cap is no longer painted at the one value that hides logos.
+            //
+            // IT IS NOT FREE, and the losers are named rather than averaged away. Three logos have no
+            // readable edge at 0.72 against one under the gradient: SMU (gone either way), plus
+            // TENNESSEE and UCLA, which go from 43.7% and 81.2% lost to 100%. Both are a solid block
+            // of the team's own primary, so the flatter the cap the less of them survives - the same
+            // failure D1 hit, milder. Recorded for Joe rather than used to overturn his ruling.
             //
             // C3 still holds: it tints the BAND, not the primary, so a gold Steelers band does not
             // get black caps.
-            background: `linear-gradient(180deg, ${tint(awayBand.band, 0.86)}, ${tint(awayBand.band, 0.58)})`,
+            background: tint(awayBand.band, CAP_TINT),
           }}
         >
           <img src={teamLogoUrl(away.id)} alt="" loading="lazy" />
@@ -589,7 +600,7 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
           className="mcap"
           style={{
             width: cap,
-            background: `linear-gradient(180deg, ${tint(homeBand.band, 0.86)}, ${tint(homeBand.band, 0.58)})`,
+            background: tint(homeBand.band, CAP_TINT),
           }}
         >
           <img src={teamLogoUrl(home.id)} alt="" loading="lazy" />
