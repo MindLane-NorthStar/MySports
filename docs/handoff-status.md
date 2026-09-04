@@ -1,14 +1,15 @@
-# MySports — Handoff Status (post-prompt-30, 2026-09-03)
+# MySports — Handoff Status (post-prompt-31, 2026-09-03)
 
 **This file now lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
 Read first for any session picking up MySports. Memory `/areas/mysports.md` + `/areas/mysports-build-log.md` + `/areas/mysports-ui-repair.md` carry the compressed truth. Companions: **`docs/enhancement-register.md`** — the repo copy is the source (prompt 26); §1–§13 are still only in the Claude project and Joe is supplying them, so check there before re-raising ANY decision, **`docs/feature-study/05-home-page-decisions.md` (D1–D6, the D3 amendment, deployment facts, E5, and §9 NETWORK TBD — BINDING)**, `docs/rendering-contract.md` v1.6.5, `docs/rendering-contract-mobile.md` (Addendum v1.1), `claude/program-card-design-v1.md`.
 
 ## Repo state
-main, HEAD **81e2efd**. **200 Python tests OK (skipped=1)**, **169/169 JS unit tests**, smoke **30/30**, qa-shots behavioural assertions **14/14** (was 8/8; prompt 30 added the rail-under-zoom guard). Tree clean apart from always-untracked `assets/` and `artifacts/`.
+main, HEAD **3c23f5a**. **200 Python tests OK (skipped=1)**, **169/169 JS unit tests**, smoke **30/30**, qa-shots behavioural assertions **14/14**. Tree clean apart from always-untracked `assets/`.
 
 **Smoke 29/30 is CLOSED.** The `generated_grids` bare-key failure was fixed in prompt 22 by standardising on bare keys with consumers joining `ASSET_BASE_URL`.
 
+Prompt 31: `ebdbae4` Racing art + register §16 → `bf2998f` Racing chip, ALL bar, non-scrolling tile row → `a61a2f2` sport block first + day row count → `88a7ed0` YOUR TEAMS heading (05 §5 closed) → `0143013` navbar safe-area → `ad4075c` ET removed, one footnote → `7b11196` name shrink/ellipsis (the @ wrap measured and KEPT) → `da31a8d` even time/date spacing → `3c23f5a` reference updated.
 Prompt 30: `81e2efd` the grid rail comes unpinned under zoom - fixed by zooming through layout instead of a CSS transform; Mobile Grid Addendum v1.2.
 Prompt 29: `9c374c8` the card's right slot becomes a priority ladder, contract v1.6.6 (exceptions now outrank odds; winner-first score; TIED; the dash replaces Sched).
 Prompt 28: `25ba786` sport tiles become fixed soft-cornered squares with marks filling the box (register §15) → `99bda44` banner inset absorbs the artwork's 18px headroom.
@@ -52,6 +53,9 @@ This is **ruled**: `docs/feature-study/05-home-page-decisions.md` **§9 — NETW
 6. **Privacy gate before the Cavs season (late October):** production is a public URL. Confirm no loaded broadcast row publishes the unannounced WUAB/RESN arrangement.
 
 ## Open — carry into prompt 28 / v1.7
+- **The card's matchup column is too narrow for one-line team names, and Joe rules on the fix.** Prompt 31 measured removing `.duel`'s `flex-wrap` - the `@` then holds its line, but `.mbody` is 152px at 390px against the ~250px two names need, so **122 of 124 names on 2026-09-05 truncated** ("South Alabama" 41px of 110). The wrap was kept. Options, none of them prompt 31's to take: widen `.mbody` (stage 6 freed 22px on the DESKTOP time column, only ~2px on mobile), or the two-row stacked matchup. The locked reference specifies no-wrap and the divergence is recorded in both files.
+- **`components/NavBanner.js:33` prints "all times ET · Cleveland".** Prompt 31 removed the ET suffix from every clock and added one italic footnote, but left this - it is a timezone statement, not a clock suffix, and was outside the brief's list. It renders only on `/weeks` and `/history` and is `display:none` on mobile, so desktop Weeks/History now carry two timezone statements and Today carries one. Joe's call.
+- **The navbar safe-area fix needs Joe's phone** (`0143013`). Verified only by substituting a literal 47px into `--nav-safe`; Chromium has no safe area.
 - **The banner's standalone top gap was corrected in prompt 28 (`99bda44`) and needs Joe's phone to confirm.** `.banner`'s padding-top now subtracts the artwork's own 18px of headroom from the safe-area inset instead of stacking on it, so the wordmark sits flush with the bottom of the status bar rather than 18px below it. Chromium has no safe area, so this was verified only by substituting a literal 47px into the shipped expression. If it now reads too tight, it is a one-number change.
 - **The design builders are still project-only.** `build_demo.py`, `app_template.html`, `build_banner.py` and `markkit.py` produce the locked design references and are NOT under version control — confirmed absent from the working tree at `89614ec`. `docs/design/mobile_demo.html` is a TEMPLATE (`__DATA__`, `__TODAY__`, `__GRIDSVG__` and the rest are filled by `build_demo.py`), so the repo copy cannot be rebuilt from the repo. Cowork owes them; a filing item, not a defect.
 - **`--faint` reaches 3.63:1 on the card top and true AA is unreachable there** without moving `--dim` or lightening `--panel-top`. Prompt 25 measured it; the smallest same-hue grey that reaches 4.5:1 on `--panel-top` is `#989fa8`, and `--dim` is 4.62:1 on that same ground — 0.06 apart, the same colour to the eye, so the third step of the hierarchy would cease to exist. **Joe's call, accepted. Not a defect to re-raise.**
