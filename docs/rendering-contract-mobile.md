@@ -1,4 +1,10 @@
-# Mobile Grid Addendum — v1.4 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04)
+# Mobile Grid Addendum — v1.5 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04)
+
+> **Numbering note (v1.5).** v1.4 added the fitted name run and the flat endcap in one commit and
+> numbered **both M17**. The endcap is now **M18**; the name run keeps M17. M13's superseded-gradient
+> note pointed at the ambiguous number and now names M18, which is the rule that actually replaced the
+> gradient. No other rule number is duplicated. Rules are listed M1–M12, M15, M16, M17, M13, M14, M18 —
+> out of numeric order, which predates this and is left alone rather than silently reshuffled.
 
 **Scope: EVERY grid rendering in EVERY mobile view, for EVERY sport** — CFB, NFL, MLB, NBA, NHL, and any future sport — in the Today, Weeks, and History views alike. The PC/archival grid remains governed by `docs/rendering-contract.md` unamended; anything not listed below inherits that contract verbatim on mobile too.
 
@@ -32,11 +38,11 @@
 
 **M17. The name run is fitted, not fixed (2026-09-04).** `nameSize` was a hardcoded `Math.max(8, 15 * 0.8)` — 12px that measured nothing, so a long run simply truncated. It is now the **largest size at which the whole `{rank} NAME (record)` run fits the block's name span**, measured per card with the same canvas context M2 uses, capped at the contract's 26px × M1's 0.8 (**20.8px**) and floored at 14px × 0.8 (**11.2px**). Geometry is frozen: block widths, lane counts, cap sizes and tray heights are unchanged, and a larger name never widens a block.
 
-**M13. Everything else** — block anatomy, ~~cap gradients (tint 0.86→0.58)~~ **(superseded by M17)**, centered names with rank + record run, hairlines, seam gradient, pills tray with drop priority, marquee gold plate, ALT pills, eligibility buckets, row order, legend glyphs — identical to the PC contract. ~~No other mobile deviations exist.~~ **That sentence was true when written and is not now — see M15 and M16.**
+**M13. Everything else** — block anatomy, ~~cap gradients (tint 0.86→0.58)~~ **(superseded by M18)**, centered names with rank + record run, hairlines, seam gradient, pills tray with drop priority, marquee gold plate, ALT pills, eligibility buckets, row order, legend glyphs — identical to the PC contract. ~~No other mobile deviations exist.~~ **That sentence was true when written and is not now — see M15 and M16.**
 
 **M14. Overlapping programs split the difference (v1.1, Joe 2026-09-03).** Two programs on the same network row whose blocks overlap by **60 minutes or less** each give up half the overlap - the earlier one's end and the later one's start meet at its midpoint - so they share ONE row rather than forcing a second lane. Over 60 minutes generates the second row as before; three or more mutually overlapping programs fall back to lanes; and if splitting would leave either chip under 60 minutes of rendered width, that pair takes the second row too. **Presentational only** - the drawn block moves, the kickoff never does, and the detail panel still shows real times. Identical to the PC contract's v1.6.5 rule and pinned to it by `tests/fixtures/overlap_cases.json`, which both renderers' test suites read. On CFB 2026-09-05 this takes the phone grid from 38 lanes to 36, with 2 pairs split and the width guard never firing.
 
-**M17. The endcap is FLAT at tint 0.72 (2026-09-04, Joe's ruling).** M13 inherited the PC contract's
+**M18. The endcap is FLAT at tint 0.72 (2026-09-04, Joe's ruling).** M13 inherited the PC contract's
 vertical gradient, `tint(0.86)` top to `tint(0.58)` bottom. That range spans from the worst value for
 logo legibility to a good one, so half of every cap was painted at the one tint that hides logos.
 Measured over the **310** teams with local art, mean logo ink lost against the cap: flat band colour
