@@ -69,7 +69,7 @@ Joe's stated list is thirteen teams across five sports, so this is **not** the m
 - The D3 probe result — decides whether v1.1 moves to refresh-on-open.
 - **E5 market-pending state for regional NFL windows is still unruled and is due before Sunday September 13.** It is not part of this board.
 - E2/E6 derivation and the §11.9 renderer "Tonight summary line" are the same calculation. **Build it once in the web app and have v1.7 import it**, or the two drift within a month.
-- Whether the `YOUR TEAMS` micro-label survives Joe seeing it rendered.
+- ~~Whether the `YOUR TEAMS` micro-label survives Joe seeing it rendered.~~ **CLOSED 2026-09-03 (prompt 31).** It did not. Joe: *"Your Teams renders in small gray text like an afterthought."* D6 specified it as a faint micro-label separating floated rows *inside* a band; §11's reorder made it the **first heading on the page**, which is a different job. It now takes the band-header treatment — same family, weight, size, letter-spacing and hairline as `.band-title` / `.band-head` — so the page has one heading system. **Cowork's call, one token to reverse:** `--ink` rather than gold, because gold would make the first heading louder than every heading under it and D6's surviving instruction is to avoid decorative treatment here.
 
 ---
 

@@ -1524,8 +1524,21 @@ input:focus-visible {
 /* ---- favourites float (D6, prompt 20)
  * Band-level only: the faint label and the hairline that separates Joe's teams from the rest of the
  * day. Neither touches the card, which stays closed under contract v1.6.4. */
-.favlabel{font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:.18em;
-  text-transform:uppercase;color:var(--faint);margin:0 0 6px}
+/* YOUR TEAMS IS A HEADING NOW (05 §5, closed). D6 specified this as a faint micro-label separating
+ * floated rows INSIDE a band; prompt 27's reorder (05 §11) made it the FIRST HEADING ON THE PAGE.
+ * Right treatment for the old job, wrong for the new one - Joe: "renders in small gray text like
+ * an afterthought". It now takes the band-header treatment so the page has ONE heading system:
+ * the same family, weight, size, letter-spacing and colour as .band-title, and the same bottom
+ * hairline .band-head carries. Values are matched to those rules deliberately - if the band header
+ * changes, this should change with it.
+ *
+ * COWORK'S CALL, one token to reverse: --ink rather than gold. Gold would mark it as the personal
+ * section, but it would also make the first heading louder than every heading beneath it, and
+ * D6's surviving instruction is to avoid decorative treatment here. */
+.favlabel{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink);margin:0 0 8px;
+  padding-bottom:6px;border-bottom:1px solid var(--line-soft)}
+@media (max-width:699px){.favlabel{font-size:15px}}
 .favrule{border:0;border-top:1px solid var(--line-soft);margin:14px 0}
 
 /* ---- market pending (E5, prompt 21)
