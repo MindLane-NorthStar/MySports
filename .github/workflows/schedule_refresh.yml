@@ -73,6 +73,14 @@ jobs:
         # Fail honest per league: a league whose fetch fails is skipped inside the module and the
         # others still commit, so one flaky league API never fails the refresh.
         run: python -m pipeline.standings --workflow schedule_refresh
+      - name: CFB polls into mysports.rankings (AP / Coaches / CFP)
+        # Beside standings because it is the same kind of step: a provider table the cards read, loaded
+        # whole rather than reconciled. DAILY even though a poll moves weekly - AP lands Sunday and the
+        # Playoff Committee Tuesday, and a fixed weekly slot would either miss one or sit a week stale.
+        # Re-running a week is an upsert on (sport, season, week, poll_type, team_id), so the extra runs
+        # cost one request per published week and change nothing. Weeks with no poll yet return empty
+        # and are skipped, which is every week before the season's first Sunday.
+        run: python -m pipeline.rankings --workflow schedule_refresh
       - name: Push new logos to R2
         run: python scripts/sync_assets.py --push --prefix logos/
       - name: Load fixtures into mysports.* (evidence only — Milestone 1 loader)

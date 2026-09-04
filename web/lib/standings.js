@@ -82,3 +82,38 @@ export function indexStandings(rows) {
 export function standingFor(index, teamId, season) {
   return index.get(`${teamId}|${season}`) || null;
 }
+
+// ---------------------------------------------------------------- college football poll ranks
+//
+// Joe's precedence, verbatim: "CFP Rank (if one exists) - if no CFP Rank, then AP Rank (if one
+// exists)". The Coaches poll is LOADED by pipeline/rankings.py and deliberately not consulted here -
+// it is stored because the provider publishes it, not because the card shows it.
+//
+// **This reads mysports.rankings, never games.away_rank / games.home_rank.** The game row carries a
+// bare number with no poll attached to it, so it physically cannot express "the CFP has them 4th but
+// the AP has them 7th" - it cannot honour a precedence it does not record. The rankings table can,
+// which is the whole reason it gets loaded.
+
+/** Index ranking rows for lookup, keyed team|season|week|poll. */
+export function indexRankings(rows) {
+  const by = new Map();
+  for (const r of rows || []) {
+    by.set(`${r.team_id}|${r.season}|${r.week}|${r.poll_type}`, r);
+  }
+  return by;
+}
+
+/**
+ * The rank to show for one club in one week: CFP if the committee has ranked them, else AP, else null.
+ * Null means UNRANKED and the caller renders nothing - it never falls through to a lower poll or to a
+ * previous week, because "unranked this week" and "we have no poll for this week" must not look alike.
+ */
+export function rankFor(index, teamId, season, week) {
+  if (!index || teamId == null) return null;
+  for (const poll of ['CFP', 'AP']) {
+    const row = index.get(`${teamId}|${season}|${week}|${poll}`);
+    const rank = row?.rank;
+    if (Number.isInteger(rank) && rank > 0) return rank;
+  }
+  return null;
+}
