@@ -1630,8 +1630,11 @@ input:focus-visible {
  * A regional game whose map has not published yet is neither watchable nor off-service, so it is
  * never dimmed like an off-service row and never hidden. The cue is a quiet gold "MARKET TBD" tag on
  * the row WRAPPER - MatchupCard is locked and nothing here reaches inside it. */
-.offsvc{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
-  color:var(--faint);font-size:12px;margin:-2px 0 10px}
+/* A2: the second .offsvc rule lived here - display:flex, flex-direction:column,
+   align-items:flex-start, gap:2px - and every one of its layout properties was overridden further
+   down by a third rule that put the row back. Its colour, size and margin were byte-identical to
+   the first declaration, so the whole rule was dead weight. Deleted with the override that existed
+   only to undo it; the first declaration now stands alone and already says row/baseline/wrap. */
 .offsvc-total{color:var(--dim);font-weight:600}
 .offsvc-pending{color:var(--gold-dim)}
 .pending-row{position:relative}
@@ -1858,7 +1861,6 @@ main > h1:first-child { margin-top: 0; }
  * The TOTAL came out because the Today page already prints it one scroll above in <p class="sub">
  * and the remaining segments sum to it - it was the one number on the line that was duplicated
  * rather than earned. */
-.offsvc { flex-direction: row; align-items: baseline; flex-wrap: wrap; gap: 10px; }
 .offsvc-line { color: var(--dim); }
 
 /* ---- week select (prompt 23)
