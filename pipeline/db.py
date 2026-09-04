@@ -88,14 +88,35 @@ class DB:
             cur.execute(sql, None if params is None else tuple(_pg(v) for v in params))
 
     def upsert(self, table: str, rows: Iterable[dict[str, Any]], conflict: str, update: list[str] | None = None,
-               tag: str | None = None) -> int:
-        """INSERT ... ON CONFLICT (conflict) DO UPDATE SET update-cols (or DO NOTHING when update is empty)."""
+               tag: str | None = None, preserve: Iterable[str] | None = None) -> int:
+        """INSERT ... ON CONFLICT (conflict) DO UPDATE SET update-cols (or DO NOTHING when update is empty).
+
+        `preserve` names columns where **NULL MEANS "I DID NOT FIND OUT", NOT "THE VALUE IS GONE"**.
+        Those are written as `coalesce(excluded.c, table.c)`, so a loader that could not reach its
+        provider cannot erase what a previous successful run established. A real change still lands -
+        only a null is refused, and a null is never the fact.
+
+        This exists because a loader silently deleted 94 rows' worth of reference data. `teams` gets
+        its conference from each sport's teams file; `adapters/nhl.py` fetches that from a SEPARATE
+        call to the one that produces the teams, guarded by a `_safe` that swallows the error and
+        returns None. The file was then written with `conference: null` on all 32 clubs, and the next
+        bootstrap wrote those nulls straight over the division links - which is exactly what happened
+        on 2026-09-01 and is why migration 0011 had to seed them a second time.
+
+        **OPT-IN PER CALL SITE, deliberately.** `pipeline/standings.py` upserts columns where null is
+        a real, meaningful answer - the NHL publishes no games_back, MLB no points - and coalescing
+        those would freeze a stale number in place the day a league stopped publishing one. The two
+        cases look identical in SQL and are opposites in meaning, so the caller has to say which it is.
+        """
+        preserve = set(preserve or ())
         n = 0
         for r in rows:
             cols = list(r.keys())
             placeholders = ", ".join("%s" for _ in cols)
             if update:
-                action = "do update set " + ", ".join(f"{c} = excluded.{c}" for c in update if c in cols)
+                action = "do update set " + ", ".join(
+                    (f"{c} = coalesce(excluded.{c}, {table}.{c})" if c in preserve else f"{c} = excluded.{c}")
+                    for c in update if c in cols)
             else:
                 action = "do nothing"
             sql = f"insert into {table} ({', '.join(cols)}) values ({placeholders}) on conflict ({conflict}) {action}"

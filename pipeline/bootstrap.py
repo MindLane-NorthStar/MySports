@@ -106,7 +106,21 @@ def teams_and_conferences(db: DB) -> tuple[int, int]:
                           "fbs_status": t.get("classification") if sport == "cfb" else None,
                           "primary_color": t.get("color"), "secondary_color": t.get("alternateColor"), "external_ids": ext})
     nc = db.upsert("conferences", confs.values(), "id", ["name"])
-    nt = db.upsert("teams", teams, "id", ["canonical_name", "short_name", "location", "abbreviation", "conference_id", "fbs_status", "primary_color", "secondary_color", "external_ids"])
+    # `preserve` = the columns where a null in the teams file means "this run did not find out",
+    # never "the value is gone". Without it this upsert DELETES reference data whenever a teams file
+    # comes back thin, which is not hypothetical: as of 2026-09-04 the NFL, NBA and NHL teams files
+    # all carry `conference: null` on every row - 94 clubs - so the next unguarded run would wipe
+    # every division link migration 0011 seeded, with no fetch failure needed at all. The NHL flavour
+    # of it already happened once (adapters/nhl.py takes its divisions from a separate call behind a
+    # `_safe` that swallows the error), which is why 0011 had to be applied twice.
+    #
+    # A real correction still lands - coalesce only refuses a null - so this cannot mask a team that
+    # genuinely changed conference, colours or abbreviation. It only refuses to call silence a change.
+    #
+    # short_name and canonical_name are NOT preserved: they are always derived non-null here, so a
+    # null would be a bug worth seeing rather than one worth papering over.
+    PRESERVE = ["conference_id", "location", "abbreviation", "fbs_status", "primary_color", "secondary_color"]
+    nt = db.upsert("teams", teams, "id", ["canonical_name", "short_name", "location", "abbreviation", "conference_id", "fbs_status", "primary_color", "secondary_color", "external_ids"], preserve=PRESERVE)
     return nc, nt
 
 
