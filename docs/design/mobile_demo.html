@@ -66,9 +66,18 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
   color:#fff; text-shadow:0 0 2px #F0C850, 0 0 8px rgba(240,200,80,.5)}
 .abar .wm b{color:var(--gold)}
 .abar .day{margin-left:auto; font-family:var(--disp); font-weight:600; font-size:15px; color:var(--dim); letter-spacing:.06em}
-.chiprow{display:flex; gap:6px; padding:4px 14px 10px; overflow-x:auto}
-.spbtn{flex:0 0 auto; width:40px; height:40px; padding:5px; border:1px solid var(--line); border-radius:4px;
+/* REGISTER §16 (prompt 31). The row NO LONGER SCROLLS: ALL moved out to a full-width bar of its own
+   and NASCAR+IndyCar became one Racing chip, so eight tiles remain and they SHARE the row's width
+   instead of each claiming a fixed 40px. Named cost: a flexed tile is not a fixed size - eight at
+   390px land near 40px, under the 44px tap target - accepted in exchange for never swiping. */
+.sportbar{display:flex; flex-direction:column; gap:6px; padding:4px 14px 10px}
+.chiprow{display:flex; gap:6px}
+.spbtn{flex:1 1 0; min-width:0; aspect-ratio:1/1; padding:5px; border:1px solid var(--line); border-radius:10px;
   background:linear-gradient(180deg, var(--panel-hi), var(--panel-lo)); display:flex; align-items:center; justify-content:center}
+/* The ALL bar: a tile as wide as the row, one tile tall, edges flush with it. */
+.spbtn.bar{flex:0 0 auto; width:auto; aspect-ratio:auto; align-self:stretch; min-height:44px;
+  font-family:var(--disp); font-weight:700; font-size:17px; letter-spacing:.04em; text-transform:uppercase; color:var(--dim)}
+.spbtn.bar.on{color:var(--gold)}
 .spbtn img{max-height:100%; max-width:100%; object-fit:contain; opacity:.8}
 .spbtn.on{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset}
 .spbtn.all{font-family:var(--disp); font-weight:700; font-size:13px; color:var(--dim)}
@@ -94,6 +103,11 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .mcard .mid{min-width:0; display:flex; flex-direction:column; gap:4px}
 .duel{display:grid; grid-template-columns:1fr auto 1fr; gap:2px 4px; align-items:center}
 .duel.fixcol .atbig{justify-self:end; margin-right:2px}
+/* KNOWN DIVERGENCE, recorded rather than silently tolerated (prompt 31). This file holds one line
+   and lets the stacks shrink; the shipped app keeps flex-wrap on .duel. Removing it there was
+   measured and rejected: the app's .mbody is 152px at 390px, and two names plus logos plus the @
+   need ~250px, so 122 of 124 names on the 2026-09-05 slate truncated. The app's card is narrower
+   than this reference assumes; widening it is Joe's call. */
 .duel.hug{display:flex; align-items:flex-start; gap:6px}
 .duel.hug .tcol{flex:0 1 auto; min-width:0}
 .duel.hug .atbig{flex:0 0 auto}
@@ -385,11 +399,10 @@ function buildMobileGrid(style){
 function appHTML(variant){
   const mlb4 = GAMES.filter(g=>g.sport==="mlb");
   const cfb4 = GAMES.filter(g=>g.sport==="cfb");
-  const chips = `<div class="chiprow">
-    <span class="spbtn all on">ALL</span>
+  const chips = `<div class="sportbar"><span class="spbtn bar on">ALL</span><div class="chiprow">
     <span class="spbtn"><img src="${LEAGUE.cfb}" alt="CFB"></span>
     <span class="spbtn"><img src="${LEAGUE.mlb}" alt="MLB"></span>
-  </div>`;
+  </div></div>`;
   const bar = `<div class="abar"><span class="wm">MySports <b>TV</b></span><span class="day">Tue Sep 2</span></div>`;
   const tonight = `<div class="secthead"><img src="${LEAGUE.mlb}" alt=""><span class="t">Tonight · MLB</span><span class="c">${TODAY.length} games · live lines</span></div>`
     + rows(TODAY, "t");
