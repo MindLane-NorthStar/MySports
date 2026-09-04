@@ -1,14 +1,15 @@
-# MySports — Handoff Status (post-prompt-31, 2026-09-03)
+# MySports — Handoff Status (post-prompt-35, 2026-09-04)
 
 **This file now lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
 Read first for any session picking up MySports. Memory `/areas/mysports.md` + `/areas/mysports-build-log.md` + `/areas/mysports-ui-repair.md` carry the compressed truth. Companions: **`docs/enhancement-register.md`** — the repo copy is the source (prompt 26); §1–§13 are still only in the Claude project and Joe is supplying them, so check there before re-raising ANY decision, **`docs/feature-study/05-home-page-decisions.md` (D1–D6, the D3 amendment, deployment facts, E5, and §9 NETWORK TBD — BINDING)**, `docs/rendering-contract.md` v1.6.5, `docs/rendering-contract-mobile.md` (Addendum v1.1), `claude/program-card-design-v1.md`.
 
 ## Repo state
-main, HEAD **3c23f5a**. **200 Python tests OK (skipped=1)**, **169/169 JS unit tests**, smoke **30/30**, qa-shots behavioural assertions **14/14**. Tree clean apart from always-untracked `assets/`.
+main, HEAD **fab2f1f**. **200 Python tests OK (skipped=1)**, **185/185 JS unit tests**, smoke **30/30**, qa-shots **14/14**. Tree clean apart from always-untracked `assets/`.
 
 **Smoke 29/30 is CLOSED.** The `generated_grids` bare-key failure was fixed in prompt 22 by standardising on bare keys with consumers joining `ASSET_BASE_URL`.
 
+Prompt 35 (three phases): A `625feba` iOS tile collapse -> `359f58a` tile order -> `0e52467` stale-LIVE guard | B `22229ae` the @ comes off ordinary games (contract v1.6.7) | C the grid's team bands, the fitted name run and contract v1.6.8.
 Prompt 31: `ebdbae4` Racing art + register §16 → `bf2998f` Racing chip, ALL bar, non-scrolling tile row → `a61a2f2` sport block first + day row count → `88a7ed0` YOUR TEAMS heading (05 §5 closed) → `0143013` navbar safe-area → `ad4075c` ET removed, one footnote → `7b11196` name shrink/ellipsis (the @ wrap measured and KEPT) → `da31a8d` even time/date spacing → `3c23f5a` reference updated.
 Prompt 30: `81e2efd` the grid rail comes unpinned under zoom - fixed by zooming through layout instead of a CSS transform; Mobile Grid Addendum v1.2.
 Prompt 29: `9c374c8` the card's right slot becomes a priority ladder, contract v1.6.6 (exceptions now outrank odds; winner-first score; TIED; the dash replaces Sched).
@@ -53,6 +54,11 @@ This is **ruled**: `docs/feature-study/05-home-page-decisions.md` **§9 — NETW
 6. **Privacy gate before the Cavs season (late October):** production is a public URL. Confirm no loaded broadcast row publishes the unannounced WUAB/RESN arrangement.
 
 ## Open — carry into prompt 28 / v1.7
+- **THE PHONE GRID NOW PAINTS TEAM BANDS, and did not before.** `.mnames` held two name rows on the block's own charcoal with no background at all - the colour data arrived and was never used, which is why prompt 22 stage 4 measured the path as intact. It now implements contract v1.6.8's mobile band rule, and the name run is fitted per card rather than a hardcoded 12px.
+- **HELD FOR JOE - twelve MLB rows stuck at `in_progress`.** Kickoffs 2026-09-01 22:40 to 2026-09-02 00:40 UTC. Prompt 35 shipped the DISPLAY guard (`isStaleLive`, 8 hours, renders `Final pending`); the backfill is a database write and was deliberately not made. The scores are in the prompt-35 report.
+- **A pipeline logic gap behind those rows, for its own prompt.** `schedule_refresh` failed three times on 2026-09-02 (15:00, 19:30, 19:35 UTC) - the RENDER job, `FileNotFoundError: artifacts/validation/mlb_2026_teams.json`. Something wrote `completed_at` on all twelve at 19:39:37 without setting `result_status='final'`, and the later successful runs did not repair them.
+- **TBS has no mark and it is a LIVE gap, not a pre-emptive one.** `networks_services` carries `('tbs','TBS')` with **2 loaded `game_broadcasts` rows**, and `web/public/marks/` has only `tnt.png`. The source art is NOT in `assets/network-logos/`, so prompt 35 stopped there - sourcing it is Cowork's job.
+- **The navbar links could not be reproduced as broken.** At 390px with a 47px inset simulated, all three hit-test to themselves and the routes resolve. The device checks are in the prompt-35 report.
 - **The card's matchup column is too narrow for one-line team names, and Joe rules on the fix.** Prompt 31 measured removing `.duel`'s `flex-wrap` - the `@` then holds its line, but `.mbody` is 152px at 390px against the ~250px two names need, so **122 of 124 names on 2026-09-05 truncated** ("South Alabama" 41px of 110). The wrap was kept. Options, none of them prompt 31's to take: widen `.mbody` (stage 6 freed 22px on the DESKTOP time column, only ~2px on mobile), or the two-row stacked matchup. The locked reference specifies no-wrap and the divergence is recorded in both files.
 - **`components/NavBanner.js:33` prints "all times ET · Cleveland".** Prompt 31 removed the ET suffix from every clock and added one italic footnote, but left this - it is a timezone statement, not a clock suffix, and was outside the brief's list. It renders only on `/weeks` and `/history` and is `display:none` on mobile, so desktop Weeks/History now carry two timezone statements and Today carries one. Joe's call.
 - **The navbar safe-area fix needs Joe's phone** (`0143013`). Verified only by substituting a literal 47px into `--nav-safe`; Chromium has no safe area.
