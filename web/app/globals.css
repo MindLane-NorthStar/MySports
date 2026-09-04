@@ -866,10 +866,21 @@ input:focus-visible {
 
 .mgrid-head h3 {
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--display);
   font-size: 17px;
   letter-spacing: 0.05em;
   color: var(--ink);
+}
+
+/* D4: the league mark, sized to the heading it sits in rather than to a fixed pixel count, so it
+   tracks the text if that ever moves. */
+.mgrid-mark {
+  height: 1.55em;
+  width: auto;
+  flex: 0 0 auto;
 }
 
 .mgrid-head .mgrid-meta {
@@ -887,6 +898,9 @@ input:focus-visible {
   scrollbar-width: thin;
 }
 
+/* D5: a network mark, or the network's name where it has no mark. The 44px target was already
+   here and stays; the padding tightens for a mark because a mark is wider than the word it
+   replaces and the pill would otherwise run away with the row. */
 .mgrid-nav button {
   flex: 0 0 auto;
   font: inherit;
@@ -901,9 +915,25 @@ input:focus-visible {
   padding: 3px 10px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 44px;
+  /* D5: a MARK is not a word - the marks normalize to equal ink area, so a tall narrow one renders
+     20px wide and left the pill at 38px, under the target even though the 44px height was fine.
+     Measured: 4 of 17 buttons on the CFB slate. The height alone was never the whole target. */
+  min-width: 44px;
   cursor: pointer;
   white-space: nowrap;
+}
+
+.mgrid-nav button[data-mark='true'] {
+  padding: 3px 8px;
+}
+
+.mgrid-nav button img {
+  display: block;
+  width: auto;
+  max-width: 68px;
+  object-fit: contain;
 }
 
 .mgrid-scroll {

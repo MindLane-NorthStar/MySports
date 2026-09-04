@@ -39,9 +39,9 @@ import {
   tint,
 } from '../lib/gridmodel.js';
 import { splitOverlaps } from '../lib/overlap.js';
-import { teamLogoUrl } from '../lib/config.js';
+import { teamLogoUrl, sportMarkUrl, SPORT_LABEL } from '../lib/config.js';
 import { markStyle, hasMark } from '../lib/marks.js';
-import { etTime } from '../lib/format.js';
+import { etTime, longDay } from '../lib/format.js';
 import { cardName, cardBroadcast } from './MatchupCard.js';
 import { recordText, standingFor } from '../lib/standings.js';
 import { railLabel } from '../lib/raillabel.js';
@@ -113,7 +113,10 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
   const { measure, ready } = useTextMeasurer();
 
   const model = useMemo(() => {
-    const mins = blockMinutes(sport);
+    // D3: PER GAME, not per page. Block length is policy per sport - CFB and NFL 210 minutes, NHL
+    // and NBA 150, MLB 180 - so an ALL grid that used one number would draw every baseball game
+    // three and a half hours wide. On a single-sport page every g.sport equals `sport`, so this is
+    // exactly the old value there and the frozen geometry does not move.
     const timed = [];
     const tbd = [];
     for (const g of games || []) {
@@ -124,7 +127,7 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
         tbd.push(g);
         continue;
       }
-      timed.push({ game: g, start, end: start + mins, broadcast: b });
+      timed.push({ game: g, start, end: start + blockMinutes(g.sport), broadcast: b });
     }
 
     // M2: measure the widest rendered team line on THIS slate, in the real fonts.
@@ -138,7 +141,16 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
         widest = Math.max(widest, measure(text, nameFont));
       }
     }
-    const pxPerMin = pxPerMinute(widest / SCALE, sport) * SCALE;
+    // D3: the scale is set by the SHORTEST block on the slate. pxPerMinute divides the widest team
+    // line by a duration, so the smallest duration yields the largest pixels-per-minute - and M2's
+    // guarantee is that the NARROWEST block still fits the widest name. Picking the page sport (or
+    // the longest) would let a 150-minute NHL block fall under that width and wrap a name, which is
+    // the one thing M2 says cannot happen by construction. One sport present: unchanged.
+    const present = [...new Set(timed.map((t) => t.game.sport))];
+    const scaleSport = present.length
+      ? present.reduce((a, b) => (blockMinutes(b) < blockMinutes(a) ? b : a))
+      : sport;
+    const pxPerMin = pxPerMinute(widest / SCALE, scaleSport) * SCALE;
 
     const { segments, cuts } = collapseGaps(
       timed.map((t) => ({ start: t.start, end: t.end })),
@@ -193,7 +205,7 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
     // line, and it does not depend on zoom - neither does the overlap split or the lane packing,
     // which both work in MINUTES. Keeping them on these deps is what makes a pinch frame cheap.
     return { rows, scale, ticks, cuts, pxPerMin, segments, tbd, netTbd, kickTbd,
-             blockMins: mins, widest, guardHits };
+             blockMins: blockMinutes(scaleSport), widest, guardHits };
   }, [games, sport, measure, ready, standings]);
 
   // M6: pinch-to-zoom over the canvas. The rail is sticky in the SCROLLER, which now has no
@@ -255,22 +267,55 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
 
   return (
     <section className="mgrid" aria-label="Mobile grid">
+      {/* D4: "(mark) College Football Broadcasts · Saturday September 12, 2026 · 70 GAMES". It read
+          "CFB GRID" over a bare ISO date - the sport as a code, the word GRID naming the widget
+          rather than its contents, and a date in a format nobody says out loud.
+          longDay() emits "Saturday, September 12, 2026"; the comma after the weekday goes, because
+          this line is already separated by middots and a second punctuation mark inside one segment
+          reads as a stutter.
+          With no sport selected there is no league mark to show and the slate really is every sport,
+          so it says so rather than leaving the line to start with a middot. */}
       <div className="mgrid-head">
-        <h3>{(sport || '').toUpperCase()} GRID</h3>
-        <span className="mgrid-meta">
-          {day} · {onGrid} on the grid{tbd.length ? ` · ${tbd.length} awaiting kickoff / network` : ''}
-          {cuts.length ? ` · ${cuts.length} gap${cuts.length > 1 ? 's' : ''} cut` : ''}
-        </span>
+        <h3>
+          {sportMarkUrl(sport) ? <img className="mgrid-mark" src={sportMarkUrl(sport)} alt="" /> : null}
+          <span>
+            {sport ? SPORT_LABEL[sport] || sport.toUpperCase() : 'All Sports'} Broadcasts ·{' '}
+            {longDay(day).replace(/,/, '')} · {onGrid} {onGrid === 1 ? 'GAME' : 'GAMES'}
+          </span>
+        </h3>
+        {/* The count moved into the heading, so this keeps only what the heading cannot say: the
+            games that could NOT be placed, and the dead time M3 collapsed. Both explain something
+            the reader would otherwise have to notice was missing. */}
+        {tbd.length || cuts.length ? (
+          <span className="mgrid-meta">
+            {tbd.length ? `${tbd.length} awaiting kickoff / network` : ''}
+            {tbd.length && cuts.length ? ' · ' : ''}
+            {cuts.length ? `${cuts.length} gap${cuts.length > 1 ? 's' : ''} cut` : ''}
+          </span>
+        ) : null}
       </div>
 
       {/* M8: jump-to-network quick nav */}
       {rows.length > 1 ? (
         <nav className="mgrid-nav" aria-label="Jump to network">
-          {rows.map((r) => (
-            <button key={r.id} type="button" onClick={() => jumpTo(r.id)}>
-              {r.name}
-            </button>
-          ))}
+          {/* D5: the network's own mark where it has one, its name where it does not - TBS, and every
+              out-of-market RSN, have no published mark and are not going to grow one. The aria-label
+              is unconditional so the accessible name is the network either way: an <img alt=""> in a
+              button that has no other text leaves it announced as "button", nothing more. */}
+          {rows.map((r) => {
+            const mark = markStyle(r.id, 26);
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => jumpTo(r.id)}
+                aria-label={`Jump to ${r.name}`}
+                data-mark={mark ? 'true' : 'false'}
+              >
+                {mark ? <img src={mark.src} height={mark.height} alt="" /> : r.name}
+              </button>
+            );
+          })}
         </nav>
       ) : null}
 

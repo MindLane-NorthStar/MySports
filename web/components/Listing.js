@@ -68,8 +68,12 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
     return [...known, ...extra].map((s) => [s, by.get(s)]);
   }, [bands, rest]);
 
-  // The grid stays bound to a SINGLE selected sport, exactly as before - bands do not each get one.
-  const showGrid = Boolean(grid && sport && games.length);
+  // D3: the grid no longer requires a single selected sport. It was gated on `sport` because block
+  // length is per-sport policy and one grid could only use one number; MobileGrid now takes that
+  // per game, so ALL renders every sport on one timeline, in rail order, exactly as one sport does.
+  // Still ONE grid, not one per band. The archived PC grid stays per (sport, day) - that is a
+  // rendered artefact from the daily job, not something the app composes.
+  const showGrid = Boolean(grid && games.length);
 
   // The mobile grid follows what the bands actually show: everything except genuinely ineligible
   // games. Computed here because the grid spans bands - and it is deliberately built from the WHOLE

@@ -21,10 +21,8 @@ import MatchupCard from './MatchupCard.js';
 import { offServiceSummary, countParts } from '../lib/offservice.js';
 import { favoriteIds, isFavorite, splitFavorites } from '../lib/favorites.js';
 import favoritesDoc from '../../data/favorites.json';
-
-// College football has no mark of its own in web/public/leagues; the banner uses the CFP mark for the
-// college slot, so the band follows the banner rather than inventing a second convention.
-const MARK = { cfb: 'cfp', nfl: 'nfl', nba: 'nba', nhl: 'nhl', mlb: 'mlb' };
+// D4: the mark table now lives in config.js - the mobile grid header needs the same one.
+import { sportMarkUrl } from '../lib/config.js';
 
 // `floatFavorites` and `sectionLabel` exist for 05 section 11. On the Today page the favourites
 // are hoisted to a PAGE-LEVEL section, so the in-band float is switched off there and the section
@@ -109,7 +107,7 @@ export default function SportBand({ sport, label, games, standings, showDay = fa
         {sectionLabel ? <p className={headingClass}>{sectionLabel}</p> : null}
         {showHeader ? (
           <header className="band-head">
-            {MARK[sport] ? <img className="band-mark" src={`/leagues/${MARK[sport]}_dark.png`} alt="" /> : null}
+            {sportMarkUrl(sport) ? <img className="band-mark" src={sportMarkUrl(sport)} alt="" /> : null}
             <h2 className="band-title">{label || sport}</h2>
           </header>
         ) : null}

@@ -120,6 +120,23 @@ export function teamLogoDarkUrl(teamId) {
   return `${ASSET_BASE_URL}logos/${String(teamId).toLowerCase()}_dark.png`;
 }
 
+/**
+ * The league mark slug for a sport - web/public/leagues/{slug}_dark.png.
+ *
+ * D4: lifted out of SportBand.js, which owned it privately, because the mobile grid header now needs
+ * the same mark and the alternative was a second copy that could drift from the first.
+ *
+ * College football has no mark of its own; the banner uses the CFP mark for the college slot, so
+ * everything follows the banner rather than inventing a second convention.
+ */
+export const SPORT_MARK = { cfb: 'cfp', nfl: 'nfl', nba: 'nba', nhl: 'nhl', mlb: 'mlb' };
+
+/** The league mark for a sport, or null when that sport has none. */
+export function sportMarkUrl(sport) {
+  const slug = SPORT_MARK[sport];
+  return slug ? `/leagues/${slug}_dark.png` : null;
+}
+
 export function networkLogoUrl(slug) {
   if (!slug) return null;
   return `${ASSET_BASE_URL}network-logos/${String(slug).toLowerCase()}.png`;
