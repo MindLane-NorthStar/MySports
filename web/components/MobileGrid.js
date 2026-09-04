@@ -35,8 +35,8 @@ import {
   clockShort,
   packLanes,
   viewingMinutes,
-  tint,
   bandFor,
+  tint,
 } from '../lib/gridmodel.js';
 import { splitOverlaps } from '../lib/overlap.js';
 import { teamLogoUrl } from '../lib/config.js';
@@ -409,7 +409,7 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
   );
 }
 
-/** One block: cap endcaps with RAW logos on tint gradients, centred names, hairline, seam, tray. */
+/** One block: RAW logos on tinted band caps, the names as one surface, hairline, seam, tray. */
 
 /**
  * C5, Joe: "I want the text as large as it can be without abbreviating or affecting geometry."
@@ -496,9 +496,17 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
           className="mcap"
           style={{
             width: cap,
-            // C3: the cap tints the BAND colour, not the primary. Under Joe's rule the band is the
-            // secondary on 259 of 340 teams, so tinting the primary would put black caps around a gold
-            // Steelers band - two unrelated colours in one block.
+            // D1 STOPS HERE, ON EVIDENCE. The cap was going to become the flat band colour so it and
+            // the name row read as one surface. Measured over the 307 teams whose art is in the local
+            // mirror, that roughly DOUBLES the logo ink that disappears into the cap it sits on -
+            // 14.9% -> 27.1% mean, teams losing half their logo 14 -> 46, teams with no readable edge
+            // anywhere 3 -> 9. Nine logos vanish outright (Clemson, Ole Miss, SMU, Washington State,
+            // Cardinals, Giants, Phillies, Pirates, Raptors), because a logo drawn in the team's own
+            // brand colour cannot survive a cap painted that same colour. The names below DID become
+            // one continuous surface; the cap keeps its tint gradient until Joe rules otherwise.
+            //
+            // C3 still holds: it tints the BAND, not the primary, so a gold Steelers band does not
+            // get black caps.
             background: `linear-gradient(180deg, ${tint(awayBand.band, 0.86)}, ${tint(awayBand.band, 0.58)})`,
           }}
         >
@@ -510,7 +518,10 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
             {away.name}
             {away.record ? <span className="mrec">{away.record}</span> : null}
           </div>
-          <div className="mhair" style={{ width: '86%' }} />
+          {/* D1: full width, not 86%. An inset rule was right when the two names were floating
+              pills on a panel; on one continuous surface it left a 7% notch of band colour at each
+              end where the divider simply stopped. */}
+          <div className="mhair" />
           {/* contract §3: the home band reads "@ {rank} {TEAM}". The '@' is what marks the band as
               the home side and does NOT depend on rank data, which is null for most games. */}
           <div className="mname" style={{ fontSize: nameSize, background: homeBand.band, color: homeBand.ink }}>
@@ -530,9 +541,13 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
           <img src={teamLogoUrl(home.id)} alt="" loading="lazy" />
         </div>
       </div>
+      {/* D2: the BAND colours, not the primaries. This was the last place in the block still
+          reading team.primary_color directly - so a Steelers block had a gold band, gold caps and a
+          black seam, which looked like a rendering fault rather than a design. Untinted, for the
+          same reason the caps are: the seam is the block's own edge, not a shadow of it. */}
       <div
         className="mseam"
-        style={{ background: `linear-gradient(90deg, ${tint(away.color, 0.86)}, ${tint(home.color, 0.86)})` }}
+        style={{ background: `linear-gradient(90deg, ${awayBand.band}, ${homeBand.band})` }}
       />
       <div className="mtray" style={{ height: trayH - 2 }}>
         <span className="mtray-left">

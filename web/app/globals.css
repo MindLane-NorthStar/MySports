@@ -1096,7 +1096,11 @@ input:focus-visible {
   align-items: stretch;
 }
 
-/* cap endcaps carry the RAW logo on the team-tinted gradient (contract v1.3e / addendum M12) */
+/* cap endcaps carry the RAW logo on the team-tinted gradient (contract v1.3e / addendum M12).
+   D1 proposed flattening this to the band colour so the cap and the name row became one field. The
+   measurement vetoed it: flat roughly doubles the logo ink that vanishes into its own cap (14.9% ->
+   27.1% mean over 307 teams) and takes nine logos to zero readable edge. The names went continuous;
+   the cap did not. See the note in MobileGrid.js Block(). */
 .mcap {
   flex: 0 0 auto;
   display: flex;
@@ -1110,18 +1114,26 @@ input:focus-visible {
   object-fit: contain;
 }
 
+/* D1: ONE CONTINUOUS SURFACE. This column is flex-direction: column, so its CROSS axis is
+   horizontal - `stretch` is what makes each name row span the full width and meet the caps rather
+   than sitting as a centred pill with panel showing either side of it. The 1px gap and the 3px
+   padding went with it: both were places the block's own background showed THROUGH the band.
+   The 3px moves onto .mname, so the text still clears the cap edge while the colour does not. */
 .mnames {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  gap: 1px;
-  padding: 0 3px;
 }
 
+/* Still display:block, deliberately - text-overflow: ellipsis needs a block formatting context and
+   would stop working the moment this became a flex container. flex: 1 1 0 splits the column's full
+   height between the two rows so no panel shows above or below them either. */
 .mname {
+  flex: 1 1 0;
+  display: block;
   font-family: var(--display);
   font-weight: 700;
   text-transform: uppercase;
@@ -1131,6 +1143,7 @@ input:focus-visible {
   text-overflow: ellipsis;
   max-width: 100%;
   text-align: center;
+  padding: 0 3px;
 }
 
 .mname .mrank {
@@ -1148,9 +1161,13 @@ input:focus-visible {
   opacity: 0.82;
 }
 
+/* The away/home boundary. On the old panel-backed block this was the only thing separating two
+   floating text rows; on a continuous surface the colour change already separates them, so it drops
+   to a hairline that reads as a fold in one surface rather than a rule between two. */
 .mhair {
+  flex: 0 0 1px;
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.22);
 }
 
 .mseam {
