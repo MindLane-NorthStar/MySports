@@ -1,14 +1,15 @@
-# MySports — Handoff Status (post-prompt-29, 2026-09-03)
+# MySports — Handoff Status (post-prompt-30, 2026-09-03)
 
 **This file now lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
 Read first for any session picking up MySports. Memory `/areas/mysports.md` + `/areas/mysports-build-log.md` + `/areas/mysports-ui-repair.md` carry the compressed truth. Companions: **`docs/enhancement-register.md`** — the repo copy is the source (prompt 26); §1–§13 are still only in the Claude project and Joe is supplying them, so check there before re-raising ANY decision, **`docs/feature-study/05-home-page-decisions.md` (D1–D6, the D3 amendment, deployment facts, E5, and §9 NETWORK TBD — BINDING)**, `docs/rendering-contract.md` v1.6.5, `docs/rendering-contract-mobile.md` (Addendum v1.1), `claude/program-card-design-v1.md`.
 
 ## Repo state
-main, HEAD **9c374c8**. **200 Python tests OK (skipped=1)**, **162/162 JS unit tests**, smoke **30/30**, qa-shots behavioural assertions **8/8**. Tree clean apart from always-untracked `assets/` and `artifacts/`.
+main, HEAD **81e2efd**. **200 Python tests OK (skipped=1)**, **169/169 JS unit tests**, smoke **30/30**, qa-shots behavioural assertions **14/14** (was 8/8; prompt 30 added the rail-under-zoom guard). Tree clean apart from always-untracked `assets/` and `artifacts/`.
 
 **Smoke 29/30 is CLOSED.** The `generated_grids` bare-key failure was fixed in prompt 22 by standardising on bare keys with consumers joining `ASSET_BASE_URL`.
 
+Prompt 30: `81e2efd` the grid rail comes unpinned under zoom - fixed by zooming through layout instead of a CSS transform; Mobile Grid Addendum v1.2.
 Prompt 29: `9c374c8` the card's right slot becomes a priority ladder, contract v1.6.6 (exceptions now outrank odds; winner-first score; TIED; the dash replaces Sched).
 Prompt 28: `25ba786` sport tiles become fixed soft-cornered squares with marks filling the box (register §15) → `99bda44` banner inset absorbs the artwork's 18px headroom.
 Prompt 27: `bb7b73f` the three authorities land in the repo, §11 scoped to Today → `0e3e336` YOUR TEAMS → grid → bands on `/` (05 §11 built) → `5f43dd5` empty states pronounce the sport once.
