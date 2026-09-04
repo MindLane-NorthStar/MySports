@@ -215,6 +215,23 @@ export function countLines(total, onCount, pending, off, tbd) {
  * access, not broadcast. He ruled for brevity on a line that has to survive a 56-game Saturday at
  * 390px, with the trade-off on the record in 05 section 10.
  */
+/**
+ * The same three segments as countSummary, but as PARTS so the band can make one of them a
+ * control. Joe: "eliminate the 'Show 11 unavailable' text with link and instead make the
+ * 'X unavailable' text the link. We don't need to list the number of unavailable games twice."
+ *
+ * countSummary stays, returning the joined string. It has one app caller and a dozen test
+ * assertions pinned to the joined form; breaking it to add a second shape would be churn for
+ * nothing. Both read the same `lines` object, so they cannot disagree.
+ */
+export function countParts(lines) {
+  return [
+    { key: 'airing', text: lines.airing },
+    { key: 'tbd', text: lines.tbd },
+    { key: 'unavailable', text: lines.unavailable },
+  ].filter((p) => p.text);
+}
+
 export function countSummary(lines) {
   // What he can watch, what nobody has settled yet, what he cannot watch.
   return [lines.airing, lines.tbd, lines.unavailable].filter(Boolean).join(' · ');

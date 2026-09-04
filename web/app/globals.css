@@ -1472,10 +1472,13 @@ input:focus-visible {
   margin-bottom: 14px;
 }
 
-.weekday h3 {
+/* B1/C3: the Weeks day heading is NOT .band-title - it is its own 14px gold rule, which the brief
+   allowed for. It takes the same 1.5x (14 -> 21px) and keeps its gold, and it now renders THROUGH
+   SportBand so the count joins it exactly as it joins a band header. */
+.weekday h3, .weekday-head {
   color: var(--gold);
   font-family: var(--display);
-  font-size: 14px;
+  font-size: 21px;
   letter-spacing: 0.08em;
   margin-bottom: 6px;
 }
@@ -1598,10 +1601,20 @@ input:focus-visible {
   color:var(--faint);font-size:12px;margin:-2px 0 10px}
 /* The most important of the three: a 15px target gating access to every filtered game. It has no
    background and no border, so the whole 44px is invisible - nothing about it looks different. */
-.offsvc-toggle{background:none;border:0;padding:0;cursor:pointer;
-  display:inline-flex;align-items:center;min-height:44px;
-  font-family:var(--body);font-size:12px;color:var(--gold);text-decoration:underline;
+/* B3: the unavailable COUNT is the control - there is no longer a separate "Show N unavailable".
+   It is still a real <button> with aria-expanded, styled as the link Joe asked for.
+   THE 44px TAP TARGET SURVIVES as a pseudo-element rather than min-height: this run is now inline
+   in a 12px text row, and a 44px min-height would push the header row apart. The ::after extends
+   the hit area vertically over the row without occupying any layout. */
+.offsvc-toggle{background:none;border:0;padding:0;cursor:pointer;position:relative;
+  font:inherit;font-size:inherit;color:var(--gold);text-decoration:underline;
   text-underline-offset:2px}
+.offsvc-toggle::after{content:'';position:absolute;left:-6px;right:-6px;top:50%;
+  transform:translateY(-50%);height:44px}
+/* Expanded: the same run stays the control and simply reads as active - the underline goes and
+   the gold goes to --ink, so the row says "these are showing" without a second label. */
+.offsvc-toggle[aria-expanded='true']{color:var(--ink);text-decoration:none}
+.offsvc-sep{color:var(--faint);padding:0 5px}
 .offsvc-toggle:hover{color:var(--ink)}
 .offsvc-row{opacity:.45;filter:saturate(.7)}
 .offsvc-row:hover{opacity:.72}
@@ -1620,7 +1633,11 @@ input:focus-visible {
  * COWORK'S CALL, one token to reverse: --ink rather than gold. Gold would mark it as the personal
  * section, but it would also make the first heading louder than every heading beneath it, and
  * D6's surviving instruction is to avoid decorative treatment here. */
-.favlabel{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.09em;
+/* B1: 1.5x. 17 -> 25.5px, and 15 -> 22.5px at <=699px, matching .band-title step for step -
+   this rule's own note says it is matched to the band header deliberately and must move with it.
+   The hairline and the bottom margin move to .band-headrow, which now carries the heading AND the
+   count on one line (B2). */
+.favlabel{font-family:var(--display);font-weight:700;font-size:25.5px;letter-spacing:.09em;
   text-transform:uppercase;color:var(--ink);margin:0 0 8px;
   padding-bottom:6px;border-bottom:1px solid var(--line-soft)}
 @media (max-width:699px){.favlabel{font-size:15px}}
@@ -1662,14 +1679,24 @@ input:focus-visible {
  * Bands render in SPORTS order, not kickoff order, so the page reads in the product's order rather
  * than by whichever sport happened to start first. The header is band level - the card is untouched. */
 .band{margin:0 0 26px}
-.band-head{display:flex;align-items:center;gap:9px;margin:0 0 8px;
-  padding-bottom:6px;border-bottom:1px solid var(--line-soft)}
-.band-mark{height:22px;width:auto;flex:0 0 auto}
-.band-title{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.09em;
+/* B2: the heading and the count share one line, the count pushed right by margin-left:auto and
+   set at its own size - the header grows 1.5x, the count does not. flex-wrap on this row is what
+   makes it degrade at narrow widths WITHOUT a media query: a 1.5x title plus "2 airing · 13
+   unavailable" cannot fit 360px, so the count simply takes the next line.
+   The hairline lives here now rather than on .band-head, so it spans the whole row including the
+   count instead of stopping under the title. */
+.band-headrow{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:12px;row-gap:2px;
+  margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line-soft)}
+.band-headrow > .offsvc{margin-left:auto;margin-bottom:0}
+.band-headrow > .favlabel{margin:0;padding:0;border-bottom:0}
+.band-head{display:flex;align-items:center;gap:9px;margin:0;padding:0;border-bottom:0}
+.band-mark{height:33px;width:auto;flex:0 0 auto}
+.band-title{font-family:var(--display);font-weight:700;font-size:25.5px;letter-spacing:.09em;
   text-transform:uppercase;color:var(--ink);margin:0}
 @media (max-width:699px){
-  .band-mark{height:18px}
-  .band-title{font-size:15px}
+  .band-mark{height:27px}
+  .band-title{font-size:22.5px}
+  .favlabel{font-size:22.5px}
 }
 
 /* ---- desktop shows the PC grid, not the mobile one (prompt 22)

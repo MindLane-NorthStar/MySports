@@ -27,7 +27,8 @@ function anyInFlight(games) {
   });
 }
 
-export default function Listing({ games, standingsRows, day, sport, generatedAt, showDay = false, grid = false, bands = false }) {
+export default function Listing({ games, standingsRows, day, sport, generatedAt, showDay = false,
+                                  grid = false, bands = false, heading = null, headingClass = 'favlabel' }) {
   const [open, setOpen] = useState(null);
   const router = useRouter();
   const standings = useMemo(() => indexStandings(standingsRows), [standingsRows]);
@@ -105,8 +106,12 @@ export default function Listing({ games, standingsRows, day, sport, generatedAt,
       ) : (
         // /weeks and /history keep their flat structure - the same component, header off, so the
         // count line, the toggle, the favourites float and the row wrappers have one implementation.
+        // C3: /weeks passes its day heading down so it renders through the SAME header row the
+        // sport bands use, and the count joins it identically. It used to be an <h3> outside this
+        // component, which is why the count could only sit below it.
         <SportBand sport={sport} label={null} games={games} standings={standings}
-                   showDay={showDay} onOpen={setOpen} showHeader={false} />
+                   showDay={showDay} onOpen={setOpen} showHeader={false}
+                   sectionLabel={heading} headingClass={headingClass} />
       )}
 
       {/* THE MOBILE GRID IS MOBILE-ONLY. It used to render at every width, so a desktop MLB day whose

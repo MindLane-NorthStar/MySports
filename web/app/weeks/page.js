@@ -40,8 +40,11 @@ function WeekDays({ days, grouped, standingsRows }) {
       {days.map((d) =>
         grouped[d]?.length ? (
           <div key={d} className="weekday">
-            <h3>{shortDay(d)}</h3>
-            <Listing games={grouped[d]} standingsRows={standingsRows} day={d} />
+            {/* C3: the day heading renders THROUGH Listing -> SportBand now, so it shares the header
+                row with the count exactly as a sport band does. It was an <h3> here, which is why
+                the count could only ever sit on the line below it. */}
+            <Listing games={grouped[d]} standingsRows={standingsRows} day={d}
+                     heading={shortDay(d)} headingClass="weekday-head" />
           </div>
         ) : null
       )}

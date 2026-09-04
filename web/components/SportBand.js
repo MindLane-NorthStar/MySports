@@ -18,7 +18,7 @@
 
 import { useMemo, useState } from 'react';
 import MatchupCard from './MatchupCard.js';
-import { offServiceSummary, countSummary } from '../lib/offservice.js';
+import { offServiceSummary, countParts } from '../lib/offservice.js';
 import { favoriteIds, isFavorite, splitFavorites } from '../lib/favorites.js';
 import favoritesDoc from '../../data/favorites.json';
 
@@ -32,7 +32,8 @@ const MARK = { cfb: 'cfp', nfl: 'nfl', nba: 'nba', nhl: 'nhl', mlb: 'mlb' };
 // because those two group by DAY and lifting a favourite out of its day destroys the calendar they
 // exist to be. Defaults preserve their behaviour exactly.
 export default function SportBand({ sport, label, games, standings, showDay = false, onOpen,
-                                    showHeader = true, floatFavorites = true, sectionLabel = null }) {
+                                    showHeader = true, floatFavorites = true, sectionLabel = null,
+                                    headingClass = 'favlabel' }) {
   const [showAll, setShowAll] = useState(false);
 
   const summary = useMemo(() => offServiceSummary(games), [games]);
@@ -40,11 +41,21 @@ export default function SportBand({ sport, label, games, standings, showDay = fa
   const pendingIds = useMemo(() => new Set(summary.pending.map((g) => g.id)), [summary]);
   const tbdIds = useMemo(() => new Set(summary.tbd.map((g) => g.id)), [summary]);
 
+  const favIds = useMemo(() => favoriteIds(favoritesDoc), []);
+
+  // How many games the toggle would actually REVEAL. Since A1 a favourite is never hidden, so a
+  // section made entirely of favourites can report "1 unavailable" and have nothing to show - the
+  // YOUR TEAMS section does exactly that. The count still says unavailable, because they are; it
+  // just is not a control when pressing it would do nothing.
+  const hiddenCount = useMemo(
+    () => summary.off.filter((g) => !isFavorite(g, favIds)).length,
+    [summary, favIds],
+  );
+
   // E5 + 05 section 9: only genuinely ineligible games are hidden. Market-pending AND network-TBD
   // games are exempt in BOTH toggle states, and the visible set is the original array minus `off`,
   // so everything keeps its chronological position rather than being regrouped. Both carve-outs are
   // free here: neither state is ever IN `off`, so subtracting `off` exempts them by construction.
-  const favIds = useMemo(() => favoriteIds(favoritesDoc), []);
 
   // A FAVOURITED TEAM'S GAME IS NEVER HIDDEN, in either toggle state. Market-pending and network-TBD
   // are already exempt by construction; favourites join them by name.
@@ -91,35 +102,41 @@ export default function SportBand({ sport, label, games, standings, showDay = fa
           and nothing here reaches inside it. Same .favlabel the in-band float uses, so the two
           arrangements read identically and Joe's open ruling on its prominence still applies to one
           rule rather than two. */}
-      {sectionLabel ? <p className="favlabel">{sectionLabel}</p> : null}
-      {showHeader ? (
-        <header className="band-head">
-          {MARK[sport] ? <img className="band-mark" src={`/leagues/${MARK[sport]}_dark.png`} alt="" /> : null}
-          <h2 className="band-title">{label || sport}</h2>
-        </header>
-      ) : null}
+      {/* B2: the heading and the count share ONE row. .band-headrow carries the hairline so it spans
+          the whole line rather than stopping under the title, and wraps the count below at narrow
+          widths instead of squeezing a 1.5x heading. */}
+      <div className="band-headrow">
+        {sectionLabel ? <p className={headingClass}>{sectionLabel}</p> : null}
+        {showHeader ? (
+          <header className="band-head">
+            {MARK[sport] ? <img className="band-mark" src={`/leagues/${MARK[sport]}_dark.png`} alt="" /> : null}
+            <h2 className="band-title">{label || sport}</h2>
+          </header>
+        ) : null}
 
-      {/* The count block renders for EVERY band, not only ones with something hidden. A band that
-          reports nothing beside one reporting four lines reads as missing data rather than as
-          "everything here is available" - seen in the 2026-09-03 QA shot, where College Football
-          showed its header and jumped straight to cards while MLB below it listed four lines. */}
-      {games.length ? (
-        <div className="offsvc">
-          {/* ONE line, not four. The outlet lists are gone - they were the verbose part, and every
-              revealed row already names its own network. Each COUNT stays, because D4 and E5 both
-              turn on counts this line carries. */}
-          <span className="offsvc-line">{countSummary(summary.lines)}</span>
-          {summary.offCount ? (
-            <button type="button" className="offsvc-toggle" onClick={() => setShowAll((v) => !v)}
-                    aria-expanded={showAll}>
-              {/* The toggle only renders when offCount is non-zero, and after prompt 24 it reveals
-                  ONLY genuinely off-service games - market-pending and network-TBD are never hidden.
-                  So the number is exact and the label can carry it, in the count line's own words. */}
-              {showAll ? 'Hide them' : `Show ${summary.offCount} unavailable`}
-            </button>
-          ) : null}
-        </div>
-      ) : null}
+        {/* B3: ONE count, and the unavailable part IS the control - there is no second
+            "Show N unavailable" saying the same number again. Still a real <button> with
+            aria-expanded, because it is a disclosure, whatever it looks like. */}
+        {games.length ? (
+          <div className="offsvc">
+            <span className="offsvc-line">
+              {countParts(summary.lines).map((part, i) => (
+                <span key={part.key}>
+                  {i > 0 ? <span className="offsvc-sep">·</span> : null}
+                  {part.key === 'unavailable' && hiddenCount ? (
+                    <button type="button" className="offsvc-toggle" aria-expanded={showAll}
+                            onClick={() => setShowAll((v) => !v)}>
+                      {part.text}
+                    </button>
+                  ) : (
+                    part.text
+                  )}
+                </span>
+              ))}
+            </span>
+          </div>
+        ) : null}
+      </div>
 
       {favorites.length ? (
         <>
