@@ -115,3 +115,158 @@ test('a flat-cap team keeps the ink it has today; a tinted one is re-derived on 
   assert.notEqual(surface, umass.band);
   assert.ok(inkFor(surface, umass.band, null).ink);
 });
+
+// ---------------------------------------------------------------------------------------------
+// THE TINTED-SURFACE DEFECT (shipped in bf5a297, fixed here).
+//
+// tint() returns a CSS string - `rgb(126, 133, 137)` - and rgbOf() parsed only #rrggbb. So on every
+// TINTED surface contrastRatio() returned null for the team colours AND for both neutrals, and
+// `null >= null` is true in JS, so inkFor() fell out of its last branch with white and a null ratio.
+// All 109 tinted teams rendered white names whatever their colours; eleven at 1.68:1 on #bdbdbd.
+//
+// It survived a green suite because the pins above only ever walk BAND surfaces, which are hex, and
+// the 191/116/0 counts were computed on the Python side. Nothing ran a tinted surface through the
+// runtime that actually renders. These tests do.
+
+test('inkFor parses a tinted surface and gives Ohio State charcoal, not white', () => {
+  const got = inkFor(tint('#a7b1b7', CAP_TINT), '#ba0c2f', '#a7b1b7');
+  assert.equal(got.ink, '#101214');
+  assert.ok(Math.abs(got.ratio - 5.01) < 0.02, `ratio ${got.ratio}`);
+});
+
+test('Ball State keeps its scarlet on the tinted white surface', () => {
+  const got = inkFor(tint('#ffffff', CAP_TINT), '#ba0c2f', '#ffffff');
+  assert.equal(got.ink, '#ba0c2f');
+  assert.equal(got.neutral, false);
+  assert.ok(Math.abs(got.ratio - 3.51) < 0.02, `ratio ${got.ratio}`);
+});
+
+test('the Steelers keep black on the tinted gold surface', () => {
+  const got = inkFor(tint('#ffb612', CAP_TINT), '#000000', '#ffb612');
+  assert.equal(got.ink, '#000000');
+  assert.equal(got.neutral, false);
+});
+
+test('rgb() and rgba() surfaces parse; junk throws rather than answering white', () => {
+  assert.ok(inkFor('rgb(0, 0, 0)', '#ba0c2f', '#ffffff').ratio > 1);
+  assert.ok(inkFor('rgba(18, 20, 22, 1)', '#ba0c2f', '#ffffff').ratio > 1);
+  assert.ok(inkFor('rgb(126,133,137)', '#ba0c2f', '#a7b1b7').ratio > 1, 'spaces are optional');
+  for (const bad of ['not a colour', '#abc', '', null, 'rgb(1,2)']) {
+    assert.throws(() => inkFor(bad, '#ffffff', '#000000'), TypeError, String(bad));
+  }
+});
+
+test('inkFor never returns a null ratio on any surface the app can produce', () => {
+  for (const row of fixture.teams) {
+    const b = bandFor(row.band, null);
+    for (const s of [b.band, tint(b.band, CAP_TINT)]) {
+      const got = inkFor(s, row.band, null);
+      assert.equal(typeof got.ratio, 'number', `${row.id} on ${s}`);
+      assert.ok(Number.isFinite(got.ratio) && got.ratio >= 1, `${row.id} on ${s}: ${got.ratio}`);
+    }
+  }
+});
+
+// ---- the JS/Python agreement test prompt 40 was missing -------------------------------------
+const colours = JSON.parse(
+  readFileSync(join(HERE, 'fixtures', 'team-colours.json'), 'utf8')
+).teams;
+
+/** Walk one team the way Block() does: table -> surface -> ink. */
+function renderInk(id) {
+  const c = colours[id];
+  const cap = capFor(id);
+  const b = bandFor(c.primary, c.secondary);
+  const surface = cap.tint === 1 ? b.band : tint(b.band, CAP_TINT);
+  return { cap, band: b, surface, got: inkFor(surface, c.primary, c.secondary) };
+}
+
+test('the RUNTIME reproduces the rule over all 307 study teams', () => {
+  let team = 0, neutral = 0, under = 0, min = Infinity;
+  for (const row of fixture.teams) {
+    assert.ok(colours[row.id], `${row.id} missing from team-colours.json`);
+    const { got } = renderInk(row.id);
+    if (got.neutral) neutral++; else team++;
+    if (got.ratio < 3.0) under++;
+    min = Math.min(min, got.ratio);
+  }
+  assert.deepEqual({ team, neutral, under }, { team: 191, neutral: 116, under: 0 });
+  assert.ok(min >= 3.0, `minimum ratio ${min}`);
+  assert.ok(Math.abs(min - 3.04) < 0.02, `minimum ratio ${min}`);
+});
+
+test('the 109 tinted teams split 56 team-colour / 20 charcoal / 33 white', () => {
+  // The split the defect destroyed: before the fix this was 0 / 0 / 109.
+  let t = 0, ch = 0, wh = 0;
+  const charcoal = [];
+  for (const row of fixture.teams) {
+    const { cap, got } = renderInk(row.id);
+    if (cap.tint === 1) continue;
+    if (!got.neutral) t++;
+    else if (got.ink.toLowerCase() === '#101214') { ch++; charcoal.push(row.id); }
+    else wh++;
+  }
+  assert.deepEqual({ t, ch, wh }, { t: 56, ch: 20, wh: 33 });
+  // by id, never by name - two teams can share a display name across sports
+  assert.deepEqual(charcoal.sort(), [
+    '119',   // Towson
+    '160',   // New Hampshire
+    '167',   // New Mexico
+    '194',   // Ohio State
+    '2000',  // Abilene Chrstn
+    '2447',  // Nicholls
+    '2449',  // N Dakota St
+    '2450',  // Norfolk St
+    '2678',  // VMI
+    '282',   // Indiana St
+    '52',    // Florida St
+    '58',    // South Florida
+    '66',    // Iowa State
+    'mlb-108', // Angels
+    'nba-DAL', // Mavericks
+    'nfl-12',  // Chiefs
+    'nfl-24',  // Chargers
+    'nfl-8',   // Lions
+    'nhl-17',  // Red Wings
+    'nhl-7',   // Sabres
+  ].sort());
+});
+
+test('exactly the 26 teams Joe accepted give up a team-colour ink', () => {
+  const lost = [];
+  for (const row of fixture.teams) {
+    const { band, got } = renderInk(row.id);
+    if (!band.inkIsNeutral && got.neutral) lost.push(row.id);
+  }
+  assert.equal(lost.length, 26);
+  // By ID, never by name: two clubs can share a display name across sports, and a name-keyed pin
+  // would quietly stop checking the one that moved.
+  assert.deepEqual(lost.sort(), [
+    '160',      // New Hampshire
+    '194',      // Ohio State
+    '2000',     // Abilene Chrstn
+    '2132',     // Cincinnati
+    '2447',     // Nicholls
+    '2449',     // N Dakota St
+    '2459',     // N Illinois
+    '2466',     // N'Western St
+    '259',      // Virginia Tech
+    '2678',     // VMI
+    '282',      // Indiana St
+    '309',      // Louisiana
+    '52',       // Florida St
+    '58',       // South Florida
+    '66',       // Iowa State
+    'mlb-108',  // Angels
+    'mlb-121',  // Mets
+    'mlb-142',  // Twins
+    'nba-CHA',  // Hornets
+    'nba-CHI',  // Bulls
+    'nba-CLE',  // Cavaliers
+    'nba-DAL',  // Mavericks
+    'nba-HOU',  // Rockets
+    'nba-TOR',  // Raptors
+    'nhl-17',   // Red Wings
+    'nhl-7',    // Sabres
+  ].sort());
+});

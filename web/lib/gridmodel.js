@@ -211,11 +211,31 @@ function chan(v) {
   return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
 }
 
-function rgbOf(hex) {
-  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
-  if (!m) return null;
-  const n = parseInt(m[1], 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+/**
+ * Parse a colour this codebase actually produces: `#rrggbb`, `rgb(r, g, b)` or `rgba(r, g, b, a)`.
+ *
+ * IT USED TO TAKE HEX ONLY, and that shipped a live defect in bf5a297. tint() returns a CSS string -
+ * `rgb(126, 133, 137)` - so once candidate D started asking for the ink on a TINTED surface, every
+ * call parsed to null, contrastRatio() returned null for both the team colours and the neutrals, and
+ * `null >= null` is true in JS, so inkFor() fell out of its last branch with white and a null ratio.
+ * All 109 tinted teams rendered white names whatever their colours; eleven of them at 1.68:1.
+ *
+ * The alpha in rgba() is deliberately ignored rather than composited: every surface we pass is opaque,
+ * and silently blending against an unknown backdrop would be a worse answer than the one it replaces.
+ */
+function rgbOf(colour) {
+  const s = String(colour || '').trim();
+  const hex = /^#?([0-9a-f]{6})$/i.exec(s);
+  if (hex) {
+    const n = parseInt(hex[1], 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  const fn = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*[\d.]+\s*)?\)$/i.exec(s);
+  if (fn) {
+    const c = [fn[1], fn[2], fn[3]].map((v) => Math.min(255, Math.max(0, Math.round(Number(v)))));
+    return c.every((v) => Number.isFinite(v)) ? c : null;
+  }
+  return null;
 }
 
 /** Real sRGB relative luminance - not a luminance shortcut and not a tint() approximation. */
@@ -296,6 +316,13 @@ export function bandFor(primaryHex, secondaryHex) {
  * clears 3:1 and is not the surface itself, otherwise the better of --ink and charcoal.
  */
 export function inkFor(surfaceHex, primaryHex, secondaryHex) {
+  // The surface ALWAYS comes from our own code - bandFor().band or tint() of it - so one that will
+  // not parse is a programming error, and the right place for it to surface is a failing test rather
+  // than a phone rendering white-on-grey. Returning a null ratio is what let bf5a297 ship: the
+  // function had no way to say "I could not answer" and said "white" instead.
+  if (rgbOf(surfaceHex) === null) {
+    throw new TypeError(`inkFor: unparseable surface ${JSON.stringify(surfaceHex)}`);
+  }
   let best = null;
   for (const c of [primaryHex, secondaryHex]) {
     if (rgbOf(c) === null) continue;

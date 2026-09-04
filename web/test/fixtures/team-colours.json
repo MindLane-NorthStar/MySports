@@ -1,0 +1,1245 @@
+{
+ "_generated": "2026-09-04T21:09:03+00:00",
+ "teams": {
+  "103": {
+   "primary": "#8c2232",
+   "secondary": "#dbcca6"
+  },
+  "113": {
+   "primary": "#881c1c",
+   "secondary": "#ffffff"
+  },
+  "119": {
+   "primary": "#FFC229",
+   "secondary": "#null"
+  },
+  "12": {
+   "primary": "#cc0033",
+   "secondary": "#003366"
+  },
+  "120": {
+   "primary": "#ce1126",
+   "secondary": "#ffffff"
+  },
+  "127": {
+   "primary": "#173f35",
+   "secondary": "#ffffff"
+  },
+  "130": {
+   "primary": "#00274c",
+   "secondary": "#ffcb05"
+  },
+  "135": {
+   "primary": "#7a0019",
+   "secondary": "#ffcc33"
+  },
+  "142": {
+   "primary": "#f1b82d",
+   "secondary": "#000000"
+  },
+  "145": {
+   "primary": "#13294b",
+   "secondary": "#cf142b"
+  },
+  "150": {
+   "primary": "#00539b",
+   "secondary": "#ffffff"
+  },
+  "151": {
+   "primary": "#592a8a",
+   "secondary": "#fdc82f"
+  },
+  "152": {
+   "primary": "#cc0000",
+   "secondary": "#ffffff"
+  },
+  "153": {
+   "primary": "#7bafd4",
+   "secondary": "#13294b"
+  },
+  "154": {
+   "primary": "#ceb888",
+   "secondary": "#2c2a29"
+  },
+  "158": {
+   "primary": "#d00000",
+   "secondary": "#ffffff"
+  },
+  "16": {
+   "primary": "#00573c",
+   "secondary": "#cdb97d"
+  },
+  "160": {
+   "primary": "#004990",
+   "secondary": "#c3c4c6"
+  },
+  "164": {
+   "primary": "#ce0e2d",
+   "secondary": "#ffffff"
+  },
+  "166": {
+   "primary": "#8c0b42",
+   "secondary": "#ffffff"
+  },
+  "167": {
+   "primary": "#ba0c2f",
+   "secondary": "#a7a8aa"
+  },
+  "183": {
+   "primary": "#f76900",
+   "secondary": "#000e54"
+  },
+  "189": {
+   "primary": "#fd5000",
+   "secondary": "#4f2c1d"
+  },
+  "193": {
+   "primary": "#c41230",
+   "secondary": "#ffffff"
+  },
+  "194": {
+   "primary": "#ba0c2f",
+   "secondary": "#a7b1b7"
+  },
+  "195": {
+   "primary": "#024230",
+   "secondary": "#ffffff"
+  },
+  "197": {
+   "primary": "#fe5c00",
+   "secondary": "#000000"
+  },
+  "2": {
+   "primary": "#0c2340",
+   "secondary": "#f26522"
+  },
+  "2000": {
+   "primary": "#592d82",
+   "secondary": "#b1b3b3"
+  },
+  "2005": {
+   "primary": "#003594",
+   "secondary": "#ffffff"
+  },
+  "2006": {
+   "primary": "#041e42",
+   "secondary": "#a89968"
+  },
+  "201": {
+   "primary": "#841617",
+   "secondary": "#ffffff"
+  },
+  "2016": {
+   "primary": "#4b0058",
+   "secondary": "#46166a"
+  },
+  "202": {
+   "primary": "#003595",
+   "secondary": "#d0b787"
+  },
+  "2026": {
+   "primary": "#000000",
+   "secondary": "#ffcd00"
+  },
+  "2029": {
+   "primary": "#e0aa0f",
+   "secondary": "#eaaa00"
+  },
+  "2032": {
+   "primary": "#cc092f",
+   "secondary": "#000000"
+  },
+  "204": {
+   "primary": "#dc4405",
+   "secondary": "#000000"
+  },
+  "2046": {
+   "primary": "#8e0b0b",
+   "secondary": "#null"
+  },
+  "2050": {
+   "primary": "#ba0c2f",
+   "secondary": "#ffffff"
+  },
+  "2065": {
+   "primary": "#7b1831",
+   "secondary": "#e9aa12"
+  },
+  "2084": {
+   "primary": "#005bbb",
+   "secondary": "#ffffff"
+  },
+  "21": {
+   "primary": "#a6192e",
+   "secondary": "#000000"
+  },
+  "2116": {
+   "primary": "#000000",
+   "secondary": "#b4a169"
+  },
+  "2117": {
+   "primary": "#6a0032",
+   "secondary": "#ffc82e"
+  },
+  "2127": {
+   "primary": "#2e3192",
+   "secondary": "#ded090"
+  },
+  "213": {
+   "primary": "#001e44",
+   "secondary": "#ffffff"
+  },
+  "2132": {
+   "primary": "#000000",
+   "secondary": "#e00122"
+  },
+  "218": {
+   "primary": "#a41e35",
+   "secondary": "#ffffff"
+  },
+  "2184": {
+   "primary": "#002D62",
+   "secondary": "#b90b2e"
+  },
+  "2197": {
+   "primary": "#000000",
+   "secondary": "#bebab9"
+  },
+  "2198": {
+   "primary": "#660819",
+   "secondary": "#f0f0f0"
+  },
+  "2199": {
+   "primary": "#046a38",
+   "secondary": "#ffffff"
+  },
+  "221": {
+   "primary": "#003594",
+   "secondary": "#ffb81c"
+  },
+  "2226": {
+   "primary": "#003366",
+   "secondary": "#cc0000"
+  },
+  "2229": {
+   "primary": "#091f3f",
+   "secondary": "#c3993f"
+  },
+  "2230": {
+   "primary": "#830032",
+   "secondary": "#909090"
+  },
+  "2247": {
+   "primary": "#0039a6",
+   "secondary": "#ffffff"
+  },
+  "2261": {
+   "primary": "#0067AC",
+   "secondary": "#null"
+  },
+  "227": {
+   "primary": "#091f3f",
+   "secondary": "#5ab3e8"
+  },
+  "2277": {
+   "primary": "#00539c",
+   "secondary": "#null"
+  },
+  "228": {
+   "primary": "#f56600",
+   "secondary": "#522d80"
+  },
+  "2294": {
+   "primary": "#000000",
+   "secondary": "#ffcd00"
+  },
+  "23": {
+   "primary": "#0055a2",
+   "secondary": "#e5a823"
+  },
+  "2305": {
+   "primary": "#0051ba",
+   "secondary": "#e8000d"
+  },
+  "2306": {
+   "primary": "#512888",
+   "secondary": "#ffffff"
+  },
+  "2309": {
+   "primary": "#002664",
+   "secondary": "#eaab00"
+  },
+  "231": {
+   "primary": "#582c83",
+   "secondary": "#ffffff"
+  },
+  "2320": {
+   "primary": "#000000",
+   "secondary": "#ebebeb"
+  },
+  "2335": {
+   "primary": "#0a254e",
+   "secondary": "#b72025"
+  },
+  "2341": {
+   "primary": "#null",
+   "secondary": "#null"
+  },
+  "2348": {
+   "primary": "#003087",
+   "secondary": "#cb333b"
+  },
+  "235": {
+   "primary": "#00498f",
+   "secondary": "#9c9ea1"
+  },
+  "238": {
+   "primary": "#000000",
+   "secondary": "#cfae70"
+  },
+  "2385": {
+   "primary": "#000000",
+   "secondary": "#null"
+  },
+  "239": {
+   "primary": "#154734",
+   "secondary": "#ffb81c"
+  },
+  "2390": {
+   "primary": "#f47321",
+   "secondary": "#005030"
+  },
+  "2393": {
+   "primary": "#036eb7",
+   "secondary": "#ffffff"
+  },
+  "24": {
+   "primary": "#8c1515",
+   "secondary": "#ffffff"
+  },
+  "2400": {
+   "primary": "#005328",
+   "secondary": "#cf2d34"
+  },
+  "2415": {
+   "primary": "#014786",
+   "secondary": "#f47937"
+  },
+  "242": {
+   "primary": "#00205b",
+   "secondary": "#c1c6c8"
+  },
+  "2426": {
+   "primary": "#00225b",
+   "secondary": "#b5a67c"
+  },
+  "2429": {
+   "primary": "#005035",
+   "secondary": "#a49665"
+  },
+  "2433": {
+   "primary": "#840029",
+   "secondary": "#fdb913"
+  },
+  "2439": {
+   "primary": "#cf0a2c",
+   "secondary": "#cac8c8"
+  },
+  "2440": {
+   "primary": "#041e42",
+   "secondary": "#8a8d8f"
+  },
+  "2447": {
+   "primary": "#C41230",
+   "secondary": "#f0f0f0"
+  },
+  "2448": {
+   "primary": "#0505aa",
+   "secondary": "#004684"
+  },
+  "2449": {
+   "primary": "#00583d",
+   "secondary": "#ffc425"
+  },
+  "245": {
+   "primary": "#500000",
+   "secondary": "#ffffff"
+  },
+  "2450": {
+   "primary": "#0c8968",
+   "secondary": "#fdb813"
+  },
+  "2453": {
+   "primary": "#000000",
+   "secondary": "#null"
+  },
+  "2459": {
+   "primary": "#c8102e",
+   "secondary": "#000000"
+  },
+  "2464": {
+   "primary": "#003976",
+   "secondary": "#1b3069"
+  },
+  "2466": {
+   "primary": "#492F91",
+   "secondary": "#ed6118"
+  },
+  "248": {
+   "primary": "#c8102e",
+   "secondary": "#ffffff"
+  },
+  "2483": {
+   "primary": "#007030",
+   "secondary": "#fee11a"
+  },
+  "249": {
+   "primary": "#00853e",
+   "secondary": "#ffffff"
+  },
+  "25": {
+   "primary": "#041e42",
+   "secondary": "#ffc72c"
+  },
+  "2502": {
+   "primary": "#00311e",
+   "secondary": "#ebebeb"
+  },
+  "2509": {
+   "primary": "#ceb888",
+   "secondary": "#000000"
+  },
+  "251": {
+   "primary": "#bf5700",
+   "secondary": "#ffffff"
+  },
+  "252": {
+   "primary": "#003da5",
+   "secondary": "#002e5d"
+  },
+  "2534": {
+   "primary": "#f56423",
+   "secondary": "#ffffff"
+  },
+  "254": {
+   "primary": "#be0000",
+   "secondary": "#ffffff"
+  },
+  "2545": {
+   "primary": "#215732",
+   "secondary": "#ffc72c"
+  },
+  "2546": {
+   "primary": "#c8102e",
+   "secondary": "#000000"
+  },
+  "256": {
+   "primary": "#450084",
+   "secondary": "#cbb677"
+  },
+  "2567": {
+   "primary": "#d70000",
+   "secondary": "#0033a1"
+  },
+  "2571": {
+   "primary": "#0033a0",
+   "secondary": "#ffd100"
+  },
+  "2572": {
+   "primary": "#ffc72c",
+   "secondary": "#231f20"
+  },
+  "2579": {
+   "primary": "#73000a",
+   "secondary": "#000000"
+  },
+  "258": {
+   "primary": "#232d4b",
+   "secondary": "#f84c1e"
+  },
+  "259": {
+   "primary": "#861f41",
+   "secondary": "#e87722"
+  },
+  "26": {
+   "primary": "#2774ae",
+   "secondary": "#f2a900"
+  },
+  "2623": {
+   "primary": "#5e0009",
+   "secondary": "#ffffff"
+  },
+  "2627": {
+   "primary": "#000000",
+   "secondary": "#null"
+  },
+  "2628": {
+   "primary": "#4d1979",
+   "secondary": "#ffffff"
+  },
+  "2633": {
+   "primary": "#ff8200",
+   "secondary": "#ffffff"
+  },
+  "2634": {
+   "primary": "#171796",
+   "secondary": "#f0f0f0"
+  },
+  "2636": {
+   "primary": "#0c2340",
+   "secondary": "#f15a22"
+  },
+  "2638": {
+   "primary": "#ff8200",
+   "secondary": "#041e42"
+  },
+  "264": {
+   "primary": "#33006f",
+   "secondary": "#e8d3a2"
+  },
+  "2641": {
+   "primary": "#c30020",
+   "secondary": "#000000"
+  },
+  "2643": {
+   "primary": "#7badd3",
+   "secondary": "#002856"
+  },
+  "2649": {
+   "primary": "#0b2240",
+   "secondary": "#ffcd00"
+  },
+  "265": {
+   "primary": "#a60f2d",
+   "secondary": "#4d4d4d"
+  },
+  "2653": {
+   "primary": "#862633",
+   "secondary": "#b1b1b1"
+  },
+  "2655": {
+   "primary": "#006747",
+   "secondary": "#418fde"
+  },
+  "2678": {
+   "primary": "#ae122a",
+   "secondary": "#ffd619"
+  },
+  "2698": {
+   "primary": "#0033a1",
+   "secondary": "#db1a21"
+  },
+  "2711": {
+   "primary": "#532e1f",
+   "secondary": "#f1c500"
+  },
+  "275": {
+   "primary": "#a00000",
+   "secondary": "#ffffff"
+  },
+  "2751": {
+   "primary": "#492f24",
+   "secondary": "#ffc425"
+  },
+  "2754": {
+   "primary": "#E51936",
+   "secondary": "#690717"
+  },
+  "276": {
+   "primary": "#00b140",
+   "secondary": "#000000"
+  },
+  "277": {
+   "primary": "#eaaa00",
+   "secondary": "#002855"
+  },
+  "2771": {
+   "primary": "#000000",
+   "secondary": "#null"
+  },
+  "278": {
+   "primary": "#c41230",
+   "secondary": "#13284c"
+  },
+  "2803": {
+   "primary": "#000000",
+   "secondary": "#9f8343"
+  },
+  "282": {
+   "primary": "#00669a",
+   "secondary": "#f0f0f0"
+  },
+  "290": {
+   "primary": "#041e42",
+   "secondary": "#ffffff"
+  },
+  "292": {
+   "primary": "#null",
+   "secondary": "#null"
+  },
+  "295": {
+   "primary": "#043657",
+   "secondary": "#98c5ea"
+  },
+  "30": {
+   "primary": "#990000",
+   "secondary": "#ffcc00"
+  },
+  "304": {
+   "primary": "#ef8c00",
+   "secondary": "#e9a126"
+  },
+  "309": {
+   "primary": "#ce181e",
+   "secondary": "#000000"
+  },
+  "3101": {
+   "primary": "#000000",
+   "secondary": "#null"
+  },
+  "311": {
+   "primary": "#127dbe",
+   "secondary": "#null"
+  },
+  "322": {
+   "primary": "#790000",
+   "secondary": "#a59474"
+  },
+  "324": {
+   "primary": "#006f71",
+   "secondary": "#a27752"
+  },
+  "326": {
+   "primary": "#501214",
+   "secondary": "#6a5638"
+  },
+  "328": {
+   "primary": "#0f2439",
+   "secondary": "#ffffff"
+  },
+  "333": {
+   "primary": "#9e1b32",
+   "secondary": "#ffffff"
+  },
+  "338": {
+   "primary": "#fdbb30",
+   "secondary": "#0b1315"
+  },
+  "344": {
+   "primary": "#5d1725",
+   "secondary": "#c1c6c8"
+  },
+  "349": {
+   "primary": "#000000",
+   "secondary": "#d3bc8d"
+  },
+  "356": {
+   "primary": "#ff5f05",
+   "secondary": "#13294b"
+  },
+  "36": {
+   "primary": "#1e4d2b",
+   "secondary": "#c8c372"
+  },
+  "38": {
+   "primary": "#cfb87c",
+   "secondary": "#000000"
+  },
+  "399": {
+   "primary": "#3D2777",
+   "secondary": "#ffffff"
+  },
+  "41": {
+   "primary": "#000e2f",
+   "secondary": "#ffffff"
+  },
+  "48": {
+   "primary": "#00539f",
+   "secondary": "#ffd200"
+  },
+  "5": {
+   "primary": "#1a5632",
+   "secondary": "#fdb913"
+  },
+  "52": {
+   "primary": "#782f40",
+   "secondary": "#ceb888"
+  },
+  "55": {
+   "primary": "#cc0000",
+   "secondary": "#000000"
+  },
+  "57": {
+   "primary": "#0021a5",
+   "secondary": "#fa4616"
+  },
+  "58": {
+   "primary": "#006747",
+   "secondary": "#cfc493"
+  },
+  "59": {
+   "primary": "#b3a369",
+   "secondary": "#ffffff"
+  },
+  "6": {
+   "primary": "#00205b",
+   "secondary": "#bf0d3e"
+  },
+  "61": {
+   "primary": "#ba0c2f",
+   "secondary": "#2c2a29"
+  },
+  "62": {
+   "primary": "#024731",
+   "secondary": "#000000"
+  },
+  "66": {
+   "primary": "#c8102e",
+   "secondary": "#f1be48"
+  },
+  "68": {
+   "primary": "#0033a0",
+   "secondary": "#d64309"
+  },
+  "70": {
+   "primary": "#000000",
+   "secondary": "#8c6e4a"
+  },
+  "77": {
+   "primary": "#582c83",
+   "secondary": "#ffffff"
+  },
+  "8": {
+   "primary": "#a32136",
+   "secondary": "#ffffff"
+  },
+  "84": {
+   "primary": "#990000",
+   "secondary": "#ffffff"
+  },
+  "87": {
+   "primary": "#0c2340",
+   "secondary": "#c99700"
+  },
+  "9": {
+   "primary": "#ffc627",
+   "secondary": "#8c1d40"
+  },
+  "93": {
+   "primary": "#002148",
+   "secondary": "#000e00"
+  },
+  "96": {
+   "primary": "#0033a0",
+   "secondary": "#ffffff"
+  },
+  "97": {
+   "primary": "#c9001f",
+   "secondary": "#000000"
+  },
+  "98": {
+   "primary": "#c60c30",
+   "secondary": "#ffffff"
+  },
+  "99": {
+   "primary": "#461d7c",
+   "secondary": "#fdd023"
+  },
+  "mlb-108": {
+   "primary": "#ba0021",
+   "secondary": "#c4ced4"
+  },
+  "mlb-109": {
+   "primary": "#aa182c",
+   "secondary": "#000000"
+  },
+  "mlb-110": {
+   "primary": "#df4601",
+   "secondary": "#000000"
+  },
+  "mlb-111": {
+   "primary": "#0d2b56",
+   "secondary": "#bd3039"
+  },
+  "mlb-112": {
+   "primary": "#0e3386",
+   "secondary": "#cc3433"
+  },
+  "mlb-113": {
+   "primary": "#c6011f",
+   "secondary": "#ffffff"
+  },
+  "mlb-114": {
+   "primary": "#002b5c",
+   "secondary": "#e31937"
+  },
+  "mlb-115": {
+   "primary": "#33006f",
+   "secondary": "#000000"
+  },
+  "mlb-116": {
+   "primary": "#0a2240",
+   "secondary": "#ff4713"
+  },
+  "mlb-117": {
+   "primary": "#002d62",
+   "secondary": "#eb6e1f"
+  },
+  "mlb-118": {
+   "primary": "#004687",
+   "secondary": "#7ab2dd"
+  },
+  "mlb-119": {
+   "primary": "#005a9c",
+   "secondary": "#ffffff"
+  },
+  "mlb-120": {
+   "primary": "#ab0003",
+   "secondary": "#11225b"
+  },
+  "mlb-121": {
+   "primary": "#002d72",
+   "secondary": "#ff5910"
+  },
+  "mlb-133": {
+   "primary": "#003831",
+   "secondary": "#efb21e"
+  },
+  "mlb-134": {
+   "primary": "#000000",
+   "secondary": "#fdb827"
+  },
+  "mlb-135": {
+   "primary": "#2f241d",
+   "secondary": "#ffc425"
+  },
+  "mlb-136": {
+   "primary": "#005c5c",
+   "secondary": "#0c2c56"
+  },
+  "mlb-137": {
+   "primary": "#000000",
+   "secondary": "#fd5a1e"
+  },
+  "mlb-138": {
+   "primary": "#be0a14",
+   "secondary": "#001541"
+  },
+  "mlb-139": {
+   "primary": "#092c5c",
+   "secondary": "#8fbce6"
+  },
+  "mlb-140": {
+   "primary": "#003278",
+   "secondary": "#c0111f"
+  },
+  "mlb-141": {
+   "primary": "#134a8e",
+   "secondary": "#6cace5"
+  },
+  "mlb-142": {
+   "primary": "#031f40",
+   "secondary": "#e20e32"
+  },
+  "mlb-143": {
+   "primary": "#e81828",
+   "secondary": "#003278"
+  },
+  "mlb-144": {
+   "primary": "#0c2340",
+   "secondary": "#ba0c2f"
+  },
+  "mlb-145": {
+   "primary": "#000000",
+   "secondary": "#c4ced4"
+  },
+  "mlb-146": {
+   "primary": "#00a3e0",
+   "secondary": "#000000"
+  },
+  "mlb-147": {
+   "primary": "#132448",
+   "secondary": "#c4ced4"
+  },
+  "mlb-158": {
+   "primary": "#13294b",
+   "secondary": "#ffc72c"
+  },
+  "nba-ATL": {
+   "primary": "#c8102e",
+   "secondary": "#fdb927"
+  },
+  "nba-BKN": {
+   "primary": "#000000",
+   "secondary": "#ffffff"
+  },
+  "nba-BOS": {
+   "primary": "#008348",
+   "secondary": "#ffffff"
+  },
+  "nba-CHA": {
+   "primary": "#008ca8",
+   "secondary": "#1d1060"
+  },
+  "nba-CHI": {
+   "primary": "#ce1141",
+   "secondary": "#000000"
+  },
+  "nba-CLE": {
+   "primary": "#860038",
+   "secondary": "#bc945c"
+  },
+  "nba-DAL": {
+   "primary": "#0064b1",
+   "secondary": "#bbc4ca"
+  },
+  "nba-DEN": {
+   "primary": "#0e2240",
+   "secondary": "#fec524"
+  },
+  "nba-DET": {
+   "primary": "#1d428a",
+   "secondary": "#c8102e"
+  },
+  "nba-GSW": {
+   "primary": "#fdb927",
+   "secondary": "#1d428a"
+  },
+  "nba-HOU": {
+   "primary": "#ce0e2d",
+   "secondary": "#000000"
+  },
+  "nba-IND": {
+   "primary": "#0c2340",
+   "secondary": "#ffd520"
+  },
+  "nba-LAC": {
+   "primary": "#12173f",
+   "secondary": "#c8102e"
+  },
+  "nba-LAL": {
+   "primary": "#552583",
+   "secondary": "#fdb927"
+  },
+  "nba-MEM": {
+   "primary": "#5d76a9",
+   "secondary": "#12173f"
+  },
+  "nba-MIA": {
+   "primary": "#98002e",
+   "secondary": "#000000"
+  },
+  "nba-MIL": {
+   "primary": "#00471b",
+   "secondary": "#eee1c6"
+  },
+  "nba-MIN": {
+   "primary": "#266092",
+   "secondary": "#79bc43"
+  },
+  "nba-NOP": {
+   "primary": "#0a2240",
+   "secondary": "#b4975a"
+  },
+  "nba-NYK": {
+   "primary": "#1d428a",
+   "secondary": "#f58426"
+  },
+  "nba-OKC": {
+   "primary": "#007ac1",
+   "secondary": "#ef3b24"
+  },
+  "nba-ORL": {
+   "primary": "#0150b5",
+   "secondary": "#9ca0a3"
+  },
+  "nba-PHI": {
+   "primary": "#1d428a",
+   "secondary": "#e01234"
+  },
+  "nba-PHX": {
+   "primary": "#29127a",
+   "secondary": "#e56020"
+  },
+  "nba-POR": {
+   "primary": "#e03a3e",
+   "secondary": "#000000"
+  },
+  "nba-SAC": {
+   "primary": "#5a2d81",
+   "secondary": "#6a7a82"
+  },
+  "nba-SAS": {
+   "primary": "#000000",
+   "secondary": "#c4ced4"
+  },
+  "nba-TOR": {
+   "primary": "#d91244",
+   "secondary": "#000000"
+  },
+  "nba-UTA": {
+   "primary": "#4e008e",
+   "secondary": "#79a3dc"
+  },
+  "nba-WAS": {
+   "primary": "#e31837",
+   "secondary": "#002b5c"
+  },
+  "nfl-1": {
+   "primary": "#a71930",
+   "secondary": "#000000"
+  },
+  "nfl-10": {
+   "primary": "#4495d2",
+   "secondary": "#001532"
+  },
+  "nfl-11": {
+   "primary": "#003b75",
+   "secondary": "#ffffff"
+  },
+  "nfl-12": {
+   "primary": "#e31837",
+   "secondary": "#ffb612"
+  },
+  "nfl-13": {
+   "primary": "#000000",
+   "secondary": "#a5acaf"
+  },
+  "nfl-14": {
+   "primary": "#003594",
+   "secondary": "#ffd100"
+  },
+  "nfl-15": {
+   "primary": "#008e97",
+   "secondary": "#fc4c02"
+  },
+  "nfl-16": {
+   "primary": "#4f2683",
+   "secondary": "#ffc62f"
+  },
+  "nfl-17": {
+   "primary": "#002a5c",
+   "secondary": "#c60c30"
+  },
+  "nfl-18": {
+   "primary": "#d3bc8d",
+   "secondary": "#000000"
+  },
+  "nfl-19": {
+   "primary": "#003c7f",
+   "secondary": "#c9243f"
+  },
+  "nfl-2": {
+   "primary": "#00338d",
+   "secondary": "#d50a0a"
+  },
+  "nfl-20": {
+   "primary": "#115740",
+   "secondary": "#ffffff"
+  },
+  "nfl-21": {
+   "primary": "#06424d",
+   "secondary": "#000000"
+  },
+  "nfl-22": {
+   "primary": "#a40227",
+   "secondary": "#ffffff"
+  },
+  "nfl-23": {
+   "primary": "#000000",
+   "secondary": "#ffb612"
+  },
+  "nfl-24": {
+   "primary": "#0080c6",
+   "secondary": "#ffc20e"
+  },
+  "nfl-25": {
+   "primary": "#aa0000",
+   "secondary": "#b3995d"
+  },
+  "nfl-26": {
+   "primary": "#002a5c",
+   "secondary": "#69be28"
+  },
+  "nfl-27": {
+   "primary": "#bd1c36",
+   "secondary": "#3e3a35"
+  },
+  "nfl-28": {
+   "primary": "#5a1414",
+   "secondary": "#ffb612"
+  },
+  "nfl-29": {
+   "primary": "#0085ca",
+   "secondary": "#000000"
+  },
+  "nfl-3": {
+   "primary": "#0b1c3a",
+   "secondary": "#e64100"
+  },
+  "nfl-30": {
+   "primary": "#007487",
+   "secondary": "#d7a22a"
+  },
+  "nfl-33": {
+   "primary": "#29126f",
+   "secondary": "#000000"
+  },
+  "nfl-34": {
+   "primary": "#021018",
+   "secondary": "#eb0028"
+  },
+  "nfl-4": {
+   "primary": "#fb4f14",
+   "secondary": "#000000"
+  },
+  "nfl-5": {
+   "primary": "#472a08",
+   "secondary": "#ff3c00"
+  },
+  "nfl-6": {
+   "primary": "#002a5c",
+   "secondary": "#b0b7bc"
+  },
+  "nfl-7": {
+   "primary": "#0a2343",
+   "secondary": "#fc4c02"
+  },
+  "nfl-8": {
+   "primary": "#0076b6",
+   "secondary": "#bbbbbb"
+  },
+  "nfl-9": {
+   "primary": "#204e32",
+   "secondary": "#ffb612"
+  },
+  "nhl-1": {
+   "primary": "#e30b2b",
+   "secondary": "#000000"
+  },
+  "nhl-10": {
+   "primary": "#003e7e",
+   "secondary": "#ffffff"
+  },
+  "nhl-12": {
+   "primary": "#e30426",
+   "secondary": "#000000"
+  },
+  "nhl-13": {
+   "primary": "#e51937",
+   "secondary": "#002d62"
+  },
+  "nhl-14": {
+   "primary": "#003e7e",
+   "secondary": "#ffffff"
+  },
+  "nhl-15": {
+   "primary": "#d71830",
+   "secondary": "#0b1f41"
+  },
+  "nhl-16": {
+   "primary": "#e31937",
+   "secondary": "#000000"
+  },
+  "nhl-17": {
+   "primary": "#e30526",
+   "secondary": "#ffffff"
+  },
+  "nhl-18": {
+   "primary": "#fdba31",
+   "secondary": "#002d62"
+  },
+  "nhl-19": {
+   "primary": "#0070b9",
+   "secondary": "#fdb71a"
+  },
+  "nhl-2": {
+   "primary": "#00529b",
+   "secondary": "#f47d31"
+  },
+  "nhl-20": {
+   "primary": "#dd1a32",
+   "secondary": "#000000"
+  },
+  "nhl-21": {
+   "primary": "#860038",
+   "secondary": "#005ea3"
+  },
+  "nhl-22": {
+   "primary": "#00205b",
+   "secondary": "#ff4c00"
+  },
+  "nhl-23": {
+   "primary": "#003e7e",
+   "secondary": "#008752"
+  },
+  "nhl-24": {
+   "primary": "#fc4c02",
+   "secondary": "#000000"
+  },
+  "nhl-25": {
+   "primary": "#20864c",
+   "secondary": "#000000"
+  },
+  "nhl-26": {
+   "primary": "#121212",
+   "secondary": "#a2aaad"
+  },
+  "nhl-28": {
+   "primary": "#00788a",
+   "secondary": "#070707"
+  },
+  "nhl-29": {
+   "primary": "#002d62",
+   "secondary": "#e31937"
+  },
+  "nhl-3": {
+   "primary": "#0056ae",
+   "secondary": "#e51937"
+  },
+  "nhl-30": {
+   "primary": "#124734",
+   "secondary": "#ae122a"
+  },
+  "nhl-4": {
+   "primary": "#fe5823",
+   "secondary": "#000000"
+  },
+  "nhl-5": {
+   "primary": "#000000",
+   "secondary": "#fdb71a"
+  },
+  "nhl-52": {
+   "primary": "#002d62",
+   "secondary": "#c41230"
+  },
+  "nhl-54": {
+   "primary": "#344043",
+   "secondary": "#b4975a"
+  },
+  "nhl-55": {
+   "primary": "#000d33",
+   "secondary": "#a3dce4"
+  },
+  "nhl-6": {
+   "primary": "#231f20",
+   "secondary": "#fdb71a"
+  },
+  "nhl-68": {
+   "primary": "#000000",
+   "secondary": "#7ab2e1"
+  },
+  "nhl-7": {
+   "primary": "#00468b",
+   "secondary": "#fdb71a"
+  },
+  "nhl-8": {
+   "primary": "#c41230",
+   "secondary": "#013a81"
+  },
+  "nhl-9": {
+   "primary": "#dd1a32",
+   "secondary": "#b79257"
+  }
+ }
+}
