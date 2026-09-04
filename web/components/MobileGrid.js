@@ -42,6 +42,8 @@ import {
   CAP_TINT,
 } from '../lib/gridmodel.js';
 import { splitOverlaps } from '../lib/overlap.js';
+// Moved to lib so the listings card can measure with the same canvas and the same faces.
+import { useTextMeasurer } from '../lib/useTextMeasurer.js';
 import { teamLogoUrl, teamLogoDarkUrl, sportMarkUrl, SPORT_LABEL } from '../lib/config.js';
 import { markStyle, hasMark } from '../lib/marks.js';
 import { etTime, longDay } from '../lib/format.js';
@@ -59,34 +61,6 @@ const SEAM_PX = 30; // the dashed cut occupies this much of the axis (M3)
 // than the single global value B5 shipped. See the note at the cap.
 
 
-/** Text measurement in the REAL fonts - M2 requires the widest line be measured, not estimated. */
-function useTextMeasurer() {
-  const ctxRef = useRef(null);
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    const canvas = document.createElement('canvas');
-    ctxRef.current = canvas.getContext('2d');
-    let cancelled = false;
-    const done = () => !cancelled && setReady(true);
-    if (document.fonts?.ready) document.fonts.ready.then(done, done);
-    else done();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return useMemo(
-    () => ({
-      ready,
-      measure(text, font) {
-        const ctx = ctxRef.current;
-        if (!ctx) return (text || '').length * 8;
-        ctx.font = font;
-        return ctx.measureText(text || '').width;
-      },
-    }),
-    [ready]
-  );
-}
 
 /**
  * The record run beside a name (contract v1.1). `games.home_record` / `away_record` are the CFB

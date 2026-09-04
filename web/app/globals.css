@@ -579,8 +579,15 @@ input[type='search'] {
 /* C2: the record, beside the name on line 1. flex 0 0 auto - it never shrinks and never wraps; it is
    four to eight characters, and the name beside it is the thing with room to give. Baseline-ish
    alignment comes free from .tl1's align-items:center. */
+/* The record YIELDS to the name (prompt 42). The component drops it from the flow entirely when the
+   name needs its room - visibility:hidden would keep the box and the gap and concede nothing - so
+   this shrink is the safety net beneath that decision, not the mechanism: if anything unexpected
+   overruns the row, the record is what clips rather than the team name. */
 .tl1-rec {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--dim);
   font-size: 11.5px;
   font-weight: 500;

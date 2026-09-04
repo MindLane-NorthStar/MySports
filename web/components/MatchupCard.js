@@ -22,10 +22,13 @@
 //
 // The venue line stays at the foot of the body, under both teams.
 
+import { useRef } from 'react';
 import { etTime, teamColor, dayParts, slotContent } from '../lib/format.js';
 import { teamLogoDarkUrl, markUrl } from '../lib/config.js';
 import { showsMark } from '../lib/marks.js';
 import { standingParts, standingFor, rankFor } from '../lib/standings.js';
+import { useTextMeasurer, useElementWidth } from '../lib/useTextMeasurer.js';
+import { fitNameAndRecord } from '../lib/cardGeometry.js';
 
 // STACK_H (54 = 22 + 16 + 16) is gone with markStyle(): the network mark is no longer sized against
 // the three-line stack, it is fitted to a fixed box per breakpoint in CSS.
@@ -35,13 +38,26 @@ export function cardName(team, fallbackId) {
   return team?.display_name || team?.short_name || team?.canonical_name || team?.abbreviation || fallbackId || 'TBD';
 }
 
-/** Tiered shrink BEFORE truncation: a long name gets smaller type, not an ellipsis. */
+/**
+ * The FIRST-PAINT size only. The real decision is fitNameAndRecord(), measured against the room the
+ * row actually has; this is what renders before that measurement exists (server output, and the tick
+ * before the fonts resolve), so it stays a cheap character-count guess.
+ *
+ * Character count is why prompt 42 existed: it cannot know that "South Alabama" is thirteen
+ * characters and still needs 110px in the 81px a 390px card has. Kept, exported and tested as the
+ * fallback it now is - not as the rule.
+ */
 export function nameSize(name) {
   const n = (name || '').length;
   if (n > 19) return 11;
   if (n > 13) return 12.5;
   return 15;
 }
+
+/** The face `.tl1 b` paints in, as a canvas font shorthand. Weight and family match the stylesheet. */
+const NAME_FONT = (px) => `600 ${px}px Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+/** `.tl1-rec` is 11.5px/500 tabular; its width decides whether the name can afford to keep it. */
+const REC_FONT = "500 11.5px Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
 /**
  * ONE COLUMN PER TEAM - line 1 (logo + name), line 2 (record + standing), line 3 (MLB probable).
@@ -55,7 +71,8 @@ export function nameSize(name) {
  * The column is `flex: 0 1 auto; min-width: 0`, so the '@' still hugs: the stack is only as wide as
  * its content, and the two stacks close around the '@' rather than sitting in fixed halves.
  */
-function TeamStack({ team, teamId, sport, standings, rankings, season, week, probable, showProbable }) {
+function TeamStack({ team, teamId, sport, standings, rankings, season, week, probable, showProbable,
+                    rowWidth, measure }) {
   const name = cardName(team, teamId);
   const id = team?.id || teamId;
   const row = standings ? standingFor(standings, id, season) : null;
@@ -63,14 +80,24 @@ function TeamStack({ team, teamId, sport, standings, rankings, season, week, pro
   // The POLL travels with the number because line 2 prints it - "AP #14 · Big Ten", not "#14".
   const ranked = sport === 'cfb' && rankings ? rankFor(rankings, id, season, week) : null;
   const { record, rest } = standingParts(row, sport, team?.conference?.name, ranked);
+
+  // THE NAME OUTRANKS THE RECORD (prompt 42), and both decisions are measured rather than guessed.
+  // Until the row has been measured - the server pass, and the tick before the fonts resolve - fall
+  // back to the old character-count size, which useLayoutEffect-timing corrects before paint.
+  const fit = rowWidth > 0 && measure
+    ? fitNameAndRecord(measure, name, record ? measure(record, REC_FONT) : 0, rowWidth, NAME_FONT)
+    : { px: nameSize(name), showRecord: Boolean(record), truncates: false };
+
   return (
     <div className="tcol">
       <div className="tl1">
         <img src={teamLogoDarkUrl(id)} alt="" loading="lazy" />
-        <b style={{ fontSize: `${nameSize(name)}px` }}>{name}</b>
-        {/* C2: the record joins the name. It does not shrink with the name - it is short, and a
-            squeezed "70-71" would be unreadable long before a squeezed team name is. */}
-        {record ? <span className="tl1-rec">{record}</span> : null}
+        <b style={{ fontSize: `${fit.px}px` }}>{name}</b>
+        {/* The record is DROPPED FROM THE FLOW when the name needs its room, never hidden in place:
+            visibility:hidden would keep the box and the gap, so it would concede nothing. C2's
+            reasoning stands where there is room - a squeezed "70-71" reads worse than a squeezed
+            name - which is exactly why the concession is all-or-nothing rather than a shrink. */}
+        {record && fit.showRecord ? <span className="tl1-rec">{record}</span> : null}
       </div>
       {/* Absent means ABSENT, per line: no blank row is reserved for anything that does not exist. */}
       {rest ? <div className="tcol-rec">{rest}</div> : null}
@@ -109,6 +136,11 @@ export function favourite(game) {
 }
 
 export default function MatchupCard({ game, standings, rankings, showDay = false, onOpen }) {
+  // One measurement per card, shared by both team stacks: `.tl1` spans the body track, so the room
+  // the name has is the body's width less the logo, the gaps and whatever the record wants.
+  const bodyRef = useRef(null);
+  const bodyWidth = useElementWidth(bodyRef);
+  const { measure } = useTextMeasurer();
   const { home, away, sport } = game;
   const b = cardBroadcast(game);
   // Just the URL. The mark's box is CSS now, per breakpoint, so the card never computes hf.
@@ -139,13 +171,14 @@ export default function MatchupCard({ game, standings, rankings, showDay = false
         ) : null}
       </div>
 
-      <div className="mbody">
+      <div className="mbody" ref={bodyRef}>
         {/* the '@' sits between the away name's last character and the home logo - content flow,
             never a fixed centre column */}
         <div className="duel hug">
           <TeamStack
             team={away} teamId={game.away_team_id} sport={sport} standings={standings}
             rankings={rankings} season={game.season} week={game.week}
+            rowWidth={bodyWidth} measure={measure}
             probable={game.probable_away_pitcher} showProbable={isMlb}
           />
           {/* NOTHING between the stacks on an ordinary game - away-above-home carries it, and Joe
@@ -159,6 +192,7 @@ export default function MatchupCard({ game, standings, rankings, showDay = false
           <TeamStack
             team={home} teamId={game.home_team_id} sport={sport} standings={standings}
             rankings={rankings} season={game.season} week={game.week}
+            rowWidth={bodyWidth} measure={measure}
             probable={game.probable_home_pitcher} showProbable={isMlb}
           />
         </div>

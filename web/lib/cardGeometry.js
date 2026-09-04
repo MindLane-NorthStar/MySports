@@ -65,3 +65,73 @@ export function forWidth(width) {
     gap: SLOT.gap[key],
   };
 }
+
+// ---------------------------------------------------------------- the team name's room (prompt 42)
+//
+// The card's fit order now mirrors the grid's. The PC contract §3 states the grid's as
+// "shrink the whole line to keep the record -> drop the record -> shrink the name alone", and the
+// card had neither half of it: the record was `flex: 0 0 auto`, so it took its ~37px whatever the
+// name needed, and the name's tier stepped on CHARACTER COUNT rather than on the room it actually
+// had. "South Alabama" is thirteen characters, so it rendered at 15px and needed 110px in 81px.
+//
+// Measured at 390px over the four loaded days, 206 team lines: 70 truncated. Width-measured tiers
+// alone take that to 16, the record yielding alone takes it to 58, and the two together to 3.
+
+/** The three sizes the name may take, largest first. Unchanged; only how one is chosen has moved. */
+export const NAME_TIERS = [15, 12.5, 11];
+
+/** The logo box and the flex gap inside `.tl1`, which the name has to share the row with. */
+export const NAME_ROW = { logo: 20, gap: 7 };
+
+/**
+ * The largest tier whose rendered width fits `avail`, or the smallest tier when none does.
+ *
+ * Returns `{ px, fits }` - `fits: false` means even 11px overruns, so the name will ellipsis and the
+ * caller has already conceded everything it can. `measure` is the canvas measurer from
+ * useTextMeasurer; `font` is a CSS font shorthand builder taking the size in px.
+ */
+export function fitNameTier(measure, name, avail, font, letterSpacing = 0) {
+  const text = String(name || '');
+  if (!measure || !(avail > 0)) return { px: NAME_TIERS[0], fits: true };
+  for (const px of NAME_TIERS) {
+    // measureText excludes letter-spacing, so it is added per character where the face carries it.
+    const w = measure(text, font(px)) + letterSpacing * px * text.length;
+    if (w <= avail) return { px, fits: true };
+  }
+  return { px: NAME_TIERS[NAME_TIERS.length - 1], fits: false };
+}
+
+/**
+ * How much of the row is left for the name, with and without the record beside it.
+ *
+ * `.tl1` is a flex row of logo, name and optionally record, with one gap between each pair - so the
+ * record costs its own width AND a second gap, which at 390px is the difference between 81px of room
+ * and 37px.
+ */
+export function nameRoom(rowWidth, recordWidth) {
+  const withoutRecord = rowWidth - NAME_ROW.logo - NAME_ROW.gap;
+  return {
+    withoutRecord,
+    withRecord: recordWidth > 0 ? withoutRecord - NAME_ROW.gap - recordWidth : withoutRecord,
+  };
+}
+
+/**
+ * The whole concession, in one pure decision: what size the name takes and whether the record
+ * survives beside it.
+ *
+ * Order, least-visible first: keep both and step the name down 15 -> 12.5 -> 11 while it still fits
+ * beside the record; only when no tier fits does the record go; only when no tier fits WITHOUT the
+ * record does the name truncate. A line therefore never shows a shortened name next to a full
+ * record, which was the old behaviour and the wrong way round.
+ *
+ * THE RECORD IS DROPPED FROM THE FLOW, NOT HIDDEN. `visibility: hidden` keeps the box and its gap,
+ * so it would concede nothing at all - the 44px it occupies is the entire point of dropping it.
+ */
+export function fitNameAndRecord(measure, name, recordWidth, rowWidth, font, letterSpacing = 0) {
+  const room = nameRoom(rowWidth, recordWidth);
+  const keep = fitNameTier(measure, name, room.withRecord, font, letterSpacing);
+  if (keep.fits) return { px: keep.px, showRecord: true, truncates: false };
+  const drop = fitNameTier(measure, name, room.withoutRecord, font, letterSpacing);
+  return { px: drop.px, showRecord: false, truncates: !drop.fits };
+}
