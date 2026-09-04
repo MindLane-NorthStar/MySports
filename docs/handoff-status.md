@@ -1,14 +1,15 @@
-# MySports — Handoff Status (post-prompt-28, 2026-09-03)
+# MySports — Handoff Status (post-prompt-29, 2026-09-03)
 
 **This file now lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
 Read first for any session picking up MySports. Memory `/areas/mysports.md` + `/areas/mysports-build-log.md` + `/areas/mysports-ui-repair.md` carry the compressed truth. Companions: **`docs/enhancement-register.md`** — the repo copy is the source (prompt 26); §1–§13 are still only in the Claude project and Joe is supplying them, so check there before re-raising ANY decision, **`docs/feature-study/05-home-page-decisions.md` (D1–D6, the D3 amendment, deployment facts, E5, and §9 NETWORK TBD — BINDING)**, `docs/rendering-contract.md` v1.6.5, `docs/rendering-contract-mobile.md` (Addendum v1.1), `claude/program-card-design-v1.md`.
 
 ## Repo state
-main, HEAD **99bda44**. **200 Python tests OK (skipped=1)**, **146/146 JS unit tests**, smoke **30/30**, qa-shots behavioural assertions **8/8**. Tree clean apart from always-untracked `assets/` and `artifacts/`.
+main, HEAD **9c374c8**. **200 Python tests OK (skipped=1)**, **162/162 JS unit tests**, smoke **30/30**, qa-shots behavioural assertions **8/8**. Tree clean apart from always-untracked `assets/` and `artifacts/`.
 
 **Smoke 29/30 is CLOSED.** The `generated_grids` bare-key failure was fixed in prompt 22 by standardising on bare keys with consumers joining `ASSET_BASE_URL`.
 
+Prompt 29: `9c374c8` the card's right slot becomes a priority ladder, contract v1.6.6 (exceptions now outrank odds; winner-first score; TIED; the dash replaces Sched).
 Prompt 28: `25ba786` sport tiles become fixed soft-cornered squares with marks filling the box (register §15) → `99bda44` banner inset absorbs the artwork's 18px headroom.
 Prompt 27: `bb7b73f` the three authorities land in the repo, §11 scoped to Today → `0e3e336` YOUR TEAMS → grid → bands on `/` (05 §11 built) → `5f43dd5` empty states pronounce the sport once.
 Prompt 26: `ab291b5` count line / mobile order / chip inversion ruled → `ac5b8c9` active chip inverted (charcoal + gold border) → `ceb3fdf` count line becomes airing/TBD/unavailable → `d2777fa` WWE + UFC empty copy → `ba05819` iOS standalone (black-translucent + safe-area) → `e9100cb` Weeks chips shortened, chip marks 20px.
@@ -74,3 +75,4 @@ This is **ruled**: `docs/feature-study/05-home-page-decisions.md` **§9 — NETW
 20 **Never edit a source file with a bare repeated string replace.** Prompt 22 corrupted `web/lib/offservice.js` that way and prompt 20 corrupted `data/render_policies.json`. Use line-anchored surgery or a parser, and assert only the intended region changed.
 21 ~~From the bridge shell, `git diff --ignore-cr-at-eol` is the only honest tree check.~~ **RETIRED — the condition it waited on was met.** `f15449f` put `.js .mjs .jsx .css .html` in `.gitattributes`, so a plain `git diff` now tells the truth from either OS. Kept as a numbered stub so rules are never renumbered under a session that memorised them.
 22 **Before asserting what a component does, read the component and cite file and line — never the contract document that describes it.** Three prompts have shipped or nearly shipped a wrong premise this way: `bootstrap_season.yml` was believed to load a season when it loaded only teams; prompt 24 stage 4 was written on the premise that no-broadcast games vanished from the phone grid, when `MobileGrid.js` had always given them M7 cards; and register §13 justified the scrolling chip row on the claim that `.chiprow` already sets `overflow-x:auto`, which is true only of `docs/feature-study/mockups/home-page-candidates.html:16` and never of `web/app/globals.css:231`. A contract says what a component SHOULD do; only the file says what it DOES.
+23 **When a change alters anything the locked reference implements, `docs/design/mobile_demo.html` changes in the same commit.** A reference that lags the app stops being an authority and becomes a second opinion. Prompt 22 repaired nine findings that were all the same failure - shipped code drifting from a reference nobody re-read - prompt 25 nearly shipped a fifth chip into a wrapping row for the same reason, and prompt 29 found the reference still carrying `--faint: #6A7078`, a value prompt 25 had replaced for failing AA.
