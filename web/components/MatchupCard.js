@@ -71,14 +71,9 @@ export function cardBroadcast(game) {
   return rows.find((b) => b.is_primary) || rows.find((b) => b.delivery_surface === 'LINEAR') || rows[0];
 }
 
-function networkText(game, b) {
-  if (b?.network?.canonical_name) return b.network.canonical_name;
-  if (b?.label) return b.label;
-  if (game.network_status === 'tbd') return 'Network TBD';
-  if (game.network_status === 'no_linear_telecast') return 'No linear telecast';
-  if (game.network_status === 'stream_exclusive') return 'Streaming exclusive';
-  return 'Not on your services';
-}
+// networkText() lived here and is gone with A3: it was the only caller's only use, and it carried
+// the 'No linear telecast' string that prompt 24 flagged as a false certainty on games with no
+// broadcast row at all. The venue replaces it, so both go together.
 
 /** The favoured side, from the moneylines when present and the (home) spread otherwise. */
 export function favourite(game) {
@@ -141,7 +136,11 @@ export default function MatchupCard({ game, standings, showDay = false, onOpen }
 
         {/* grey network text under EVERY matchup, mark or no mark */}
         <div className="mnet">
-          <span className="mnet-text">{networkText(game, b)}</span>
+          {/* A3, Joe's ruling: the bottom line is the VENUE, not the network. The network MARK
+              still renders in its own column two places right, which is what made this text
+              redundant. Nothing renders when a game has no venue row - measured, that is 0 of
+              1379 loaded games, so the blank case is theoretical rather than common. */}
+          {game.venue?.name ? <span className="mnet-text">{game.venue.name}</span> : null}
         </div>
       </div>
 
