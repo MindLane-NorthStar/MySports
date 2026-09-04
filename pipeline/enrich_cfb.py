@@ -31,6 +31,19 @@ Null-safety, stated precisely because the two halves pull against each other:
   * **Records only ever accumulate**, so a team absent from the records block keeps what it has
     (coalesce). A present team is overwritten.
 
+**`away_rank` IS written, and the lopsided counts are the slate, not a bug** (investigated 2026-09-04,
+recorded so nobody re-opens it). 2026 week 1 has `home_rank` on 23 of 99 games and `away_rank` on 3,
+which looks like a one-sided loader. It is not: RANKS_SQL sets both columns from two symmetric rank_of()
+calls, and cross-checking every week-1 game against `mysports.rankings` - a table loaded from a wholly
+separate path (pipeline/rankings.py) - gives **exactly 23 AP-ranked home teams and exactly 3 AP-ranked
+away teams, with zero games ranked in the poll but null in the column, on either side.** Week 1 is
+ranked teams hosting; that is all this is.
+
+The specific counter-example that prompted the check, Clemson at LSU with a null away rank, is also
+correct: **Clemson is not in the 2026 AP top 25.** It appears only in the Coaches poll at #23, and
+rank_of() deliberately never reads Coaches (Playoff Committee, else AP). A null there is the honest
+answer, not a miss.
+
 Windows-portable: no %-strftime, every open() passes encoding=, ASCII console, the DSN is never printed.
 """
 from __future__ import annotations
