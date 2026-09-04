@@ -59,9 +59,10 @@ function TeamStack({ team, teamId, sport, standings, rankings, season, week, pro
   const name = cardName(team, teamId);
   const id = team?.id || teamId;
   const row = standings ? standingFor(standings, id, season) : null;
-  // CFB only: the poll rank, CFP before AP. Every other sport passes null and never reaches a poll.
-  const rank = sport === 'cfb' && rankings ? rankFor(rankings, id, season, week) : null;
-  const { record, rest } = standingParts(row, sport, team?.conference?.name, rank);
+  // CFB only: { poll, rank }, CFP before AP. Every other sport passes null and never reaches a poll.
+  // The POLL travels with the number because line 2 prints it - "AP #14 · Big Ten", not "#14".
+  const ranked = sport === 'cfb' && rankings ? rankFor(rankings, id, season, week) : null;
+  const { record, rest } = standingParts(row, sport, team?.conference?.name, ranked);
   return (
     <div className="tcol">
       <div className="tl1">

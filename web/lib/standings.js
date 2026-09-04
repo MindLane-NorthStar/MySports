@@ -8,7 +8,7 @@
 //   nhl  55-16-11  /  121 pts · 1st Atlantic        (no games back - the NHL does not publish one)
 //   nba  52-30  /  4th East · 2.0 GB                (division_rank carries the CONFERENCE seed)
 //   nfl  3-0  /  1st AFC East        , or just  AFC North  before anyone has played
-//   cfb  8-1  /  #7                  , the CFP rank if there is one, else AP, else the conference
+//   cfb  8-1  /  AP #14 · Big Ten     , the poll and its rank BESIDE the conference, not instead of it
 //
 // **ABSENT MEANS ABSENT, on each line separately** (Joe, 2026-09-04). A record that does not exist
 // renders nothing - and a record of 0-0 does not exist, it is the absence of a season. But a club with
@@ -71,7 +71,7 @@ function gamesBack(row) {
  *   nfl, nhl   place in DIVISION
  *   nba        place in CONFERENCE - division_rank carries the conference seed (0008, and 0011 seeds
  *              the two conference rows shortGroup() folds to East / West)
- *   cfb        CFP rank, else AP rank, else place in conference, else the conference name
+ *   cfb        the poll rank AND the conference, joined - see below
  *   mlb        unchanged: place in division, then games back
  *
  * **NHL keeps its points.** The spec says games back, but the NHL does not publish it - games_back is
@@ -85,11 +85,26 @@ function gamesBack(row) {
  * **A record of 0-0 is not a record.** "If a record does not yet exist, display nothing until one
  * does" - and before week 1 every NFL club reads 0-0, which is the absence of a season, not a start.
  *
- * `rank` is the CFB poll rank from rankFor(), passed in rather than looked up so this stays pure and
- * so the card cannot accidentally read games.away_rank, which carries no poll and cannot honour the
- * CFP-before-AP precedence.
+ * **CFB IS A COMBINATION, NOT AN EITHER/OR** (Joe's clarification, 2026-09-04, on the live Fresno
+ * State at USC card: *"the line below USC should read `AP #14 - Big Ten` - NOT simply `#14`"*). The
+ * rank and the conference are two independent facts and each renders when it exists:
+ *
+ *     CFP-ranked, placed        CFP #4 · 3rd ACC
+ *     AP-ranked, placed         AP #14 · 2nd Big Ten
+ *     AP-ranked, not placed     AP #14 · Big Ten          <- every ranked card in week 1
+ *     unranked, placed          3rd ACC
+ *     unranked, not placed      Big Ten
+ *
+ * The earlier reading - rank INSTEAD of conference - was a fair reading of the written spec, which
+ * listed these as alternatives, so this is a clarification of the rule rather than a defect in the
+ * code that implemented it. CFP still outranks AP when both exist; only the label is new, and it is
+ * why `ranked` carries the poll rather than a bare integer.
+ *
+ * `ranked` is `{ poll, rank }` from rankFor(), or null. It is passed in rather than looked up so this
+ * stays pure, and so the card cannot accidentally read games.away_rank, which carries no poll at all
+ * and therefore cannot honour the CFP-before-AP precedence OR print the label.
  */
-export function standingParts(row, sport, groupName, rank = null) {
+export function standingParts(row, sport, groupName, ranked = null) {
   const group = shortGroup(groupName);
   const record = row ? realRecord(row, sport) : null;
   const place = row ? ordinal(row.division_rank) : null;
@@ -97,8 +112,10 @@ export function standingParts(row, sport, groupName, rank = null) {
 
   let rest = null;
   if (sport === 'cfb') {
-    // A strict precedence, not a combination: one of these answers and the rest stay quiet.
-    rest = Number.isInteger(rank) && rank > 0 ? `#${rank}` : placed || group || null;
+    // Two independent facts joined, each rendering only when it exists. The placement is preferred
+    // over the bare conference name exactly as it is for every other sport - being ranked does not
+    // stop a club also having a place in its conference table.
+    rest = [rankLabel(ranked), placed || group].filter(Boolean).join(' · ') || null;
   } else if (sport === 'nhl') {
     const pts = Number.isInteger(row?.points) ? `${row.points} pts` : null;
     rest = [pts, placed || group].filter(Boolean).join(' · ') || null;
@@ -116,8 +133,8 @@ export function standingParts(row, sport, groupName, rank = null) {
  * the surface that needed the split, and it calls standingParts() instead. Both read the same rules
  * from the same place, so the two surfaces cannot drift.
  */
-export function standingLine(row, sport, groupName, rank = null) {
-  const { record, rest } = standingParts(row, sport, groupName, rank);
+export function standingLine(row, sport, groupName, ranked = null) {
+  const { record, rest } = standingParts(row, sport, groupName, ranked);
   return [record, rest].filter(Boolean).join(' · ') || null;
 }
 
@@ -160,16 +177,29 @@ export function indexRankings(rows) {
 }
 
 /**
- * The rank to show for one club in one week: CFP if the committee has ranked them, else AP, else null.
- * Null means UNRANKED and the caller renders nothing - it never falls through to a lower poll or to a
- * previous week, because "unranked this week" and "we have no poll for this week" must not look alike.
+ * Which poll ranks this club this week, and where: `{ poll, rank }` - CFP if the committee has ranked
+ * them, else AP, else null.
+ *
+ * **It returns the POLL with the number.** It used to return a bare integer, which threw away the one
+ * thing the card now has to print: `#14` cannot be labelled `AP #14` by a caller that was never told
+ * which poll answered. The precedence was always here; only the identity was being discarded.
+ *
+ * Null still means UNRANKED, and it never falls through to a lower poll or to a previous week, because
+ * "unranked this week" and "we have no poll for this week" must not look alike.
  */
 export function rankFor(index, teamId, season, week) {
   if (!index || teamId == null) return null;
   for (const poll of ['CFP', 'AP']) {
     const row = index.get(`${teamId}|${season}|${week}|${poll}`);
     const rank = row?.rank;
-    if (Number.isInteger(rank) && rank > 0) return rank;
+    if (Number.isInteger(rank) && rank > 0) return { poll, rank };
   }
   return null;
+}
+
+/** `{ poll: 'AP', rank: 14 }` -> 'AP #14'. Anything malformed renders nothing rather than half a label. */
+export function rankLabel(ranked) {
+  const rank = ranked?.rank;
+  if (!ranked?.poll || !Number.isInteger(rank) || rank <= 0) return null;
+  return `${ranked.poll} #${rank}`;
 }
