@@ -154,9 +154,13 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 /* ---------- mobile-optimized grid: airing windows only ---------- */
 .mgwrap{margin:0 12px 14px; border:1px solid var(--line-soft); border-radius:6px; background:#141414; overflow-x:auto; -webkit-overflow-scrolling:touch}
 .mgcanvas{position:relative; font-family:var(--body)}
-.mgaxis{position:relative; height:22px; border-bottom:1px solid var(--line-soft)}
+/* B2: the axis rule and the between-network rule both stepped up, so the reference keeps showing
+   what the app ships. Joe asked for the lines between networks to be more distinguishable; at
+   1px over this background they were a hairline you inferred rather than saw. The app carries the
+   same change on .mgrid-axis and .mgrid-row via the --line-grid token. */
+.mgaxis{position:relative; height:22px; border-bottom:2px solid #4a505a}
 .mgaxis .tick{position:absolute; top:4px; transform:translateX(-50%); font-family:var(--disp); font-weight:600; font-size:10px; letter-spacing:.06em; color:var(--faint); white-space:nowrap}
-.mgrow{position:relative; height:68px; border-bottom:1px solid #1d1f23}
+.mgrow{position:relative; height:68px; border-bottom:2px solid #4a505a}
 .mgrow:last-child{border-bottom:0}
 .mglab{position:absolute; left:0; top:0; z-index:5; width:58px; height:68px; display:flex; align-items:center; justify-content:center;
   background:linear-gradient(90deg,#191b1e 78%,rgba(25,27,30,0)); font-family:var(--disp); font-weight:600; font-size:9.5px; letter-spacing:.04em; color:var(--dim); text-align:center; line-height:1.1; padding:0 4px}

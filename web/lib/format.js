@@ -56,6 +56,26 @@ export function shortDay(day) {
   return day ? DAY_SHORT.format(new Date(`${day}T00:00:00Z`)) : '';
 }
 
+const WEEKDAY_LONG = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long' });
+
+/**
+ * B4: the listings date stamp as TWO parts - { weekday: 'Wednesday', monthDay: 'Sep 2' }.
+ *
+ * shortDay() renders 'Wed, Sep 2' as one string, and in the card's 56px date column that wrapped
+ * wherever it ran out of room - which put the bare day NUMBER on its own second line. Joe's ruling is
+ * that the break should be deliberate and in the right place: the full weekday on line 1, the month
+ * and date on line 2. Returning the parts rather than a joined string is what lets the card do that
+ * without re-parsing a formatted date.
+ *
+ * shortDay() stays: /weeks still wants the one-line form for its day headings, where there is room.
+ */
+export function dayParts(day) {
+  if (!day) return null;
+  const d = new Date(`${day}T00:00:00Z`);
+  if (!Number.isFinite(d.getTime())) return null;
+  return { weekday: WEEKDAY_LONG.format(d), monthDay: MONTH_DAY.format(d) };
+}
+
 /** 'Aug 29 - Sep 7, 2026' for a derived span. */
 export function daySpanLabel(start, end) {
   if (!start) return '';

@@ -14,7 +14,7 @@
 // The '@' HUGS the away name: it sits in the content flow between the away column and the home logo,
 // not in a fixed centre column, so the matchup reads as one sentence rather than a table row.
 
-import { etTime, teamColor, shortDay, slotContent } from '../lib/format.js';
+import { etTime, teamColor, dayParts, slotContent } from '../lib/format.js';
 import { teamLogoDarkUrl } from '../lib/config.js';
 import { markStyle, showsMark } from '../lib/marks.js';
 import { standingLine, standingFor } from '../lib/standings.js';
@@ -112,7 +112,15 @@ export default function MatchupCard({ game, standings, showDay = false, onOpen }
 
       <div className="mtime">
         {etTime(game.canonical_kickoff_at_utc, game.kickoff_status)}
-        {showDay ? <span className="mtime-day">{shortDay(game.viewing_day)}</span> : null}
+        {/* B4: two deliberate lines - WEDNESDAY over SEP 2. As one string in a 56px column this
+            wrapped at whatever character ran out of room, which stranded the date NUMBER alone on
+            line two. */}
+        {showDay && dayParts(game.viewing_day) ? (
+          <span className="mtime-day">
+            <span className="mtime-weekday">{dayParts(game.viewing_day).weekday}</span>
+            <span className="mtime-date">{dayParts(game.viewing_day).monthDay}</span>
+          </span>
+        ) : null}
       </div>
 
       <div className="mbody">

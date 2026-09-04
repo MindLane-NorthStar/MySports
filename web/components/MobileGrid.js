@@ -278,9 +278,18 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
       <div className="mgrid-head">
         <h3>
           {sportMarkUrl(sport) ? <img className="mgrid-mark" src={sportMarkUrl(sport)} alt="" /> : null}
-          <span>
-            {sport ? SPORT_LABEL[sport] || sport.toUpperCase() : 'All Sports'} Broadcasts ·{' '}
-            {longDay(day).replace(/,/, '')} · {onGrid} {onGrid === 1 ? 'GAME' : 'GAMES'}
+          {/* B1: TWO LINES, split deliberately rather than left to wrap. As one run of text this
+              broke mid-date - "MLB Broadcasts - Saturday September 5," then "2026 - 3 games" - which
+              is the worst place it could break, because a year on its own line reads as a separate
+              fact. The line that names the grid and the line that dates it are different kinds of
+              information, so they get a line each and the break stops being the browser's choice. */}
+          <span className="mgrid-headlines">
+            <span className="mgrid-line1">
+              {sport ? SPORT_LABEL[sport] || sport.toUpperCase() : 'All Sports'} Broadcasts
+            </span>
+            <span className="mgrid-line2">
+              {longDay(day).replace(/,/, '')} · {onGrid} {onGrid === 1 ? 'GAME' : 'GAMES'}
+            </span>
           </span>
         </h3>
         {/* The count moved into the heading, so this keeps only what the heading cannot say: the

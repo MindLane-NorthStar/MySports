@@ -61,6 +61,13 @@
 
   --line: #3a3f47;
   --line-soft: #2b2f35;
+  /* B2, grid only. Joe: "more distinguishable horizontal dividing lines between networks".
+     The grid ran its network rule at --line-soft (#2b2f35) over --panel (#23262b) - about
+     eight points of lightness, which is a hairline you infer rather than see. This is one
+     clear step above --line, and it is a SEPARATE token so the grid can be firmer without
+     dragging every card border on the site up with it. The grid is a dense surface; the rest
+     of the app is not, and over-weighting those would make them noisier, not clearer. */
+  --line-grid: #4a505a;
 
   --ink: #f2f2f0;
   --dim: #9aa0a8;
@@ -448,14 +455,37 @@ input[type='search'] {
   font-variant-numeric: tabular-nums;
 }
 
+/* B4: WEDNESDAY over SEP 2, two lines by construction rather than by wrapping.
+ *
+ * THE FACE IS THE FIX, NOT THE SIZE. The plan was to shrink this text until the longest weekday fit
+ * the 56px column - the column itself cannot widen without taking width back off the matchup that the
+ * last two prompts fought for. Measured in Inter, though, WEDNESDAY needs 74.5px at 11px/0.04em, and
+ * even 9.5px with tighter tracking still needs 60px. Nothing fits 56px until 8.5px, which is too
+ * small to read for a label nobody is looking for.
+ *
+ * Barlow Condensed - already the face of the TIME directly above it in this same column - holds
+ * WEDNESDAY in 50.8px at the original 11px/0.04em, with 5px to spare. So the label keeps its size,
+ * the column keeps its 56px, and the date column becomes typographically one thing instead of a
+ * condensed time over a grotesque date. (Widths measured in the browser across all seven weekdays;
+ * MONDAY is not the constraint, WEDNESDAY is.)
+ *
+ * Height is unchanged: this occupied two lines when it wrapped and occupies two lines now, so no card
+ * grows. */
 .mtime .mtime-day {
-  display: block;
-  font-family: var(--body);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--display);
   font-size: 11px;
   font-weight: 600;
+  line-height: 1.15;
   letter-spacing: 0.04em;
   color: var(--faint);
   text-transform: uppercase;
+}
+
+.mtime-weekday,
+.mtime-date {
+  white-space: nowrap;
 }
 
 /* the duel line. The '@' HUGS the away name - it is in the content flow between the away column and
@@ -875,10 +905,43 @@ input:focus-visible {
   color: var(--ink);
 }
 
+/* B1: the two lines are a COLUMN beside the mark, which is why the mark can span both. The heading
+   is a flex row of exactly two things now - mark, then this stack - rather than a mark and one long
+   run of text that wrapped wherever it ran out of room. min-width:0 so a long sport name shrinks the
+   stack instead of pushing the mark off. */
+.mgrid-headlines {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+/* Line 1 names the grid. It keeps the heading's own type. */
+.mgrid-line1 {
+  white-space: nowrap;
+  line-height: 1.15;
+}
+
+/* Line 2 dates it and counts it. Smaller and dimmer, because the date is the qualifier and the sport
+   is the subject - and small enough that the longest weekday-plus-date-plus-count still holds one
+   line at 360px, which is the whole point of the split. */
+.mgrid-line2 {
+  font-family: var(--body);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
 /* D4: the league mark, sized to the heading it sits in rather than to a fixed pixel count, so it
-   tracks the text if that ever moves. */
+   tracks the text if that ever moves.
+   B1: 2.3em now rather than 1.55em - the heading is two lines tall, and Joe asked for the mark to
+   span their COMBINED height at its current generous size. Still em-based, so it keeps tracking. */
 .mgrid-mark {
-  height: 1.55em;
+  height: 2.3em;
   width: auto;
   flex: 0 0 auto;
 }
@@ -962,7 +1025,11 @@ input:focus-visible {
   left: 0;
   z-index: 3;
   background: var(--panel);
-  border-right: 1px solid var(--line);
+  /* B2 surface 1 of 3: the rail tile's outline. Its vertical edge is here; its horizontal edges come
+     from .mgrid-row's border-bottom, so the three B2 rules together are what draw the tile as a box.
+     box-sizing is border-box globally and the rail is pinned at --rail-w, so going to 2px costs the
+     mark one pixel of content and moves NO geometry - verified: scrollWidth 1073 before and after. */
+  border-right: 2px solid var(--line-grid);
   width: var(--rail-w);
   min-width: var(--rail-w);
   max-width: var(--rail-w);
@@ -971,7 +1038,10 @@ input:focus-visible {
 .mgrid-row {
   display: flex;
   align-items: stretch;
-  border-bottom: 1px solid var(--line-soft);
+  /* B2 surface 2 of 3, and the one Joe named: the line BETWEEN networks. Was 1px --line-soft, which
+     over --panel is roughly invisible. Two pixels of --line-grid instead - a step in weight and a
+     step in colour, taken together because either alone still read as a hairline at this density. */
+  border-bottom: 2px solid var(--line-grid);
 }
 
 .mrail-cell {
@@ -1042,7 +1112,11 @@ input:focus-visible {
 .mgrid-axis {
   display: flex;
   align-items: stretch;
-  border-bottom: 1px solid var(--line);
+  /* B2 surface 3 of 3: the rule directly under the start times. It separates the axis from the first
+     network rather than one network from the next, so it carries the same weight as the row rule -
+     a lighter axis under heavier row rules would read as the least important line on the grid, which
+     is backwards. height stays 26px; border-box absorbs the extra pixel. */
+  border-bottom: 2px solid var(--line-grid);
   height: 26px;
 }
 
@@ -1703,8 +1777,22 @@ input:focus-visible {
    only to undo it; the first declaration now stands alone and already says row/baseline/wrap. */
 .offsvc-total{color:var(--dim);font-weight:600}
 .offsvc-pending{color:var(--gold-dim)}
+/* B3: the badge sits over the NETWORK-MARK column, not the card's top-right corner.
+ * At right:8px it was pinned exactly where .mslot draws the favoured team's logo on an odds card,
+ * so on a short card the two occupied the same corner - the overlap Joe reported.
+ *
+ * 66px is measured, not chosen. The card's right padding plus the slot column put .mnet-mark's right
+ * edge a constant 66px in from the row wrapper's right edge at 360, 390 AND 430 - the two right-hand
+ * columns are fixed-width, so only the flexible .mbody absorbs the difference. The badge is 52.2px
+ * wide against a 62px mark column, so it lands inside that column with room either side, and its
+ * right edge stops ~13px clear of .mslot's left edge instead of covering it.
+ *
+ * top:4px, not 6px. The mark is vertically CENTRED in its column, so the clearance above it is
+ * (card height - mark height) / 2 - smallest on a short card carrying a tall mark. 4px keeps the
+ * badge clear at every card height the app renders; 6px left barely half a pixel on the worst case.
+ * Checked across all five sports at all three widths - see the B3 overlap check. */
 .pending-row{position:relative}
-.pending-row::after{content:'MARKET TBD';position:absolute;top:6px;right:8px;z-index:2;pointer-events:none;
+.pending-row::after{content:'MARKET TBD';position:absolute;top:4px;right:66px;z-index:2;pointer-events:none;
   font-family:var(--display);font-weight:600;font-size:10px;letter-spacing:.14em;
   color:var(--gold);background:rgba(27,27,27,.86);
   border:1px solid var(--gold-dim);border-radius:3px;padding:2px 5px 1px}
@@ -1717,8 +1805,10 @@ input:focus-visible {
  * is E5's colour and the two cues must not read as the same thing at a glance. Mutually exclusive
  * with .pending-row by construction, so the two ::after tags can never collide.
  * The cue is on the row WRAPPER; MatchupCard is locked and nothing here reaches inside it. */
+/* Same move as .pending-row, and for the same reason - these two are mutually exclusive by
+ * construction, so they must land in the SAME place or one of them is wrong. */
 .networktbd-row{position:relative}
-.networktbd-row::after{content:'NETWORK TBD';position:absolute;top:6px;right:8px;z-index:2;pointer-events:none;
+.networktbd-row::after{content:'NETWORK TBD';position:absolute;top:4px;right:66px;z-index:2;pointer-events:none;
   font-family:var(--display);font-weight:600;font-size:10px;letter-spacing:.14em;
   color:var(--dim);background:rgba(27,27,27,.86);
   border:1px solid var(--line-soft);border-radius:3px;padding:2px 5px 1px}
