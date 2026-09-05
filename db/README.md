@@ -870,3 +870,70 @@ and 180 is smaller than the window's own 14:00 opening. D1 jumped to FINALS, fou
 **A window cannot close before it opens.** That is a wrap, and it is now read as one. Pinned by two
 tests in `web/test/bandstate.test.mjs`: the wrap case, and an ordinary day still reaching FINALS on
 time.
+
+## NASCAR start times corrected in place — 2026-09-05 (prompt 49 stage 3)
+
+**Approved by Joe, 2026-09-06 ("NASCAR fix is approved"):** a targeted `UPDATE` of `start_at` on
+exactly the 98 NASCAR race-session rows prompt 47 loaded. Nothing else was written.
+Backups first: `artifacts/backups/{programs,game_broadcasts}_2026-09-05T234942Z.csv`
+(4,190 and 2,681 rows).
+
+**The defect**, from prompt 48's report: `cf.nascar.com` publishes `race_date` as a **naive Eastern
+wall clock** and `adapters/common.parse_iso` stamps a naive value UTC, so every race sat 4 hours
+early in EDT and 5 in EST. Prompt 48 fixed the adapter (`77258ff`) and could not fix the rows,
+because `start_at` is part of the race-session natural key and a corrected time reads as a different
+race — the moved-twin guard skipped all 98 on the runner, by design.
+
+### How each row was matched — and why it is not "matching by start_at"
+
+The loader stored **no race id**: `adapters/nascar.py` carries `race_id` in `_provenance`, and
+`pipeline/load_programs.py`'s `PROGRAM_COLS` does not include it, so it never reached the database.
+`source_url` is per-**series**, not per-race. Title plus series is ambiguous — the two Daytona Duels
+share a title and a day.
+
+So each feed race was matched on `(series, title, THE VALUE THE BUGGY LOADER WOULD HAVE WRITTEN)` —
+the naive wall clock read as UTC. An exact three-part key that disambiguates the Duels (their naive
+times differ, 14:00 and 15:45) and, unlike a fuzzy match, **proves the defect's mechanism on every
+row it touches**. `scripts/fix_nascar_start_times.py`; a row that did not match would have stopped
+the stage.
+
+**98 of 98 stored rows matched 98 of 98 feed races. Zero unmatched either way.**
+
+### The gate, and the two rows that corrected it
+
+Offsets seen: `+4h` and `+5h`. A first gate asserted "+5h in January, February, November and
+December" and **failed two correct rows** — DST 2026 runs **Sunday March 8 to Sunday November 1**, so
+the DuraMAX Texas Grand Prix (Mar 1) and the GOVX 200 (Mar 7) are genuinely EST and genuinely +5h.
+The gate now asks `zoneinfo` for the offset at each instant, which cannot be wrong about a transition
+week.
+
+| | before | after |
+|---|---|---|
+| Cook Out Southern 500 (Darlington) | 2026-09-06 **13:00 ET** | **17:00 ET** |
+| DAYTONA 500 | 2026-02-15 09:30 ET | 14:30 ET |
+| America 250 Florida Duel #1 / #2 | 14:00 / 15:45 ET | 19:00 / 20:45 ET |
+| NASCAR Championship Race | 2026-11-08 10:00 ET | 15:00 ET |
+
+### What else moved: nothing, and it is checksummed rather than asserted
+
+`programs` carries **no column derived from `start_at`** — no `viewing_day`, no stored end;
+`expected_duration_min` is a duration and `postponed_to` is null on all 98. The viewing day is
+derived in the app from `start_at` (`web/lib/programs.js` `viewingDayOf`), so it follows. **None of
+the 98 attached `game_broadcasts` rows carries a `window_start` or `window_end`** — 0 of 0.
+
+| checksum | before | after | unchanged |
+|---|---|---|---|
+| every non-NASCAR-race `programs.start_at` | `ea253df60f16a82e…` | `ea253df60f16a82e…` | **YES** |
+| `viewer_program_eligibility` verdicts | `2112eac7f64f67d7…` | `2112eac7f64f67d7…` | **YES** |
+| `viewer_game_eligibility` verdicts | `1517d6f676eb710b…` | `1517d6f676eb710b…` | **YES** |
+| `game_broadcasts` windows | `5ebe727778017e62…` | `5ebe727778017e62…` | **YES** |
+| NASCAR race sessions | 98 | **98** | — |
+
+**Verified on the page**, not just in the database: `/?day=2026-09-06&sport=racing` renders the list
+card's time column and the grid block's tray as **`5:00 PM`** and `5:00 PM · Darlington Raceway` —
+the feed's value, matching ESPN's `2026-09-06T21:00Z`. Screenshots in
+`artifacts/qa/2026-09-06-nascar-times/`.
+
+**The DAYTONA 500 keeps cf.nascar.com's 2:30 PM ET**, which prompt 48 recorded as a one-hour
+disagreement with ESPN's 1:30 PM. This correction fixes the **timezone** defect only; the source
+disagreement is untouched and still open.
