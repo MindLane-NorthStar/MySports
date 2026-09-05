@@ -49,10 +49,20 @@ def test_offline_cannot_validate_and_says_so_by_not_warning():
 
 # --------------------------------------------------------------------------- the conflict targets
 def test_every_program_type_has_a_natural_key_matching_the_migrations():
-    """These must mirror the partial unique indexes in 0012 and 0013, or a re-run duplicates."""
-    assert CONFLICT["race_session"] == "sport, series, start_at, title"
+    """These must mirror the partial unique indexes in 0012, 0013 and 0015, or a re-run duplicates.
+
+    RACE SESSIONS MOVED TO 0015's KEY, and this guard is what noticed. 0012's
+    `(sport, series, start_at, title)` cannot serve a row whose `series` is NULL, because NULLs are
+    distinct in a unique index - so IndyCar, which runs one series and therefore carries none,
+    duplicated on its second load. 0015 adds `(sport, coalesce(series, ''), start_at, title)` and
+    this is what the loader conflicts on. 0012's index is kept and is still asserted below: it is
+    insufficient, not wrong, and dropping it is not something this run may do.
+    """
+    assert CONFLICT["race_session"] == "sport, (coalesce(series, '')), start_at, title"
+    m15 = (ROOT / "db/migrations/0015_race_session_key_is_null_safe.sql").read_text(encoding="utf-8")
+    assert "(sport, (coalesce(series, '')), start_at, title)" in m15
     m12 = (ROOT / "db/migrations/0012_programs_own_broadcasts.sql").read_text(encoding="utf-8")
-    assert "(sport, series, start_at, title)" in m12
+    assert "(sport, series, start_at, title)" in m12, "0012's index is kept, not dropped"
     m13 = (ROOT / "db/migrations/0013_program_fields_and_studio_shows.sql").read_text(encoding="utf-8")
     for ptype in ("weekly_show", "studio_show", "fight_card", "special_event"):
         assert ptype in CONFLICT

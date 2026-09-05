@@ -557,3 +557,95 @@ states that are facts about a regional window rather than about the profile.
 run's approved write list. They self-heal: the daily `schedule_refresh` NASCAR step re-loads through
 the fixed loader on its natural key, after which a `--programs` reconcile flips them. Two past races
 in History; named here so nobody has to rediscover it.
+
+## 0015 — the race-session natural key survives a NULL series — 2026-09-05 (prompt 48 stage 3)
+
+**Found by loading IndyCar, and it is 0012's own finding in a second place.** 0012 wrote:
+*"NULLs are distinct in a unique constraint, so with game_id null every program broadcast looks new
+and a re-load duplicates all of them."* The same sentence is true of `programs.series`, and the index
+0012 created is the one it is true of:
+
+```sql
+create unique index programs_race_session_uq
+  on programs (sport, series, start_at, title) where program_type = 'race_session';
+```
+
+NASCAR carries a series on every row (`cup` / `oreilly` / `truck`), so 98 races reload cleanly.
+**IndyCar runs one series and carries `series = null`** — register §16 named that trap explicitly, that
+a `racing` series value "would make IndyCar a fourth series alongside NASCAR's Cup, O'Reilly and
+Truck". So every IndyCar row looked new to `ON CONFLICT` and a second load INSERTED. **Measured: two
+runs of the same 18 races produced 36 rows.**
+
+### The DDL, verbatim
+
+```sql
+create unique index if not exists programs_race_session_key_uq
+  on programs (sport, (coalesce(series, '')), start_at, title)
+  where program_type = 'race_session';
+```
+
+Plus a `comment on index`. **0012's index is LEFT IN PLACE** — it is not wrong, only insufficient, and
+dropping it would be a drop this run's approval does not allow. `pipeline/load_programs.py` conflicts
+on the new one, repeating both the expression and the predicate (0012's lesson about partial indexes,
+now also about expression indexes).
+
+### The one row-level write, and why it is in a migration
+
+A unique index cannot be built over duplicate rows, so the 18 second copies **this run's own IndyCar
+load created** had to go first. It is scoped to exactly those — `sport = 'indycar'`, keeping the
+lowest `program_id` of each `(title, start_at)` group — and the migration **asserts** afterwards that
+no non-IndyCar row moved, raising an exception if one did. Their `game_broadcasts` rows follow through
+0012's `on delete cascade`. Backups taken before the load that made them:
+`artifacts/backups/{programs,game_broadcasts}_2026-09-05T205219Z.csv` (3,966 and 2,374 rows).
+
+Dry run and apply both reported: `indycar 36 -> 18 (18 duplicate rows removed); every other sport
+3966 -> 3966`.
+
+## IndyCar 2026 — 2026-09-05 (prompt 48 stage 3)
+
+18 race sessions with a broadcast each, from `indycar.com/Schedule` through `adapters/indycar.py`.
+**Built against 2026 rather than deferred to 2027** — Joe's amendment of 2026-09-05, register §17,
+which supersedes the recommendation in `docs/research/indycar.md` §10 and research-summary-2 §6.
+
+| | |
+|---|---|
+| programs | 3,966 → **3,984** (exactly +18) |
+| by sport | nascar 98, indycar 18 |
+| broadcasts on programs | 98 → **116** |
+| games | 3,868, unchanged |
+| networks | `FOX` 17, `FS1` 1 |
+| eligibility | **116 rows, 0 uncovered, 0 orphans** — every race `eligible` |
+
+**The recorded fetch and a fresh one produced identical row sets** (0 drift either way), and the
+second and third loads reported 18 programs and 18 broadcasts with the totals unmoved — idempotence
+proven after 0015, not assumed.
+
+**Reconcile run id 85**, 116 programs. The game side is provably untouched: the md5 over all 3,868
+game verdicts is `d4fa47cb02ab41427267dfcff1eb8440` before and after, unchanged since stage 1.
+
+### What the cross-check found, and the trap inside it
+
+ESPN's `racing/irl` scoreboard was used to verify every start, the same discipline that caught
+cf.nascar.com. **Do not verify against `leagues[0].calendar`:** its `startDate` is a fixed THREE HOURS
+later than the race on 15 of the 18 entries, and ESPN's own `events[].date` for the same race
+disagrees with its own calendar by exactly that (Monterey is `18:30Z` as an event and `21:30Z` in the
+calendar). A first pass compared against the calendar, reported 18 of 18 races wrong, and would have
+"corrected" a correct adapter into a three-hour error across a whole season.
+
+Against the per-date `events[].date`, **14 of 18 agree to the minute.** The four that differ are
+broadcast-window versus green-flag, not zone errors:
+
+| race | indycar.com | ESPN | note |
+|---|---|---|---|
+| Indianapolis 500 | 10:00 AM ET | 12:00 PM ET | the research doc's "six-hour window from 10 AM" |
+| Arlington | 11:30 AM ET | 12:30 PM ET | the doc names an "Arlington 30 min" pre-race |
+| Washington DC | 11:30 AM ET | 1:00 PM ET | same shape, 90 minutes |
+| Milwaukee race 2 | 6:00 PM ET | — | ESPN lists ONE Milwaukee event that day; the page lists two |
+
+**indycar.com wins on all four**: a TV grid draws the window a viewer tunes to. Recorded so nobody
+"fixes" it later.
+
+**Also worth recording:** the page lists **both** Milwaukee races on Aug 30, where
+`docs/research/indycar.md` §2 says "Milwaukee Aug 29–30" and ESPN's calendar puts race 1 on Aug 29.
+The page is the authority the research verified, so the page is what loaded; the disagreement is a
+watch item, not a silent correction.

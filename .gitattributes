@@ -19,3 +19,11 @@
 *.html  text eol=lf
 .gitignore     text eol=lf
 .gitattributes text eol=lf
+# RECORDED FETCHES ARE BYTES, and are asserted as bytes. tests/fixtures/*.html and *.json hold pages
+# and payloads exactly as a source served them, and their tests pin a sha256 and a byte count so a
+# silent site change fails a test rather than quietly changing what gets loaded. Line-ending
+# normalisation would rewrite those bytes on checkout and break the assertion on any machine but the
+# one that recorded them - so these are excluded from it. `-text` is not "binary": git still stores
+# and diffs them as files, it simply does not touch their line endings.
+tests/fixtures/*.html  -text
+tests/fixtures/*.json  -text

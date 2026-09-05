@@ -71,7 +71,12 @@ select program_id, start_at from programs
 
 # The conflict target per program type, mirroring the partial unique indexes in 0012 and 0013.
 CONFLICT = {
-    "race_session": "sport, series, start_at, title",
+    # MIGRATION 0015, and the reason is worth the line. 0012's key was `sport, series, start_at,
+    # title`, and `series` is NULLABLE - so for IndyCar, which runs ONE series and therefore carries
+    # no series value at all, every row looked new to ON CONFLICT and a second load INSERTED.
+    # Measured: two runs of the same 18 races produced 36 rows. `coalesce(series, '')` is what makes
+    # a null series a value the index can compare, and 0015 builds the matching expression index.
+    "race_session": "sport, (coalesce(series, '')), start_at, title",
     "weekly_show": "sport, title, start_at",
     "studio_show": "sport, title, start_at",
     "fight_card": "sport, start_at, title",
