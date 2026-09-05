@@ -1,4 +1,7 @@
-// The home-page banner: one inline SVG per breakpoint, both drawn from web/lib/banner-layout.json.
+// The home-page banner. The PHONE breakpoint is BannerMobileV2 - banner v2 artwork, one inline SVG
+// with its coordinates baked in. The DESKTOP breakpoint is still the JSON-drawn SVG below, from
+// web/lib/banner-layout.json; it is replaced in its own commit so either breakpoint can be
+// reverted alone.
 //
 // Server component on purpose. The layout JSON already carries every number the drawing needs -
 // including `ar`, the width/height of each PNG, written by scripts/build_brand_marks.py - so this
@@ -10,9 +13,11 @@
 // declared `id="ds"` the hidden copy could win the lookup - and Chromium renders NOTHING, not an
 // unfiltered shape, when a filter id resolves into a display:none subtree. Every id here is therefore
 // namespaced by breakpoint ('pc-' / 'mo-'), which is also what the reference SVGs in
-// docs/design/banner/ do.
+// docs/design/banner/ do. BannerMobileV2 follows the same discipline with its own 'bn' prefix, so
+// the two SVGs cannot collide while both are mounted.
 
 import layout from '../lib/banner-layout.json';
+import BannerMobileV2 from './BannerMobileV2.jsx';
 
 const GOLD = '#F0C850';
 const WHITE = '#FFFFFF';
@@ -146,7 +151,7 @@ export default function Banner() {
         <Stage side="pc" p="pc" />
       </div>
       <div className="bn-mobile">
-        <Stage side="mobile" p="mo" />
+        <BannerMobileV2 />
       </div>
     </header>
   );

@@ -1688,9 +1688,6 @@ input:focus-visible {
   text-shadow:0 1px 4px rgba(0,0,0,.9)}
 .bn-pc .bnsub{font-size:15px;letter-spacing:.32em;margin-top:8px;padding-left:.32em}
 .bn-mobile{display:none;position:relative}
-.bn-mobile .scatter{display:block;width:100%;height:auto}
-.bn-mobile .wordmark{font-size:40px;padding-top:12px}
-.bn-mobile .bnsub{font-size:11px;letter-spacing:.2em;margin-top:6px;padding-left:.2em}
 .slot rect{opacity:.7}
 @media (max-width:699px){.bn-pc{display:none}.bn-mobile{display:block}}
 /* forced modes for the review frames */
