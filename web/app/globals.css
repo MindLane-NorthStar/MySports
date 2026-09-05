@@ -259,12 +259,27 @@ h3 {
   max-width: 100%;
 }
 
+/* THE HEADER ROW BREATHES EVENLY, AND THE CONTROL BLOCK IS ONE THING (prompt 46 unit 1B, Joe's
+   2026-09-05 review, items 2-4 and 8). Two equations, and this one rule carries both because it is
+   the block that sits between all four edges:
+
+     margin-top    = the space from the header row down to the ALL SPORTS bar. It is set to 18px to
+                     match the space ABOVE the header row, which is .shell's own padding-top - so
+                     the row has the same air on both sides. Adjacent margins collapse, so this
+                     wins over .pagehead's 2px bottom and is the only number that matters.
+     margin-bottom = the space from the tile row down to the first section. Set to 6px, the same
+                     6px .sportbar puts BETWEEN the bar and the tiles, so bar, tiles and the
+                     section below read as one block rather than three.
+
+   Deliberately on the tile row's WRAPPER and not on .favlabel: the first section below the tiles
+   changes (YOUR TEAMS on Today, the week block on Weeks, the first band on History, and the D1
+   band when it lands), and a margin on the wrapper is inherited by whichever one is first. */
 .controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  margin: 16px 0 20px;
+  margin: 18px 0 6px;
 }
 
 /* Today's controls stack: the sport block, then the day row. Its OWN class, not a change to
@@ -2050,9 +2065,15 @@ input:focus-visible {
 
 /* 5b. The banner-to-date gap was 46px at 1440: .shell padding-top 24px + the h1's own 22px top
  * margin, stacked. The h1 is the first thing under the chrome, so its top margin is pure duplication
- * of the shell's padding - zeroed at the source rather than cancelled with a negative margin. */
+ * of the shell's padding - zeroed at the source rather than cancelled with a negative margin.
+ *
+ * .pagehead IS ALSO A FIRST CHILD (prompt 46 unit 1B). Prompt 45 wrapped the heading and its picker
+ * in .pagehead, which made this selector stop matching on Today and Weeks - so both silently got the
+ * 22px duplication back, 40px of air above the header row against History's 18. That is the uneven
+ * spacing Joe reported. Both selectors now, so the rule means what it said. */
 .shell { padding-top: 18px; }
-main > h1:first-child { margin-top: 0; }
+main > h1:first-child,
+main > .pagehead:first-child { margin-top: 0; }
 
 /* 5c. One line, so it lays out as a line rather than a stack - and since 05 section 10 it holds
  * one line at 360px too. It got there by shedding a segment and shortening the other three:
