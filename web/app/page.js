@@ -19,19 +19,6 @@ import { overlayForDay, applyOverlay } from '../lib/livescores.js';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * The count beside the date picker: `80 broadcasts`, or `9 MLB broadcasts` for one sport.
- *
- * TWO WORDS DELIBERATELY NOT HERE, flagged to Joe and agreed. Not "available": contract v1.6.6
- * and 05 section 10 make `available` and `airing` mean "on services Joe has", and the band line
- * below already reads `6 airing · 48 TBD · 5 unavailable` - a header claiming 80 are available
- * above a line saying 5 are unavailable contradicts itself on one screen. And not "today": the
- * date picker beside it supplies the day, and "today" is false every time he opens a Saturday.
- */
-function broadcastCount(n, sport) {
-  const word = n === 1 ? 'broadcast' : 'broadcasts';
-  return sport ? `${n} ${SPORT_LABEL[sport] || sport} ${word}` : `${n} ${word}`;
-}
 
 // The four sports added to the chip row in prompt 25 have nothing loaded yet, and the general
 // empty state would answer them with a list of dates for OTHER sports - which reads as a bug
@@ -150,17 +137,20 @@ export default async function TodayPage({ searchParams }) {
 
   return (
     <main>
-      <h1>{longDay(day)}</h1>
+      {/* Joe's ruling from the installed app, 2026-09-04: the heading is the word DATE and the
+          picker sits on the heading's own line, to its right. The heading IS the control's label -
+          <label htmlFor> inside an <h1> is valid phrasing content - so the visible name prompt 25
+          insisted on is still there, still real, and now only said once. */}
+      <div className="pagehead">
+        <h1><label htmlFor="viewing-day">DATE</label></h1>
+        <DatePicker day={day} />
+      </div>
 
-      {/* The sport block comes FIRST - the ALL bar, then the tiles - and the day row sits under it
-          carrying its own count. <p className="sub"> is gone: it said the same number one line
-          above the control that sets it. */}
+      {/* The sport block: the ALL bar, then the tiles. The day row that used to sit under it is
+          gone with its count - the bands below already read `6 airing . 48 TBD . 5 unavailable`,
+          and Joe ruled the broadcast count eliminated. */}
       <div className="controls controls-stack">
         <SportFilter sport={sport} />
-        <div className="dayrow">
-          <DatePicker day={day} />
-          <span className="daycount">{broadcastCount(games.length, sport)}</span>
-        </div>
       </div>
 
       {error ? <p className="error">Could not read the database: {error}</p> : null}

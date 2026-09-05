@@ -86,25 +86,48 @@ function emptyFor(sport) {
     : 'No games loaded for this week.';
 }
 
-async function CalendarWeeks({ index, pick, sport }) {
-  const all = calendarWeeksFrom(index).map((w) => ({ ...w, key: w.start }));
-  if (!all.length) return <p className="empty">No games loaded.</p>;
+/**
+ * ONE definition of the week list, which one is picked, and how each is labelled.
+ *
+ * The picker moved up to the page heading in prompt 45, while the games it selects are still
+ * rendered by CalendarWeeks / SeasonWeeks below. Two places now need the same answer, and two copies
+ * of `all.find(pick) || currentWeekKey || all[0]` would be free to drift - the heading could offer a
+ * week the block below was not showing. So the derivation lives here and both callers use it.
+ */
+function weekChoices({ index, pick, sport, seasonMode }) {
+  const all = seasonMode
+    ? seasonWeeksFrom(index)
+        .filter((w) => !sport || w.sport === sport)
+        .map((w) => ({ ...w, key: `${w.sport}-${w.season}-${w.week}` }))
+    : calendarWeeksFrom(index).map((w) => ({ ...w, key: w.start }));
+  if (!all.length) return { all, selected: null, options: [] };
   // Default to the CURRENT week, not all[0] - see currentWeekKey. Applied to the calendar view as
   // well as the season one: leaving one landing on today and the other on January reads as a bug.
-  const selected = all.find((w) => w.key === pick) || all.find((w) => w.key === currentWeekKey(all, todayET())) || all[0];
+  const selected =
+    all.find((w) => w.key === pick) ||
+    all.find((w) => w.key === currentWeekKey(all, todayET())) ||
+    all[0];
+  // C1: no ISO week number, in the picker or in the heading. It was a number nobody navigates by -
+  // "Week 35" answers a question no one asked, while the dates answer the one they did.
+  const options = seasonMode
+    ? all.map((w) => ({
+        key: w.key,
+        group: SPORT_LABEL[w.sport] || w.sport.toUpperCase(),
+        label: `${SPORT_TAG[w.sport] || w.sport.toUpperCase()} Week ${w.week} · ${daySpanWeekdays(w.start, w.end)}`,
+      }))
+    : all.map((w) => ({ key: w.key, label: daySpanWeekdays(w.start, w.end) }));
+  return { all, selected, options };
+}
+
+async function CalendarWeeks({ index, pick, sport }) {
+  const { all, selected } = weekChoices({ index, pick, sport, seasonMode: false });
+  if (!all.length) return <p className="empty">No games loaded.</p>;
   const weeks = [selected];
   const loaded = await Promise.all(weeks.map((w) => gamesForRange(w.start, w.end, sport)));
   const standings = await Promise.all(loaded.map((g) => standingsForGames(g)));
   const ranks = await Promise.all(loaded.map((g) => rankingsForGames(g)));
   return (
     <>
-      {/* C1: no ISO week number, in the picker or in the heading. It was a number nobody navigates
-          by - "Week 35" answers a question no one asked, while the dates answer the one they did. */}
-      <WeekSelect
-        sport={sport}
-        selected={selected.key}
-        options={all.map((w) => ({ key: w.key, label: daySpanWeekdays(w.start, w.end) }))}
-      />
       {weeks.map((w, i) => {
         const grouped = byDay(loaded[i], w.days);
         return (
@@ -126,28 +149,14 @@ async function CalendarWeeks({ index, pick, sport }) {
 }
 
 async function SeasonWeeks({ index, pick, sport }) {
-  const all = seasonWeeksFrom(index)
-    .filter((w) => !sport || w.sport === sport)
-    .map((w) => ({ ...w, key: `${w.sport}-${w.season}-${w.week}` }));
+  const { all, selected } = weekChoices({ index, pick, sport, seasonMode: true });
   if (!all.length) return <p className="empty">No NFL or college football weeks loaded.</p>;
-  // Default to the CURRENT week, not all[0] - see currentWeekKey. Applied to the calendar view as
-  // well as the season one: leaving one landing on today and the other on January reads as a bug.
-  const selected = all.find((w) => w.key === pick) || all.find((w) => w.key === currentWeekKey(all, todayET())) || all[0];
   const weeks = [selected];
   const loaded = await Promise.all(weeks.map((w) => gamesForSeasonWeek(w.sport, w.season, w.week)));
   const standings = await Promise.all(loaded.map((g) => standingsForGames(g)));
   const ranks = await Promise.all(loaded.map((g) => rankingsForGames(g)));
   return (
     <>
-      <WeekSelect
-        sport={sport}
-        selected={selected.key}
-        options={all.map((w) => ({
-          key: w.key,
-          group: SPORT_LABEL[w.sport] || w.sport.toUpperCase(),
-          label: `${SPORT_TAG[w.sport] || w.sport.toUpperCase()} Week ${w.week} · ${daySpanWeekdays(w.start, w.end)}`,
-        }))}
-      />
       {weeks.map((w, i) => {
         const days = daySpan(w.start, w.end);
         const grouped = byDay(loaded[i], days);
@@ -184,9 +193,22 @@ export default async function WeeksPage({ searchParams }) {
     error = e instanceof RestError ? `${e.status} — ${e.body}` : String(e);
   }
 
+  // The heading carries the picker now, so the page derives the same choices the block below
+  // will - one helper, so the two cannot disagree about which week is selected.
+  const choices = weekChoices({ index, pick, sport, seasonMode });
+
   return (
     <main>
-      <h1>Weeks</h1>
+      {/* Joe's ruling from the installed app, 2026-09-04: the heading is the word WEEK and the week
+          picker sits on the heading's own line, to its right. The heading IS the select's label -
+          WeekSelect's <label htmlFor="week-select"> moved up here, so prompt 25 section 4b's one
+          real label survives as the heading rather than being duplicated. */}
+      <div className="pagehead">
+        <h1><label htmlFor="week-select">WEEK</label></h1>
+        {choices.selected ? (
+          <WeekSelect sport={sport} selected={choices.selected.key} options={choices.options} />
+        ) : null}
+      </div>
       {/* C2: the Today page's own chip row, IMPORTED rather than reimplemented - useSetParam reads
           usePathname(), so SportFilter was never coupled to "/" and needed no fork to land here.
           ALL stays the first control, as the full-width bar above the tiles. */}

@@ -214,34 +214,49 @@ h3 {
   text-transform: uppercase;
 }
 
-/* .sub is gone from the Today page - its count moved beside the date picker as .daycount. The rule
-   stays because /weeks and /history still use it. */
+/* .sub is gone from the Today page. Its count moved beside the date picker in prompt 31 and was
+   eliminated outright in prompt 45. The rule stays because /weeks and /history still use it. */
 .sub {
   color: var(--dim);
   font-size: 13px;
   margin: 0 0 18px;
 }
 
-/* The day row: the Day label and its date input on the left, the count on the right. margin-left
-   auto rather than space-between so the label and input stay together as one control. */
-.dayrow {
+/* THE PAGE HEADER CARRIES ITS PICKER (prompt 45, Joe's ruling from the installed app).
+   Today reads DATE with the date input beside it, Weeks reads WEEK with the week select; the
+   heading is the control's own <label>, so tapping the word opens the picker. This replaces the
+   .dayrow / .daycount pair, which put the Day label and input BELOW the tiles with a broadcast
+   count on the right - Joe eliminated the count and moved the picker up to the heading line.
+
+   align-items:center is what "aligned with it" means here: the picker is centred on the heading's
+   text box, not on its baseline. The h1's own top margin moves to the ROW, or the flex line would
+   inherit it and the picker would sit low by 22px. 12px is a literal because this stylesheet has no
+   spacing scale to read (rule 16 - there are no --gap/--space tokens to use). */
+.pagehead {
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: 100%;
-  /* B3: the count drops to its OWN line rather than being squeezed into whatever is left beside
-     the date. The longest label - "68 College Football broadcasts" - is 146px at 360px and 176px
-     at 390px, and in both cases that is the whole remaining width, so the text wrapped inside a
-     squeezed box. Wrapping the FLEX instead keeps it on one line and right-aligned under the
-     date. One property; it does nothing at all on days whose count is short. */
+  gap: 12px;
   flex-wrap: wrap;
+  margin: 22px 0 2px;
 }
 
-.daycount {
-  margin-left: auto;
-  color: var(--dim);
-  font-size: 13px;
-  text-align: right;
+.pagehead h1 {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+/* The heading IS the label, so it has to look clickable without looking like a link. */
+.pagehead h1 label {
+  cursor: pointer;
+}
+
+/* The week trigger takes the rest of the line and is allowed to shrink: the longest option label
+   is far wider than a 390px phone, and min-width:0 is what lets a flex item actually shrink below
+   its content width instead of pushing the row past the viewport. */
+.pagehead .chip-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .controls {

@@ -268,3 +268,24 @@ and `/history` group rows by day, and hoisting a favourite out of its day would 
 those pages exist to show — a calendar. They keep the in-band float they have today, which on those
 pages floats within a day rather than within a sport. D6's float is therefore retired on `/` and
 retained on `/weeks` and `/history`.
+
+## 12. DATE / WEEK HEADERS CARRY THE PICKER — 2026-09-04, Joe's ruling from the installed app
+
+The Today heading no longer prints the viewing day and the Weeks heading no longer reads
+"Weeks". Each reads a single word in the heading style — `DATE` on Today, `WEEK` on Weeks,
+no colon — and the page's picker sits directly to its right on the same line, centered on the
+heading's text box. The row is the first block on the page, above the ALL bar and the tiles.
+
+Three earlier rulings are amended:
+
+1. **Prompt 31 stage 3's Day row is retired.** The `Day` label, the date input's row below the
+   tiles, and the `N broadcasts` count text are gone. The count duplicated what the bands
+   already say (`6 airing · 48 TBD · 5 unavailable`) and Joe ruled it eliminated.
+2. **Prompt 25 §4b's "keep the Day label" no longer applies** — the reason it existed (a
+   control whose own text is a date needs a visible name) is now carried by the heading,
+   which is the control's `<label>`.
+3. **Prompt 36 C1–C3 keeps its week-format rules**; only the position of the picker and the
+   heading text change. `WeekSelect`'s real `<label htmlFor="week-select">` survives as the
+   heading.
+
+History's heading is deliberately unchanged; Joe will rule on it separately.
