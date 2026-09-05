@@ -289,3 +289,23 @@ Three earlier rulings are amended:
    heading.
 
 History's heading is deliberately unchanged; Joe will rule on it separately.
+
+## 13. SECOND INSTALLED-APP REVIEW — 2026-09-05, Joe's rulings, shipped in prompt 46 stage 1
+
+1. **Headroom.** The installed-app addition above the banner is 4 px, not 7 (half of prompt 45's
+   addition; Joe: "too much space").
+2. **Header row breathes evenly.** The space between the tab row's hairline and the DATE / WEEK /
+   HISTORY header row equals the space between that row and the ALL SPORTS bar.
+3. **One control block.** The space between the tile row and the first section below it equals
+   the space between the ALL SPORTS bar and the tile row. Joe's item 6 (use the YOUR TEAMS→card
+   distance) was superseded by his item 8; the first-section rule is written so the D1 band
+   inherits it.
+4. **Pickers.** Both pickers render a styled trigger with the native control invisible on top
+   of it, so iOS keeps its wheel and calendar. WEEK: `NFL Week 1` / `CFB Week 1` in gold, the
+   date range in the standings-line gray; calendar weeks show only the range in the trigger's
+   ink. DATE: `Friday, September 4, 2026`, the same pill and chevron as WEEK.
+5. **Season-week block headings** are two lines: the sport-week line, then the range. The
+   sport-week line is gold (Cowork's call, matching the picker; open to veto).
+6. **Grid cards:** a space before the record; an all-zero record is absent (contract v1.6.14).
+7. **List card venue** is one step brighter than the standings lines (token recorded in the
+   commit).

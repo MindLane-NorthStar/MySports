@@ -688,8 +688,24 @@ input[type='search'] {
   visibility: hidden;
 }
 
+/* THE VENUE IS ONE STEP BRIGHTER THAN THE STANDINGS LINES (prompt 46 1F, Joe's item 14: make the
+   venue easier to tell apart from the record, standing and games-back runs).
+
+   It was --dim - the SAME token, at the same weight, as .tcol-rec one line above it. Measured, they
+   were byte-identical: rgb(154,160,168) both. Nothing distinguished them but position.
+
+   Chosen by render against the card's own plate, not against a global corner (rule 13). The local
+   background behind this run is rgb(32,35,40):
+       --dim  #9aa0a8   5.98:1   (what it was, and what the standings lines still are)
+       --ink  #f2f2f0  14.06:1   (this)
+   --dim at weight 500 was tried first, as planned, and rejected by looking: at the same colour the
+   extra weight is invisible next to the standings line, which is the one comparison that matters.
+
+   It still reads UNDER the team names, and by size rather than colour: 12px regular against the
+   name's 14px. The palette has no step between --dim and --ink to use instead, and inventing one
+   would be a fourth grey nobody ruled on. */
 .mnet-text {
-  color: var(--dim);
+  color: var(--ink);
   font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
