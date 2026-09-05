@@ -97,7 +97,12 @@ def read_input(db: DB, game_ids: list[str] | None, all_games: bool) -> dict[str,
         gw = "where g.id = any(%s)"; ow = "and o.game_id = any(%s)"; bw = "where b.game_id = any(%s)"
         p: tuple = (game_ids,)
     elif all_games:
-        gw = ""; ow = ""; bw = ""; p = ()
+        # MIGRATION 0012 MADE game_id NULLABLE, so game_broadcasts now also holds rows whose subject
+        # is a PROGRAM - a NASCAR race on FS2 has no game at all. Every other branch here is
+        # game-scoped and excludes them for free; this one is not, and without the guard those rows
+        # would come back with a null game_id and be grouped under a game that does not exist. The
+        # reconciler decides GAMES; a program's broadcast is not its business.
+        gw = ""; ow = ""; bw = "where b.game_id is not null"; p = ()
     else:
         gw = CHANGED_WHERE; ow = "and o.game_id in (select g.id from games g " + CHANGED_WHERE + ")"; bw = "where b.game_id in (select g.id from games g " + CHANGED_WHERE + ")"; p = ()
     cols_g = ["id", "sport", "neutral_site", "home_team_id", "home_conference_id", "canonical_kickoff_at_utc", "kickoff_certainty", "primary_network_id", "network_certainty", "canonical_state", "rights_controller_type", "rights_controller_id"]

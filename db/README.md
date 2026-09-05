@@ -306,3 +306,67 @@ The change set is provably bare-only — 529 games carry zero active broadcast r
 `no_linear_telecast` rows remaining: **0**. The 94 distinct reason strings the database holds were not
 rewritten — every rows-present rung produces the same string it did before, pinned by
 `tests/test_telecast_ladder.py`.
+
+## Migrations 0012 and 0013 — 2026-09-05 (prompt 47 stage 1)
+
+**0012 — programs own broadcasts, and a race session gets a natural key.** Both are prompt 46's
+findings, unchanged.
+
+```sql
+alter table game_broadcasts add column if not exists program_id bigint references programs(program_id) on delete cascade;
+alter table game_broadcasts alter column game_id drop not null;
+alter table game_broadcasts add constraint game_broadcasts_subject_ck check (num_nonnulls(game_id, program_id) = 1);
+create index if not exists game_broadcasts_program_idx on game_broadcasts (program_id);
+create unique index if not exists game_broadcasts_program_uq
+  on game_broadcasts (program_id, service_id, delivery_surface, feed_side) where program_id is not null;
+create unique index if not exists programs_race_session_uq
+  on programs (sport, series, start_at, title) where program_type = 'race_session';
+```
+
+Dropping the NOT NULL is the one non-additive change, named in the run's approval. The subject check
+is **exactly one**, not at least one: a row naming both would be read as a game row by every
+game-scoped query. The existing `unique (game_id, service_id, delivery_surface, feed_side)` cannot
+serve program rows — NULLs are distinct in a unique constraint, so with `game_id` null every re-load
+would duplicate — hence the mirrored partial index.
+
+**The one consumer that would have broken:** `pipeline/reconcile.py`'s `--all` branch passed an empty
+broadcast where-clause. It now passes `where b.game_id is not null`. The other three
+(`--game`, changed-evidence, `render_feed.MEDIA_SQL`) were already game-scoped;
+`web/lib/queries.js` embeds through the FK and never sees program rows. Pinned by
+`tests/test_program_broadcasts.py`.
+
+**0013 — the real spec-v0.5 gaps, which are fewer than expected.** 0009 already built `subtitle`,
+`location_text`, `on_site`, `series`, `headliners`, `hosts_crew`, `open_ended`, `postponed_to`,
+`segments`, **and** `game_broadcasts.window_start/window_end`, **and** every `sport` value (nascar,
+indycar, ufc, wwe, aew) and every `program_type` value. **0013 therefore contains no `ALTER TYPE` at
+all.** What was genuinely missing:
+
+```sql
+alter table programs add column if not exists anchor_program_id bigint references programs(program_id);
+alter table programs add column if not exists bookend text;   -- check (pre|post)
+alter table programs add column if not exists brand_key text;
+alter table programs add column if not exists source_url text;
+alter table programs add column if not exists source_tier text;
+alter table game_broadcasts add constraint game_broadcasts_window_ck check (window_end > window_start);
+create unique index programs_weekly_show_uq   on programs (sport, title, start_at)  where program_type = 'weekly_show';
+create unique index programs_studio_show_uq   on programs (sport, title, start_at)  where program_type = 'studio_show';
+create unique index programs_fight_card_uq    on programs (sport, start_at, title)  where program_type = 'fight_card';
+create unique index programs_special_event_uq on programs (sport, start_at, title)  where program_type = 'special_event';
+```
+
+`anchor_program_id` is **not** 0009's `parent_program_id`: parent is containment (a segment inside a
+show), anchor is what a bookend attaches to and renders against, on a different network row.
+`brand_key` is the lookup into `data/brands.json`; 0009's `brand_mark` is a path to one image.
+
+**The studio tables already existed** — 0009 built `studio_shows(show_id, name, network,
+sport_covered, brand_mark, default_slot, created_at)` and `studio_show_instances(instance_id,
+show_id, program_id, air_date, location_text, on_site, hosts, source_url, source_tier, observed_at)`.
+A `create table if not exists` against them is a **silent no-op**, so 0013 extends `studio_shows`
+additively instead (`bookend`, `weekday`, `slot_start_et`, `duration_min`, `anchor_rule`,
+`active_from`, `active_to`, `source_url`, `updated_at`) and leaves the instance table alone — its
+`location_text` / `source_url` / `source_tier` already are the site, its citation and its tier.
+
+Backups first: `artifacts/backups/{programs,game_broadcasts,games}_2026-09-05T172858Z.csv`. Both
+files dry-run (`--dry-run` executes and rolls back) before applying. **Post-check, all eight
+identical:** programs 1,384 and its id checksum `766cc016245c5ef64e26fd8f0856ca73`, broadcasts 1,061,
+rows with a null `game_id` 0, games 1,384, eligible 466, market-pending 176, hidden 918.
