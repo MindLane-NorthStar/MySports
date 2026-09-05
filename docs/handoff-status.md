@@ -9,7 +9,11 @@ amendment, §9 NETWORK TBD, §11 mobile page order, §12 the DATE/WEEK headers, 
 review), `docs/rendering-contract.md` **v1.7**, `docs/rendering-contract-mobile.md` (Addendum
 v1.2 + M19/M20), **`docs/design/program-card-design-v1.md`** — the program card's design of record,
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
-`docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths.
+`docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
+holds the Claude Code briefs themselves - fifteen of them as of prompt 49 (19-23, 40, 43-49),
+verbatim and never edited after the fact; 01-18, 24-39, 41 and 42 are still Project-only and Cowork
+is extracting them. Prompts are the as-run record of why a commit exists; THIS file is what is
+current.
 
 ## Repo state
 
