@@ -81,6 +81,31 @@ jobs:
         # cost one request per published week and change nothing. Weeks with no poll yet return empty
         # and are skipped, which is every week before the season's first Sunday.
         run: python -m pipeline.rankings --workflow schedule_refresh
+      # ---------------------------------------------------------------- programs (prompt 47)
+      - name: NASCAR race sessions -> programs (fail-honest)
+        # FAIL HONEST PER UNIT, the shape the standings step uses: a fetch that fails logs one line
+        # and the refresh carries on. A race schedule that could not be reached is not a reason to
+        # lose the day's games.
+        #
+        # Idempotent by construction - 0012/0013 gave every program_type a partial unique index, so
+        # a daily re-run updates 98 rows and inserts none. Rows go through the enum validation and
+        # row-level quarantine prompt 46 added to pipeline/db.py, so one bad value costs its own row
+        # and not the batch.
+        #
+        # ONLY NASCAR. IndyCar, WWE, AEW, the studio shows and UFC were not built this run - their
+        # research documents are not in the repo (see the prompt-47 report), and a step calling an
+        # adapter that does not exist would fail every night for a reason nobody could act on.
+        run: |
+          set +e
+          out="artifacts/programs/nascar_$(date -u +%F).json"
+          python -m adapters.nascar --year 2026 --out "$out"
+          if [ $? -ne 0 ]; then
+            echo "nascar: fetch failed - skipped, refresh continues"
+          else
+            python -m pipeline.load_programs --input "$out" || echo "nascar: load failed - skipped, refresh continues"
+          fi
+          exit 0
+
       - name: Push new logos to R2
         run: python scripts/sync_assets.py --push --prefix logos/
       - name: Load fixtures into mysports.* (evidence only — Milestone 1 loader)
