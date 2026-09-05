@@ -172,12 +172,22 @@ rather than an editorial choice. `web/lib/programs.js` `fitCrew()` decides it fo
 
 ### Studio-show bookends
 
-A `studio_show` with `anchor_program_id` set and `bookend = pre` renders on the **anchor's network
-row**, ending at the anchor's start; `post` begins at the anchor's end. With no anchor — a standalone
-show, or an anchor not yet loaded — it renders on its own network row at its slot. Overlaps on a row
-resolve through the existing lane rule (§3 truncation and the v1.6.5 overlap split); nothing new.
+A `studio_show` with `bookend = pre` ends when its anchor starts; `post` begins when the anchor ends.
+With no anchor — a standalone week, or a game not loaded yet — it keeps its slot duration. Overlaps on
+a row resolve through the existing lane rule (§3 truncation and the v1.6.5 overlap split); nothing new.
 **Studio shows never get a chip** (register §9): they render under the parent sport's chip and under
 ALL SPORTS.
+
+**THE RULE IS REALISED IN THE DATA, NOT AT RENDER TIME**, and stage 6 moved it there deliberately.
+`pipeline/load_studio_shows.py` resolves each instance's anchor when it generates the row and writes
+the shortened `expected_duration_min` onto it, so the grid draws a studio show exactly as it draws
+any other program. Three consequences, all of them wanted: there is no anchor lookup in the phone
+renderer and a second one in the SVG renderer to keep in step; the duration is INSPECTABLE, because
+what the row says is what gets drawn; and the network needs no lookup either, since
+`docs/research/studio-shows.md` §2 has it that "studio shows carry the same distributor as the anchor
+game window by construction". Measured: Football Night in America's 120-minute slot becomes **80**
+minutes against an 8:20 PM SNF kickoff, and 91 of 111 generated instances found an anchor — the 20
+that did not are CFB weeks past the announcement horizon, where no game has a broadcast row yet.
 
 ### UFC renders plain
 

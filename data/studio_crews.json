@@ -1,0 +1,75 @@
+{
+  "_about": "HAND-CURATED CREWS, for College GameDay and Big Noon Kickoff ONLY. Register section 17, Joe's amendment of 2026-09-05, which amends section 7 Q5 ('sourced, never hand-curated') for these two shows and no others. Every other show's hosts_crew stays null - WWE's, AEW's and NASCAR's crews are REPORTED rather than announced, and the design of record's crew tier takes announcements. JOE EDITS THIS FILE; the loader only reads it.\nA seat with no verified source is the literal string \"TBA\", never a guess.",
+  "crews": {
+    "gameday": {
+      "_source": "ESPN's own Week 1 release, 2026 - a published ANNOUNCEMENT, which is a stronger source than the hand-curation this file was created to allow. Named verbatim: 'Rece Davis returns as host alongside analysts Kirk Herbstreit, Desmond Howard, Pat McAfee, Nick Saban and \"Stanford Steve\" Coughlin, with reporters Jen Lada, Jess Sims and Pete Thamel rounding out the nine-member on-air team.'",
+      "crew": [
+        {
+          "name": "Rece Davis",
+          "role": "host",
+          "source_url": "https://espnpressroom.com/press-release/college-gameday-hits-the-road-for-the-500th-time-as-season-40-kicks-off-in-baton-rouge/"
+        },
+        {
+          "name": "Kirk Herbstreit",
+          "role": "analyst",
+          "source_url": "https://espnpressroom.com/press-release/college-gameday-hits-the-road-for-the-500th-time-as-season-40-kicks-off-in-baton-rouge/"
+        },
+        {
+          "name": "Desmond Howard",
+          "role": "analyst",
+          "source_url": "https://espnpressroom.com/press-release/college-gameday-hits-the-road-for-the-500th-time-as-season-40-kicks-off-in-baton-rouge/"
+        },
+        {
+          "name": "Pat McAfee",
+          "role": "analyst",
+          "source_url": "https://espnpressroom.com/press-release/college-gameday-hits-the-road-for-the-500th-time-as-season-40-kicks-off-in-baton-rouge/"
+        },
+        {
+          "name": "Nick Saban",
+          "role": "analyst",
+          "source_url": "https://espnpressroom.com/press-release/college-gameday-hits-the-road-for-the-500th-time-as-season-40-kicks-off-in-baton-rouge/"
+        },
+        {
+          "name": "Stanford Steve Coughlin",
+          "role": "analyst",
+          "source_url": "https://espnpressroom.com/press-release/college-gameday-hits-the-road-for-the-500th-time-as-season-40-kicks-off-in-baton-rouge/"
+        },
+        {
+          "name": "Jen Lada",
+          "role": "reporter",
+          "source_url": "https://espnpressroom.com/press-release/college-gameday-hits-the-road-for-the-500th-time-as-season-40-kicks-off-in-baton-rouge/"
+        },
+        {
+          "name": "Jess Sims",
+          "role": "reporter",
+          "source_url": "https://espnpressroom.com/press-release/college-gameday-hits-the-road-for-the-500th-time-as-season-40-kicks-off-in-baton-rouge/"
+        },
+        {
+          "name": "Pete Thamel",
+          "role": "reporter",
+          "source_url": "https://espnpressroom.com/press-release/college-gameday-hits-the-road-for-the-500th-time-as-season-40-kicks-off-in-baton-rouge/"
+        }
+      ]
+    },
+    "bignoon": {
+      "_source": "NOT VERIFIED. docs/research/studio-shows.md section 6 lists the FOX CFB roster release of 2026-08-29 as the source and marks its fetchability UNVERIFIED; this run verified that foxsports.com Press Pass answers 200 with ZERO tables and zero occurrences of 'Big Noon' on three separate paths, because the page is JS-rendered. So no seat is filled from memory. Joe fills these in by hand, or a later pass fills them from a source that machine-reads.",
+      "crew": [
+        {
+          "name": "TBA",
+          "role": "host",
+          "source_url": null
+        },
+        {
+          "name": "TBA",
+          "role": "analyst",
+          "source_url": null
+        },
+        {
+          "name": "TBA",
+          "role": "analyst",
+          "source_url": null
+        }
+      ]
+    }
+  }
+}

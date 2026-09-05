@@ -1,0 +1,166 @@
+{
+  "_about": "The studio-show REGISTRY: one entry per show docs/research/studio-shows.md verified with a 2026 slot. pipeline/load_studio_shows.py reads this, upserts `studio_shows`, and generates one `studio_show` program per air date. SCOPE is register section 7 Q4: pregame and postgame BOOKENDS on the game's network - no halftime, no daily talk. A studio show never gets a chip (section 9); it renders under the sport it covers.",
+  "_not_loaded": [
+    {
+      "show": "Sunday NFL Countdown",
+      "why": "named in the run's brief, but docs/research/studio-shows.md section 1 - the 'Verified 2026 slots' list - does NOT carry it. No weekday, no start, no duration, no network. The brief's own rule is 'Nothing not in the doc', so it is not loaded. It arrives the day the doc or an ESPN release states its slot."
+    },
+    {
+      "show": "Prime Video TNF pregame",
+      "why": "the doc gives 'Thu ~7:00 PM ET' - with the tilde - and marks the 2026 roster UNVERIFIED. An approximate start is not a slot; a program placed on the grid at a guessed minute is a broadcast fact this run does not invent."
+    },
+    {
+      "show": "Netflix NFL pregames",
+      "why": "five games in 2026, only one of them dated in the doc (Melbourne, Thu Sept 10), and 'pregame format [UNVERIFIED]'. No slot, no duration, no network row that can be generated per air date."
+    },
+    {
+      "show": "NASCAR RaceDay (FOX) and the USA Sports pre/post-race shows",
+      "why": "the doc gives the USA shows as '30 min each side of the race' but states NO start time for RaceDay and no source that machine-reads either. The pre/post pair could be DERIVED from each race's start - and deriving a broadcast from another broadcast is a rule the research has not blessed, so it waits for nascar.com/tv-schedule to be verified (docs/research/nascar.md section 6 marks it UNVERIFIED)."
+    }
+  ],
+  "_findings": [
+    {
+      "source": "espnpressroom.com",
+      "result": "CLEAN, and it carries more than the doc promised. The Week 1 release gives College GameDay's site (Baton Rouge, Louisiana), its window (Sat Sept 5, 9 a.m. to noon ET), its networks (ESPN, ESPNU, Disney+, the ESPN App) AND its ANNOUNCED nine-member 2026 on-air team. That is an announcement, which is a better source than the hand-curation register section 17 permits.",
+      "url": "https://espnpressroom.com/press-release/college-gameday-hits-the-road-for-the-500th-time-as-season-40-kicks-off-in-baton-rouge/"
+    },
+    {
+      "source": "espnpressroom.com/us/college-gameday/",
+      "result": "200, but its single table is a HISTORICAL January bowl-season table, not the weekly Date/Site/Game table. The weekly site lives in each week's own release.",
+      "url": "https://espnpressroom.com/us/college-gameday/"
+    },
+    {
+      "source": "foxsports.com Press Pass",
+      "result": "200 on every path tried - /presspass, /presspass/latest-news and /presspass/latest-news/weekly-schedule - and ZERO tables and zero occurrences of 'Big Noon' in any of them. The doc marked fetchability UNVERIFIED; it is now verified as fetch-clean but CONTENT-EMPTY, because the page is JS-rendered. So Big Noon's site is `tba` and is never guessed.",
+      "url": "https://www.foxsports.com/presspass/latest-news/weekly-schedule"
+    }
+  ],
+  "shows": [
+    {
+      "show_key": "gameday",
+      "title": "College GameDay",
+      "sport": "cfb",
+      "network_key": "ESPN",
+      "simulcast": "ESPNU",
+      "brand_key": "gameday",
+      "bookend": "pre",
+      "weekday": 5,
+      "slot_start_et": "09:00",
+      "duration_min": 180,
+      "anchor_rule": "earliest ESPN or ABC college football game that day",
+      "active_from": "2026-08-29",
+      "active_to": "2026-12-12",
+      "on_site": true,
+      "source_url": "https://espnpressroom.com/us/college-gameday/",
+      "source_note": "docs/research/studio-shows.md section 1: Sat 9:00 AM ET, three hours, ESPN + ESPNU simulcast, on the road every week. Confirmed on 2026-09-05 by the ESPN release below: 'airs Saturday, Sept. 5 from 9 a.m. to noon ET on ESPN, ESPNU, Disney+ and the ESPN App'."
+    },
+    {
+      "show_key": "bignoon",
+      "title": "Big Noon Kickoff",
+      "sport": "cfb",
+      "network_key": "FOX",
+      "simulcast": null,
+      "brand_key": "bignoon",
+      "bookend": "pre",
+      "weekday": 5,
+      "slot_start_et": "10:00",
+      "duration_min": 120,
+      "anchor_rule": "FOX's noon college football game that day",
+      "active_from": "2026-08-29",
+      "active_to": "2026-12-05",
+      "on_site": true,
+      "source_url": "https://www.foxsports.com/presspass",
+      "source_note": "docs/research/studio-shows.md section 1: Sat 10:00 AM ET, two hours, FOX (FS1 simulcast some weeks), on the road. Three-hour specials at 9:00 select weeks come from the schedule release, not the slot - and no such release is machine-readable, see _findings."
+    },
+    {
+      "show_key": "foxnflkickoff",
+      "title": "FOX NFL Kickoff",
+      "sport": "nfl",
+      "network_key": "FOX",
+      "simulcast": null,
+      "brand_key": "foxnflkickoff",
+      "bookend": "pre",
+      "weekday": 6,
+      "slot_start_et": "11:00",
+      "duration_min": 60,
+      "anchor_rule": "FOX's early NFL window that day",
+      "active_from": "2026-09-13",
+      "active_to": "2027-01-03",
+      "on_site": false,
+      "source_url": "https://www.foxsports.com/presspass",
+      "source_note": "docs/research/studio-shows.md section 1: Sun 11:00 AM ET, one hour, FOX [foxsports.com Press Pass 2026-08-04]."
+    },
+    {
+      "show_key": "foxnflsunday",
+      "title": "FOX NFL Sunday",
+      "sport": "nfl",
+      "network_key": "FOX",
+      "simulcast": null,
+      "brand_key": "foxnflsunday",
+      "bookend": "pre",
+      "weekday": 6,
+      "slot_start_et": "12:00",
+      "duration_min": 60,
+      "anchor_rule": "FOX's early NFL window that day",
+      "active_from": "2026-09-13",
+      "active_to": "2027-01-03",
+      "on_site": false,
+      "source_url": "https://www.foxsports.com/presspass",
+      "source_note": "docs/research/studio-shows.md section 1: Sun 12:00 PM ET, one hour, FOX, LA studio. TWO CARDS rather than one - docs/research/events-summary-2.md section 6's recommendation, taken: they are different shows with different hosts."
+    },
+    {
+      "show_key": "nfltoday",
+      "title": "The NFL Today",
+      "sport": "nfl",
+      "network_key": "CBS",
+      "simulcast": null,
+      "brand_key": "nfltoday",
+      "bookend": "pre",
+      "weekday": 6,
+      "slot_start_et": "12:00",
+      "duration_min": null,
+      "anchor_rule": "CBS's early NFL window that day",
+      "active_from": "2026-09-13",
+      "active_to": "2027-01-03",
+      "on_site": false,
+      "source_url": "https://www.paramountpressexpress.com/cbs-sports/",
+      "source_note": "docs/research/studio-shows.md section 1: Sun 12:00 PM ET, CBS, NYC studio. NO DURATION IS STATED, so the type default in data/duration_defaults.json applies and the bookend rule shortens it to the anchor."
+    },
+    {
+      "show_key": "fnia",
+      "title": "Football Night in America",
+      "sport": "nfl",
+      "network_key": "NBC",
+      "simulcast": "Peacock",
+      "brand_key": "fnia",
+      "bookend": "pre",
+      "weekday": 6,
+      "slot_start_et": "19:00",
+      "duration_min": null,
+      "anchor_rule": "NBC's Sunday night NFL game",
+      "active_from": "2026-09-13",
+      "active_to": "2027-01-03",
+      "on_site": false,
+      "source_url": "https://nbcsportspressbox.com/",
+      "source_note": "docs/research/studio-shows.md section 1: Sun 7:00 PM ET, NBC/Peacock, studio. No duration stated."
+    },
+    {
+      "show_key": "mnfcountdown",
+      "title": "Monday Night Countdown",
+      "sport": "nfl",
+      "network_key": "ESPN",
+      "simulcast": null,
+      "brand_key": "mnfcountdown",
+      "bookend": "pre",
+      "weekday": 0,
+      "slot_start_et": "18:00",
+      "duration_min": null,
+      "anchor_rule": "ESPN's Monday night NFL game",
+      "active_from": "2026-09-14",
+      "active_to": "2027-01-04",
+      "on_site": true,
+      "source_url": "https://espnpressroom.com/us/press-releases/",
+      "source_note": "docs/research/studio-shows.md section 1: Mon 6:00 PM ET, ESPN, on-site at the MNF venue most weeks. No duration stated; the 2026 roster is UNVERIFIED in the doc, so no crew is written."
+    }
+  ]
+}

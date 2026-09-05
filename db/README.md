@@ -755,3 +755,71 @@ is `docs/research/aew.md` §2's rule. Both rows are written; only the linear one
 
 **AEW gets no chip** (register §13's amendment to §9) — it loads, appears under ALL SPORTS and renders
 on its networks. That is a chip-row decision and the adapter is unaffected by it.
+
+## Studio shows — the registry, the instances, the crews — 2026-09-05 (prompt 48 stage 6)
+
+**111 instances across 7 shows**, plus the `studio_shows` registry and 111 `studio_show_instances`
+observations. Backups first: `artifacts/backups/{programs,game_broadcasts,studio_shows,studio_show_instances}_2026-09-05T213153Z.csv`.
+
+| | |
+|---|---|
+| programs | 4,055 → **4,166** (exactly +111) |
+| College GameDay | 16 · ESPN + ESPNU | Big Noon Kickoff | 15 · FOX |
+| FOX NFL Kickoff / FOX NFL Sunday | 16 each · FOX (**two cards**, events-summary-2 §6's recommendation taken) |
+| The NFL Today | 16 · CBS | Football Night in America | 16 · NBC + Peacock |
+| Monday Night Countdown | 16 · ESPN | | |
+| `studio_shows` | **7** | `studio_show_instances` | **111, all 111 linked to a program** |
+| broadcasts on programs | 152 → **2,641 total** (+143) | games | 3,868, unchanged |
+
+**Sanity gate: PASS.** One instance per `(show, air_date)` — zero duplicate groups. Every instance
+linked to its program. A second run of both loaders moved nothing. Reconcile **run id 88**, 298
+programs, 0 uncovered, 0 orphans; the game-side md5 is unchanged.
+
+### The bookend rule is realised in the DATA
+
+`pipeline/load_studio_shows.py` resolves each instance's anchor as it generates the row and writes
+the shortened `expected_duration_min` onto it. **91 of 111 found an anchor.** Football Night in
+America's 120-minute slot becomes **80** against an 8:20 PM SNF kickoff. The 20 that did not are CFB
+weeks past the announcement horizon, where no game carries a broadcast row yet — those render at
+their slot on their own row, which is a real state and not a failure.
+
+### What the sources actually gave
+
+| source | result |
+|---|---|
+| **espnpressroom.com** | **CLEAN, and more than the doc promised.** The Week 1 release gives GameDay's site (**Baton Rouge, LA**), its window (Sat Sept 5, 9 a.m.–noon ET), its networks, **and its ANNOUNCED nine-member 2026 on-air team** — Rece Davis, Kirk Herbstreit, Desmond Howard, Pat McAfee, Nick Saban, "Stanford Steve" Coughlin, Jen Lada, Jess Sims, Pete Thamel. An announcement outranks the hand-curation register §17 permits, so that is what was used, with the release cited on every seat. |
+| espnpressroom.com/us/college-gameday/ | 200, but its single table is a **historical January bowl table**, not the weekly Date/Site/Game table `docs/research/studio-shows.md` §6 described. The weekly site is prose inside each week's own release, so that is what is parsed. |
+| **foxsports.com Press Pass** | The doc marked fetchability UNVERIFIED. **Now verified: fetch-clean but CONTENT-EMPTY.** 200 on `/presspass`, `/presspass/latest-news` and `/presspass/latest-news/weekly-schedule`, with **zero tables and zero occurrences of "Big Noon"** on all three — the page is JS-rendered. So Big Noon's site is `tba` (no subtitle) and its crew is TBA. **Neither is guessed.** |
+
+**Site tiers: 1 `announced`, 110 `reported`** — one release means one week. There is no page listing
+every week's site, so a week without a recorded release has none.
+
+### Not loaded, and why
+
+Four shows the brief names have **no verified 2026 slot** in `docs/research/studio-shows.md` §1, and
+the brief's own rule is *"Nothing not in the doc"*:
+
+- **Sunday NFL Countdown** — absent from the doc's "Verified 2026 slots" list entirely.
+- **Prime Video TNF pregame** — the doc gives "Thu **~**7:00 PM ET", with the tilde. An approximate
+  start is not a slot.
+- **Netflix NFL pregames** — one dated game and "pregame format [UNVERIFIED]".
+- **NASCAR RaceDay and the USA pre/post-race shows** — "30 min each side of the race" but no stated
+  start for RaceDay and no machine-readable source. Deriving a broadcast from another broadcast is a
+  rule the research has not blessed.
+
+Each is recorded in `data/studio_shows.json`'s `_not_loaded` with its reason, so it arrives the day a
+source states its slot rather than being rediscovered.
+
+### The tripwire moved on Sept 5, and here is exactly why
+
+| | before | after |
+|---|---|---|
+| CFB `2026-09-05` blocks | 62 | **64** (+2: College GameDay, Big Noon Kickoff) |
+| block widths | {240, 223} | {240, 223, **205, 136**} — every GAME width unchanged |
+| scrollWidth | 1073 | **1282** (+209: the axis now opens at 9:00 AM for GameDay, earlier than the first kickoff) |
+| rows | 15 | 15 — both shows sit on ESPN's and FOX's existing rows |
+| name count / measured width | 124 / 14744 | 124 / 14744 — **unchanged**, so no game name moved |
+| MLB `2026-09-03` | 3 / {228} / 577 | 3 / {228} / 577 — **untouched** |
+
+**New baseline:** CFB `2026-09-05` = **64 / {240, 223, 205, 136} / 1282**; MLB `2026-09-03` =
+3 / {228} / 577.
