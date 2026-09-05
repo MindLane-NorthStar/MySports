@@ -12,7 +12,7 @@ v1.2), `claude/program-card-design-v1.md`.
 
 ## Repo state
 
-main, HEAD **e1d44ee**. Gates: **232 Python tests + 1 skipped**, **269 JS unit tests**, smoke
+main, HEAD **8f63741**. Gates: **280 Python tests + 1 skipped**, **290 JS unit tests**, smoke
 **30/30**, qa-shots **14/14**. Tree clean apart from always-untracked `assets/` (and `web/qa/`, which
 prompt 46 added to `.gitignore`).
 
@@ -175,3 +175,55 @@ before touching any count line.
 26. **The gate and the commit are SEPARATE COMMANDS.** The runner's exit code and its parsed counts
     decide — never the last command in a chain. `b1b1d9b` went out red because a commit was
     `&&`-chained after a gate whose final command was a `grep` that succeeded.
+
+---
+
+## 2026-09-05 night run (prompt 46)
+
+Ran on `main` from `6b3bc58`. Final HEAD **8f63741**. Gates moved
+**232 + 1 / 259 / 30 / 14** → **280 + 1 / 290 / 30 / 14**.
+
+| stage | commit | what shipped |
+|---|---|---|
+| 1A | `6d9e168` | standalone headroom +7 → +4 |
+| 1B | `f46a57c` | symmetric header spacing; tiles→section gap = bar→tiles gap |
+| 1C | `56e15f3` | styled pickers over native controls; gold sport-week, long date |
+| 1D | `66df3fd` | two-line season-week headings, sport-week in gold |
+| 1E | `eb22693` | grid name·record space, all-zero records absent (contract v1.6.14) |
+| 1F | `e1d44ee` | venue one step brighter; 05 §13 records the batch |
+| 2 | `588065a` | this file rewritten; the old chrome's leftovers retired |
+| 3 | `2127d75` | one telecast ladder; the re-reconcile (run id 81) |
+| 4 | `d6c19c7` | `db/enums.json` + row-level quarantine in the loader |
+| 5 | `569aef0` | D1 the first band, D5 the 1592 px composition |
+| 6 | `3fd5f6c` | bootstrap takes NHL/NBA date ranges — **the loads did not run** |
+| 7 | `8f63741` | NASCAR adapter + recorded feeds — **the load did not run** |
+
+**The phone-grid tripwire was re-baselined once, in 1E, and held for every stage after:**
+CFB `2026-09-05` 62 blocks / {240, 223} / **1073** (unchanged); MLB `2026-09-03` 3 / **228** / **577**
+(was 231 / 582 — M2 stopped measuring a second space it never drew).
+
+**The one database write:** the stage-3 re-reconcile, run id 81, 1,384 games in 172 s. Sanity gate
+passed on all seven criteria; the change set was provably bare-only (78 rows: nfl 24 + nhl 38 +
+nba 16 moved `no_linear_telecast` → `tbd`). Backups at
+`artifacts/backups/{games,viewer_game_eligibility}_2026-09-05T133646Z.csv`.
+
+### Opened by this run
+
+- **NHL and NBA season loads still owe their data.** The workflow can now do it
+  (`nhl_from`/`nhl_to`, `nba_from`/`nba_to`) but the loads must run **in the workflow, not from this
+  laptop**: measured at stage 0, ESPN answered **403 three times out of three** and
+  `api-web.nhle.com` answered **200 on 2 of 5** bounded attempts. Both blocks are local — the daily
+  refresh uses the same adapters from GitHub's network and is green. Someone has to be present for
+  the sanity gate (NHL near 1,312, NBA near 1,230, a shortfall over 5 % is a stop).
+- **NASCAR needs two migrations before its 98 programs can load**, both named in `8f63741`:
+  `game_broadcasts` has no `program_id` and `game_id` is NOT NULL, so a program cannot own a
+  broadcast row; and `programs` has no natural key, so there is nothing to upsert on and a second
+  run would insert 98 duplicates.
+- **v1.7 now has NASCAR data waiting for it** — the adapter and three recorded feeds exist; nothing
+  renders a program until the contract lands.
+- **1D's gold sport-week heading line and 1F's `--ink` venue token are Cowork's calls, open to veto.**
+- **D1's three states are pinned by fixtures but only `tonight` was screenshot** — the run happened
+  at 10:04 ET. Injecting a different `now` into a server render would mean a debug query parameter
+  on a production page.
+- **`programs == games` is no longer a database-wide invariant** — one-directional now: every game
+  has a program, not every program has a game.
