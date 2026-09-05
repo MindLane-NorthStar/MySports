@@ -823,3 +823,50 @@ source states its slot rather than being rediscovered.
 
 **New baseline:** CFB `2026-09-05` = **64 / {240, 223, 205, 136} / 1282**; MLB `2026-09-03` =
 3 / {228} / 577.
+
+## UFC, rest of 2026 — 2026-09-05 (prompt 48 stage 7)
+
+**9 fight cards** from the Paramount+ "Sneak Peak" schedule page through `adapters/ufc.py`. Backups:
+`artifacts/backups/{programs,game_broadcasts}_2026-09-05T214154Z.csv`.
+
+| | |
+|---|---|
+| programs | 4,166 → **4,175** (exactly +9) |
+| cards | Sept 5 Paris · Sept 12 Glendale · Sept 19 **UFC 331** LA · Sept 26 APEX · Oct 3 **UFC 332** Salt Lake · Oct 10 APEX · Oct 17 Edmonton · Oct 24 **UFC 333** Abu Dhabi · Nov 7 APEX |
+| broadcasts | 2,641 → **2,650** — Paramount+ on every card, nothing else |
+| games | 3,868, unchanged |
+| eligibility | 307 rows, 0 uncovered, 0 orphans; all 9 `stream only: paramount-plus` |
+
+**Nine, where `docs/research/ufc.md` §1 listed eight** — the page gained the Oct 10 Fight Night since
+the doc was written, which is the page being the authority rather than the doc. Second load moved
+nothing. Reconcile **run id 90**; the game-side md5 is unchanged.
+
+### What is deliberately absent
+
+- **No segment dividers and no CBS window overlay on the card.** Joe, 2026-09-03, in the design of
+  record — one plain card, superseding the register's own Q2.
+- **`segments` is the EMPTY ARRAY, not a guess.** The page carries the **main-card start only**;
+  `docs/research/ufc.md` §1 names that as its weakness and §5 warns early prelims can begin three
+  hours earlier. A convention-derived prelims time would put a wrong start on the grid for **every**
+  card. *(Empty and not null: `programs.segments` is `jsonb NOT NULL default '[]'` from 0009, and a
+  null failed the entire load — which is how this was found. The transaction rolled back cleanly and
+  nothing landed; verified at 4,166 / 0 UFC rows before the retry.)*
+- **No CBS row.** No upcoming card flags a simulcast, and the page says it outright on the Sept 5
+  card: *"There is no pay-per-view or CBS simulcast."* Paramount Press Express was re-read and
+  carries **zero** UFC/CBS sentences. A window inferred from UFC 326's 8–10 PM precedent would be an
+  invented broadcast. **0 windowed rows, and 0 of them outside their card's span** — the gate passes
+  vacuously and honestly.
+- **No odds.** Register §9 puts UFC moneylines under `show_odds` via The Odds API
+  `mma_mixed_martial_arts`; the brief forbids adding a provider key tonight.
+
+### One defect a UFC card exposed in code that predates it
+
+`web/lib/bandstate.js` read a slate as **already finished** whenever its last program ended at or
+after 03:00. `primeWindow` reports `closesAt` as a wall clock and `pastCutover` only lifts a value
+*before* 03:00, so UFC 331 — 9 PM with a 360-minute block — closed at `"03:00"`, came back as **180**,
+and 180 is smaller than the window's own 14:00 opening. D1 jumped to FINALS, found none, and rendered
+*"Nothing loaded for this viewing day yet"* over a card that had not started.
+
+**A window cannot close before it opens.** That is a wrap, and it is now read as one. Pinned by two
+tests in `web/test/bandstate.test.mjs`: the wrap case, and an ordinary day still reaching FINALS on
+time.

@@ -92,7 +92,14 @@ export function bandState(games, now, policy, { dayLabel = null, tomorrow = [], 
   const opens = win ? hhmmToMinutes(win.opensAt) : null;
   // primeWindow reports closesAt as a wall clock, so a 20:20 kickoff with a 210-minute block closes
   // at 23:50 but a 22:00 one closes at "01:00" - which is 60, not 1500, until the cutover is applied.
-  const closes = pastCutover(win ? hhmmToMinutes(win.closesAt) : null);
+  let closes = pastCutover(win ? hhmmToMinutes(win.closesAt) : null);
+  // AND THE CUTOVER IS NOT ENOUGH ON ITS OWN, which a UFC card is what found. `pastCutover` only
+  // lifts a value BEFORE 03:00, so a day whose last program ends at exactly 03:00 or later comes
+  // back as 180 or 240 - a number smaller than the window's own opening. A window cannot close
+  // before it opens, so that is a wrap, and it is read as one. Measured: UFC 331 starts at 9 PM
+  // with a 360-minute block, closes at "03:00", and the band decided the evening was already over
+  // and rendered "Nothing loaded for this viewing day yet" over a card that had not started.
+  if (closes !== null && opens !== null && closes < opens) closes += 24 * 60;
 
   const live = rows.filter(isLive);
   const finals = rows.filter(isFinal);

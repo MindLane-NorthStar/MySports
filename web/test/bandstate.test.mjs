@@ -142,3 +142,38 @@ test('the module reads no clock of its own', () => {
   assert.doesNotMatch(src, /Date\.now\(\)/, '`now` is an argument, always');
   assert.doesNotMatch(src, /new Date\(\)/, 'a bare new Date() is a hidden clock');
 });
+
+// --------------------------------------------------------------------------- the wrap (v1.7)
+test('a slate that ends AT or AFTER 03:00 has not already finished', () => {
+  // THE BUG A UFC CARD FOUND. primeWindow reports closesAt as a wall clock, and pastCutover only
+  // lifts a value BEFORE 03:00 - so a 9 PM card with a 360-minute block closes at "03:00", came
+  // back as 180, and 180 is smaller than the window's own 14:00 opening. The band read that as
+  // "the day is over", jumped to FINALS, found no finals, and rendered "Nothing loaded for this
+  // viewing day yet" over a card that had not started.
+  //
+  // A window cannot close before it opens. That is a wrap, and it is read as one.
+  const policy = { ufc: { prime_window_start: '14:00', block_minutes: 360 } };
+  const card = {
+    id: 'program-1', sport: 'ufc', result_status: 'scheduled',
+    canonical_kickoff_at_utc: '2026-09-20T01:00:00Z',        // 9:00 PM ET on the 19th
+  };
+  // asked at 6 PM ET on the day itself - inside the window, hours before the card
+  const at6pm = new Date('2026-09-19T22:00:00Z');
+  const band = bandState([card], at6pm, policy, { dayLabel: 'Saturday' });
+  assert.notEqual(band.state, 'finals', 'the evening has not finished');
+  assert.equal(band.empty, false);
+  assert.deepEqual(band.rows.map((r) => r.id), ['program-1']);
+});
+
+test('and the wrap does not stop an ordinary day from finishing', () => {
+  // The guard above must not turn every day into an unfinished one. A slate that closes BEFORE
+  // midnight has no wrap to read, so `closes` stands and FINALS still arrives on time.
+  const policy = { cfb: { prime_window_start: '12:00', block_minutes: 210 } };
+  const game = {
+    id: 'g1', sport: 'cfb', result_status: 'final',
+    canonical_kickoff_at_utc: '2026-09-19T17:00:00Z',        // 1:00 PM ET, closing at 4:30 PM
+  };
+  const band = bandState([game], new Date('2026-09-19T22:00:00Z'), policy, { dayLabel: 'Saturday' });
+  assert.equal(band.state, 'finals', 'a 4:30 PM close is past by 6 PM');
+  assert.deepEqual(band.rows.map((r) => r.id), ['g1']);
+});
