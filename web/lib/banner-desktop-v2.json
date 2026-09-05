@@ -1,0 +1,386 @@
+{
+ "name": "MySports TV home banner v2 - desktop (Option B / layout BX at 200, final)",
+ "date": "2026-09-04",
+ "prompt": 42,
+ "stage": {
+  "w": 1400,
+  "h": 200,
+  "units": "CSS px on a 1400-wide stage; the SVG scales to the container width (height = width * 200/1400)"
+ },
+ "background": {
+  "type": "linear-gradient",
+  "direction": "top-to-bottom",
+  "stops": [
+   [
+    "0%",
+    "#272727"
+   ],
+   [
+    "45%",
+    "#232323"
+   ],
+   [
+    "100%",
+    "#1A1A1A"
+   ]
+  ]
+ },
+ "glow": [
+  {
+   "cx": 1223,
+   "cy": 99,
+   "rx": 200,
+   "ry": 120,
+   "color": "rgb(255,170,60)",
+   "alpha_stops": [
+    [
+     "0%",
+     0.32
+    ],
+    [
+     "45.3%",
+     0.176
+    ],
+    [
+     "82%",
+     0.058
+    ],
+    [
+     "100%",
+     0.021
+    ]
+   ]
+  },
+  {
+   "cx": 1215,
+   "cy": 103,
+   "rx": 88,
+   "ry": 74,
+   "color": "rgb(255,170,60)",
+   "alpha_stops": [
+    [
+     "0%",
+     0.42
+    ],
+    [
+     "45.3%",
+     0.231
+    ],
+    [
+     "82%",
+     0.076
+    ],
+    [
+     "100%",
+     0.028
+    ]
+   ]
+  }
+ ],
+ "title": {
+  "text": "MYSPORTS TV",
+  "x": 60,
+  "baseline_y": 51.76,
+  "font": "Barlow Condensed 700",
+  "font_size": 55,
+  "letter_spacing_px": 2.48,
+  "fill_gradient_top_to_bottom": [
+   [
+    "0%",
+    "#FBE59A"
+   ],
+   [
+    "42%",
+    "#F2CD62"
+   ],
+   [
+    "70%",
+    "#E4B646"
+   ],
+   [
+    "100%",
+    "#D2A038"
+   ]
+  ],
+  "glow": {
+   "fill": "#F3CC5A",
+   "blur_std_dev": 10.0,
+   "opacity": 0.55
+  }
+ },
+ "tagline": {
+  "text": "EVERY GAME. EVERY CHANNEL. ONE PLACE.",
+  "x": 62,
+  "baseline_y": 80.0,
+  "font": "Barlow Condensed 600",
+  "font_size": 15,
+  "letter_spacing_px": 3.0,
+  "fill": "#A4AAB2"
+ },
+ "tv": {
+  "file": "tv-cutout.png",
+  "x": 1165.06,
+  "y": 50.5,
+  "w": 99.87,
+  "h": 105
+ },
+ "marks": [
+  {
+   "id": "nbc",
+   "file": "nbc.png",
+   "group": "network",
+   "x": 60.01,
+   "y": 93.2,
+   "w": 31.98,
+   "h": 31.6
+  },
+  {
+   "id": "fox",
+   "file": "fox.png",
+   "group": "network",
+   "x": 141.0,
+   "y": 100.05,
+   "w": 42.19,
+   "h": 17.9
+  },
+  {
+   "id": "espn",
+   "file": "espn.png",
+   "group": "network",
+   "x": 232.19,
+   "y": 100.05,
+   "w": 72.03,
+   "h": 17.9
+  },
+  {
+   "id": "cbs",
+   "file": "cbs.png",
+   "group": "network",
+   "x": 353.28,
+   "y": 100.05,
+   "w": 64.44,
+   "h": 17.9
+  },
+  {
+   "id": "abc-gray",
+   "file": "abc-gray.png",
+   "group": "network",
+   "x": 466.7,
+   "y": 93.2,
+   "w": 31.6,
+   "h": 31.6
+  },
+  {
+   "id": "paramount",
+   "file": "paramount.png",
+   "group": "network",
+   "x": 547.39,
+   "y": 100.05,
+   "w": 77.83,
+   "h": 17.9
+  },
+  {
+   "id": "dazn",
+   "file": "dazn.png",
+   "group": "network",
+   "x": 674.2,
+   "y": 93.2,
+   "w": 31.6,
+   "h": 31.6
+  },
+  {
+   "id": "prime",
+   "file": "prime.png",
+   "group": "network",
+   "x": 754.78,
+   "y": 97.4,
+   "w": 72.43,
+   "h": 23.2
+  },
+  {
+   "id": "appletv",
+   "file": "appletv.png",
+   "group": "network",
+   "x": 876.3,
+   "y": 98.45,
+   "w": 40.41,
+   "h": 21.1
+  },
+  {
+   "id": "guardstv",
+   "file": "guardstv.png",
+   "group": "network",
+   "x": 965.75,
+   "y": 91.1,
+   "w": 34.3,
+   "h": 35.8
+  },
+  {
+   "id": "tnt",
+   "file": "tnt.png",
+   "group": "network",
+   "x": 60.0,
+   "y": 140.2,
+   "w": 31.6,
+   "h": 31.6
+  },
+  {
+   "id": "netflix",
+   "file": "netflix.png",
+   "group": "network",
+   "x": 135.47,
+   "y": 147.05,
+   "w": 66.66,
+   "h": 17.9
+  },
+  {
+   "id": "peacock",
+   "file": "peacock.png",
+   "group": "network",
+   "x": 246.05,
+   "y": 147.05,
+   "w": 57.91,
+   "h": 17.9
+  },
+  {
+   "id": "usa",
+   "file": "usa.png",
+   "group": "network",
+   "x": 347.86,
+   "y": 146.8,
+   "w": 41.88,
+   "h": 18.4
+  },
+  {
+   "id": "tbs",
+   "file": "tbs.png",
+   "group": "network",
+   "x": 433.53,
+   "y": 146.8,
+   "w": 34.13,
+   "h": 18.4
+  },
+  {
+   "id": "espn2",
+   "file": "espn2.png",
+   "group": "network",
+   "x": 511.62,
+   "y": 147.05,
+   "w": 93.76,
+   "h": 17.9
+  },
+  {
+   "id": "fs1",
+   "file": "fs1.png",
+   "group": "network",
+   "x": 649.22,
+   "y": 143.35,
+   "w": 55.96,
+   "h": 25.3
+  },
+  {
+   "id": "btn",
+   "file": "btn.png",
+   "group": "network",
+   "x": 749.12,
+   "y": 138.1,
+   "w": 59.36,
+   "h": 35.8
+  },
+  {
+   "id": "secn",
+   "file": "secn.png",
+   "group": "network",
+   "x": 852.35,
+   "y": 138.1,
+   "w": 69.09,
+   "h": 35.8
+  },
+  {
+   "id": "mlbn",
+   "file": "mlbn.png",
+   "group": "network",
+   "x": 965.35,
+   "y": 138.1,
+   "w": 34.69,
+   "h": 35.8
+  },
+  {
+   "id": "mlb",
+   "file": "mlb.png",
+   "group": "league",
+   "x": 1191.29,
+   "y": 16.5,
+   "w": 47.42,
+   "h": 25
+  },
+  {
+   "id": "nfl",
+   "file": "nfl.png",
+   "group": "league",
+   "x": 1127.13,
+   "y": 42.0,
+   "w": 27.74,
+   "h": 38
+  },
+  {
+   "id": "nhl",
+   "file": "nhl.png",
+   "group": "league",
+   "x": 1269.14,
+   "y": 43.0,
+   "w": 31.72,
+   "h": 36
+  },
+  {
+   "id": "cfp",
+   "file": "cfp.png",
+   "group": "league",
+   "x": 1111.51,
+   "y": 87.0,
+   "w": 24.98,
+   "h": 36
+  },
+  {
+   "id": "ufc",
+   "file": "ufc.png",
+   "group": "league",
+   "x": 1278.11,
+   "y": 96.0,
+   "w": 51.79,
+   "h": 18
+  },
+  {
+   "id": "nba",
+   "file": "nba.png",
+   "group": "league",
+   "x": 1132.62,
+   "y": 128.0,
+   "w": 16.76,
+   "h": 38
+  },
+  {
+   "id": "wwe",
+   "file": "wwe.png",
+   "group": "league",
+   "x": 1269.9,
+   "y": 131.5,
+   "w": 34.19,
+   "h": 31
+  },
+  {
+   "id": "nascar",
+   "file": "nascar.png",
+   "group": "league",
+   "x": 1164.03,
+   "y": 166.5,
+   "w": 101.93,
+   "h": 17
+  }
+ ],
+ "filters": {
+  "mark": "white halo (dx0 dy0 sd1.2 .22) then black drop (dx0 dy2 sd1.2 .55)",
+  "tv": "black drop (dx0 dy6 sd4 .65) + warm halo (dx0 dy0 sd6 rgb(255,150,40) .28)",
+  "title_glow": "feGaussianBlur sd10.0 on a #F3CC5A copy at opacity .55"
+ }
+}

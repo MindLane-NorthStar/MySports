@@ -1676,19 +1676,22 @@ input:focus-visible {
  * doubled. max() keeps it at 0 in any browser where the inset is 0, so nothing changes off-iOS. */
 .banner{position:relative;overflow:hidden;border-bottom:1px solid var(--line-soft);
   padding-top:max(0px, calc(env(safe-area-inset-top, 0px) - 18px));
-  background:radial-gradient(90% 130% at 50% 10%,#3B3B3B 0%,#262626 55%,#161616 100%)}
+  /* THE GROUND IS THE STAGE. The old radial was drawn for the old artwork; banner v2 paints its
+     own stage, so the wrapper only has to continue it. Same three stops as the SVG's bdBg/bnBg,
+     which is what makes the wings past the 1600px block invisible instead of a halo. On a phone
+     the SVG covers this edge to edge, so the only place it shows is the safe-area padding above
+     it - where reading as the stage's top colour is exactly right. */
+  background:linear-gradient(180deg,#272727 0%,#232323 45%,#1A1A1A 100%)}
 .bn-pc{position:relative}
-.bn-pc .scatter{display:block;width:100%;max-width:1400px;height:auto;margin:0 auto}
-.bn-title{position:absolute;left:0;right:0;top:0;text-align:center;z-index:3;pointer-events:none}
+/* The desktop stage is 1400 wide and the banner is full-bleed to the viewport, so past 1600px the
+   art would keep stretching and the two rows of marks would drift apart. The block caps it: the
+   SVG scales to 1600 and stops, which puts the ceiling at 1600 x 200/1400 = 229px. Beyond that the
+   wings are .banner's gradient, which is the same three stops the stage paints. */
+.bd-wrap{max-width:1600px;margin:0 auto}
 .wordmark{font-family:var(--display);font-weight:700;line-height:1;letter-spacing:.04em;text-transform:uppercase;color:#fff;white-space:nowrap;
   text-shadow:0 0 2px #F0C850,0 0 10px rgba(240,200,80,.55),0 2px 6px rgba(0,0,0,.8)}
 .wordmark b{font-weight:700;color:var(--gold);text-shadow:0 0 10px rgba(240,200,80,.6),0 2px 6px rgba(0,0,0,.8)}
-.bn-pc .wordmark{font-size:56px;padding-top:16px}
-.bnsub{font-family:var(--display);font-weight:600;text-transform:uppercase;color:var(--dim);white-space:nowrap;
-  text-shadow:0 1px 4px rgba(0,0,0,.9)}
-.bn-pc .bnsub{font-size:15px;letter-spacing:.32em;margin-top:8px;padding-left:.32em}
 .bn-mobile{display:none;position:relative}
-.slot rect{opacity:.7}
 @media (max-width:699px){.bn-pc{display:none}.bn-mobile{display:block}}
 /* forced modes for the review frames */
 .force-mobile .bn-pc{display:none}.force-mobile .bn-mobile{display:block}
