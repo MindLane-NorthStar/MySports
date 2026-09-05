@@ -60,6 +60,12 @@ jobs:
         run: |
           IFS=, read -ra SP <<< "${{ github.event.inputs.sports }}"
           season="${{ github.event.inputs.season }}"
+          # The date-driven sports' ranges, read into plain shell vars so the nhl|nba branch below
+          # can choose between them. Prompt 46 intended these and never wrote them: its loop
+          # referenced $NHL_FROM and friends while nothing assigned them, so even a parsing workflow
+          # would have reported "no date range given" and loaded nothing.
+          NHL_FROM="${{ github.event.inputs.nhl_from }}"; NHL_TO="${{ github.event.inputs.nhl_to }}"
+          NBA_FROM="${{ github.event.inputs.nba_from }}"; NBA_TO="${{ github.event.inputs.nba_to }}"
           expand() {  # "1-15" or "1,3,5" -> a space-separated list
             local spec="$1"
             if [[ "$spec" == *-* ]]; then seq "${spec%%-*}" "${spec##*-}"; else echo "$spec" | tr ',' ' '; fi
@@ -79,9 +85,15 @@ jobs:
                   echo "::endgroup::"
                 done ;;
               nhl|nba)
-                # ${{ }} is substituted by Actions BEFORE this shell runs, so the range cannot be
-                # selected with a shell variable inside the expression - both are read into plain
-                # shell vars above and chosen here.
+                # An Actions expression is substituted BEFORE this shell runs, so the range cannot
+                # be selected with a shell variable inside one - both are read into plain shell vars
+                # above and chosen here.
+                #
+                # AND THE BRACES ARE NOT WRITTEN OUT ANYWHERE IN THIS BLOCK, not even in a comment:
+                # Actions substitutes expressions inside shell comments too, and an empty one is a
+                # parse error ("An expression was expected"). Prompt 46's version of this very
+                # comment contained a literal empty expression and stopped the whole workflow file
+                # from parsing - every push since failed in 0s.
                 if [[ "$S" == nhl ]]; then from="$NHL_FROM"; to="$NHL_TO"; else from="$NBA_FROM"; to="$NBA_TO"; fi
                 if [[ -z "$from" || -z "$to" ]]; then
                   echo "$S: no date range given - teams/logos only"
