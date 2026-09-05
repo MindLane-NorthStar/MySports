@@ -106,6 +106,128 @@ jobs:
           fi
           exit 0
 
+      # ---------------------------------------------------------------- programs (prompt 48)
+      #
+      # FIVE MORE STEPS, ALL IN THE SHAPE ABOVE. Prompt 47 could build only the NASCAR one because
+      # the research documents the rest load from were not in the repo; they are now, so the other
+      # five adapters exist and get a step each. EVERY EXISTING STEP IS BYTE-IDENTICAL - these are
+      # added after NASCAR's and nothing is reordered.
+      #
+      # The shape, once, so the repetition below reads as repetition: `set +e`, run the adapter to a
+      # dated file, and if it failed log ONE line and carry on; if it worked, load it and log one
+      # line if THAT failed. `exit 0` at the end means a source being down never costs the day's
+      # games. Rows go through the enum validation and row-level quarantine in pipeline/db.py, so a
+      # bad value costs its own row rather than the batch, and every load is a natural-key upsert -
+      # 0012, 0013 and 0015's partial indexes - so a daily re-run updates rather than duplicates.
+      #
+      # NO ACTIONS EXPRESSION APPEARS IN ANY `run:` BLOCK BELOW. Working rule 28 exists because an
+      # EMPTY one - an opening brace pair with nothing between it - inside a shell COMMENT made
+      # bootstrap_season.yml unparseable for four days while PyYAML called it valid.
+      # tests/test_workflows.py is the guard, not PyYAML.
+      #
+      # AND THE GUARD PROVED ITSELF ON THIS VERY COMMENT: a first draft spelled the empty expression
+      # out as an example, and the guard failed the file for containing exactly the thing the
+      # sentence was warning about. It does not distinguish a comment from a command, which is the
+      # whole point - neither does Actions.
+      - name: IndyCar race sessions -> programs (fail-honest)
+        # Built against 2026 rather than 2027 - Joe's amendment, register section 17. The season ends
+        # Sept 6, so from Sept 7 this step re-reads a finished season every night and updates 18 rows
+        # to the same values. That is cheap and it is CORRECT: the day indycar.com publishes 2027,
+        # --year has to move, and a step that had stopped running would not be there to move.
+        run: |
+          set +e
+          out="artifacts/programs/indycar_$(date -u +%F).json"
+          python -m adapters.indycar --year 2026 --out "$out"
+          if [ $? -ne 0 ]; then
+            echo "indycar: fetch failed - skipped, refresh continues"
+          else
+            python -m pipeline.load_programs --input "$out" || echo "indycar: load failed - skipped, refresh continues"
+          fi
+          exit 0
+
+      - name: WWE Raw / SmackDown / PLEs -> programs (fail-honest)
+        # TWO surfaces, and the adapter needs both: the Premier Shows block for the slots and the
+        # platforms, wwe.com/events for the names and venues. Either one failing fails the step,
+        # which is the honest outcome - a PLE with no name is not something to load.
+        run: |
+          set +e
+          out="artifacts/programs/wwe_$(date -u +%F).json"
+          python -m adapters.wwe --through 2026-12-31 --out "$out"
+          if [ $? -ne 0 ]; then
+            echo "wwe: fetch failed - skipped, refresh continues"
+          else
+            python -m pipeline.load_programs --input "$out" || echo "wwe: load failed - skipped, refresh continues"
+          fi
+          exit 0
+
+      - name: AEW Dynamite / Collision -> programs (fail-honest)
+        # THE MONTHLY PARSE RUNS INSIDE THIS DAILY STEP. docs/research/aew.md is emphatic that the
+        # WBD monthly HBO Max schedule is the only authority for Collision's night and network, and
+        # on 2026-09-05 it could not be reached - press.wbd.com carries no AEW content at its root
+        # and no trade had republished one. So the adapter runs the slot-default path and RE-READS
+        # allelitewrestling.com every night to report a DRIFT line the day the site stops agreeing
+        # with data/aew_2026_schedule.json. That drift line is the signal to go looking for the
+        # monthly schedule again; the Wednesday research watch is the other path.
+        run: |
+          set +e
+          out="artifacts/programs/aew_$(date -u +%F).json"
+          python -m adapters.aew --through 2026-12-31 --out "$out"
+          if [ $? -ne 0 ]; then
+            echo "aew: fetch failed - skipped, refresh continues"
+          else
+            python -m pipeline.load_programs --input "$out" || echo "aew: load failed - skipped, refresh continues"
+          fi
+          exit 0
+
+      - name: UFC fight cards -> programs (fail-honest)
+        # The Paramount+ page is updated about weekly and announces cards 8-12 weeks out, so a daily
+        # re-read is how a newly announced card arrives. No CBS row is written unless the page flags
+        # a simulcast; no segment times are invented.
+        run: |
+          set +e
+          out="artifacts/programs/ufc_$(date -u +%F).json"
+          python -m adapters.ufc --year 2026 --out "$out"
+          if [ $? -ne 0 ]; then
+            echo "ufc: fetch failed - skipped, refresh continues"
+          else
+            python -m pipeline.load_programs --input "$out" || echo "ufc: load failed - skipped, refresh continues"
+          fi
+          exit 0
+
+      - name: Studio shows -> registry, programs and instances (fail-honest)
+        # THREE WRITES, and the order matters: the programs first, then the registry and the
+        # instances, because an instance links to the program by its natural key and the link is
+        # null until the program exists.
+        #
+        # THE GAMEDAY SITE PARSE RUNS HERE. It reads whatever ESPN Press Room releases are recorded
+        # under tests/fixtures/; a week with no recorded release keeps site_tier = tba and renders no
+        # subtitle. BIG NOON STAYS tba UNTIL A PARSEABLE SOURCE EXISTS - foxsports.com Press Pass
+        # answers 200 on three paths with zero tables and zero occurrences of "Big Noon", because it
+        # is JS-rendered. The Wednesday research watch is the override path: a human reads the page
+        # and edits data/studio_crews.json or drops a release into tests/fixtures/, and this step
+        # picks it up the next night. Nothing here guesses a site.
+        run: |
+          set +e
+          out="artifacts/programs/studio_$(date -u +%F).json"
+          python -m pipeline.load_studio_shows --through 2026-12-31 --export "$out"
+          if [ $? -ne 0 ]; then
+            echo "studio: generation failed - skipped, refresh continues"
+          else
+            python -m pipeline.load_programs --input "$out" || echo "studio: program load failed - skipped, refresh continues"
+            python -m pipeline.load_studio_shows --through 2026-12-31 || echo "studio: registry/instances failed - skipped, refresh continues"
+          fi
+          exit 0
+
+      - name: Reconcile program eligibility (migration 0014)
+        # PROGRAM-SCOPED ON PURPOSE. `--programs` on its own reconciles programs and nothing else, so
+        # this cannot touch the game side and cannot collide with the game reconcile further down.
+        # Working rule 27 is about two BULK writes running at once; these run in sequence in one job.
+        #
+        # It is the last program step because it reads what the five above wrote: a program loaded
+        # tonight has no eligibility row until this runs, and the app shows an ELIGIBILITY MISSING
+        # cue for one that has none rather than calling it watchable.
+        run: python -m pipeline.reconcile --programs --workflow schedule_refresh
+
       - name: Push new logos to R2
         run: python scripts/sync_assets.py --push --prefix logos/
       - name: Load fixtures into mysports.* (evidence only — Milestone 1 loader)
