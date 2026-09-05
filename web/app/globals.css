@@ -1667,24 +1667,37 @@ input:focus-visible {
  * which is the entire point of black-translucent. Only its CONTENT is pushed clear, with padding
  * rather than a margin so the gradient still paints behind the clock and battery.
  *
- * THE INSET IS ADDED WHOLE. NOTHING IS ABSORBED (prompt 44).
- * Prompt 28 subtracted 18px here because the OLD artwork carried ~18px of empty gradient above its
- * glyphs, so a 47px iPhone inset would have stacked two gaps and put the wordmark 65px down.
- * Banner v2 is not that drawing. Its 11 stage px of headroom above the wordmark's first ink is not
- * slack to reclaim - it is the gap Joe set in phone iteration 9 ("top gap between the status bar
- * and the content halved, 22 -> 11"), measured with the stage sitting directly under the status
- * bar, and the 21.8% screen figure he approved was (47 + 155) / 926: the FULL inset plus the stage.
- * So the constant to absorb is 0. At a 47px inset the stage starts at y=47 and the first ink lands
- * at y=58 (428) / 57 (390); subtracting anything at all would eat the gap he chose. env()'s own
- * fallback is 0px, so no max() is needed and nothing changes in any browser without a safe area. */
+ * THE INSET IS ADDED WHOLE, PLUS 7px WHEN INSTALLED (prompt 44, amended by prompt 45).
+ * Prompt 28 SUBTRACTED 18px here, because the OLD artwork carried ~18px of empty gradient above its
+ * glyphs and a 47px iPhone inset would have stacked two gaps. Banner v2 is not that drawing: it
+ * carries 11 stage px of headroom, the gap Joe set in phone iteration 9 (22 -> 11), so prompt 44
+ * removed the subtraction and let the whole inset through.
+ *
+ * Then Joe saw it installed: "the tight distance between the bezel and top of the MySports TV text
+ * ... we need to add a smidge of padding." His ruling is 18px of clear space, and he made both
+ * calls, so the later one wins. The 11 stays in the ARTWORK - coordinates are never hand-edited -
+ * and the extra 7 comes from the wrapper, in the @media block below so it applies only where an
+ * inset exists. env()'s own fallback is 0px, so no max() is needed and a browser without a safe
+ * area still gets exactly nothing from either rule. */
 .banner{position:relative;overflow:hidden;border-bottom:1px solid var(--line-soft);
   padding-top:env(safe-area-inset-top, 0px);
   /* THE GROUND IS THE STAGE. The old radial was drawn for the old artwork; banner v2 paints its
      own stage, so the wrapper only has to continue it. Same three stops as the SVG's bdBg/bnBg,
-     which is what makes the wings past the 1600px block invisible instead of a halo. On a phone
-     the SVG covers this edge to edge, so the only place it shows is the safe-area padding above
-     it - where reading as the stage's top colour is exactly right. */
+     which is what makes the wings past the 1600px block invisible instead of a halo. It is now a
+     FALLBACK on a phone rather than the band's paint: prompt 43 let this gradient fill the
+     safe-area band, and because it is anchored to the whole element it had drifted to #252525 by
+     the band's bottom while the stage restarted at #272727 - a 3.1/255 step, with 8.7 and 10.7
+     where the two warm glows began. The band is the ARTWORK's now (BannerMobileV2's ground rect
+     starts at y=-90); this only shows if that overflow ever fails to paint. */
   background:linear-gradient(180deg,#272727 0%,#232323 45%,#1A1A1A 100%)}
+/* INSTALLED ONLY. display-mode: standalone is exactly the condition manifest.js creates, and it is
+   the only place a top inset exists - so the 7px lands on the phone Joe is looking at and nowhere
+   else. Adding it unconditionally would put a 7px ground strip above the banner in every desktop
+   browser and re-base every height test for something no one can see. Wordmark first ink then sits
+   18px below the inset: 7 here + the artwork's own 11. */
+@media (display-mode: standalone){
+  .banner{padding-top:calc(env(safe-area-inset-top, 0px) + 7px)}
+}
 .bn-pc{position:relative}
 /* The desktop stage is 1400 wide and the banner is full-bleed to the viewport, so past 1600px the
    art would keep stretching and the two rows of marks would drift apart. The block caps it: the

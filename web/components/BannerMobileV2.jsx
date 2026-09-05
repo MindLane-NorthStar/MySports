@@ -1,20 +1,42 @@
 // MySports TV — home banner v2, PHONE breakpoint. Generated 2026-09-04 from banner-mobile-v2.json (Prompt 42).
 // Stage 428x155, scales to the container width. Assets live in web/public/banner/ (copied from the handoff package).
 // Do not hand-edit coordinates; regenerate from the JSON if the design changes.
+//
+// PROMPT 45 - THE ARTWORK PAINTS THE SAFE-AREA BAND. Installed on iOS the web view runs under the
+// status bar and .banner pads itself by env(safe-area-inset-top). That band used to be .banner's
+// flat CSS gradient while the stage below it started with its own ground AND its two warm glows -
+// a step of 8.7/255 under the wordmark and 10.7/255 under the TV, which is the seam Joe reported on
+// 2026-09-04. The fix is overflow:visible plus a ground rect that starts at y=-90, so the stage's
+// own paint fills the band and there is no boundary to see. The 0-155 region is untouched: the
+// marks, the type and every coordinate are exactly as generated.
+//
+// WHICH IS WHY THE THREE GRADIENTS ARE userSpaceOnUse. They were objectBoundingBox (the default),
+// which defines a gradient on the unit square of the shape it fills - so growing the ground rect
+// would have stretched its gradient with it and moved every pixel of the visible stage. Pinned to
+// stage coordinates instead, the rect can grow and the paint cannot move. The conversion arithmetic
+// is artifacts/qa/2026-09-05-banner-seam/gradient-convert.py.
+//
+// THE GLOWS' OUTER STOPS ARE LEFT AS GENERATED (0.021 / 0.028, not 0). They make the ellipse
+// boundary a faint hard edge, which overflow:visible exposes in the band as a 3.4/255 line at
+// stage y=-20 - well above the stage, up beside the clock. Fading them to zero removes it, and was
+// measured: it also repaints the annulus between the 82%% and 100%% rings, changing 10.6%% of the
+// visible stage by up to 6/255. That is a far bigger change to the artwork than the artifact is
+// worth, so the tails stay. The seam Joe reported - at the stage's own top edge - is 2.0/255 now.
+//
 export default function BannerMobileV2() {
   return (
-    <svg viewBox="0 0 428 155" width="100%" role="img" aria-labelledby="bnTitle" style={{ display: "block" }}>
+    <svg viewBox="0 0 428 155" width="100%" role="img" aria-labelledby="bnTitle" overflow="visible" style={{ display: "block" }}>
     <title id="bnTitle">MySports TV. Every game. Every channel. One place.</title>
     <defs>
-    <linearGradient id="bnBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#272727"/><stop offset=".45" stopColor="#232323"/><stop offset="1" stopColor="#1A1A1A"/></linearGradient>
-    <radialGradient id="bnGlow0" cx=".5" cy=".5" r=".5"><stop offset="0%" stopColor="rgb(255,170,60)" stopOpacity="0.32"/><stop offset="45.3%" stopColor="rgb(255,170,60)" stopOpacity="0.176"/><stop offset="82%" stopColor="rgb(255,170,60)" stopOpacity="0.058"/><stop offset="100%" stopColor="rgb(255,170,60)" stopOpacity="0.021"/></radialGradient>
-    <radialGradient id="bnGlow1" cx=".5" cy=".5" r=".5"><stop offset="0%" stopColor="rgb(255,170,60)" stopOpacity="0.42"/><stop offset="45.3%" stopColor="rgb(255,170,60)" stopOpacity="0.231"/><stop offset="82%" stopColor="rgb(255,170,60)" stopOpacity="0.076"/><stop offset="100%" stopColor="rgb(255,170,60)" stopOpacity="0.028"/></radialGradient>
+    <linearGradient id="bnBg" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="155"><stop offset="0" stopColor="#272727"/><stop offset=".45" stopColor="#232323"/><stop offset="1" stopColor="#1A1A1A"/></linearGradient>
+    <radialGradient id="bnGlow0" gradientUnits="userSpaceOnUse" cx="346" cy="82" r="138" gradientTransform="translate(346,82) scale(1,0.73913043478260869565) translate(-346,-82)"><stop offset="0%" stopColor="rgb(255,170,60)" stopOpacity="0.32"/><stop offset="45.3%" stopColor="rgb(255,170,60)" stopOpacity="0.176"/><stop offset="82%" stopColor="rgb(255,170,60)" stopOpacity="0.058"/><stop offset="100%" stopColor="rgb(255,170,60)" stopOpacity="0.021"/></radialGradient>
+    <radialGradient id="bnGlow1" gradientUnits="userSpaceOnUse" cx="334" cy="84" r="66" gradientTransform="translate(334,84) scale(1,0.84848484848484848485) translate(-334,-84)"><stop offset="0%" stopColor="rgb(255,170,60)" stopOpacity="0.42"/><stop offset="45.3%" stopColor="rgb(255,170,60)" stopOpacity="0.231"/><stop offset="82%" stopColor="rgb(255,170,60)" stopOpacity="0.076"/><stop offset="100%" stopColor="rgb(255,170,60)" stopOpacity="0.028"/></radialGradient>
     <linearGradient id="bnGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#FBE59A"/><stop offset=".42" stopColor="#F2CD62"/><stop offset=".7" stopColor="#E4B646"/><stop offset="1" stopColor="#D2A038"/></linearGradient>
     <filter id="bnTitleGlow" x="-20%" y="-100%" width="140%" height="300%"><feGaussianBlur stdDeviation="10"/></filter>
     <filter id="bnMark" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="0" stdDeviation="1.2" floodColor="#ffffff" floodOpacity=".22" result="halo"/><feDropShadow in="halo" dx="0" dy="2" stdDeviation="1.2" floodColor="#000000" floodOpacity=".55"/></filter>
     <filter id="bnTv" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="6" stdDeviation="4" floodColor="#000000" floodOpacity=".65" result="s"/><feDropShadow in="s" dx="0" dy="0" stdDeviation="6" floodColor="rgb(255,150,40)" floodOpacity=".28"/></filter>
     </defs>
-    <rect x="0" y="0" width="428" height="155" fill="url(#bnBg)"/>
+    <rect x="0" y="-90" width="428" height="245" fill="url(#bnBg)"/>
     <ellipse cx="346" cy="82" rx="138" ry="102" fill="url(#bnGlow0)"/>
     <ellipse cx="334" cy="84" rx="66" ry="56" fill="url(#bnGlow1)"/>
     <image href="/banner/tv-cutout.png" x="294.05" y="36.0" width="79.9" height="84" preserveAspectRatio="xMidYMid meet" filter="url(#bnTv)"/>

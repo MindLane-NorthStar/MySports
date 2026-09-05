@@ -69,9 +69,24 @@ test('.banner carries the ONLY top safe-area inset, and now it is on every route
   // This is what prompt 31 was fixing when it gave .navbar an inset of its own: Weeks and History ran
   // under the iPhone clock because the single inset rule lived on a component they did not render.
   // With one masthead there is one inset again, and it is the right one.
+  //
+  // Prompt 45 added a SECOND occurrence: the installed app gets +7px on top of the inset. So the
+  // count is 2 - but the property this test exists to protect is unchanged and is asserted more
+  // tightly than before: EVERY occurrence in the stylesheet belongs to a .banner rule, and the
+  // second one is inside @media (display-mode: standalone). No other selector may take a top inset.
   const css = src('app/globals.css');
-  assert.equal((css.match(/safe-area-inset-top/g) || []).length, 1, 'exactly one top inset rule');
-  assert.match(css, /\.banner\{[\s\S]{0,300}?safe-area-inset-top/, 'and it belongs to .banner');
+  const hits = css.match(/safe-area-inset-top/g) || [];
+  assert.equal(hits.length, 2, 'the base rule and the standalone override, and nothing else');
+  // Delete every .banner rule BODY and nothing may be left holding a top inset. (No .banner rule in
+  // this stylesheet contains a nested brace, so [^}]* is an exact rule body here.)
+  const withoutBanner = css.replace(/\.banner\{[^}]*\}/g, '');
+  assert.doesNotMatch(withoutBanner, /safe-area-inset-top/,
+                      'no selector other than .banner may take a top inset');
+  assert.match(css, /\.banner\{[\s\S]{0,300}?padding-top:env\(safe-area-inset-top, 0px\);/,
+               'the base rule adds the whole inset and subtracts nothing');
+  assert.match(css,
+    /@media \(display-mode: standalone\)\{\s*\.banner\{padding-top:calc\(env\(safe-area-inset-top, 0px\) \+ 7px\)\}/,
+    'and the installed app gets 7px more, so the wordmark clears the bezel by 18');
 });
 
 test('there is exactly ONE definition of the link list', () => {

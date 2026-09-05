@@ -337,5 +337,12 @@
   "mark": "white halo (dx0 dy0 sd1.2 .22) then black drop (dx0 dy2 sd1.2 .55)",
   "tv": "black drop (dx0 dy6 sd4 .65) + warm halo (dx0 dy0 sd6 rgb(255,150,40) .28)",
   "title_glow": "feGaussianBlur sd10 on a #F3CC5A copy at opacity .55"
+ },
+ "headroom_paint": {
+  "prompt": 45,
+  "date": "2026-09-04",
+  "what": "The ground rect is drawn from y=-90 instead of y=0 and the root <svg> is overflow:visible, so the artwork paints the iOS safe-area band above the stage instead of leaving it to .banner's CSS gradient. That boundary was the seam Joe reported: 8.7/255 under the wordmark, 10.7 under the TV, 3.1 on neutral ground. Measured after: 2.0 worst.",
+  "gradients": "bnBg, bnGlow0 and bnGlow1 were objectBoundingBox (the default), so growing a shape would have stretched its gradient with it. All three are gradientUnits=userSpaceOnUse now, pinned to stage coordinates; the two radial ones carry the box aspect as a gradientTransform. Arithmetic: artifacts/qa/2026-09-05-banner-seam/gradient-convert.py.",
+  "unchanged": "Every mark, image, text and filter coordinate below is exactly as generated, and the glow ellipses are NOT extended - see BannerMobileV2.jsx for why their outer stops keep their tails. The 0-155 stage region measured 8 of 597060 pixels different by 1/255 at 428 CSS px / DPR 3, which is Chromium's gradient rasteriser, not a geometry change."
  }
 }
