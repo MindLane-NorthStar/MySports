@@ -128,3 +128,38 @@ def test_the_broadcast_insert_targets_0012s_partial_index(emitted):
     _, sql, _ = emitted
     assert "on conflict (program_id, service_id, delivery_surface, feed_side)" in sql
     assert "where program_id is not null do update set" in sql
+
+
+# --------------------------------------------------------------------------- the moved-twin guard
+def test_the_loader_refuses_to_insert_a_moved_twin():
+    """A CORRECTED TIME MUST NOT DOUBLE A SEASON.
+
+    Every program_type's natural key contains start_at, so the moment an adapter fixes a wrong time
+    the ON CONFLICT target changes and the row inserts instead of updating. That is exactly the
+    situation prompt 48 created by finding cf.nascar.com's timestamps are naive Eastern: without this
+    guard the next scheduled refresh would have added 98 second copies of the 2026 season.
+
+    The guard's SQL is asserted here rather than its behaviour, because the behaviour needs a
+    database and this must hold in the offline gate too. What is pinned is the narrowness: same
+    sport, type, title, series and ET calendar day, DIFFERENT start_at.
+    """
+    text = (ROOT / "pipeline" / "load_programs.py").read_text(encoding="utf-8")
+    assert "MOVED_TWIN_SQL" in text
+    sql = text.split("MOVED_TWIN_SQL = ", 1)[1].split('"""', 2)[1]
+    assert "start_at <> %s" in sql, "it must fire only when the time actually differs"
+    assert "series is not distinct from %s" in sql, "null series must match null series"
+    assert "America/New_York" in sql, "same ET calendar day, so a real doubleheader is unaffected"
+    assert "limit 1" in sql
+    # and the caller skips rather than writing
+    assert "moved_twin_skipped" in text
+    assert "WARN moved-twin SKIPPED" in text
+
+
+def test_the_guard_is_inert_offline():
+    """`--emit-sql` has no connection to ask, so a dry run is never blocked by it."""
+    import pipeline.load_programs as lp
+
+    class NoConn:
+        conn = None
+
+    assert lp.moved_twin(NoConn(), {"start_at": "2026-09-06T21:00:00Z", "title": "x"}, "race_session") is None

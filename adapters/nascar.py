@@ -21,6 +21,23 @@ emits 98 programs for 2026, not 964.
 `race_type_id` 1 is a points race and 2 is an exhibition (the Clash, the Duels, the All-Star race).
 Both are race sessions and both are emitted; the field is carried through so a later ruling can
 separate them without a re-fetch.
+
+THE FEED'S TIMESTAMPS ARE NAIVE, AND THEY ARE EASTERN. `race_date` reads `"2026-09-06T17:00:00"`
+with no zone at all, and `adapters.common.parse_iso` stamps a naive value UTC - so every race prompt
+47 loaded is FOUR HOURS EARLY (five in winter). The Cook Out Southern 500 sat on the grid at 1:00 PM
+instead of 5:00 PM. Measured, not assumed: six 2026 Cup races were read back from ESPN's
+`racing/nascar-premier` scoreboard, which publishes real UTC, and five agree with the Eastern
+reading to the minute - including the NASCAR Championship Race on Nov 8, which is in EST, so this is
+a wall clock and not a fixed -4 offset:
+
+    Coca-Cola 600     18:00 -> 22:00Z   ESPN 22:00Z
+    Sonoma            15:30 -> 19:30Z   ESPN 19:30Z
+    Daytona (Aug)     19:30 -> 23:30Z   ESPN 23:30Z
+    Southern 500      17:00 -> 21:00Z   ESPN 21:00Z
+    Championship      15:00 -> 20:00Z   ESPN 20:00Z   (EST)
+
+The sixth, the DAYTONA 500, is a genuine SOURCE DISAGREEMENT and not a zone question: cf.nascar.com
+says 14:30 ET and ESPN says 13:30 ET. One hour, one race, recorded rather than smoothed over.
 """
 
 from __future__ import annotations
@@ -31,7 +48,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from adapters.common import find_repo_root, http_json, parse_iso, iso_utc
+
+ET = ZoneInfo("America/New_York")
 
 ROOT = find_repo_root()
 
@@ -40,6 +62,17 @@ FEED = "https://cf.nascar.com/cacher/{year}/{series}/race_list_basic.json"
 # The schema's own vocabulary (migration 0009's programs_series_ck), keyed by the feed's series_id.
 SERIES = {1: "cup", 2: "oreilly", 3: "truck"}
 SERIES_ID = {v: k for k, v in SERIES.items()}
+
+def _open_ended_default() -> bool:
+    path = ROOT / "data" / "duration_defaults.json"
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return bool(json.load(fh).get("race_session", {}).get("open_ended_default"))
+    except (OSError, ValueError):
+        return True          # a race whose end is unknown is the safe reading, not a hard box
+
+
+OPEN_ENDED = _open_ended_default()
 
 # Fallback when the feed gives no usable duration. Cup and Xfinity races run long; trucks are
 # shorter. These are DEFAULTS, recorded as such in each row's provenance - not measurements.
@@ -86,9 +119,27 @@ def broadcast_rows(race: dict[str, Any]) -> list[dict[str, Any]]:
     }]
 
 
+def race_start(value: str | None):
+    """The feed's `race_date` as a real instant. A NAIVE value is Eastern; see the module docstring.
+
+    A value that already carries an offset is trusted as written - if the feed ever starts publishing
+    one, this stops guessing on that day and not a day later.
+    """
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    try:
+        naive = datetime.fromisoformat(raw)
+    except ValueError:
+        return parse_iso(raw)
+    if naive.tzinfo is not None:
+        return naive
+    return naive.replace(tzinfo=ET)
+
+
 def to_program(race: dict[str, Any], series: str) -> dict[str, Any] | None:
     """One `programs` row, or None when the entry has no usable start."""
-    start = parse_iso(race.get("race_date"))
+    start = race_start(race.get("race_date"))
     if start is None:
         return None
     minutes, provenance = duration_min(race, series)
@@ -105,6 +156,10 @@ def to_program(race: dict[str, Any], series: str) -> dict[str, Any] | None:
         # venue_id is an FK into `venues` and this feed carries a track_id from a different
         # namespace, so the track lands in location_text rather than inventing a mapping.
         "location_text": (race.get("track_name") or "").strip() or None,
+        # A race END is not knowable in advance - cautions, red flags and rain move it, which is
+        # exactly what open_ended means. data/duration_defaults.json says so for every race_session;
+        # this reads that file rather than restating its answer.
+        "open_ended": OPEN_ENDED,
         "source_tier": "official_league_feed",
         "source_url": FEED.format(year=race.get("race_season") or "", series=SERIES_ID[series]),
         "brand_key": "nascar",

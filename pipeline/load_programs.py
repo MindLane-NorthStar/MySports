@@ -44,6 +44,31 @@ from typing import Any
 from adapters.common import access_lookup, access_status_for, normalize_outlet
 from pipeline.db import DB, ROOT
 
+# THE DUPLICATE HAZARD, and why this file refuses a write rather than making one.
+#
+# Every program_type's natural key CONTAINS start_at (see CONFLICT below). That is fine while a
+# schedule only gains rows - and it is a trap the moment an adapter CORRECTS a time. Prompt 48 found
+# that cf.nascar.com publishes naive Eastern timestamps and adapters/common.parse_iso had been
+# stamping them UTC, so all 98 loaded races are four hours early. Fixing the adapter changes
+# start_at, which changes the natural key, which means ON CONFLICT matches nothing and the next
+# scheduled refresh inserts 98 SECOND COPIES beside the 98 wrong ones.
+#
+# So a row that looks like a moved twin of a stored row is SKIPPED and REPORTED, never inserted. The
+# operator gets a line naming both times and can decide; a loader that quietly doubled a season
+# would be discovered by a reader seeing every race twice.
+#
+# The match is deliberately narrow - same sport, same type, same series, same title, same ET
+# CALENDAR DAY, different start_at - so a genuine doubleheader (two different titles, or the same
+# title on different days) is unaffected. It cannot fire on an unchanged reload, because there the
+# start_at is equal and ON CONFLICT does its job.
+MOVED_TWIN_SQL = """
+select program_id, start_at from programs
+ where sport = %s and program_type = %s and title = %s
+   and series is not distinct from %s
+   and (start_at at time zone 'America/New_York')::date = (%s::timestamptz at time zone 'America/New_York')::date
+   and start_at <> %s
+ limit 1"""
+
 # The conflict target per program type, mirroring the partial unique indexes in 0012 and 0013.
 CONFLICT = {
     "race_session": "sport, series, start_at, title",
@@ -106,6 +131,15 @@ def access_for(broadcast: dict, profile: tuple[set[str], set[str]]) -> str:
     return access_status_for(normalize_outlet(label), *profile)
 
 
+def moved_twin(db, row, ptype):
+    """`(program_id, stored_start)` when a stored row is this row at a different time, else None."""
+    if db.conn is None or not row.get("start_at"):
+        return None                    # offline --emit-sql has nothing to ask
+    found = db.fetch(MOVED_TWIN_SQL, (row.get("sport"), ptype, row.get("title"),
+                                      row.get("series"), row.get("start_at"), row.get("start_at")))
+    return found[0] if found else None
+
+
 def load(db, rows, known_networks, profile=None):
     counts: Counter = Counter()
     now = datetime.now(timezone.utc)
@@ -117,6 +151,14 @@ def load(db, rows, known_networks, profile=None):
         if not conflict:
             print("WARN skip: no natural key for program_type %r" % ptype, file=sys.stderr)
             counts["skipped"] += 1
+            continue
+
+        twin = moved_twin(db, row, ptype)
+        if twin is not None:
+            print("WARN moved-twin SKIPPED: %r %s stored at %s, feed says %s - the natural key "
+                  "contains start_at, so loading this would ADD a row rather than correct one"
+                  % (row.get("title"), ptype, twin[1], row.get("start_at")), file=sys.stderr)
+            counts["moved_twin_skipped"] += 1
             continue
 
         program = {c: row.get(c) for c in PROGRAM_COLS if c in row}
@@ -191,6 +233,10 @@ def main(argv: list[str] | None = None) -> int:
     db.close()
     print("programs %d | broadcasts %d | unknown networks %d | skipped %d"
           % (counts["programs"], counts["broadcasts"], counts["unknown_network"], counts["skipped"]))
+    if counts["moved_twin_skipped"]:
+        print("MOVED-TWIN SKIPPED %d row(s): a stored program matches on everything but start_at. "
+              "Correcting those times is a database decision, not a load - see pipeline/load_programs.py"
+              % counts["moved_twin_skipped"])
     split = sorted((k[len("access:"):], v) for k, v in counts.items() if k.startswith("access:"))
     if split:
         print("access: " + " | ".join("%s %d" % kv for kv in split))
