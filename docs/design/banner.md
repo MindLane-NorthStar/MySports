@@ -1,10 +1,21 @@
 # Banner — composition and mark rules (design session 2026-09-02)
 
-The home page opens on a banner; every other route wears a compact bar cut from the same art. Both
-are drawn from one file, [`web/lib/banner-layout.json`](../../web/lib/banner-layout.json), by
-[`web/components/Banner.js`](../../web/components/Banner.js). Static references for both breakpoints
-are in [`docs/design/banner/`](banner/) — `banner-pc.svg` and `banner-mobile.svg` are what the
-component must reproduce, and are the thing to diff against when a change looks wrong.
+**SUPERSEDED, and kept for the composition rules below.** This describes the prompt-16 banner: one
+drawing per breakpoint generated from `web/lib/banner-layout.json`, with a compact bar on every route
+except the home page. None of that is the app any more.
+
+- The compact bar was retired in prompt 43 (`c1d9955`): **every route wears the full banner**, with
+  the `.homenav` tab row beneath it.
+- `banner-layout.json` was deleted in prompt 43 (`560d1c1`). The artwork is banner v2, baked into
+  [`web/components/BannerMobileV2.jsx`](../../web/components/BannerMobileV2.jsx) and
+  [`BannerDesktopV2.jsx`](../../web/components/BannerDesktopV2.jsx); `web/lib/banner-mobile-v2.json`
+  and `banner-desktop-v2.json` document those coordinates but are imported by nothing.
+- The static references `banner-pc.svg`, `banner-mobile.svg` and `navbar.html` were deleted in
+  prompt 46 — they reproduced artwork and a component that no longer exist, so diffing against them
+  would have been diffing against the wrong app.
+
+The composition reasoning below is still the reasoning banner v2 inherits, which is why this file
+survives.
 
 ## The composition is the app icon, widened
 

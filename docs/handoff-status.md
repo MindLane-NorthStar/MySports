@@ -1,89 +1,177 @@
-# MySports — Handoff Status (post-prompt-35, 2026-09-04)
+# MySports — Handoff Status (rewritten 2026-09-05, prompt 46 stage 2)
 
-**This file now lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
+**This file lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at
+`claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
-Read first for any session picking up MySports. Memory `/areas/mysports.md` + `/areas/mysports-build-log.md` + `/areas/mysports-ui-repair.md` carry the compressed truth. Companions: **`docs/enhancement-register.md`** — the repo copy is the source (prompt 26); §1–§13 are still only in the Claude project and Joe is supplying them, so check there before re-raising ANY decision, **`docs/feature-study/05-home-page-decisions.md` (D1–D6, the D3 amendment, deployment facts, E5, and §9 NETWORK TBD — BINDING)**, `docs/rendering-contract.md` v1.6.5, `docs/rendering-contract-mobile.md` (Addendum v1.1), `claude/program-card-design-v1.md`.
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§14
+only in the repo; §1–§13 are still project-only and Joe is supplying them — check there before
+re-raising any decision), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
+amendment, §9 NETWORK TBD, §11 mobile page order, §12 the DATE/WEEK headers, §13 the 2026-09-05
+review), `docs/rendering-contract.md` **v1.6.14**, `docs/rendering-contract-mobile.md` (Addendum
+v1.2), `claude/program-card-design-v1.md`.
 
 ## Repo state
-main, HEAD **fab2f1f**. **200 Python tests OK (skipped=1)**, **185/185 JS unit tests**, smoke **30/30**, qa-shots **14/14**. Tree clean apart from always-untracked `assets/`.
 
-**Smoke 29/30 is CLOSED.** The `generated_grids` bare-key failure was fixed in prompt 22 by standardising on bare keys with consumers joining `ASSET_BASE_URL`.
+main, HEAD **e1d44ee**. Gates: **232 Python tests + 1 skipped**, **269 JS unit tests**, smoke
+**30/30**, qa-shots **14/14**. Tree clean apart from always-untracked `assets/` (and `web/qa/`, which
+prompt 46 added to `.gitignore`).
 
-Prompt 35 (three phases): A `625feba` iOS tile collapse -> `359f58a` tile order -> `0e52467` stale-LIVE guard | B `22229ae` the @ comes off ordinary games (contract v1.6.7) | C the grid's team bands, the fitted name run and contract v1.6.8.
-Prompt 31: `ebdbae4` Racing art + register §16 → `bf2998f` Racing chip, ALL bar, non-scrolling tile row → `a61a2f2` sport block first + day row count → `88a7ed0` YOUR TEAMS heading (05 §5 closed) → `0143013` navbar safe-area → `ad4075c` ET removed, one footnote → `7b11196` name shrink/ellipsis (the @ wrap measured and KEPT) → `da31a8d` even time/date spacing → `3c23f5a` reference updated.
-Prompt 30: `81e2efd` the grid rail comes unpinned under zoom - fixed by zooming through layout instead of a CSS transform; Mobile Grid Addendum v1.2.
-Prompt 29: `9c374c8` the card's right slot becomes a priority ladder, contract v1.6.6 (exceptions now outrank odds; winner-first score; TIED; the dash replaces Sched).
-Prompt 28: `25ba786` sport tiles become fixed soft-cornered squares with marks filling the box (register §15) → `99bda44` banner inset absorbs the artwork's 18px headroom.
-Prompt 27: `bb7b73f` the three authorities land in the repo, §11 scoped to Today → `0e3e336` YOUR TEAMS → grid → bands on `/` (05 §11 built) → `5f43dd5` empty states pronounce the sport once.
-Prompt 26: `ab291b5` count line / mobile order / chip inversion ruled → `ac5b8c9` active chip inverted (charcoal + gold border) → `ceb3fdf` count line becomes airing/TBD/unavailable → `d2777fa` WWE + UFC empty copy → `ba05819` iOS standalone (black-translucent + safe-area) → `e9100cb` Weeks chips shortened, chip marks 20px.
-Prompt 25: `990518f` docs + rule 22 → `2e41a51` chip row scrolls, marks only, four new sports → `4d2012e` a11y (aria-pressed, group names, 44px targets) → `8eb324d` --faint lifted → `a5c588f` week control, toggle count, duplicate sentence.
-Prompt 24: `dff0725` docs + NETWORK TBD ruled (05 §9) → `f15449f` line-ending normalisation → `2024c21` reconciler: no out-of-market conclusion from an empty broadcast list (78 → 0) → `a1f7364` network TBD is its own state, never off-service, never hidden → `10efae7` grid note for games with no network to place.
-Prompt 23: `a382569` bootstrap_season loads games → `015da43` overlap rule both renderers → `7261189` week dropdown + current-week default → `b44893e` PostgREST row-cap fix.
-Prompt 22: `f42c364` four-column card restored → `234079c` Guardians TV mark → `24f9de8` desktop PC grid + bare keys → `8f64103` colour-band guard (no colour bug found) → `e826d23` chips, banner gap, one-line count.
-Prompt 21: `abaf8dc` → `da2388c` → `50f9180` → `f064172` → `4250aa9`.
+Prompt 46 stage 1 — Joe's second installed-app review, 2026-09-05:
+`6d9e168` headroom +7→+4 → `f46a57c` symmetric header spacing, tiles-to-section gap → `56e15f3`
+styled pickers over native controls → `66df3fd` two-line season-week headings → `eb22693` grid
+name·record space + all-zero suppression (contract v1.6.14) → `e1d44ee` venue one step brighter, and
+05 §13.
 
-**CRLF hazard — CLOSED** by `f15449f` (prompt 24, stage 1b), which added `.js .mjs .jsx .css .html` to `.gitattributes` as `text eol=lf` and renormalised. All 51 files of those types are LF on disk and in the index, the bridge shell's 479-line phantom diff is gone, and `git diff --name-only` returns empty from either OS. No `--ignore-cr-at-eol` workaround is needed any more.
+Prompt 45: `98bf919` the artwork paints the safe-area band (the seam) → `e5ff931` DATE/WEEK headers
+carry the picker → `6b3bc58` ALL SPORTS.
+
+Prompt 44: `a68af01` absorb nothing of the inset; `392a130` the card-ladder fixture stops rotting.
+
+Prompt 43: `bd7bd22` icon v7 → `0649dd9` banner phone v2 → `560d1c1` banner desktop v2, retire
+`banner-layout.json` → `c1d9955` **the banner is on every route; NavBanner and the compact bar are
+gone**.
+
+Prompt 42: `fbfc2f8` contract v1.6.13 — the card's fit order mirrors the grid's.
+
+Earlier prompts are in `git log`; this file no longer restates them.
+
+**CRLF hazard — CLOSED** by `f15449f` (prompt 24). `.js .mjs .jsx .css .html` are `text eol=lf` in
+`.gitattributes`. A plain `git diff` tells the truth from either OS. Note `globals.css` is CRLF *on
+disk* and LF *in the index* — git normalises on add, so preserve line endings when editing it
+programmatically.
 
 ## DEPLOYED
-**https://my-sports-xi.vercel.app** — Vercel project `my-sports`, team `mindlane-northstar` (Pro), Root Directory `web`. **Leave Vercel Authentication on Standard Protection** (it exempts the production alias, keeps previews behind login). Do not buy Advanced Deployment Protection.
 
-**Akamai does not block Vercel** (probe from `iad1`, four 200s). The 403 is specific to the Cowork cloud workspace. **Never reapply a bare browser UA** — it scores worse than an honest bot UA.
+**https://my-sports-xi.vercel.app** — Vercel project `my-sports`, team `mindlane-northstar` (Pro),
+Root Directory `web`. **Leave Vercel Authentication on Standard Protection.** Do not buy Advanced
+Deployment Protection. Every push to `main` is the production deploy.
+
+**Akamai does not block Vercel** (probe from `iad1`, four 200s). The 403 is specific to the Cowork
+cloud workspace. **Never reapply a bare browser UA.**
 
 ## What works now
-- **Data spine:** 29-table `mysports` schema; adapters cfbd/espn-nfl/nhl/nba/mlb; reconciliation; standings for 4 leagues; MLB probables.
-- **A FULL 2026 REGULAR SEASON IS LOADED.** `games` 375 → ~1,379. CFB 14 weeks (week 14 absent, week 15 holds 1 game — that is what CFBD returns for `season-type=regular`, conference championship week is labelled outside it; **not a load failure, do not "fix" it**). NFL 18 weeks complete. `mlb` 153 / `nba` 19 / `nhl` 47 are date-driven. `bootstrap_season.yml` takes `cfb_weeks` / `nfl_weeks` dispatch inputs and is **manual-dispatch only**; `schedule_refresh.yml` is unchanged and still scoped to the current CFB week and the coming NFL Sunday.
-- **Live scores, read-only:** `web/lib/livescores.js` — state/score/clock/period from the providers on render, 60 s cache, fails open, never writes.
-- **Card state (E1) + data-as-of (E4).** NHL in-progress uses `P3`, not `T3`.
-- **Overlap rule (contract v1.6.5, Addendum M14 v1.1).** Two programs on one network row overlapping by ≤60 min split the difference at the midpoint; >60 min still generates a second row. Presentational only — never touches `canonical_kickoff_at_utc` or `block_minutes`. Landed in **both** renderers, pinned by nine shared fixtures at `tests/fixtures/overlap_cases.json`, with `floor((a.end + b.start) / 2)` specified so Python `//` and JS `Math.floor` cannot drift a minute. Width guard fired 0 times on both real slates. **Note `render_day.py` already avoided the extra lane by truncating the earlier block — so on the PC grid this moved the boundary to the fair place rather than removing rows; the row saving is on the phone grid.**
-- **Weeks page:** dropdown grouped by sport via `<optgroup>`, defaulting to the current week (span containing today's ET viewing day → latest start wins → next upcoming → most recent past). URL stays the source of truth.
-- **Off-service (D4/E3)** from `mysports.viewer_game_eligibility`, never recomputed in JS. **Favorites (D6):** `data/favorites.json`, 13 teams. **Prime window (D2):** `prime_window_start` per sport — still unconsumed. **Market-pending (E5):** `market_pending` computed in `pipeline/reconcile.py`; rule is `access_status = 'unverified'`.
-- **Per-sport bands:** every band reports its counts, not only bands with something hidden (`4250aa9` — do not regress).
-- **iOS home screen:** 180×180 apple-icon + manifest. **Navigation:** `web/lib/routes.js` is the single route-list definition.
+
+- **Data spine:** 29-table `mysports` schema (migrations through `0011_division_seed.sql`); adapters
+  cfbd / espn-nfl / nhl / nba / mlb; reconciliation; standings for 4 leagues; MLB probables.
+- **A FULL 2026 CFB + NFL REGULAR SEASON IS LOADED.** `games` ≈1,379. CFB 14 weeks (week 14 absent,
+  week 15 holds 1 game — that is what CFBD returns for `season-type=regular`; **not a load failure**).
+  NFL 18 weeks complete. `mlb` 153 / `nba` 19 / `nhl` 47 are date-driven and therefore **partial** —
+  see Open. `bootstrap_season.yml` is manual-dispatch only; `schedule_refresh.yml` is scoped to the
+  current CFB week and the coming NFL Sunday.
+- **Live scores, read-only:** `web/lib/livescores.js` — state/score/clock/period on render, 60 s
+  cache, fails open, never writes. Stale-LIVE guard at 8 h (`isStaleLive`, `format.js`).
+- **Overlap rule** (contract v1.6.5, Addendum M14 v1.1) in **both** renderers, pinned by nine shared
+  fixtures at `tests/fixtures/overlap_cases.json`.
+- **Chrome:** one masthead on every route — the full banner (`BannerMobileV2` / `BannerDesktopV2`,
+  coordinates baked in; the v2 JSON files are documentation and are imported by nothing) plus the
+  `.homenav` tab row. `.banner` carries the app's ONLY top safe-area inset, +4 px when installed.
+- **Pickers:** a drawn face over an invisible native control, so iOS keeps its wheel and calendar.
+- **Off-service (D4/E3)** from `mysports.viewer_game_eligibility`, never recomputed in JS.
+  **Favorites (D6):** `data/favorites.json`, 13 teams. **Market-pending (E5)** in
+  `pipeline/reconcile.py`; the rule is `access_status = 'unverified'`.
+- **Per-sport bands:** every band reports its counts, not only bands with something hidden
+  (`4250aa9` — do not regress).
+- **Navigation:** `web/lib/routes.js` is the single route-list definition.
 
 ## THE HEADLINE OPEN ITEM — the announcement horizon
-**529 of ~1,379 games have zero `game_broadcasts` rows**, and the app currently calls every one of them "not on your services." `2027-01-10` renders `16 games · 16 not on your services` on an empty page. **53.4% of the loaded season is hidden by D4 and three-quarters of that is hidden merely for not being announced yet.**
 
-This is **ruled**: `docs/feature-study/05-home-page-decisions.md` **§9 — NETWORK TBD is a fourth state**, always shown, never filtered, counted on its own line, label `network TBD`, mutually exclusive with market-pending by construction. **Prompt 24 implements it.** Read §9 before touching any count line.
+**~529 of ~1,379 games have zero `game_broadcasts` rows.** Ruled in
+`05-home-page-decisions.md` **§9 — NETWORK TBD is a fourth state**, always shown, never filtered,
+counted on its own line, mutually exclusive with market-pending. Implemented in prompt 24. Read §9
+before touching any count line.
 
-## Immediate next steps
-1. **Prompt 24 — correctness.** Land these docs; fix `pipeline/reconcile.py`'s false out-of-market conclusion from an empty broadcast list (78 rows: nfl 24 + nhl 38 + nba 16); implement the NETWORK TBD state; add the grid's honest "not on the grid" note; normalise `.gitattributes` for `.js/.mjs/.jsx/.css/.html` as an isolated commit.
-2. **Prompt 25 — the visual pass.** Chip rebuild per register §13 (league marks only, no text; NASCAR/INDYCAR/UFC/WWE added; **no AEW chip**; raw art on the gold active plate; horizontally scrolling row; honest per-sport empty states). Logo two-state audit — lead: `nfl.png` and `nfl_dark.png` are byte-identical at 28,678 bytes. Week-control restyle (it renders gold under the gold "Season week" chip and reads as two selected chips — ruled: inactive style with a caret). 390 px mobile pass: the wrapping `@`, the network mark abutting the home team name, the 78 px time column. Mobile page reorder (YOUR TEAMS → grid → rest).
-3. **506sports NFL maps land ~Sept 8–9 → `market_coverage_nfl`.** Resolves E5's market-pending games. On the critical path for September 13.
-4. **Rendering-contract v1.7** — program card + studio shows; the grid "now" marker; `open_ended` vs `render_policies` reconciliation (same file as `prime_window_start` — land together); loader enum-hardening; the `unverified` documentation note.
-5. Behind that: WWE/AEW → UFC → NASCAR (playoffs to Nov 8) → IndyCar (Dec). CBJ watch escalation ~Sept 15 (ask first); research watch `trig_01Bvo3an2iZBcEBFphv9MqYs` Wednesdays. Cloud egress add still needed: cf.nascar.com.
-6. **Privacy gate before the Cavs season (late October):** production is a public URL. Confirm no loaded broadcast row publishes the unannounced WUAB/RESN arrangement.
+## Open
 
-## Open — carry into prompt 28 / v1.7
-- **THE PHONE GRID NOW PAINTS TEAM BANDS, and did not before.** `.mnames` held two name rows on the block's own charcoal with no background at all - the colour data arrived and was never used, which is why prompt 22 stage 4 measured the path as intact. It now implements contract v1.6.8's mobile band rule, and the name run is fitted per card rather than a hardcoded 12px.
-- **HELD FOR JOE - twelve MLB rows stuck at `in_progress`.** Kickoffs 2026-09-01 22:40 to 2026-09-02 00:40 UTC. Prompt 35 shipped the DISPLAY guard (`isStaleLive`, 8 hours, renders `Final pending`); the backfill is a database write and was deliberately not made. The scores are in the prompt-35 report.
-- **A pipeline logic gap behind those rows, for its own prompt.** `schedule_refresh` failed three times on 2026-09-02 (15:00, 19:30, 19:35 UTC) - the RENDER job, `FileNotFoundError: artifacts/validation/mlb_2026_teams.json`. Something wrote `completed_at` on all twelve at 19:39:37 without setting `result_status='final'`, and the later successful runs did not repair them.
-- **TBS has no mark and it is a LIVE gap, not a pre-emptive one.** `networks_services` carries `('tbs','TBS')` with **2 loaded `game_broadcasts` rows**, and `web/public/marks/` has only `tnt.png`. The source art is NOT in `assets/network-logos/`, so prompt 35 stopped there - sourcing it is Cowork's job.
-- **The navbar links could not be reproduced as broken.** At 390px with a 47px inset simulated, all three hit-test to themselves and the routes resolve. The device checks are in the prompt-35 report.
-- **The card's matchup column is too narrow for one-line team names, and Joe rules on the fix.** Prompt 31 measured removing `.duel`'s `flex-wrap` - the `@` then holds its line, but `.mbody` is 152px at 390px against the ~250px two names need, so **122 of 124 names on 2026-09-05 truncated** ("South Alabama" 41px of 110). The wrap was kept. Options, none of them prompt 31's to take: widen `.mbody` (stage 6 freed 22px on the DESKTOP time column, only ~2px on mobile), or the two-row stacked matchup. The locked reference specifies no-wrap and the divergence is recorded in both files.
-- **`components/NavBanner.js:33` prints "all times ET · Cleveland".** Prompt 31 removed the ET suffix from every clock and added one italic footnote, but left this - it is a timezone statement, not a clock suffix, and was outside the brief's list. It renders only on `/weeks` and `/history` and is `display:none` on mobile, so desktop Weeks/History now carry two timezone statements and Today carries one. Joe's call.
-- **The navbar safe-area fix needs Joe's phone** (`0143013`). Verified only by substituting a literal 47px into `--nav-safe`; Chromium has no safe area.
-- **The banner's standalone top gap was corrected in prompt 28 (`99bda44`) and needs Joe's phone to confirm.** `.banner`'s padding-top now subtracts the artwork's own 18px of headroom from the safe-area inset instead of stacking on it, so the wordmark sits flush with the bottom of the status bar rather than 18px below it. Chromium has no safe area, so this was verified only by substituting a literal 47px into the shipped expression. If it now reads too tight, it is a one-number change.
-- **The design builders are still project-only.** `build_demo.py`, `app_template.html`, `build_banner.py` and `markkit.py` produce the locked design references and are NOT under version control — confirmed absent from the working tree at `89614ec`. `docs/design/mobile_demo.html` is a TEMPLATE (`__DATA__`, `__TODAY__`, `__GRIDSVG__` and the rest are filled by `build_demo.py`), so the repo copy cannot be rebuilt from the repo. Cowork owes them; a filing item, not a defect.
-- **`--faint` reaches 3.63:1 on the card top and true AA is unreachable there** without moving `--dim` or lightening `--panel-top`. Prompt 25 measured it; the smallest same-hue grey that reaches 4.5:1 on `--panel-top` is `#989fa8`, and `--dim` is 4.62:1 on that same ground — 0.06 apart, the same colour to the eye, so the third step of the hierarchy would cease to exist. **Joe's call, accepted. Not a defect to re-raise.**
-- **The mobile page order (`05-home-page-decisions.md` §11) is BUILT** as of prompt 27 (`0e3e336`): YOUR TEAMS → grid → bands on `/`, D6's in-band float retired there and retained on `/weeks` and `/history` per §11's scope clarification, the `Grid ↓` chip retired, and the section arithmetic pinned by `web/test/pageorder.test.mjs`.
-- **The enhancement register §1–§13 are still only in the Claude project.** `docs/enhancement-register.md` exists and is the source going forward, but currently carries only §14; prompt 26 could not relocate the rest because no copy is in the working tree. Joe to supply. Same for the audit triage and `mobile_demo.html`.
-- **`unverified` is load-bearing semantics.** Any adapter that writes it loosely manufactures false market-pending rows. Document it in `data/authority_rules.json` `_about` and `adapters/README.md`.
-- **Loader enum hardening (v1.7).** One mistyped enum (`carriageCertainty="UNVERIFIED"`) aborted a whole daily refresh. Specific bug fixed at `64c9764`; **the class is not.** Validate enum-typed fields against the DB enum before insert and quarantine the offending ROW.
-- **The daily refresh is now two-for-two green** on current code (the 2026-09-03 run fired at 14:54 UTC and added 15 games). The cron is `0 11 * * *`; the 14:54 fire is normal GitHub Actions schedule drift — confirm once, do not treat as a fault. The "only ONE green run" watch item is retired.
-- **Design nits for Joe's eye:** the MARKET TBD badge sits tight above the odds cluster at the card's top-right.
+- **Rendering-contract v1.7** — the program card (`claude/program-card-design-v1.md`), studio-show
+  bookends, the grid "now" marker, and `open_ended` ↔ `render_policies` reconciled in one change.
+  **This is the gate** for studio shows, WWE/AEW, UFC, and for NASCAR data to become visible.
+- **506sports NFL maps → `market_coverage_nfl`** (~Sept 8–9). Resolves E5's market-pending games; on
+  the critical path for September 13.
+- **NHL and NBA hold only date-driven partial seasons** (47 and 19 games). `nba-BOS`, `nba-PHX`,
+  `nba-POR` have art and no games for that reason. A one-time bootstrap is the fix.
+- **NHL/NBA `team_records` are season 2025 by design** (prompt 37); their cards show thin standings
+  until a 2026-27 standings load exists.
+- **NFL/NBA adapters do not carry a conference.**
+- **The list card's abbreviation step is not implemented** — the grid's fourth concession. Its one
+  residual at 390 px is *UT Rio Grande Valley*, 24.57 px short with the record already dropped.
+- **The list card re-tiers on cold load** (v1.6.13, known and accepted): the tier settles when the
+  webfont resolves, so the first paint uses the character-count size.
+- **The 500–699 px band** stretches the phone stage to 253 px — one breakpoint at 700. Options: cap
+  `.bn-mobile` at ~480 px centred on the stage ground, or move the breakpoint to the 560 px the card
+  uses. Not ruled.
+- **The banner glow ellipses' 0.021 / 0.028 outer stops** leave a 3.4/255 edge at stage y=−20, beside
+  the clock. It is an ARTWORK fix, not CSS — fading the stops to zero repaints 10.6 % of the visible
+  stage by up to 6/255 (measured, prompt 45).
+- **1D's gold sport-week heading line and 1F's `--ink` venue token are Cowork's calls, open to veto.**
+- **The venue now shares the team names' token** and is separated from them by size alone (12 px vs
+  14 px). If that reads too bright on the device the fix is a new palette step, not a weight.
+- **HELD FOR JOE — twelve MLB rows stuck at `in_progress`** (kickoffs 2026-09-01/02). The DISPLAY
+  guard shipped; the backfill is a database write and was deliberately not made.
+- **A pipeline logic gap behind those rows:** `schedule_refresh` failed three times on 2026-09-02 with
+  `FileNotFoundError: artifacts/validation/mlb_2026_teams.json`; something wrote `completed_at` on all
+  twelve without setting `result_status='final'`.
+- **TBS has no mark and it is a LIVE gap** — 2 loaded `game_broadcasts` rows, no art in
+  `assets/network-logos/`. Sourcing it is Cowork's job.
+- **`unverified` is load-bearing semantics** — now documented in `data/authority_rules.json` `_about`
+  and `adapters/README.md`.
+- **The privacy gate before the Cavs season (late October):** production is a public URL. Confirm no
+  loaded broadcast row publishes the unannounced WUAB/RESN arrangement.
+- **CBJ watch escalation ~Sept 15** (ask first). **IndyCar**: 2027 schedule, October.
+- **The unruled backlog:** E8, E9, E11, E12, E13, E15.
+- **The enhancement register §1–§13 are still project-only.** Joe to supply.
+- **The design builders are project-only** — `build_demo.py`, `app_template.html`, `build_banner.py`,
+  `markkit.py`. `docs/design/mobile_demo.html` is a TEMPLATE (`__DATA__`, `__GRIDSVG__`, …), so the
+  repo copy cannot be rebuilt from the repo. A filing item, not a defect.
+- **`--faint` reaches 3.63:1 on the card top and true AA is unreachable there.** Joe's call, accepted.
+  **Not a defect to re-raise.**
 
 ## Working rules (binding)
-1 Certify Python for Windows. 2 Never write to the repo while a Claude Code prompt is in flight. 3 Secret gate every commit, ADDED lines only (`git diff -U0 --cached` + `grep "^+"`); never `findstr`. 4 Stage by explicit path; never `git add -A`. 5 Run-workflow-never-Re-run. 6 DB: additive over destructive; SELECT-and-paste first; close (`valid_to`), don't delete. 7 Unattended runs: self-committing stages, 2-strikes-skip, hard stops only for secret-gate/destructive-DB/push-reject. 8 WUAB/RESN sources never named. 9 Loader-written provider facts never become reconciled observations. 10 Check the register §7–§13, the home-page decision record, and this file before re-raising any settled decision.
-11 Cowork's bridge shell calls git with `--no-optional-locks`.
-12 **`next build` cannot run locally.** Next's `next-metadata-route-loader` interpolates the absolute path into a single-quoted JS string without escaping, and this repo lives under `Joe's Projects`, so the apostrophe closes the string. Fires only for `app/apple-icon.png`, `app/icon.png`, `app/manifest.js`. Vercel builds at a path with no apostrophe; `next dev` is unaffected. **Ruling: do nothing.** Never set `experimental.useWasmBinary`. **Standing caution: the repo path contains an apostrophe and will keep breaking tooling that interpolates paths into quoted strings.**
-13 **A numeric threshold is measured against the LOCAL background, never a global corner sample.** Look at the render, not just the number.
-14 The DB hard stop is **"no direct Postgres connection, no writer credential, no DML"** — PostgREST reads with the publishable anon key are the app's normal read path and are always allowed.
-15 `npm run test:unit` is `node --test "test/**/*.test.mjs"` — quoted glob.
-16 Color tokens are read from `web/app/globals.css`, never quoted from the mockups: the mockups use `--ground`, the app calls the same `#1b1b1b` **`--spot-2`**.
-17 **Edit JSON data files through a parser, never line-based**, and assert nothing but the intended key changed.
-18 **Team-name resolution is exact-match within sport, never substring or fuzzy** — and MLB canonical names are nickname-only ("Guardians"), so cross-check a second key such as `abbreviation`.
-19 **Never issue an unbounded PostgREST select.** It silently caps at 1,000 rows and returns no error — that cost prompt 23 a third of the season in the week picker, visible only because the database said 32 weeks and the page rendered 19. Use the paginating `restAll()` (`b44893e`). Pin regression tests to the **call site**, never a row count, or the test rots as the season grows.
-20 **Never edit a source file with a bare repeated string replace.** Prompt 22 corrupted `web/lib/offservice.js` that way and prompt 20 corrupted `data/render_policies.json`. Use line-anchored surgery or a parser, and assert only the intended region changed.
-21 ~~From the bridge shell, `git diff --ignore-cr-at-eol` is the only honest tree check.~~ **RETIRED — the condition it waited on was met.** `f15449f` put `.js .mjs .jsx .css .html` in `.gitattributes`, so a plain `git diff` now tells the truth from either OS. Kept as a numbered stub so rules are never renumbered under a session that memorised them.
-22 **Before asserting what a component does, read the component and cite file and line — never the contract document that describes it.** Three prompts have shipped or nearly shipped a wrong premise this way: `bootstrap_season.yml` was believed to load a season when it loaded only teams; prompt 24 stage 4 was written on the premise that no-broadcast games vanished from the phone grid, when `MobileGrid.js` had always given them M7 cards; and register §13 justified the scrolling chip row on the claim that `.chiprow` already sets `overflow-x:auto`, which is true only of `docs/feature-study/mockups/home-page-candidates.html:16` and never of `web/app/globals.css:231`. A contract says what a component SHOULD do; only the file says what it DOES.
-23 **When a change alters anything the locked reference implements, `docs/design/mobile_demo.html` changes in the same commit.** A reference that lags the app stops being an authority and becomes a second opinion. Prompt 22 repaired nine findings that were all the same failure - shipped code drifting from a reference nobody re-read - prompt 25 nearly shipped a fifth chip into a wrapping row for the same reason, and prompt 29 found the reference still carrying `--faint: #6A7078`, a value prompt 25 had replaced for failing AA.
+
+1. Certify Python for Windows.
+2. Never write to the repo while a Claude Code prompt is in flight.
+3. Secret gate every commit, ADDED lines only, with `grep`; never `findstr`.
+4. Stage by explicit path; never `git add -A`.
+5. Run-workflow-never-Re-run.
+6. DB: additive over destructive; SELECT-and-paste first; close (`valid_to`), don't delete.
+7. Unattended runs: self-committing stages, 2-strikes-skip, hard stops only for secret-gate /
+   destructive-DB / push-reject.
+8. WUAB/RESN sources never named.
+9. Loader-written provider facts never become reconciled observations.
+10. Check the register §7–§13, the home-page decision record, and this file before re-raising any
+    settled decision.
+11. Cowork's bridge shell calls git with `--no-optional-locks`.
+12. **`next build` cannot run locally** — Next interpolates the absolute path into a single-quoted JS
+    string and this repo lives under `Joe's Projects`. Fires only for `app/apple-icon.png`,
+    `app/icon.png`, `app/manifest.js`. Vercel builds at a path with no apostrophe; `next dev` is
+    unaffected. **Ruling: do nothing.** Never set `experimental.useWasmBinary`. **Standing caution:
+    the repo path contains an apostrophe and will keep breaking tooling that interpolates paths into
+    quoted strings.**
+13. **A numeric threshold is measured against the LOCAL background, never a global corner sample.**
+14. The DB hard stop is "no direct Postgres connection, no writer credential, no DML" — PostgREST
+    reads with the publishable anon key are the app's normal read path and are always allowed.
+15. `npm run test:unit` is `node --test "test/**/*.test.mjs"` — quoted glob.
+16. Colour tokens are read from `web/app/globals.css`, never quoted from the mockups.
+17. **Edit JSON data files through a parser, never line-based**, and assert nothing but the intended
+    key changed.
+18. **Team-name resolution is exact-match within sport**, never substring or fuzzy — and MLB canonical
+    names are nickname-only, so cross-check a second key such as `abbreviation`.
+19. **Never issue an unbounded PostgREST select.** It silently caps at 1,000 rows and returns no
+    error. Use the paginating `restAll()`. Pin regression tests to the **call site**, never a row
+    count, or the test rots as the season grows.
+20. **Never edit a source file with a bare repeated string replace.** Use line-anchored surgery or a
+    parser, and assert only the intended region changed.
+21. ~~`git diff --ignore-cr-at-eol`~~ **RETIRED** — the condition it waited on was met. Kept as a
+    numbered stub so rules are never renumbered under a session that memorised them.
+22. **Before asserting what a component does, read the component and cite file and line — never the
+    contract document that describes it.** A contract says what a component SHOULD do; only the file
+    says what it DOES. Prompt 46 found its own brief naming `fitNameAndRecord()` as the grid's fit
+    function when it belongs to the list card and the grid never calls it.
+23. **When a change alters anything the locked reference implements, `docs/design/mobile_demo.html`
+    changes in the same commit.** A reference that lags the app stops being an authority and becomes
+    a second opinion.
+24. **A count computed on the Python side is no evidence the JS runtime agrees.** Pin the runtime path
+    on every kind of input it can receive.
+25. **A prompt is done when the deploy is green and the device agrees, not when it commits.**
+26. **The gate and the commit are SEPARATE COMMANDS.** The runner's exit code and its parsed counts
+    decide — never the last command in a chain. `b1b1d9b` went out red because a commit was
+    `&&`-chained after a gate whose final command was a `grep` that succeeded.

@@ -69,7 +69,6 @@ PROG_OUT = ROOT / "web" / "public" / "programs"
 TV_SRC = ROOT / "assets" / "brand" / "tv-cutout-hires.png"
 TV_OUT = ROOT / "web" / "public" / "brand" / "tv-cutout.png"
 NET_MANIFEST = ROOT / "web" / "public" / "marks" / "manifest.json"
-LAYOUT = ROOT / "web" / "lib" / "banner-layout.json"
 
 WORK_H = 512          # working height for the dark derivations (build_web_marks' convention)
 LEAGUE_H = 256        # published league height
@@ -315,35 +314,6 @@ def build_tv(out_path: Path) -> None:
     print("  tv       %s" % ("%dx%d" % out.size))
 
 
-# ----------------------------------------------------------------------------- ar back-fill
-def update_layout_ar() -> int:
-    """Refresh every banner mark's `ar` (width/height) from the PNG that will actually be drawn.
-
-    The Banner component sizes each <image> as h*ar, so this is the one number the SVG cannot work out
-    for itself. Written here rather than measured at request time, so the server component stays a
-    pure function of the JSON and needs no image library of its own.
-    """
-    if not LAYOUT.exists():
-        return 0
-    d = json.loads(LAYOUT.read_text(encoding="utf-8"))
-    n = 0
-    for side in ("pc", "mobile"):
-        side_d = d.get(side, {})
-        # The TV cutout is placed the same way a mark is, so it needs the same `ar`.
-        for m in list(side_d.get("marks", [])) + ([side_d["tv"]] if "tv" in side_d else []):
-            p = ROOT / "web" / "public" / m["href"].lstrip("/")
-            if not p.exists():
-                continue
-            with Image.open(p) as im:
-                ar = round(im.width / max(1, im.height), 4)
-            if m.get("ar") != ar:
-                m["ar"] = ar
-                n += 1
-    if n:
-        LAYOUT.write_text(json.dumps(d, indent=2) + "\n", encoding="utf-8")
-    return n
-
-
 # ----------------------------------------------------------------------------- check
 def check() -> int:
     """Rebuild into a temp tree and diff against what is committed.
@@ -411,8 +381,6 @@ def main(argv: list[str] | None = None) -> int:
         build_programs(PROG_OUT)
     if a.only in (None, "tv"):
         build_tv(TV_OUT)
-    n = update_layout_ar()
-    print("banner-layout.json: %d ar value(s) updated" % n)
     return 0
 
 

@@ -1,5 +1,5 @@
 {
-  "_about": "Authority rules for the reconciliation engine (spec 9.1-9.7, 9.13, 9.15). pipeline/resolver.py reads this file; every canonical_decisions row records rule_version. Edit here, bump rule_version, and re-run `python -m pipeline.reconcile --all` to re-decide every game under the new rules (old decisions stay in the table).",
+  "_about": "Authority rules for the reconciliation engine (spec 9.1-9.7, 9.13, 9.15). pipeline/resolver.py reads this file; every canonical_decisions row records rule_version. Edit here, bump rule_version, and re-run `python -m pipeline.reconcile --all` to re-decide every game under the new rules (old decisions stay in the table). UNVERIFIED IS LOAD-BEARING: access_status='unverified' means a regional window with NO market conclusion yet, pending a coverage map - it is not 'unknown' and not 'probably fine'. It is the SOLE input to market-pending (pipeline/reconcile.py), so an adapter that writes it loosely manufactures false market-pending rows on games nobody has any evidence about.",
   "rule_version": "authority_rules_v1",
   "fields": {
     "kickoff_at": {

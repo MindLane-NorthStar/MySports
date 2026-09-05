@@ -148,19 +148,6 @@ a {
   border-bottom: 1px solid var(--line-soft);
 }
 
-.wordmark {
-  font-family: var(--display);
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  line-height: 1;
-}
-
-.wordmark span {
-  color: var(--gold);
-}
-
 .nav {
   display: flex;
   gap: 16px;
@@ -1785,9 +1772,6 @@ input:focus-visible {
    SVG scales to 1600 and stops, which puts the ceiling at 1600 x 200/1400 = 229px. Beyond that the
    wings are .banner's gradient, which is the same three stops the stage paints. */
 .bd-wrap{max-width:1600px;margin:0 auto}
-.wordmark{font-family:var(--display);font-weight:700;line-height:1;letter-spacing:.04em;text-transform:uppercase;color:#fff;white-space:nowrap;
-  text-shadow:0 0 2px #F0C850,0 0 10px rgba(240,200,80,.55),0 2px 6px rgba(0,0,0,.8)}
-.wordmark b{font-weight:700;color:var(--gold);text-shadow:0 0 10px rgba(240,200,80,.6),0 2px 6px rgba(0,0,0,.8)}
 .bn-mobile{display:none;position:relative}
 @media (max-width:699px){.bn-pc{display:none}.bn-mobile{display:block}}
 /* forced modes for the review frames */

@@ -46,3 +46,15 @@ Then render: `python scripts/render_day.py --sport nhl --date 2026-10-01` / `--s
 Every adapter accepts `--from-file <raw.json>` to replay a saved payload offline. `--all-logos` (nhl, nba) fetches every team's logo instead of only the window's — the season bootstrap uses it. Data files the adapters read:
 `data/markets.json` (market-of-one), `data/market_coverage_nfl.json` (weekly 506sports hand entry),
 `data/local_rights.json` (late-binding local rows), `data/access_profile.json` (spec §3.2), `data/render_policies.json` (§7.19), `data/market_coverage_mlb.json` (FOX Saturday regionals).
+
+## `access_status = 'unverified'` is load-bearing
+
+It means **a regional window with no market conclusion yet, pending a coverage map**. It does not
+mean "unknown", and it does not mean "probably fine".
+
+It is the SOLE input to market-pending in `pipeline/reconcile.py`. An adapter that writes it loosely
+- as a catch-all for anything it could not classify - manufactures false market-pending rows on games
+nobody has any evidence about, and those rows then present to the reader as a real state with a real
+badge. Write it only when the provider actually described a regional window.
+
+The same note is on `data/authority_rules.json`'s `_about`.
