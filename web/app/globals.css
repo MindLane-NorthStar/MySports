@@ -1796,6 +1796,83 @@ input:focus-visible {
   .hn-nav a{font-size:14px;padding:12px 14px 9px;letter-spacing:.06em}
 }
 
+/* ---------------------------------------------------------------- D1: the first band (prompt 46)
+ * 05-home-page-decisions.md D1, ruled at prompt 20 and unconsumed until now. Its STATE comes from
+ * web/lib/bandstate.js on the server; this only dresses it.
+ *
+ * It sits below the tile row and above YOUR TEAMS, which means it inherits stage 1B rule 2 for free:
+ * .controls margin-bottom is what sets the gap to whatever block is first, and this is now that
+ * block. Nothing here restates that number - if it did, the two would drift the first time Joe moved
+ * one of them. */
+.fband {
+  margin: 0 0 22px;
+}
+
+.fband-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 12px;
+  row-gap: 2px;
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* Matched to .favlabel / .band-title deliberately: the page has ONE heading system, and a band that
+   invented its own size would read as a different kind of thing from YOUR TEAMS below it. */
+.fband-title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 25.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin: 0;
+}
+
+.fband-when {
+  color: var(--dim);
+  font-size: 12px;
+  margin: 0;
+}
+
+.fband-all {
+  margin-left: auto;
+  color: var(--gold);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 699px) {
+  .fband-title { font-size: 15px; }
+}
+
+/* D5: band left, grid right - but only when both actually fit.
+ *
+ * 1120 grid minimum + 400 band + 24 gap + 48 padding = 1592. Below that the band sits ABOVE the
+ * grid, never beside it and never after it: a grid-first page buries the thing the band exists to
+ * answer. Today only, and only below the tile row - the banner keeps its own full-bleed wrapper
+ * (prompt 43 unit 3) and the header row keeps 1B's rules. */
+@media (min-width: 1592px) {
+  .today-split {
+    display: grid;
+    grid-template-columns: minmax(400px, 1fr) minmax(1120px, 2fr);
+    align-items: start;
+    column-gap: 24px;
+    /* IT HAS TO ESCAPE THE 1100px COLUMN. .shell caps content at 1100 and D5 needs 400 + 1120 + 24
+       = 1544, so inside the shell the two columns simply overflow and the page scrolls sideways -
+       measured at 1600 and 1920 before this was added. Centred on the shell (which is itself
+       centred, so this is the viewport centre) with a negative margin rather than a transform:
+       prompt 30 established that a transformed ancestor becomes the containing block for the grid's
+       sticky rail, and that is not a thing to reintroduce for a layout tweak. */
+    width: min(1600px, calc(100vw - 48px));
+    margin-left: calc(50% - min(800px, 50vw - 24px));
+  }
+  .today-split > .fband { margin-bottom: 0; }
+}
+
 /* ---- off-service games (D4/E3, prompt 20)
  * The count line is deliberately quiet but always present: hiding games and saying nothing would be
  * a page that lies by omission. The dim lives on a WRAPPER around the card, never on the card - the

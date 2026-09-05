@@ -13,6 +13,9 @@ import Listing from '../components/Listing.js';
 import { DatePicker, SportFilter } from '../components/Filters.js';
 import { gamesForDay, newestGridFor, gridIndex, standingsForGames, rankingsForGames } from '../lib/queries.js';
 import { longDay, todayET, etTime } from '../lib/format.js';
+import FirstBand from '../components/FirstBand.js';
+import { bandState } from '../lib/bandstate.js';
+import policies from '../lib/policies.js';
 import { SPORT_LABEL, gridAssetUrl, resolveSportParam } from '../lib/config.js';
 import { RestError } from '../lib/rest.js';
 import { overlayForDay, applyOverlay } from '../lib/livescores.js';
@@ -135,6 +138,11 @@ export default async function TodayPage({ searchParams }) {
   const overlay = await overlayForDay(day, games, { today });
   games = applyOverlay(games, overlay.map);
 
+  // D1. Computed ONCE, here, from the request time - the page is force-dynamic, so this is the
+  // clock the reader is actually looking at. It reaches the band as data; nothing recomputes it on
+  // the client, which is what keeps a time-aware block out of the hydration path entirely.
+  const band = bandState(games, new Date(), policies, { dayLabel: longDay(day) });
+
   return (
     <main>
       {/* Joe's ruling from the installed app, 2026-09-04: the heading is the word DATE and the
@@ -164,8 +172,19 @@ export default async function TodayPage({ searchParams }) {
         </p>
       ) : null}
 
-      <Listing games={games} standingsRows={standingsRows} rankingsRows={rankingsRows}
-               day={day} sport={sport} grid bands />
+      {/* D1 above, the day below. .today-split only becomes two columns at 1592px (D5); under that
+          it is a plain block, so the band sits ABOVE the grid and never after it. */}
+      <div className="today-split">
+        {!error && games.length ? (
+          <FirstBand band={band} standingsRows={standingsRows} rankingsRows={rankingsRows}
+                     day={day} sport={sport} />
+        ) : null}
+
+        <div id="all-today">
+          <Listing games={games} standingsRows={standingsRows} rankingsRows={rankingsRows}
+                   day={day} sport={sport} grid bands />
+        </div>
+      </div>
 
       {!error && games.length ? <DataAsOf day={day} today={today} overlay={overlay} /> : null}
 
