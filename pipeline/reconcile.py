@@ -180,6 +180,66 @@ def is_market_pending(db, game_id: str, eligible: bool, active: list, rules: dic
     return False
 
 
+# ----------------------------------------------------------------------------- the telecast ladder
+def telecast_verdict(sport: str, active: list[dict[str, Any]], rules: dict[str, Any], *,
+                     network_id: Any, stream_exclusive: bool, canonical_state: str | None,
+                     ) -> tuple[str, str, bool, Any, list[str]]:
+    """The eligibility `reason` and the `network_status` twin, decided together.
+
+    Pure: no database handle, no writes, no clock. Returns
+    `(reason, network_status, eligible, eligible_via_network_id, eligible_via_service_ids)`.
+
+    WHY THIS IS ONE FUNCTION. The two strings are the same conclusion said twice - the reason is what
+    the card explains, network_status is what the badge reads - and they were written thirty lines
+    apart in reconcile_game(). They have disagreed twice. Prompt 24 fixed `reason` for bare non-CFB
+    games; its twin on network_status kept labelling the same games `no_linear_telecast`, so a card
+    read "No linear telecast" underneath a NETWORK TBD badge. Deciding both here is what makes that
+    class of drift impossible rather than merely fixed.
+
+    THE RULE THE TWIN WAS MISSING: `no_linear_telecast` is a conclusion drawn FROM broadcast rows.
+    With zero active rows there is nothing to draw it from, so every sport gets `tbd` - which is what
+    `reason = "no telecast observed"` has said since prompt 24. CFB was already `tbd` unconditionally
+    and stays so; nothing about a rows-present case changes.
+    """
+    el = rules["eligibility"]
+    ok = [b for b in active if b.get("access_status") in el["eligible_access"] and b.get("blackout_rule") != "OUT_OF_MARKET"]
+    cond = [b for b in active if b.get("access_status") in el["conditional_access"]]
+    via_net = next((b["service_id"] for b in ok if b.get("delivery_surface") == "LINEAR"), None)
+    via_srv = [b["service_id"] for b in ok if b.get("delivery_surface") == "STREAMING" and b.get("service_id")]
+    eligible = bool(ok)
+
+    if eligible:
+        tba = all(b.get("carriage_certainty") in ("UNANNOUNCED", "TBA_NO_RIGHTS_HOLDER") for b in ok)
+        reason = el["local_tba_reason"] if tba else ("linear " + via_net if via_net else "stream only: " + ", ".join(via_srv))
+    elif cond:
+        reason = "verify access: " + ", ".join(b["service_id"] for b in cond if b.get("service_id"))
+    elif canonical_state == "authority_conflict":
+        reason = "authority conflict - not placed"
+    elif not active:
+        # NETWORK TBD (05 section 9). This branch fires only when there are ZERO active broadcast
+        # rows, so there is nothing here to draw a market conclusion FROM - and the old non-cfb arm
+        # drew one anyway, on 78 rows: nfl 24 + nhl 38 + nba 16, every non-cfb bare game. NFL week 18
+        # is 100% bare because the league flex-schedules it, so the app was stating Joe could not
+        # receive a full slate that nobody has assigned yet. One honest reason for every sport,
+        # matching cfb's existing string rather than inventing a fifth. The web layer derives the
+        # network-TBD state from the emptiness itself and must not have to compensate for a wrong
+        # string written here.
+        reason = "no telecast observed"
+    else:
+        reason = "not receivable: " + ", ".join(f"{b.get('service_id')}={b.get('access_status')}" for b in active)
+
+    if network_id:
+        network_status = "stream_exclusive" if stream_exclusive else "assigned"
+    elif not active:
+        network_status = "tbd"          # nothing observed, so nothing to conclude - see the docstring
+    elif sport == "cfb":
+        network_status = "tbd"
+    else:
+        network_status = "no_linear_telecast"
+
+    return reason, network_status, eligible, via_net, via_srv
+
+
 def reconcile_game(db: DB, game: dict[str, Any], rows: list[dict[str, Any]], bcs: list[dict[str, Any]], rules: dict[str, Any],
                    rails: dict[str, list[str]], now: datetime, stats: Counter, log: list[str]) -> None:
     gid, sport = game["id"], game["sport"]
@@ -219,6 +279,10 @@ def reconcile_game(db: DB, game: dict[str, Any], rows: list[dict[str, Any]], bcs
 
     # canonical columns
     state = canonical_state(sport, kd, nd, nd.certainty)
+    # ONE ladder, decided once, used by both writers below. See telecast_verdict().
+    active = [b for b in bcs if b.get("active", True)]
+    reason, network_status, eligible, via_net, via_srv = telecast_verdict(
+        sport, active, rules, network_id=nd.value, stream_exclusive=stream_exclusive, canonical_state=state)
     sets: list[str] = ["canonical_state = %s", "last_verified_at = %s"]
     params: list[Any] = [state, now]
     if kd.value is not None and kd.status in ("accepted", "retained_last_known_good", "no_change"):
@@ -230,8 +294,7 @@ def reconcile_game(db: DB, game: dict[str, Any], rows: list[dict[str, Any]], bcs
                        k_utc.astimezone(ET).date() if kd.certainty == "tbd" else viewing_day(k_utc)]   # a TBD placeholder (midnight ET) must not roll to the previous viewing day
     if nd.status in ("accepted", "retained_last_known_good", "no_change"):
         sets += ["primary_network_id = %s", "network_certainty = %s", "network_status = %s"]
-        params += [nd.value, nd.certainty if nd.value else "tbd",
-                   ("stream_exclusive" if stream_exclusive else "assigned") if nd.value else ("tbd" if sport == "cfb" else "no_linear_telecast")]
+        params += [nd.value, nd.certainty if nd.value else "tbd", network_status]
     elif nd.status == "unresolved_conflict":
         sets += ["primary_network_id = null", "network_certainty = null", "network_status = 'authority_conflict'"]
     db.run(f"update games set {', '.join(sets)} where id = %s", tuple(params + [gid]), tag="games.canonical")
@@ -242,33 +305,8 @@ def reconcile_game(db: DB, game: dict[str, Any], rows: list[dict[str, Any]], bcs
     else:
         db.run("update game_broadcasts set is_primary = (service_id = %s) where game_id = %s", (nd.value, gid), tag="game_broadcasts.primary")
 
-    # viewer eligibility (spec 10) for profile 1 from the active broadcast rows
-    el = rules["eligibility"]
-    active = [b for b in bcs if b.get("active", True)]
-    ok = [b for b in active if b.get("access_status") in el["eligible_access"] and b.get("blackout_rule") != "OUT_OF_MARKET"]
-    cond = [b for b in active if b.get("access_status") in el["conditional_access"]]
-    via_net = next((b["service_id"] for b in ok if b.get("delivery_surface") == "LINEAR"), None)
-    via_srv = [b["service_id"] for b in ok if b.get("delivery_surface") == "STREAMING" and b.get("service_id")]
-    eligible = bool(ok)
-    if eligible:
-        tba = all(b.get("carriage_certainty") in ("UNANNOUNCED", "TBA_NO_RIGHTS_HOLDER") for b in ok)
-        reason = el["local_tba_reason"] if tba else ("linear " + via_net if via_net else "stream only: " + ", ".join(via_srv))
-    elif cond:
-        reason = "verify access: " + ", ".join(b["service_id"] for b in cond if b.get("service_id"))
-    elif state == "authority_conflict":
-        reason = "authority conflict - not placed"
-    elif not active:
-        # NETWORK TBD (05 section 9). This branch fires only when there are ZERO active broadcast
-        # rows, so there is nothing here to draw a market conclusion FROM - and the old non-cfb arm
-        # drew one anyway, on 78 rows: nfl 24 + nhl 38 + nba 16, every non-cfb bare game. NFL week 18
-        # is 100% bare because the league flex-schedules it, so the app was stating Joe could not
-        # receive a full slate that nobody has assigned yet. One honest reason for every sport,
-        # matching cfb's existing string rather than inventing a fifth. The web layer derives the
-        # network-TBD state from the emptiness itself and must not have to compensate for a wrong
-        # string written here.
-        reason = "no telecast observed"
-    else:
-        reason = "not receivable: " + ", ".join(f"{b.get('service_id')}={b.get('access_status')}" for b in active)
+    # viewer eligibility (spec 10) for profile 1 - decided above by telecast_verdict(), beside the
+    # network_status it has to agree with.
     # E5 market-pending. Computed HERE, beside eligibility, because it is the same decision seen from
     # the other side - and a second implementation in the app would drift from this one exactly as a
     # JS eligibility rule would have.

@@ -274,3 +274,35 @@ guards a class of pipeline failure, not those twelve rows.
 `schedule_refresh` fails on the RENDER job with `FileNotFoundError: artifacts/validation/mlb_2026_teams.json`,
 which is why these statuses were never updated in the first place. Reconciling the rows does not stop it
 happening again tomorrow.
+
+## Re-reconcile, 2026-09-05 — the telecast ladder's twin (prompt 46 stage 3, run id 81)
+
+`pipeline/reconcile.py` decided the eligibility `reason` and its twin `games.network_status` thirty
+lines apart. Prompt 24 fixed `reason` for bare non-CFB games; the twin was left, so those same games
+kept `network_status = 'no_linear_telecast'` and a card read "No linear telecast" underneath a NETWORK
+TBD badge. Both now come from one pure function, `telecast_verdict(sport, active, rules, ...)`, and
+`no_linear_telecast` is only ever concluded from broadcast rows that exist.
+
+Backups first: `artifacts/backups/games_2026-09-05T133646Z.csv` and
+`viewer_game_eligibility_2026-09-05T133646Z.csv`, 1,384 rows each. Dry run via `--export` then
+`--input --emit-sql` (`DB(emit_path)` never connects, so `--all --emit-sql` alone reads nothing and
+reports 0 games — use the two-step form).
+
+`python -m pipeline.reconcile --all` — 1,384 games, **172 s**, run id **81**, committed.
+
+**Sanity gate, all seven criteria PASS.** Identical before and after: `games` 1,384, eligible 466,
+market-pending 176, hidden 918, genuinely-unavailable 389, uncovered 0, orphans 0.
+
+The change set is provably bare-only — 529 games carry zero active broadcast rows, and:
+
+| sport | before | after |
+|---|---|---|
+| nfl | `no_linear_telecast` 24 (all bare) | `tbd` 24 |
+| nhl | `no_linear_telecast` 38 (all bare) | `tbd` 38 |
+| nba | `no_linear_telecast` 16 (all bare) | `tbd` 16 |
+| cfb | `tbd` 451 (all bare) | unchanged |
+| every sport | `assigned` 689, `stream_exclusive` 166 | unchanged, to the row |
+
+`no_linear_telecast` rows remaining: **0**. The 94 distinct reason strings the database holds were not
+rewritten — every rows-present rung produces the same string it did before, pinned by
+`tests/test_telecast_ladder.py`.
