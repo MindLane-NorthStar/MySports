@@ -65,7 +65,15 @@ export function SportFilter({ sport, available }) {
       <div className="sportbar" role="group" aria-label="Sport">
         <button type="button" className="spbtn spbtn-all spbtn-bar" data-active={!sport}
                 aria-pressed={!sport} onClick={() => setParam('sport', null)}>
-          All
+          {/* Joe, 2026-09-04: "Make the ALL chip ALL SPORTS and keep its size as-is. I don't want
+              to interrupt the balance horizontally that we've accomplished with this chip and the
+              tiles below it." Written out in the markup because nothing uppercases it - neither
+              .spbtn nor .sportbar sets text-transform - and the bar's accessible name is this text,
+              so the name follows the label rather than needing an aria-label to restate it. The box
+              is untouched: it is still one tile tall and exactly as wide as the row beneath it.
+              MobileGrid.js:267 already calls the unfiltered grid "All Sports Broadcasts", so this
+              is the same words in both places rather than a new phrase. */}
+          ALL SPORTS
         </button>
         <div className="sportrow">
         {/* data-active stays - it is the styling hook the gold plate depends on. aria-pressed is
