@@ -1608,7 +1608,7 @@ input:focus-visible {
        lines for want of two pixels. Spending 2 of the 22 that prompt 31 freed costs the matchup
        under 1.5% of its 152px and unwraps every time on the page. The DESKTOP column stays at
        78px: it is not crowding anything and narrowing it would be change for its own sake. */
-    grid-template-columns: 56px minmax(0, 1fr) 62px 88px;
+    grid-template-columns: 56px minmax(0, 1fr) 62px 82px;
     column-gap: 9px;
     padding: 10px 10px 10px 13px;
   }

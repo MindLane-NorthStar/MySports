@@ -181,6 +181,26 @@ export function resultLabel(game) {
  *
  * Rungs 1, 3 and 5 return a single row. The slot never reserves an empty one.
  */
+/**
+ * Row 2's size, in px. 17 normally; 15 when a three-digit score would otherwise widen the slot track.
+ *
+ * A three-digit score is the NBA and nothing else - every CFB, NFL, MLB and NHL final is two digits.
+ * Measured in portrait, "116 - 104" needs 86.06px at 17px and 75.9px at 15px, so it is the one string
+ * that pushed the fixed slot track past its next-widest content. Stepping it down one size is cheaper
+ * than spending six permanent pixels of the matchup column on the widest score basketball can produce.
+ */
+export const ROW2_PX = { normal: 17, wide: 15 };
+
+/**
+ * Takes the two SCORES, not the rendered string. A regex for three digits over the string would also
+ * catch a "-162" moneyline, which is 40px at 17px and never crowded anything - only a three-digit
+ * SCORE, which is "116 - 104", is wide enough to matter.
+ */
+export function row2Size(awayScore, homeScore) {
+  const wide = [awayScore, homeScore].some((v) => Number.isFinite(Number(v)) && Math.abs(Number(v)) >= 100);
+  return wide ? ROW2_PX.wide : ROW2_PX.normal;
+}
+
 export function slotContent(game, fav = null) {
   const status = game?.result_status ?? null;
 
@@ -216,6 +236,7 @@ export function slotContent(game, fav = null) {
       // Higher number first, whichever side that is. When level the numbers are the same, so the
       // away-home order is kept rather than reversed for no reason.
       row2: tied ? `${a} - ${h}` : `${Math.max(a, h)} - ${Math.min(a, h)}`,
+      row2Px: row2Size(a, h),
       row3: resultLabel(game),
       tone,
     };
@@ -236,6 +257,8 @@ export function slotContent(game, fav = null) {
       markSide: fav.side,
       tied: false,
       row2: fav.ml === null ? '-' : (fav.ml > 0 ? `+${fav.ml}` : String(fav.ml)),
+      // A moneyline never needs the step-down: the widest, "-1200", is 54.95px at 17px.
+      row2Px: ROW2_PX.normal,
       row3: total != null ? `O/U ${Number(total)}` : null,
       tone: 'sched',
     };

@@ -35,18 +35,23 @@ export const SLOT = {
    * The fixed grid track for the three-row slot, sized from the WIDEST STRING THE LADDER CAN EMIT,
    * measured in the real faces rather than estimated (stage 2a):
    *
-   *   portrait   86.06px  "116 - 104"      .mscore at 17px          <- the binding case
-   *              80.05px  "Final pending"  .mslot-state at 13px
+   *   portrait   80.05px  "Final pending"  .mslot-state at 13px     <- the binding case
+   *              75.94px  "116 - 104"      .mscore at 15px, stepped down
    *              61.75px  "Postponed"
    *   desktop    98.52px  "Final pending"  .mslot-state at 16px     <- the binding case
-   *              86.06px  "116 - 104"
+   *              75.94px  "116 - 104"
    *              76.00px  "Postponed"
    *
-   * Rounded up to the next even pixel for sub-pixel and font-fallback variance. The three-digit
-   * score is a real NBA line, not a hypothetical: at today's 46px portrait floor with a
-   * `max-width: 84px` cap, `116 - 104` would already have overflowed its slot.
+   * Rounded up to the next even pixel for sub-pixel and font-fallback variance.
+   *
+   * PORTRAIT WAS 88px, set from "116 - 104" at 17px (86.06px). Stepping a three-digit score down one
+   * size (format.js row2Size) takes it to 75.94px and hands the binding case to `Final pending` - the
+   * stale-live guard's string - at 80.05px. Six pixels back to the matchup column, which is what let
+   * New Hampshire and James Madison stop truncating at 390px. `Final pending` binds at BOTH
+   * breakpoints now and is deliberately not renamed to buy width: it is the honest label for a row
+   * whose score the pipeline never delivered.
    */
-  track: { portrait: 88, desktop: 100 },
+  track: { portrait: 82, desktop: 100 },
   /** Row 1: the favoured/winning team's mark, and the TIED word sized to the same box. */
   row1: { portrait: 44, desktop: 44 },
   /** Measured gaps between the three rows, unchanged from stage 1. */

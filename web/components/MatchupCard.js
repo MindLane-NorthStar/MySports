@@ -60,6 +60,20 @@ const NAME_FONT = (px) => `600 ${px}px Inter, -apple-system, BlinkMacSystemFont,
 const REC_FONT = "500 11.5px Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
 /**
+ * The record's rendered width, allowing for `font-variant-numeric: tabular-nums`.
+ *
+ * Canvas has no way to ask for tabular figures, so measuring "64-75" straight gives PROPORTIONAL
+ * digits - narrower than what paints. That under-measure left the name a tier too large and produced
+ * the one thing this whole change exists to prevent: "Tigers" at 15px beside a full record, needing
+ * 46.27px in the 44.3px it actually had. Tabular figures all share the widest digit's advance, so
+ * every digit is measured as a '0'. It errs by a fraction toward reserving too much for the record,
+ * which costs a tier at worst and never truncates a name.
+ */
+function measureRecord(measure, record) {
+  return measure(String(record).replace(/[0-9]/g, '0'), REC_FONT);
+}
+
+/**
  * ONE COLUMN PER TEAM - line 1 (logo + name), line 2 (record + standing), line 3 (MLB probable).
  *
  * This is the shape the locked reference uses (`.duel.hug > .tcol`), and it is what puts each team's
@@ -85,7 +99,7 @@ function TeamStack({ team, teamId, sport, standings, rankings, season, week, pro
   // Until the row has been measured - the server pass, and the tick before the fonts resolve - fall
   // back to the old character-count size, which useLayoutEffect-timing corrects before paint.
   const fit = rowWidth > 0 && measure
-    ? fitNameAndRecord(measure, name, record ? measure(record, REC_FONT) : 0, rowWidth, NAME_FONT)
+    ? fitNameAndRecord(measure, name, record ? measureRecord(measure, record) : 0, rowWidth, NAME_FONT)
     : { px: nameSize(name), showRecord: Boolean(record), truncates: false };
 
   return (
@@ -234,7 +248,11 @@ export default function MatchupCard({ game, standings, rankings, showDay = false
             row 3 at 11px where the score rung used 17px and 13px, so the slot was 57.3px tall on a
             priced game and 69.5px on a final - two silhouettes in the column v1.6.6 claimed had one.
             Stage 1 measured that; this is where it stops. */}
-        {slot.row2 ? <span className="mscore">{slot.row2}</span> : null}
+        {slot.row2 ? (
+          <span className="mscore" style={slot.row2Px ? { fontSize: `${slot.row2Px}px` } : undefined}>
+            {slot.row2}
+          </span>
+        ) : null}
         {slot.row3 ? (
           <span className="mslot-state" data-tone={slot.tone}>{slot.row3}</span>
         ) : null}
