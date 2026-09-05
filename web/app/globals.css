@@ -1706,12 +1706,16 @@ input:focus-visible {
      starts at y=-90); this only shows if that overflow ever fails to paint. */
   background:linear-gradient(180deg,#272727 0%,#232323 45%,#1A1A1A 100%)}
 /* INSTALLED ONLY. display-mode: standalone is exactly the condition manifest.js creates, and it is
-   the only place a top inset exists - so the 7px lands on the phone Joe is looking at and nowhere
-   else. Adding it unconditionally would put a 7px ground strip above the banner in every desktop
-   browser and re-base every height test for something no one can see. Wordmark first ink then sits
-   18px below the inset: 7 here + the artwork's own 11. */
+   the only place a top inset exists - so this lands on the phone Joe is looking at and nowhere else.
+   Adding it unconditionally would put a ground strip above the banner in every desktop browser and
+   re-base every height test for something no one can see.
+
+   4px, HALVED FROM PROMPT 45's 7 (prompt 46, Joe on 2026-09-05: "Now there is too much space above
+   MySports TV ... reduce that amount that was added by half"). Half of 7 is 3.5 and this is an
+   integer pixel; at 3x DPR the half-pixel is a third of a device pixel, below anything the panel can
+   show. Wordmark first ink now sits 15px below the inset: 4 here + the artwork's own 11. */
 @media (display-mode: standalone){
-  .banner{padding-top:calc(env(safe-area-inset-top, 0px) + 7px)}
+  .banner{padding-top:calc(env(safe-area-inset-top, 0px) + 4px)}
 }
 .bn-pc{position:relative}
 /* The desktop stage is 1400 wide and the banner is full-bleed to the viewport, so past 1600px the

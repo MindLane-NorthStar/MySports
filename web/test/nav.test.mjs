@@ -84,9 +84,11 @@ test('.banner carries the ONLY top safe-area inset, and now it is on every route
                       'no selector other than .banner may take a top inset');
   assert.match(css, /\.banner\{[\s\S]{0,300}?padding-top:env\(safe-area-inset-top, 0px\);/,
                'the base rule adds the whole inset and subtracts nothing');
+  // 4px since prompt 46 unit 1A - Joe halved prompt 45's 7. First ink lands 15px below the inset:
+  // 4 here plus the artwork's own 11.
   assert.match(css,
-    /@media \(display-mode: standalone\)\{\s*\.banner\{padding-top:calc\(env\(safe-area-inset-top, 0px\) \+ 7px\)\}/,
-    'and the installed app gets 7px more, so the wordmark clears the bezel by 18');
+    /@media \(display-mode: standalone\)\{\s*\.banner\{padding-top:calc\(env\(safe-area-inset-top, 0px\) \+ 4px\)\}/,
+    'and the installed app gets 4px more, so the wordmark clears the bezel by 15');
 });
 
 test('there is exactly ONE definition of the link list', () => {
