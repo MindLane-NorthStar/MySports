@@ -1,4 +1,4 @@
-# MySports — Rendering Contract (v1.6.15 — college football, with pro-league plumbing and the Around the League strip)
+# MySports — Rendering Contract (v1.7 — college football and pro leagues, with the program card)
 
 **Status:** Design language locked by Joe on 2026-08-31 after nine prototype iterations (v0.1 wireframe → v1.0-rc). v1.0 (2026-08-31, late) closed the four data-plumbing items open at rc: real enrichment data, the TBD section, the legend, and PNG export. **v1.1 (2026-08-31, night)** is the first visual revision after the freeze, decided by Joe from rendered option boards (silhouette A/B/C, tray 0–3, marquee 0–3): local-affiliate call letters and a new broadcast order in the rail, records moved into the name line, a fixed-size tray with weather removed, and the gold-plate marquee. **v1.2 (same night)** adds Joe's four legibility tweaks: axis labels only where games begin or end, lighter tray text, brightened streamer chips, and the week number in the title. **v1.3 (2026-08-31, late night)** is the card-unification and tray revision: every game renders at full size (streaming rows and the TBD section included), the tray becomes the pills design with vector streamer wordmarks, and the tray grows to 28px. Every change since the freeze is logged in §12. Reference implementation: `scripts/render_day.py`. Reference renders: Saturday 2026-09-05 (Week 1 — 68 games, 62 on the grid, 6 omitted: the season's stress day) and Saturday 2026-10-24 (Week 8 — 2 on the grid, 39 awaiting kickoff/network, 3 omitted: the TBD-state day).
 
@@ -100,8 +100,130 @@ Groups 2–3 sort by home conference, then home team (assignments are announced 
 - CLI: `--week N` sets the fixture, raw-games, and enrichment paths in one flag; each can still be overridden. `--style key=value` (repeatable) switches design variants for comparison boards: `silhouette=outline|bezel|quiet`, `tray=pills|single|cells|chipsright`, `marquee=plate|tag|halo|sunburst`, `weather=on|off`, `records=name|tray`, `chipbg=tile|none|light`, `favlogo=disc|plain|invert`, `trayh=28|24`. The v1.3 defaults are `outline / pills / plate / off / name / tile / disc / 28`; anything else is a comparison, not the contract.
 - Text measurement uses the repo TTFs through PIL when present (`assets/fonts/`), so fit decisions are exact; it falls back to per-glyph heuristics if the fonts are missing.
 
+## 11.10 The program card (v1.7)
+
+**The design of record is `docs/design/program-card-design-v1.md`**, approved for build as written
+(Joe, 2026-09-05). This section is its implementation; where the two disagree the design doc wins and
+this section is the bug.
+
+A **program** is any non-game entry on the grid: `race_session`, `fight_card`, `weekly_show`,
+`special_event`, `studio_show`. It renders as a SECOND SILHOUETTE on the frozen game-card language -
+same 74 + 28 geometry, same `rx 9`, same `#23282E` plate, same white-hairline outline of §3, same
+tray line. **No game block, game card, tray convention, cap gradient, hairline or token changes.**
+Proved rather than asserted: with no `--programs` file the SVG renderer's output for 2026-09-05 is
+byte-identical to the pre-v1.7 render apart from its timestamp, and the phone-grid tripwire is
+unmoved (§11.9).
+
+### Anatomy
+
+| part | rule |
+|---|---|
+| **Endcap** | The rail tile's own charcoal gradient, `--panel-top #31363D` → `--panel-bottom #1E2126` — the same pair §2 paints the network rail with, read from the token and never retyped. Carries the brand mark, inset and fit-boxed. **Never brand-coloured, never white-backed.** It gives way before the stage does: `CAP = min(BLOCK_H, max(16, w / 3))`, the game block's own relationship, so a 30-minute post-race show still has room for a title. |
+| **Brand bar** | 3 px of the brand colour on the endcap's **right** edge. The one place the colour appears undiluted, and what tells four red-clustered brands apart. |
+| **Stage wash** | **The signature.** A mirrored gradient: brand at BOTH edges fading to charcoal at the centre, peak opacity **0.55** (Joe's "strong edges" over the ~0.28 soft variant). Stops at 0 / 22 / 50 / 78 / 100 %, mirrored about 50 %, with the centre stop at alpha **0**. The card centre is therefore always the plate. |
+| **Title** | Centred, Barlow Condensed 700, `--ink #F2F2F0`, 26 px design, shrinking through the game card's own fit steps (26 / 22 / 18 / 15 / 13 / 11) to the largest size at which the whole title fits the span between endcap and right edge. |
+| **Subtitle** | Centred beneath, Barlow Condensed 600, the brand colour **tinted 70 % toward white**. Location for a studio show, headliner for a fight card, series · venue for a race. |
+| **Seam** | Mirrored to match the wash: charcoal at the centre, brand at both ends. |
+| **Tray** | Kickoff · venue/service on the left (Inter 700 12.5 px, §3's rule). Crew as a muted right-aligned run, `#B4BAC0`. |
+
+### Brand constants
+
+`data/brands.json`, read and **never computed at render time**. Both renderers read the same file.
+
+| key | colour | source |
+|---|---|---|
+| `gameday` | **#F96302** | Home Depot orange — Joe's ruling, exact; replaces the mark-derived red |
+| `ufc` | #D40707 | design of record |
+| `wwe` | #FD2F25 | design of record |
+| `nascar` | #E60029 | design of record |
+| `aew` | #F0C850 | design of record — the non-red proof against the all-red cluster |
+| `indycar` | **#E43146** | **derived** from `web/public/leagues/indycar.png`: the dominant saturated hue bucket, 24 % of opaque pixels, at its median chroma |
+| `bignoon` and each NFL studio show | **#4A505A** (`--line-grid`) | **provisional.** There is no mark in the tree AND nothing to derive a colour from: `data/` carries no network palette, and the cached FOX and CBS wordmarks are monochrome with zero saturated pixels. A network's brand hex typed from memory would be an invented fact, so each carries the grid's own neutral and is an open item for the marks pipeline. |
+
+**Missing marks.** A brand with no art in `web/public/leagues/` renders its `short_title` as a
+**typographic mark** in the display face on the charcoal endcap. **No logo is ever fabricated and
+none is fetched.** Today that is `gameday`, `bignoon` and the eight NFL studio shows.
+
+### `open_ended` — the reconciliation prompt 17 flagged
+
+**The per-program column wins when it is set; `data/duration_defaults.json`'s per-type
+`open_ended_default` is what applies when it is not.** An open-ended block draws to its expected end
+and then **fades**: the wash drops to transparent over the last 30-minute column (a mask from 72 % to
+100 %), rather than stopping at a hard edge it cannot honestly claim.
+
+**What the schema allows, recorded rather than papered over:** `programs.open_ended` is
+`boolean NOT NULL default false` (migration 0009), so a row read from the database always carries a
+value and the policy branch is reachable only from a feed that omits the field. The rule is still
+implemented as written, because making it conditional on today's nullability would change meaning
+silently the day the column becomes nullable. The consequence is that the 98 NASCAR races loaded
+before this contract all carry `false` while `duration_defaults` says a race session is open-ended;
+the fix is in the ADAPTERS, which now emit it, and not in a renderer override.
+
+`data/render_policies.json` gains the five program sports in the same change, which is what register
+§12 asked for — `prime_window_start` (D2) and this reconciliation land together so the file does not
+end up with two competing shapes. Each carries a `_source` naming where its numbers came from.
+
+### The crew-fit rule
+
+The crew run renders **only when the tray width allows** — never collides, never truncates mid-name.
+**Names are dropped from the right** until the run fits; if not even one name fits, the whole run
+goes. A name is never cut and an ellipsis is never used: "COLE, GRA…" reads as a rendering fault
+rather than an editorial choice. `web/lib/programs.js` `fitCrew()` decides it for both renderers.
+
+### Studio-show bookends
+
+A `studio_show` with `anchor_program_id` set and `bookend = pre` renders on the **anchor's network
+row**, ending at the anchor's start; `post` begins at the anchor's end. With no anchor — a standalone
+show, or an anchor not yet loaded — it renders on its own network row at its slot. Overlaps on a row
+resolve through the existing lane rule (§3 truncation and the v1.6.5 overlap split); nothing new.
+**Studio shows never get a chip** (register §9): they render under the parent sport's chip and under
+ALL SPORTS.
+
+### UFC renders plain
+
+**One plain card.** No segment dividers or labels on the block, and **no CBS partial-window overlay**
+(Joe 2026-09-03, superseding the register's Q2). `programs.segments` and
+`game_broadcasts.window_start/window_end` remain DATA, surfaced in the tap-open detail panel.
+
+### The "now" marker
+
+On the **Today grid only**: a vertical gold hairline (`--gold`, 1 px, 0.85 opacity) at the current ET
+minute, the full height of the grid, **above the blocks and below the sticky rail** (`z-index: 2`
+against the rail's 3). **Positioned server-side** from the request time and moved by the existing
+15-minute refresh, so no clock runs in the component and there is no hydration path. Absent on
+archived days and on Weeks/History; the desktop SVG never draws it — the archive is immutable.
+
+### Eligibility on every program surface
+
+The program block's tray and the program list card's right slot read the **same eligibility fields
+the game card reads**, through `web/lib/offservice.js` — never a second derivation. Migration 0014
+gave programs their own `viewer_program_eligibility` rows. Hidden programs follow the hidden-game
+rule: unavailable rows hidden unless Show all, counted in the band's `N unavailable`. **A program
+with no eligibility row at all is a data defect** and renders a visible `ELIGIBILITY MISSING` cue —
+never silently as watchable.
+
+### The list-card variant
+
+`web/components/ProgramCard.js`, beside `MatchupCard.js`, which is **not touched**. Same `.mcard`
+plate, radius, hairline, left time column, network-mark column and right-hand slot, so the two fixed
+centred columns keep their centrelines down a mixed page. The body is the endcap, the title and the
+subtitle; the venue and the crew take a line each below.
+
+**The title WRAPS and never ellipsises.** Measured on the fixture board at 390: the body track is
+~152 px, so a 46 px endcap left ~106 px and "COOK OUT SOUTHERN 500" rendered "COOK O…". A programme's
+title is the only thing naming the row, so a truncated one is a card that says nothing.
+
+**The stage wash is not on the list row.** Behind a left-aligned title that wraps it reads as a
+smear; the brand carries through the endcap bar and the card's own seam.
+
+No records, no standings, no odds — a race has no record and no odds provider is wired (register §9).
+Program rows appear in the sport bands, **never in YOUR TEAMS** (a program has no team, so
+`splitFavorites` leaves them in `rest` by construction), and **in the D1 first band on the days they
+air** — Cowork's call, flagged, open to veto.
+
 ## 12. Change log
 
+- **v1.7 (2026-09-05, the program card):** the second card silhouette, for every non-game program — `race_session`, `fight_card`, `weekly_show`, `special_event`, `studio_show`. Full anatomy, brand table, bookend rule, `open_ended` reconciliation, now-marker rule, plain-UFC ruling and crew-fit rule in **§11.10**. Implemented in BOTH renderers: `web/components/MobileGrid.js` (the block) plus `web/components/ProgramCard.js` (the list variant), and `scripts/render_day.py` `draw_program_card()` behind a new `--programs FILE` input. **The frozen game-card language is extended, never reopened** — with no `--programs` file the SVG output for 2026-09-05 is byte-identical to the pre-v1.7 render apart from its timestamp, and the phone-grid tripwire holds at CFB `2026-09-05` 62 / {240, 223} / 1073 and MLB `2026-09-03` 3 / 228 / 577. Game-card heights unchanged at 132.3 / 160.3 / 168.3. `data/brands.json` is new and parser-written; `data/render_policies.json` gains the five program sports (register §12's "land both in one change"); `data/duration_defaults.json` is now read rather than dormant. **Open, and named rather than hidden:** the daily `render_all` job does not yet write a programs file beside the validation fixture, so an ARCHIVED desktop grid stays game-only until that pipeline step exists — the drawing is ready and tested, the feed is not built.
 - **v1.6.15 (2026-09-05, neutral-site games on the list card):** **the `vs` marker is retired.** Nothing renders between the two team stacks on any game - Joe: "Eliminate the `vs` so all cards look the same." The fact moves to the venue line: `(neutral site)` follows the venue name in a trailing span, **one size step smaller (11px against 12px), italic, regular weight, `--dim`** - the standings-line grey - with the parentheses part of the span. It never truncates: the span is `white-space: nowrap` and the line wraps before it, so a long venue pushes the whole parenthetical to its own line rather than clipping either. With no venue loaded the line renders the parenthetical alone, so the fact is never lost. The detail panel's venue line matches. The grid tray and both grid renderers are unchanged - the grid keeps its `vs`/`@` marker, which prompt 33 already scoped out. **Amends prompt 33 stage 1**, which kept `vs` on the 20 neutral-site games (11 CFB, 9 NFL) so a London game would not read as a home game. Measured: those 20 cards fall from 160.3 to **132.3**, the same height as every other card, which is the point; ordinary cards are unchanged at 132.3 / 168.3. `.at` is deleted with its only emitter. **`.mnet` stays a block** - making it a wrapping flex row was tried and dropped every card by 2.9px, because a flex item loses the block's line-height leading; ordinary inline flow already wraps at the space before the span.
 - **v1.6.14 (2026-09-05, the grid name·record run: separator and all-zero records):** Joe's ruling from the installed app. **(1)** In the block and TBD-card name·record run a single space separates the name from the record; the run was previously concatenated. **(2)** A record whose every component is zero (`0-0`, `0-0-0`, `0-0-0-0`) is treated as absent by the run: nothing follows the name and the fit ladder begins at "no record". Widths under M2 move accordingly; the phone-grid tripwire was re-baselined in prompt 46 unit 1E. The list card's record rule is unchanged by this entry.
 - **v1.6.13 (2026-09-04, the list card's fit order):** **the card now concedes in the same order the grid does, and the team name outranks its record.** §3 has stated the grid's order all along — *shrink to keep the record → drop the record → shrink the name* — and the card had neither half of it. Its record was `flex: 0 0 auto`, so it took its share whatever the name needed (at 390px a record costs **44px of the 81px** the row has, more than half), and `nameSize()` stepped on **character count**, which cannot know that "South Alabama" is thirteen characters and still needs 110px in 81px. **(a) The tier is chosen by MEASURED WIDTH** — 15 → 12.5 → 11px against the room the row actually has, measured on the same canvas and the same faces as the grid's M2 rule (`useTextMeasurer` moved to `web/lib/` so there is one measurer, not two). **(b) The record yields first, and is DROPPED FROM THE FLOW rather than hidden** — `visibility: hidden` keeps the box and its gap, so it would concede nothing, and the width is the whole point. A line can no longer show a shortened name beside a full record, which is what it did before and is the wrong way round. **(c) A three-digit score steps row 2 from 17px to 15px** (`row2Size()` in `format.js`, keyed on the scores rather than on the rendered string so a `-162` moneyline is not caught). Only the NBA produces one, and at 17px `116 - 104` was the single string setting the portrait slot track for every other sport. **(d) The portrait slot track falls 88px → 82px**, re-measured: with the step-down, `116 - 104` is 75.94px and the binding case passes to **`Final pending`** at 80.05px — the stale-live guard's string, which binds at *both* breakpoints now and is deliberately **not renamed to buy width**. Desktop stays 100px. **THE RESULT, measured over the four loaded days at 390px: truncated team names go from 70 of 206 to 1.** The residual is *UT Rio Grande Valley*, 24.57px short at 11px with the record already dropped — too long for a 390px card without the abbreviation step, which is the grid's fourth concession and not implemented here. 430, 852×390 and 1440 stay at **0**, with all 18 records intact. Card heights unchanged at 132.3 / 160.3 / 168.3. The two centrelines stay perfectly straight; their absolute x moves from 239/323 to **245/326** at 390px, which is simply what narrowing a fixed track does — the six freed pixels go to the `1fr` matchup column beside it. **A known cost:** the tier settles when the webfont resolves, so a cold load paints once at the character-count size and re-tiers — the same property the grid's M2 measurement has had since it shipped.

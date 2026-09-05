@@ -111,6 +111,54 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .mcard .t{font-family:var(--disp); font-weight:600; font-size:15px; color:var(--gold); line-height:1.1; align-self:start; padding-top:2px}
 .mcard .t small{display:block; font-size:10px; color:var(--faint); letter-spacing:.1em}
 .mcard .mid{min-width:0; display:flex; flex-direction:column; gap:4px}
+
+/* ---------- PROGRAM CARDS (rendering contract v1.7) ------------------------------------------
+   Design of record: docs/design/program-card-design-v1.md, approved as written (Joe, 2026-09-05).
+
+   THE SECOND SILHOUETTE, NOT A SECOND DESIGN LANGUAGE. `.pcard` IS `.mcard` - the same four-column
+   grid, so the mark column and the right slot keep the two centrelines Joe ruled on 2026-09-04
+   down a page that mixes races and games. Only the BODY differs, because a program has no opponent:
+   where a game stacks two teams, a program shows a charcoal endcap carrying its brand mark, then
+   its title, then its subtitle.
+
+   THE TITLE WRAPS AND NEVER ELLIPSISES. Measured on the v1.7 fixture board at 390: the body track
+   is ~152px, so a 46px endcap left ~106px and "COOK OUT SOUTHERN 500" rendered "COOK O...". A
+   programme's title is the only thing naming the row - there is no second line of teams to fall
+   back on - so a truncated one is a card that says nothing. Same answer C1 gave the team names.
+
+   THE STAGE WASH IS NOT HERE. It is the GRID BLOCK's signature - a mirrored gradient across a wide
+   centred block - and behind a left-aligned title that wraps it reads as a smear. On a list row the
+   brand carries through the endcap's 3px bar and the card's own left seam. The grid block itself is
+   not in this file: this file's grid is the `__GRIDSVG__` placeholder.
+
+   NO FABRICATED MARKS. A brand with no art in web/public/leagues renders its short title in the
+   display face on the charcoal tile - GameDay and Big Noon Kickoff are both in that state today.
+   ------------------------------------------------------------------------------------------- */
+.pbrand{display:flex; align-items:flex-start; gap:7px; min-width:0}
+.pcap{position:relative; flex:0 0 34px; height:34px; border-radius:5px; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(180deg,#31363d,#1e2126)}
+.pcap img{max-width:74%; max-height:62%; object-fit:contain}
+.pcap-type{font-family:var(--disp); font-weight:700; font-size:9px; line-height:1.02;
+  letter-spacing:.02em; text-align:center; text-transform:uppercase; color:var(--ink); padding:0 3px}
+/* the 3px brand bar on the endcap's RIGHT edge - the one place the colour is undiluted, and what
+   tells four red-branded programmes (NASCAR, UFC, WWE, GameDay) apart at a glance */
+.pcap-bar{position:absolute; top:0; right:0; bottom:0; width:3px}
+.ptitles{flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:1px;
+  padding:1px 5px 2px 2px; text-align:left}
+.ptitle{font-family:var(--disp); font-weight:700; font-size:15px; line-height:1.04; color:var(--ink);
+  text-transform:uppercase; white-space:normal; overflow-wrap:anywhere; max-width:100%}
+/* the subtitle takes the brand colour tinted 70% toward white; the tint is computed per brand in
+   web/lib/programs.js and arrives inline, so there is no per-brand rule here */
+.psub{font-family:var(--disp); font-weight:600; font-size:11px; line-height:1.05; letter-spacing:.03em;
+  text-transform:uppercase; white-space:normal; overflow-wrap:anywhere; max-width:100%}
+/* the crew gets its OWN line: inline beside the venue the two ran together with no separator at all
+   ("Darlington RacewayMike Joy"), and they are different kinds of fact */
+.pcrew{display:block; margin-top:2px; color:var(--faint); font-size:11px; line-height:1.15}
+/* a programme with no eligibility row has not been judged - never quiet, never inline */
+.pelig-missing{display:block; margin-top:3px; color:var(--alert); font-size:10px; font-weight:700;
+  letter-spacing:.04em}
+
 .duel{display:grid; grid-template-columns:1fr auto 1fr; gap:2px 4px; align-items:center}
 .duel.fixcol .atbig{justify-self:end; margin-right:2px}
 /* C1: THE DIVERGENCE IS CLOSED - the two teams STACK, away above home, and the reference and the app

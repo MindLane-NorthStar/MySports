@@ -1,8 +1,120 @@
 {
-  "_about": "Per-sport render policy (spec 7.19 / 11.9). block_minutes drives card width; lane_policy alt_lane = overlapping games on one network stack into lanes (CFB), market_filter = the market decides which regional game is on the row; primary_line spread|moneyline. title is the header lockup; week_label true = 'WEEK N' from the fixture week. local_row_label is the rail text for a synthesized local row whose carrier is TBA. prime_window_start (D2) is the local ET 24-hour time at which this sport's prime viewing window opens. It is a POLICY, not a schedule: the window a given day uses is the EARLIEST prime_window_start among the sports that actually have a game that day, and its close is the last program end (kickoff + that sport's block_minutes) - derived in web/lib/primewindow.js, never stored.",
-  "cfb": {"title": "COLLEGE FOOTBALL", "block_minutes": 210, "prime_window_start": "12:00", "lane_policy": "alt_lane", "primary_line": "spread", "open_ended": false, "cutover": "03:00", "week_label": true, "data_label": "CFBD"},
-  "nfl": {"title": "NFL", "block_minutes": 210, "prime_window_start": "13:00", "lane_policy": "market_filter", "primary_line": "spread", "open_ended": false, "cutover": "03:00", "week_label": true, "data_label": "ESPN"},
-  "nhl": {"title": "NHL", "block_minutes": 150, "prime_window_start": "18:00", "lane_policy": "market_filter", "primary_line": "moneyline", "open_ended": "playoffs", "cutover": "03:00", "week_label": false, "data_label": "NHL", "local_row_label": "CARRIER TBA"},
-  "nba": {"title": "NBA", "block_minutes": 150, "prime_window_start": "18:00", "lane_policy": "market_filter", "primary_line": "spread", "open_ended": false, "cutover": "03:00", "week_label": false, "data_label": "NBA", "local_row_label": "CARRIER TBA"},
-  "mlb": {"title": "MLB", "block_minutes": 180, "prime_window_start": "18:00", "lane_policy": "market_filter", "primary_line": "moneyline", "open_ended": true, "cutover": "03:00", "week_label": false, "data_label": "MLB"}
+ "_about": "Per-sport render policy (spec 7.19 / 11.9). block_minutes drives card width; lane_policy alt_lane = overlapping games on one network stack into lanes (CFB), market_filter = the market decides which regional game is on the row; primary_line spread|moneyline. title is the header lockup; week_label true = 'WEEK N' from the fixture week. local_row_label is the rail text for a synthesized local row whose carrier is TBA. prime_window_start (D2) is the local ET 24-hour time at which this sport's prime viewing window opens. It is a POLICY, not a schedule: the window a given day uses is the EARLIEST prime_window_start among the sports that actually have a game that day, and its close is the last program end (kickoff + that sport's block_minutes) - derived in web/lib/primewindow.js, never stored. RENDERING CONTRACT v1.7 (2026-09-05): the five PROGRAM sports join this file, which is what register section 12 asked for - prime_window_start (D2) and the open_ended reconciliation land in ONE change so the file does not end up with two competing shapes. Each carries a `_source` naming where its numbers came from. Their `open_ended` here is the PER-SPORT DEFAULT; a program's own programs.open_ended column wins when it is set, which - the column being NOT NULL - is always, so this policy value is the fallback for a feed that omits the field. block_minutes is likewise a fallback: a program carries its own expected_duration_min, because a 360-minute fight card and a 120-minute wrestling show cannot share one number.",
+ "cfb": {
+  "title": "COLLEGE FOOTBALL",
+  "block_minutes": 210,
+  "prime_window_start": "12:00",
+  "lane_policy": "alt_lane",
+  "primary_line": "spread",
+  "open_ended": false,
+  "cutover": "03:00",
+  "week_label": true,
+  "data_label": "CFBD"
+ },
+ "nfl": {
+  "title": "NFL",
+  "block_minutes": 210,
+  "prime_window_start": "13:00",
+  "lane_policy": "market_filter",
+  "primary_line": "spread",
+  "open_ended": false,
+  "cutover": "03:00",
+  "week_label": true,
+  "data_label": "ESPN"
+ },
+ "nhl": {
+  "title": "NHL",
+  "block_minutes": 150,
+  "prime_window_start": "18:00",
+  "lane_policy": "market_filter",
+  "primary_line": "moneyline",
+  "open_ended": "playoffs",
+  "cutover": "03:00",
+  "week_label": false,
+  "data_label": "NHL",
+  "local_row_label": "CARRIER TBA"
+ },
+ "nba": {
+  "title": "NBA",
+  "block_minutes": 150,
+  "prime_window_start": "18:00",
+  "lane_policy": "market_filter",
+  "primary_line": "spread",
+  "open_ended": false,
+  "cutover": "03:00",
+  "week_label": false,
+  "data_label": "NBA",
+  "local_row_label": "CARRIER TBA"
+ },
+ "mlb": {
+  "title": "MLB",
+  "block_minutes": 180,
+  "prime_window_start": "18:00",
+  "lane_policy": "market_filter",
+  "primary_line": "moneyline",
+  "open_ended": true,
+  "cutover": "03:00",
+  "week_label": false,
+  "data_label": "MLB"
+ },
+ "nascar": {
+  "title": "NASCAR",
+  "block_minutes": 210,
+  "prime_window_start": "12:00",
+  "lane_policy": "alt_lane",
+  "primary_line": "none",
+  "open_ended": true,
+  "cutover": "03:00",
+  "week_label": false,
+  "data_label": "NASCAR",
+  "_source": "block_minutes = data/duration_defaults.json race_session.default. prime_window_start DERIVED: the earliest ET start among the 98 loaded 2026 races is 12:00 (OnlyBulls Green Flag 150 at St. Petersburg, Feb 28), read from the recorded cf.nascar.com fixtures through adapters/nascar.py. open_ended per duration_defaults race_session.open_ended_default - a caution moves the end."
+ },
+ "indycar": {
+  "title": "INDYCAR",
+  "block_minutes": 150,
+  "prime_window_start": "10:00",
+  "lane_policy": "alt_lane",
+  "primary_line": "none",
+  "open_ended": true,
+  "cutover": "03:00",
+  "week_label": false,
+  "data_label": "INDYCAR",
+  "_source": "block_minutes from docs/research/indycar.md section 4 (~150 road/street). prime_window_start from the same doc section 2: the Indy 500 is a six-hour window from 10 AM, the earliest slot the season carries."
+ },
+ "ufc": {
+  "title": "UFC",
+  "block_minutes": 360,
+  "prime_window_start": "14:00",
+  "lane_policy": "alt_lane",
+  "primary_line": "moneyline",
+  "open_ended": true,
+  "cutover": "03:00",
+  "week_label": false,
+  "data_label": "PARAMOUNT+",
+  "_source": "block_minutes = data/duration_defaults.json fight_card.default (one card, early prelims through main card). prime_window_start from docs/research/ufc.md section 1: the earliest main-card time on the Paramount+ schedule page is 2 PM ET (UFC 333 Abu Dhabi, Oct 24). primary_line per register section 9 - moneylines under show_odds; no provider is wired, so nothing renders yet."
+ },
+ "wwe": {
+  "title": "WWE",
+  "block_minutes": 180,
+  "prime_window_start": "18:00",
+  "lane_policy": "alt_lane",
+  "primary_line": "none",
+  "open_ended": false,
+  "cutover": "03:00",
+  "week_label": false,
+  "data_label": "WWE.COM",
+  "_source": "block_minutes = data/duration_defaults.json weekly_show wwe-raw/wwe-smackdown (three hours). prime_window_start from docs/research/wwe.md section 5: PLEs are Saturday 6-10 PM ET, earlier than Raw's and SmackDown's 8 PM. Weekly shows have a fixed end (wwe.md section 4), so open_ended is false; a PLE row carries its own true, which is what the per-program column is for."
+ },
+ "aew": {
+  "title": "AEW",
+  "block_minutes": 120,
+  "prime_window_start": "19:00",
+  "lane_policy": "alt_lane",
+  "primary_line": "none",
+  "open_ended": false,
+  "cutover": "03:00",
+  "week_label": false,
+  "data_label": "WBD",
+  "_source": "block_minutes = data/duration_defaults.json weekly_show aew-dynamite/collision. prime_window_start from docs/research/aew.md section 2: Collision: Tailgate to All Out is TNT Sat 7 PM ET, earlier than the 8 PM Dynamite/Collision slot."
+ }
 }

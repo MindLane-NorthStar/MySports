@@ -54,6 +54,11 @@ import { railLabel } from '../lib/raillabel.js';
 // definitions of "nobody has announced this" would drift, and the band's count line and the
 // grid's note would then disagree about the same games on the same screen.
 import { isNetworkTbd } from '../lib/offservice.js';
+import {
+  brandFor, crewNames, eligibilityMissing, fitCrew, isOpenEnded, isProgram, programMinutes,
+  seamGradient, subtitleFor, titleFor, tintToWhite, washGradient, CREW_INK, ENDCAP_GRADIENT,
+} from '../lib/programs.js';
+import { programBroadcast } from './ProgramCard.js';
 
 const SCALE = 0.8; // M1: all grid content renders at 80% of contract design size
 const SEAM_PX = 30; // the dashed cut occupies this much of the axis (M3)
@@ -105,7 +110,7 @@ function teamLine(game, side, standings) {
   };
 }
 
-export default function MobileGrid({ games, sport, day, standings, onOpen }) {
+export default function MobileGrid({ games, sport, day, standings, onOpen, nowMinute = null }) {
   const { measure, ready } = useTextMeasurer();
 
   const model = useMemo(() => {
@@ -118,18 +123,34 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
     for (const g of games || []) {
       const start = viewingMinutes(g.canonical_kickoff_at_utc);
       const known = g.kickoff_status !== 'tbd' && start !== null;
-      const b = cardBroadcast(g);
+      // v1.7: a PROGRAM's broadcast row is chosen by its own rule - it has no `is_primary` written
+      // by the reconciler, which only ever ran over games - and its length is its own duration, not
+      // the sport's block policy. A 360-minute UFC card and a 120-minute Dynamite cannot share one
+      // number the way two CFB games can.
+      const program = isProgram(g);
+      const b = program ? programBroadcast(g) : cardBroadcast(g);
       if (!known || !b) {
         tbd.push(g);
         continue;
       }
-      timed.push({ game: g, start, end: start + blockMinutes(g.sport), broadcast: b });
+      const mins = program ? programMinutes(g) : blockMinutes(g.sport);
+      timed.push({ game: g, start, end: start + mins, broadcast: b, program, mins });
     }
 
     // M2: measure the widest rendered team line on THIS slate, in the real fonts.
     const nameFont = `700 ${Math.round(15 * SCALE * 100) / 100}px 'Barlow Condensed', 'Arial Narrow', sans-serif`;
     let widest = 0;
+    // A PROGRAM-ONLY DAY STILL NEEDS A SCALE. M2 derives pixels-per-minute from the widest rendered
+    // line on the slate, and a race has no team lines at all - so a day of nothing but races would
+    // measure 0 and collapse the axis. The program's TITLE is what it renders, so the title is what
+    // it contributes, in the same font the block draws it in.
+    const titleFont = `700 ${Math.round(15 * SCALE * 100) / 100}px 'Barlow Condensed', 'Arial Narrow', sans-serif`;
     for (const it of timed) {
+      if (!it.program) continue;
+      widest = Math.max(widest, measure(titleFor(it.game), titleFont));
+    }
+    for (const it of timed) {
+      if (it.program) continue;
       for (const side of ['home', 'away']) {
         const l = teamLine(it.game, side, standings);
         const at = side === 'home' ? '@ ' : '';
@@ -144,7 +165,10 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
     // guarantee is that the NARROWEST block still fits the widest name. Picking the page sport (or
     // the longest) would let a 150-minute NHL block fall under that width and wrap a name, which is
     // the one thing M2 says cannot happen by construction. One sport present: unchanged.
-    const present = [...new Set(timed.map((t) => t.game.sport))];
+    // Programs are excluded from the scale-sport choice: their length is per-program, so there is no
+    // policy number for them to contribute, and letting a 120-minute show act as the shortest block
+    // would rescale every game on the day around a show.
+    const present = [...new Set(timed.filter((t) => !t.program).map((t) => t.game.sport))];
     const scaleSport = present.length
       ? present.reduce((a, b) => (blockMinutes(b) < blockMinutes(a) ? b : a))
       : sport;
@@ -253,6 +277,7 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
   const trayH = TRAY_H * SCALE;
   const laneH = blockH + trayH + LANE_GAP * SCALE;
   const onGrid = rows.reduce((n, r) => n + r.items.length, 0);
+  const onProgram = rows.some((r) => r.items.some((it) => it.program));
 
   function jumpTo(id) {
     const node = document.getElementById(`mrow-${id}`);
@@ -286,7 +311,10 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
               {sport ? SPORT_LABEL[sport] || sport.toUpperCase() : 'All Sports'} Broadcasts
             </span>
             <span className="mgrid-line2">
-              {longDay(day).replace(/,/, '')} · {onGrid} {onGrid === 1 ? 'GAME' : 'GAMES'}
+              {/* v1.7: the grid holds programmes as well as games now, so it stops calling a
+                  race a game. A day with no programme on it reads exactly as it did. */}
+              {longDay(day).replace(/,/, '')} · {onGrid}{' '}
+              {onGrid === 1 ? (onProgram ? 'PROGRAM' : 'GAME') : (onProgram ? 'ON THE GRID' : 'GAMES')}
             </span>
           </span>
         </h3>
@@ -352,6 +380,22 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
             </div>
           </div>
 
+          {/* THE NOW MARKER (contract v1.7). A vertical gold hairline at the current ET minute,
+              across the full grid height, ABOVE the blocks and BELOW the sticky rail (z 2 against
+              the rail's 3). It renders only when the page hands one down, which it does only for
+              TODAY - an archived day is immutable and a week view has no single "now", so both
+              simply pass null and nothing is drawn.
+              POSITIONED SERVER-SIDE. `nowMinute` is computed from the REQUEST time in page.js and
+              arrives as a number, so there is no clock in this component and no hydration mismatch;
+              M11's existing 15-minute refresh is what moves it. */}
+          {nowMinute !== null && Number.isFinite(nowMinute) ? (
+            <div
+              className="mnow"
+              aria-hidden="true"
+              style={{ left: `calc(var(--rail-w) + ${scale.toX(nowMinute)}px)` }}
+            />
+          ) : null}
+
           {rows.map((row) => (
             <div className="mgrid-row" key={row.id} id={`mrow-${row.id}`}>
               <div className="mrail-cell">
@@ -383,18 +427,31 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
                   <div key={`cut-${row.id}-${c.from}`} className="mgrid-cut" style={{ left: scale.toX(c.from) + SEAM_PX / 2 }} />
                 ))}
                 {row.lanes.map((lane, li) =>
-                  lane.map((it) => (
-                    <Block
-                      key={it.game.id}
-                      item={it}
-                      scale={scale}
-                      top={li * laneH}
-                      blockH={blockH}
-                      trayH={trayH}
-                      standings={standings}
-                      onOpen={onOpen}
-                    measure={measure} />
-                  ))
+                  lane.map((it) =>
+                    it.program ? (
+                      <ProgramBlock
+                        key={it.game.id}
+                        item={it}
+                        scale={scale}
+                        top={li * laneH}
+                        blockH={blockH}
+                        trayH={trayH}
+                        onOpen={onOpen}
+                        measure={measure}
+                      />
+                    ) : (
+                      <Block
+                        key={it.game.id}
+                        item={it}
+                        scale={scale}
+                        top={li * laneH}
+                        blockH={blockH}
+                        trayH={trayH}
+                        standings={standings}
+                        onOpen={onOpen}
+                      measure={measure} />
+                    )
+                  )
                 )}
               </div>
             </div>
@@ -636,6 +693,114 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
               {p.text}
             </span>
           ))}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+/**
+ * THE PROGRAM BLOCK - rendering contract v1.7, the design of record built on the frozen silhouette.
+ *
+ * Every measurement below is the game block's, scaled by M1 exactly as the game block is: the same
+ * 74 + 28 geometry, the same rx, the same plate, the same tray line. What differs is what fills it,
+ * because a program has no two teams to split the card between:
+ *
+ *   endcap        charcoal RAIL-TILE gradient (globals.css --panel-top -> --panel-bottom, the same
+ *                 pair contract §2 paints the network rail with), carrying the brand mark inset and
+ *                 fit-boxed. NEVER brand-coloured, NEVER white-backed.
+ *   brand bar     3px of the brand colour on the endcap's RIGHT edge - the one place the colour is
+ *                 shown at full strength, which is what makes four red brands distinguishable.
+ *   stage wash    the signature: brand at BOTH edges fading to charcoal at the centre, peak ~55%.
+ *   title         centred, Barlow Condensed 700, --ink, shrinking by the game card's own fit steps.
+ *   subtitle      centred beneath, the brand colour tinted 70% toward white.
+ *   seam          mirrored to match - charcoal at centre, brand at both ends.
+ *   tray          start . venue/service on the left; the crew as a muted right-aligned run that
+ *                 renders ONLY when it fits, whole names or nothing (lib/programs.js fitCrew).
+ *
+ * OPEN-ENDED: a program whose end is unknown draws to its expected end and then FADES - the wash
+ * dropping to transparent over the last half-hour column - instead of stopping at a hard edge it
+ * cannot honestly claim. The rule that decides it is lib/programs.js isOpenEnded().
+ *
+ * UFC RENDERS PLAIN. No segment dividers, no CBS-window overlay (design of record, superseding the
+ * register's Q2). `segments[]` and the broadcast windows are data the detail panel shows.
+ */
+function ProgramBlock({ item, scale, top, blockH, trayH, onOpen, measure }) {
+  const program = item.game;
+  const x = scale.toX(item.start);
+  const w = Math.max(46, scale.toX(item.end) - x - 4);
+  // THE ENDCAP GIVES WAY BEFORE THE STAGE DOES, the same relationship the game block has (w / 3 at
+  // line 563). A first pass fixed the cap at the block height, and a 30-minute post-race show came
+  // out 24px wide with a 59px endcap - the stage measured ZERO and the title had nowhere to render.
+  // The floor of 46 on the width is the game block's own; the cap is a third of it, so a short show
+  // shows a narrow mark and its title rather than a mark and nothing.
+  const cap = Math.max(16, Math.min(blockH, w / 3));
+  const brand = brandFor(program.brand_key);
+  const openEnded = isOpenEnded(program);
+  const subtitle = subtitleFor(program);
+  const missing = eligibilityMissing(program);
+
+  // The title's own fit ladder, the game card's steps applied to one line instead of two: the
+  // largest size at which the WHOLE title fits the span between the endcap and the right edge.
+  const span = Math.max(0, w - cap - 10);
+  const steps = [26, 22, 18, 15, 13, 11].map((px) => px * SCALE);
+  const titleText = titleFor(program);
+  const titleFontAt = (px) => `700 ${px}px 'Barlow Condensed', 'Arial Narrow', sans-serif`;
+  const titleSize =
+    steps.find((px) => measure(titleText, titleFontAt(px)) <= span) ?? steps[steps.length - 1];
+
+  // THE CREW-FIT RULE. The run gets whatever the tray has left after the left-hand primary text,
+  // and names are dropped from the right until the remainder fits - never an ellipsis, never a
+  // half name. See lib/programs.js fitCrew for why that is the chosen behaviour.
+  const trayFont = `600 ${Math.round(11 * SCALE * 100) / 100}px Inter, -apple-system, sans-serif`;
+  const leftText = `${etTime(program.canonical_kickoff_at_utc, program.kickoff_status)}${
+    program.location_text ? ` · ${program.location_text}` : ''}`;
+  const leftW = measure(leftText, `700 ${Math.round(12.5 * SCALE * 100) / 100}px Inter, sans-serif`);
+  const crewRoom = Math.max(0, w - leftW - 16);
+  const crew = fitCrew(crewNames(program), crewRoom, measure, trayFont);
+
+  const wash = washGradient(brand.color);
+
+  return (
+    <button
+      type="button"
+      className="mblock pblock"
+      data-open-ended={openEnded ? 'true' : 'false'}
+      data-brand={brand.key || 'unknown'}
+      style={{ left: x, top, width: w, height: blockH + trayH }}
+      onClick={() => onOpen?.(program)}
+      title={titleText}
+    >
+      <div className="mblock-body" style={{ height: blockH }}>
+        <div className="pcap" style={{ width: cap, background: ENDCAP_GRADIENT }}>
+          {brand.mark_dark ? (
+            <img src={brand.mark_dark} alt="" loading="lazy" />
+          ) : (
+            // NO FABRICATED LOGO, and none fetched. A brand the tree has no art for renders its
+            // short title as a typographic mark on the charcoal tile, and the run's report lists it
+            // as an open item for the marks pipeline.
+            <span className="pcap-type">{brand.short_title || titleText.slice(0, 10)}</span>
+          )}
+          <span className="pcap-bar" style={{ background: brand.color }} />
+        </div>
+        <div className="pstage">
+          {/* The wash is its own layer so the open-ended fade can mask it without touching the
+              text above, and so the acceptance pass can sample one element for symmetry. */}
+          <span className="pwash" style={{ backgroundImage: wash }} />
+          <span className="ptext">
+            <span className="ptitle" style={{ fontSize: titleSize }}>{titleText}</span>
+            {subtitle ? (
+              <span className="psub" style={{ color: tintToWhite(brand.color) }}>{subtitle}</span>
+            ) : null}
+          </span>
+        </div>
+      </div>
+      <div className="mseam pseam" style={{ background: seamGradient(brand.color) }} />
+      <div className="mtray" style={{ height: trayH - 2 }}>
+        <span className="mtray-left">{leftText}</span>
+        <span className="mtray-right">
+          {missing ? <span className="mtray-pill" data-kind="eligmissing">ELIGIBILITY MISSING</span> : null}
+          {crew.text ? <span className="pcrew-run" style={{ color: CREW_INK }}>{crew.text}</span> : null}
         </span>
       </div>
     </button>

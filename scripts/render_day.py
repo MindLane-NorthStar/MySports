@@ -50,6 +50,8 @@ ap.add_argument("--sport", choices=["cfb", "nfl", "nhl", "nba", "mlb"],
                      "({sport}_{year}_week{N} or {sport}_{year}_{date}); default = the fixture's validation.sport, else cfb")
 ap.add_argument("--year", type=int, default=2026, help="season year used in default fixture/teams paths")
 ap.add_argument("--fixture")
+ap.add_argument("--programs", metavar="FILE",
+                help="v1.7: a JSON list of `programs` rows (adapter shape) to draw beside the games")
 ap.add_argument("--games-raw")
 ap.add_argument("--enrichment")
 ap.add_argument("--teams", help="default: artifacts/validation/cfbd_{year}_teams.json (cfb) or {sport}_{year}_teams.json")
@@ -436,6 +438,42 @@ for g in games:
     if primary in SIMULCAST and SIMULCAST[primary] not in badges: badges.append(SIMULCAST[primary]+"*")
     rec.update({"primary":primary,"badges":badges}); day.append(rec)
 
+# ----------------------------------------------------------------------------- programs (v1.7)
+#
+# A PROGRAM IS NOT IN THE FIXTURE, because the fixture is a games file. `--programs FILE` takes the
+# adapter shape (adapters/nascar.py's output, or a PostgREST read shaped the same way) and injects
+# each one onto its broadcast's network row as a pseudo-entry carrying `_prog`. Everything after this
+# point - the overlap split, the lane packing, the row build, the width arithmetic - then treats it
+# as a block like any other, which is what keeps ONE geometry rather than a parallel one.
+#
+# THE DAILY render_all JOB DOES NOT PASS THIS YET. There is no step that writes a programs file
+# beside the validation fixture, so an ARCHIVED grid stays game-only until that pipeline exists. This
+# is the drawing, ready and testable; feeding it is an open item named in the run report.
+PROGRAMS = []
+if getattr(ARGS, "programs", None):
+    with open(ARGS.programs, encoding="utf-8") as _pf:
+        _rows = json.load(_pf)
+    for _p in (_rows if isinstance(_rows, list) else _rows.get("programs", [])):
+        _iso = _p.get("start_at") or _p.get("startDate")
+        if not _iso:
+            continue
+        _dt = datetime.fromisoformat(str(_iso).replace("Z", "+00:00")).astimezone(ET)
+        if _dt.strftime("%Y-%m-%d") != TARGET:
+            continue
+        _bcs = _p.get("broadcasts") or []
+        _outs = [ALIASES.get((b.get("label") or b.get("service_id") or ""),
+                             (b.get("label") or b.get("service_id") or "")) for b in _bcs]
+        _primary = next((r for r in ROW_ORDER if r in _outs), None)             or next((o for o in _outs if o in STREAMS), None)
+        if _primary is None or _primary in UNAVAILABLE:
+            continue                                   # not receivable, or a row this grid has no rail for
+        _mins = int(_p.get("expected_duration_min") or 180)
+        rec = {"id": "prog-%s" % (_p.get("program_id") or _p.get("title")), "dt": _dt, "alt": False,
+               "end_min": _mins, "outlets": _outs, "time_tbd": False, "blocked": [], "venue": None,
+               "primary": _primary, "badges": [], "_prog": _p, "_mins": _mins}
+        PROGRAMS.append(rec)
+    day.extend(PROGRAMS)
+    print("programs: %d placed on the grid (of %d read)" % (len(PROGRAMS), len(_rows)))
+
 # OVERLAP RULE (Joe, 2026-09-03; contract v1.6.5). Two programs on one network row whose blocks
 # overlap SPLIT THE DIFFERENCE - the earlier one's end and the later one's start each move by half the
 # overlap, meeting at its midpoint, so they share one row instead of forcing a second lane.
@@ -782,9 +820,197 @@ def tray_secondary(g):
     if rv: parts.append(rv[0])
     return " · ".join(parts)
 
+# ----------------------------------------------------------------------------- the program card
+_BRANDS = {}
+_BRANDS_PATH = Path("data/brands.json")
+if _BRANDS_PATH.exists():
+    _BRANDS = json.load(open(_BRANDS_PATH, encoding="utf-8"))
+
+
+def brand_for(key):
+    """data/brands.json, with the same neutral fallback web/lib/programs.js uses for an unknown key."""
+    b = (_BRANDS.get("brands") or {}).get(key)
+    if b:
+        return b
+    return {"color": _BRANDS.get("_neutral", "#4A505A"), "short_title": None, "mark": None,
+            "mark_dark": None, "provisional": True}
+
+
+def _mark_uri(rel):
+    """web/public/leagues/x.png as a data URI, or None when the tree has no art for this brand."""
+    if not rel:
+        return None
+    fp = Path("web/public") / str(rel).lstrip("/")
+    if not fp.exists():
+        return None
+    return "data:image/png;base64," + base64.b64encode(fp.read_bytes()).decode()
+
+
+_DUR_DEFAULTS = {}
+_DUR_PATH = Path("data/duration_defaults.json")
+if _DUR_PATH.exists():
+    _DUR_DEFAULTS = json.load(open(_DUR_PATH, encoding="utf-8"))
+
+
+def _open_ended(p):
+    """The v1.7 rule, in the order web/lib/programs.js applies it: the per-program column wins when
+    it is set; the per-type default in data/duration_defaults.json applies when it is not.
+
+    Implemented twice because there are two renderers, and pinned to one answer by
+    tests/test_program_card_svg.py rather than by hoping they were written the same day.
+    """
+    own = p.get("open_ended")
+    if own is True or own is False:
+        return own
+    return bool((_DUR_DEFAULTS.get(p.get("program_type")) or {}).get("open_ended_default"))
+
+
+def _tint_to_white(col, amount=0.7):
+    """The subtitle tint: the brand colour `amount` of the way to white."""
+    h = col.lstrip("#")
+    if len(h) != 6:
+        return "#B4BAC0"
+    parts = [int(h[i:i + 2], 16) for i in (0, 2, 4)]
+    return "#%02X%02X%02X" % tuple(int(v + (255 - v) * amount) for v in parts)
+
+
+def draw_program_card(g, x, y, w, lh):
+    """The PROGRAM card - rendering contract v1.7, docs/design/program-card-design-v1.md.
+
+    Same 74 + 28 geometry, same rx 9, same #23282E plate, same white hairline as the game card: the
+    frozen language EXTENDED, never reopened. What differs is the fill, because a program has no two
+    teams - a CHARCOAL endcap carrying the brand mark, a 3px brand bar on its right edge, and a
+    MIRRORED wash with the brand colour at both edges fading to charcoal at the centre.
+    """
+    p = g["_prog"]
+    br = brand_for(p.get("brand_key"))
+    col = br.get("color") or "#4A505A"
+    cx0, cy0 = x + 1, y + 4
+    CARD_H = BLOCK_H + TRAY_H
+    uid = re.sub(r"[^A-Za-z0-9]", "", str(g["id"]))[:22]
+    open_ended = _open_ended(p)
+
+    svg.append('<g filter="url(#soft)"><rect x="%s" y="%s" width="%s" height="%s" rx="9" '
+               'fill="#23282E"/></g>' % (cx0, cy0, w, CARD_H))
+
+    # The endcap gives way before the stage does - a 30-minute post-race show must still have
+    # somewhere to put its title. Same relationship the game card has at w / 3.
+    CAP = min(BLOCK_H, max(16, w / 3))
+
+    # THE MIRRORED STAGE WASH. Brand at both edges, charcoal at the centre, peak 55% - Joe picked
+    # the strong edges over the soft variant. The centre is ALWAYS charcoal, which is what keeps the
+    # title on maximum contrast and what lets four red-branded programmes tell themselves apart.
+    svg.append('<linearGradient id="wash%s" x1="0%%" x2="100%%">'
+               '<stop offset="0%%" stop-color="%s" stop-opacity="0.55"/>'
+               '<stop offset="22%%" stop-color="%s" stop-opacity="0.1925"/>'
+               '<stop offset="50%%" stop-color="%s" stop-opacity="0"/>'
+               '<stop offset="78%%" stop-color="%s" stop-opacity="0.1925"/>'
+               '<stop offset="100%%" stop-color="%s" stop-opacity="0.55"/></linearGradient>'
+               % (uid, col, col, col, col, col))
+    mask = ""
+    if open_ended:
+        # OPEN-ENDED: the block draws to its expected end and then FADES over the last half-hour
+        # column, rather than stopping at a hard edge it cannot honestly claim.
+        svg.append('<linearGradient id="fade%s" x1="0%%" x2="100%%">'
+                   '<stop offset="0%%" stop-color="#FFFFFF"/>'
+                   '<stop offset="72%%" stop-color="#FFFFFF"/>'
+                   '<stop offset="100%%" stop-color="#000000"/></linearGradient>'
+                   '<mask id="mask%s"><rect x="%s" y="%s" width="%s" height="%s" '
+                   'fill="url(#fade%s)"/></mask>' % (uid, uid, cx0, cy0, w, BLOCK_H, uid))
+        mask = ' mask="url(#mask%s)"' % uid
+    svg.append('<rect x="%s" y="%s" width="%s" height="%s" rx="9" fill="#1E2126"/>'
+               % (cx0, cy0, w, BLOCK_H))
+    svg.append('<rect x="%s" y="%s" width="%s" height="%s" rx="9" fill="url(#wash%s)"%s/>'
+               % (cx0, cy0, w, BLOCK_H, uid, mask))
+
+    # THE ENDCAP: the rail tile's own charcoal gradient (#tile, defined once in defs and shared with
+    # the network rail, so the two cannot drift). Never brand-coloured, never white-backed.
+    svg.append('<rect x="%s" y="%s" width="%s" height="%s" rx="9" fill="url(#tile)"/>'
+               % (cx0, cy0, CAP, BLOCK_H))
+    svg.append('<rect x="%s" y="%s" width="8" height="%s" fill="url(#tile)"/>'
+               % (cx0 + CAP - 8, cy0, BLOCK_H))
+    art = _mark_uri(br.get("mark_dark") or br.get("mark"))
+    if art:
+        svg.append('<image x="%s" y="%s" width="%s" height="%s" preserveAspectRatio="xMidYMid meet" '
+                   'href="%s"/>' % (cx0 + 7, cy0 + 12, max(4, CAP - 14), BLOCK_H - 24, art))
+    else:
+        # NO FABRICATED LOGO AND NONE FETCHED. The brand's short title on the charcoal tile - a
+        # mark, and visibly one that has not been supplied yet. The report lists every such brand.
+        st = (br.get("short_title") or (p.get("title") or "")[:10]).upper()
+        fs = 11.0
+        while fs > 6 and tw_barlow(st, fs) > CAP - 10:
+            fs -= 0.5
+        svg.append('<text x="%s" y="%s" text-anchor="middle" font-family="%s" font-size="%s" '
+                   'font-weight="700" fill="#F2F2F0">%s</text>'
+                   % (cx0 + CAP / 2, cy0 + BLOCK_H / 2 + fs * 0.35, BC, fs, E(st)))
+    # the 3px brand bar on the endcap's RIGHT edge - the one place the colour is undiluted
+    svg.append('<rect x="%s" y="%s" width="3" height="%s" fill="%s"/>'
+               % (cx0 + CAP - 3, cy0, BLOCK_H, col))
+
+    # TITLE centred in the span between the endcap and the right edge, on the game card's own fit
+    # steps. SUBTITLE beneath it, the brand colour tinted 70% toward white.
+    span_x0, span_w = cx0 + CAP, w - CAP
+    title = (p.get("title") or "UNTITLED PROGRAM").upper()
+    sub = p.get("subtitle") or p.get("location_text") or ""
+    if p.get("program_type") == "studio_show" and not p.get("subtitle"):
+        sub = ""                       # studio-city display is road-only (events-summary-2 section 6)
+    sub = sub.upper()
+    fs = 11
+    for step in (26, 22, 18, 15, 13, 11):
+        fs = step
+        if tw_barlow(title, step) <= span_w - 10:
+            break
+    ty0 = cy0 + BLOCK_H / 2 + (fs * 0.34 if not sub else -1)
+    svg.append('<text x="%s" y="%s" text-anchor="middle" font-family="%s" font-size="%s" '
+               'font-weight="700" fill="#F2F2F0">%s</text>'
+               % (span_x0 + span_w / 2, ty0, BC, fs, E(title)))
+    if sub:
+        sfs = 12.0
+        while sfs > 7 and tw_barlow(sub, sfs) > span_w - 10:
+            sfs -= 0.5
+        svg.append('<text x="%s" y="%s" text-anchor="middle" font-family="%s" font-size="%s" '
+                   'font-weight="600" fill="%s">%s</text>'
+                   % (span_x0 + span_w / 2, ty0 + sfs + 3, BC, sfs, _tint_to_white(col), E(sub)))
+
+    # THE SEAM, mirrored to match the wash: charcoal at the centre, brand at both ends.
+    ty = cy0 + BLOCK_H
+    svg.append('<linearGradient id="seam%s" x1="0%%" x2="100%%">'
+               '<stop offset="0%%" stop-color="%s"/><stop offset="50%%" stop-color="#31363D"/>'
+               '<stop offset="100%%" stop-color="%s"/></linearGradient>' % (uid, col, col))
+    svg.append('<rect x="%s" y="%s" width="%s" height="2.5" fill="url(#seam%s)"/>'
+               % (cx0, ty, w, uid))
+
+    # THE TRAY: start . venue/service on the left; the crew as a muted right-aligned run that
+    # renders ONLY when it fits - whole names or none, never an ellipsis, never a collision.
+    ty_c = ty + 2.5 + (TRAY_H - 2.5) / 2
+    left = clock(g["dt"])
+    if p.get("location_text"):
+        left = left + " \u00b7 " + p["location_text"]
+    lw = tw("inter-bold", left, 12.5, 0.6)
+    svg.append('<text x="%s" y="%s" font-family="Inter, sans-serif" font-size="12.5" '
+               'font-weight="700" fill="#F2F3F4">%s</text>' % (cx0 + 10, ty_c + 4, E(left)))
+    crew = [c if isinstance(c, str) else (c or {}).get("name") for c in (p.get("hosts_crew") or [])]
+    crew = [c for c in crew if c]
+    room = w - lw - 30
+    while crew and tw("inter", " \u00b7 ".join(crew), 11, 0.55) > room:
+        crew = crew[:-1]
+    if crew:
+        svg.append('<text x="%s" y="%s" text-anchor="end" font-family="Inter, sans-serif" '
+                   'font-size="11" font-weight="600" fill="#B4BAC0">%s</text>'
+                   % (cx0 + w - 10, ty_c + 4, E(" \u00b7 ".join(crew))))
+
+    # the white hairline outline, drawn as a TOP layer exactly as the game card draws it (section 3)
+    svg.append('<rect x="%s" y="%s" width="%s" height="%s" rx="9" fill="none" stroke="#FFFFFF" '
+               'stroke-opacity="0.55" stroke-width="2.5"/>' % (cx0, cy0, w, CARD_H))
+
+
 def draw_card(g, x, y, w, lh, prim_text=None):
     """The one game card (contract §3). Used for linear rows, streaming rows and the TBD section —
     v1.3: every game renders at the same size (Joe, 2026-08-31)."""
+    # v1.7: a PROGRAM takes the second silhouette. The branch is the FIRST thing here, before any
+    # team lookup, because a program has no `a` / `h` for rank_of() or legible() to read.
+    if g.get("_prog"):
+        return draw_program_card(g, x, y, w, lh)
     cx0, cy0 = x+1, y+4                      # card origin
     half = BLOCK_H/2
     (ba, ia), (bh2, ih) = legible(ac), legible(hc)
@@ -1029,7 +1255,11 @@ for row in rows:
     for lane in row["lanes"]:
         for g in lane:
             x = xof(g.get("rs") or g["dt"]); w = g["end_min"]*PX-4
-            ac, hc = color(g["a"]["id"]), color(g["h"]["id"])
+            # v1.7: `ac`/`hc` are the two TEAM colours the game card paints its bands with, and a
+            # program has no teams to read them from. draw_card() branches to the program card
+            # before it touches either, so they are simply not resolved for one.
+            if not g.get("_prog"):
+                ac, hc = color(g["a"]["id"]), color(g["h"]["id"])
             draw_card(g, x, y, w, lh)
         y += lh
 svg.append(f'<line x1="0" y1="{y}" x2="{W-PAD_X}" y2="{y}" stroke="#FFFFFF" stroke-opacity="0.24" stroke-width="1.5"/>')

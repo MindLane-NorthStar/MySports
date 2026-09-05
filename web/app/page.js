@@ -10,13 +10,15 @@
 
 import { Suspense } from 'react';
 import Listing from '../components/Listing.js';
-import { DatePicker, SportFilter } from '../components/Filters.js';
-import { gamesForDay, newestGridFor, gridIndex, standingsForGames, rankingsForGames } from '../lib/queries.js';
+import { DatePicker, SeriesFilter, SportFilter } from '../components/Filters.js';
+import { gamesForDay, programsForDay, newestGridFor, gridIndex, standingsForGames, rankingsForGames } from '../lib/queries.js';
+import { toRows } from '../lib/programs.js';
+import { viewingMinutes } from '../lib/gridmodel.js';
 import { longDay, todayET, etTime } from '../lib/format.js';
 import FirstBand from '../components/FirstBand.js';
 import { bandState } from '../lib/bandstate.js';
 import policies from '../lib/policies.js';
-import { SPORT_LABEL, gridAssetUrl, resolveSportParam } from '../lib/config.js';
+import { SPORT_LABEL, gridAssetUrl, resolveSeriesParam, resolveSportParam } from '../lib/config.js';
 import { RestError } from '../lib/rest.js';
 import { overlayForDay, applyOverlay } from '../lib/livescores.js';
 
@@ -114,14 +116,21 @@ export default async function TodayPage({ searchParams }) {
   const params = await searchParams;
   const day = /^\d{4}-\d{2}-\d{2}$/.test(params?.day || '') ? params.day : todayET();
   const sport = resolveSportParam(params?.sport);
+  const series = resolveSeriesParam(params?.series);
 
   let games = [];
+  let programs = [];
   let grids = [];
   let standingsRows = [];
   let rankingsRows = [];
   let error = null;
   try {
-    [games, grids] = await Promise.all([gamesForDay(day, sport), gridIndex()]);
+    // v1.7: programs are a SECOND read, not a join. They live in `programs` and have no `games` row
+    // at all, so one query cannot return both - and keeping them separate means a programs failure
+    // can never take the game slate down with it.
+    [games, programs, grids] = await Promise.all([
+      gamesForDay(day, sport), programsForDay(day, sport, series), gridIndex(),
+    ]);
     // One round trip each, in parallel. rankingsForGames returns [] with no CFB game on the page,
     // and an empty id list short-circuits before any request is made.
     [standingsRows, rankingsRows] = await Promise.all([
@@ -138,10 +147,25 @@ export default async function TodayPage({ searchParams }) {
   const overlay = await overlayForDay(day, games, { today });
   games = applyOverlay(games, overlay.map);
 
+  // THE REQUEST TIME, used twice and read once. bandState() already takes it as an argument; the
+  // grid's now marker takes the same instant as a minute-of-viewing-day. Both are computed HERE, on
+  // the server, so neither reaches the client as a clock - which is what keeps a time-aware line out
+  // of the hydration path entirely (the trap prompt 42 fell into twice).
+  const now = new Date();
+  // v1.7: a program is normalised into the row shape every shared module already reads, so
+  // offservice.js, bandstate.js and the count lines need no branch. `result_status` is derived from
+  // `now` here for the same reason - a program has no observed result to read.
+  const programRows = toRows(programs, now);
+  const rows = [...games, ...programRows];
+  // The marker is drawn on TODAY only. An archived day is immutable and a past day has no "now".
+  const nowMinute = day === today ? viewingMinutes(now.toISOString()) : null;
+
   // D1. Computed ONCE, here, from the request time - the page is force-dynamic, so this is the
   // clock the reader is actually looking at. It reaches the band as data; nothing recomputes it on
   // the client, which is what keeps a time-aware block out of the hydration path entirely.
-  const band = bandState(games, new Date(), policies, { dayLabel: longDay(day) });
+  // D1's first band takes the SAME rows the page shows, programs included - Cowork's call, flagged
+  // in the register: a race that airs today belongs in Tonight beside the games it competes with.
+  const band = bandState(rows, now, policies, { dayLabel: longDay(day) });
 
   return (
     <main>
@@ -159,13 +183,16 @@ export default async function TodayPage({ searchParams }) {
           and Joe ruled the broadcast count eliminated. */}
       <div className="controls controls-stack">
         <SportFilter sport={sport} />
+        {/* Register section 9's series sub-filter. A SECOND row under the tiles - the tile row's
+            geometry is untouched, which section 16 froze deliberately. */}
+        <SeriesFilter sport={sport} series={series} />
       </div>
 
       {error ? <p className="error">Could not read the database: {error}</p> : null}
 
-      {!error && games.length === 0 ? (
+      {!error && rows.length === 0 ? (
         <p className="empty">
-          No games on this viewing day{sport ? ` for ${SPORT_LABEL[sport] || sport}` : ''}.{' '}
+          Nothing on this viewing day{sport ? ` for ${SPORT_LABEL[sport] || sport}` : ''}.{' '}
           {(sport && SPORT_EMPTY[sport]) ||
             'The database currently holds loaded days only — try 2026-09-03 or 2026-09-04 (MLB), ' +
               '2026-09-05 (CFB), 2026-09-13 (NFL), 2026-10-01 (NHL) or 2026-10-28 (NBA).'}
@@ -175,18 +202,18 @@ export default async function TodayPage({ searchParams }) {
       {/* D1 above, the day below. .today-split only becomes two columns at 1592px (D5); under that
           it is a plain block, so the band sits ABOVE the grid and never after it. */}
       <div className="today-split">
-        {!error && games.length ? (
+        {!error && rows.length ? (
           <FirstBand band={band} standingsRows={standingsRows} rankingsRows={rankingsRows}
                      day={day} sport={sport} />
         ) : null}
 
         <div id="all-today">
-          <Listing games={games} standingsRows={standingsRows} rankingsRows={rankingsRows}
-                   day={day} sport={sport} grid bands />
+          <Listing games={rows} standingsRows={standingsRows} rankingsRows={rankingsRows}
+                   day={day} sport={sport} grid bands nowMinute={nowMinute} />
         </div>
       </div>
 
-      {!error && games.length ? <DataAsOf day={day} today={today} overlay={overlay} /> : null}
+      {!error && rows.length ? <DataAsOf day={day} today={today} overlay={overlay} /> : null}
 
       {sport && !error && games.length ? (
         <Suspense fallback={null}>

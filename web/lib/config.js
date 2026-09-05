@@ -50,6 +50,30 @@ export const SPORT_FILTERS = ['nfl', 'cfb', 'mlb', 'nba', 'nhl', 'racing', 'ufc'
 
 const FILTER_EXPANDS = { racing: ['nascar', 'indycar'] };
 
+// REGISTER SECTION 9: "NASCAR is sport = nascar with its own chip AND a Cup / O'Reilly / Truck
+// sub-filter." Section 16 later merged the NASCAR and IndyCar chips into one Racing tile, which
+// changed the CHIP but not the sub-filter - the three series are still three different weekends of
+// racing, and section 5 of docs/research/nascar.md is explicit that all three can share one track
+// on one weekend (Fri Truck, Sat O'Reilly, Sun Cup) and that the sub-filter must be able to show
+// all three at once. DEFAULT ALL: no series token selected means every series, which is why this is
+// a filter rather than a required choice.
+//
+// The values are the DATABASE's own vocabulary - migration 0009's programs_series_ck - so a token
+// goes to PostgREST unchanged and there is no second spelling to keep in step.
+export const NASCAR_SERIES = ['cup', 'oreilly', 'truck'];
+
+export const SERIES_LABEL = { cup: 'Cup', oreilly: "O'Reilly", truck: 'Truck' };
+
+/** The series a URL param selects, or null for all of them. */
+export function resolveSeriesParam(value) {
+  return NASCAR_SERIES.includes(value) ? value : null;
+}
+
+/** Does this filter token put NASCAR on the page at all? Only then is the sub-filter meaningful. */
+export function showsNascar(sport) {
+  return !sport || expandSport(sport).includes('nascar');
+}
+
 /** A filter token -> the enum sports it covers. A plain sport expands to itself. */
 export function expandSport(token) {
   if (!token) return [];

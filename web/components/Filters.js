@@ -6,7 +6,7 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Picker from './Picker.js';
 import { longDay } from '../lib/format.js';
-import { SPORT_FILTERS, SPORT_LABEL } from '../lib/config.js';
+import { NASCAR_SERIES, SERIES_LABEL, SPORT_FILTERS, SPORT_LABEL, showsNascar } from '../lib/config.js';
 
 function useSetParam() {
   const router = useRouter();
@@ -128,6 +128,44 @@ export function SportFilter({ sport, available }) {
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * THE NASCAR SERIES SUB-FILTER - register section 9, and the one part of section 9's chip ruling
+ * that section 16 did not settle.
+ *
+ * Section 16 merged the NASCAR and IndyCar CHIPS into one Racing tile. It said nothing about the
+ * series, and the series are not a chip-row question: docs/research/nascar.md section 5 has all
+ * three running at one track in one weekend (Fri Truck FS1, Sat O'Reilly CW, Sun Cup USA), so the
+ * reader needs to be able to narrow to one and to see all three at once. DEFAULT IS ALL - pressing
+ * the active one clears it, exactly as the sport tiles behave.
+ *
+ * IT ONLY APPEARS WHEN NASCAR IS ON THE PAGE. A row of Cup/O'Reilly/Truck under an NFL filter would
+ * be three controls that do nothing.
+ *
+ * THE TILE ROW'S GEOMETRY IS UNTOUCHED (register section 16, prompt 31 section 2d, prompt 46 unit
+ * 1B). This is a SECOND row underneath it, not a ninth tile, so the eight tiles still flex to fill
+ * the row exactly and nothing about their width, gaps or tap targets moves.
+ */
+export function SeriesFilter({ sport, series }) {
+  const setParam = useSetParam();
+  if (!showsNascar(sport)) return null;
+  return (
+    <div className="seriesrow" role="group" aria-label="NASCAR series">
+      {NASCAR_SERIES.map((v) => (
+        <button
+          key={v}
+          type="button"
+          className="serbtn"
+          data-active={series === v}
+          aria-pressed={series === v}
+          onClick={() => setParam('series', v === series ? null : v)}
+        >
+          {SERIES_LABEL[v]}
+        </button>
+      ))}
+    </div>
   );
 }
 

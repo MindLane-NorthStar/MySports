@@ -29,7 +29,7 @@ function anyInFlight(games) {
 
 export default function Listing({ games, standingsRows, rankingsRows, day, sport, generatedAt,
                                   showDay = false, grid = false, bands = false, heading = null,
-                                  headingClass = 'favlabel' }) {
+                                  headingClass = 'favlabel', nowMinute = null }) {
   const [open, setOpen] = useState(null);
 
   /**
@@ -68,6 +68,9 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
   // The two sets are DISJOINT, which is what makes the counting work: each section is handed only
   // the games it shows, so its own count line describes the rows beneath it and a favourite is
   // counted once, in YOUR TEAMS, and not again in its sport's band.
+  // 05 section 11 + v1.7: a PROGRAM can never be a favourite - it has no team - so splitFavorites
+  // leaves every one of them in `rest`, and YOUR TEAMS stays a section about teams. That is true by
+  // construction rather than by a filter: favoriteIds() matches team ids and a program has none.
   const favIds = useMemo(() => favoriteIds(favoritesDoc), []);
   const { favorites, rest } = useMemo(
     () => (bands ? splitFavorites(games || [], favIds) : { favorites: [], rest: games || [] }),
@@ -148,7 +151,8 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
           same 699px the rest of the app uses, so no JS width state and no hydration mismatch. */}
       {showGrid ? (
         <div className="mgrid-only">
-          <MobileGrid games={gridGames} sport={sport} day={day} standings={standings} onOpen={setOpen} />
+          <MobileGrid games={gridGames} sport={sport} day={day} standings={standings} onOpen={setOpen}
+                      nowMinute={nowMinute} />
         </div>
       ) : null}
 

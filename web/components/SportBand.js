@@ -18,6 +18,8 @@
 
 import { useMemo, useState } from 'react';
 import MatchupCard from './MatchupCard.js';
+import ProgramCard from './ProgramCard.js';
+import { isProgram } from '../lib/programs.js';
 import { offServiceSummary, countParts } from '../lib/offservice.js';
 import { favoriteIds, isFavorite, splitFavorites } from '../lib/favorites.js';
 import favoritesDoc from '../../data/favorites.json';
@@ -87,10 +89,18 @@ export default function SportBand({ sport, label, games, standings, rankings, sh
      offIds.has(g.id) ? 'offsvc-row' : null]
       .filter(Boolean).join(' ') || undefined;
 
+  // v1.7: the WRAPPER is identical for both card types - the off-service dim, the MARKET TBD cue and
+  // the NETWORK TBD cue are band-level classes and apply to a race exactly as they apply to a game,
+  // because both read the same eligibility verdict through the same helper. Only the card inside
+  // differs, and MatchupCard is not touched to make that true.
   const row = (g) => (
     <div key={g.id} className={rowClass(g)} data-market-tbd={pendingIds.has(g.id) || undefined}
          data-network-tbd={tbdIds.has(g.id) || undefined}>
-      <MatchupCard game={g} standings={standings} rankings={rankings} showDay={showDay} onOpen={onOpen} />
+      {isProgram(g) ? (
+        <ProgramCard program={g} showDay={showDay} onOpen={onOpen} />
+      ) : (
+        <MatchupCard game={g} standings={standings} rankings={rankings} showDay={showDay} onOpen={onOpen} />
+      )}
     </div>
   );
 

@@ -2305,3 +2305,289 @@ main > .pagehead:first-child { margin-top: 0; }
   border-left: 4px solid transparent; border-right: 4px solid transparent;
   border-top: 5px solid currentColor;
 }
+
+/* ============================================================================
+   RENDERING CONTRACT v1.7 - THE PROGRAM CARD
+   Design of record: docs/design/program-card-design-v1.md (Joe, approved as written 2026-09-05).
+
+   The frozen game-card language is EXTENDED, never reopened: every rule below is additive and
+   scoped to .pblock / .pcard, so no selector here can reach a game block, a matchup card, a tray
+   convention, a cap gradient or a hairline that exists today. The game-card DOM is byte-identical
+   before and after this stylesheet, which the acceptance pass proves rather than asserts.
+
+   Colours come from the tokens above and from data/brands.json, never from a mockup (rule 16).
+   The endcap's charcoal is --panel-top -> --panel-bottom, the SAME pair contract section 2 paints
+   the network rail tile with, applied inline by lib/programs.js so both renderers share one value.
+   ============================================================================ */
+
+/* ---- the grid block ---------------------------------------------------- */
+
+.pblock .pcap {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.pblock .pcap img {
+  max-width: 78%;
+  max-height: 62%;
+  object-fit: contain;
+}
+
+/* A brand with no art in the tree. NOT a fabricated logo and not a blank tile - the brand's short
+   title, set in the display face on the same charcoal, which reads as a mark and reads as a mark
+   that is missing. The run's report lists every one of these for the marks pipeline. */
+.pblock .pcap-type,
+.pcard .pcap-type {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 9px;
+  line-height: 1.02;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--ink);
+  padding: 0 3px;
+  overflow: hidden;
+}
+
+/* The brand bar: 3px of the brand colour on the endcap's RIGHT edge. The one place the colour is
+   shown undiluted, and what tells four red-branded programmes apart at a glance. */
+.pblock .pcap-bar,
+.pcard .pcap-bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 3px;
+}
+
+.pblock .pstage {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* The mirrored stage wash, on its own layer so the open-ended fade can mask it without touching
+   the title above it - and so the acceptance pass can sample ONE element for symmetry. */
+.pblock .pwash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* OPEN-ENDED: the block draws to its expected end and then fades out over the last 30-minute
+   column, instead of stopping at a hard edge it cannot honestly claim. The mask applies to the
+   wash only; the plate keeps the silhouette so the card is still a card. */
+.pblock[data-open-ended='true'] .pwash {
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 72%, transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0%, #000 72%, transparent 100%);
+}
+
+.pblock .ptext {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+  padding: 0 4px;
+  text-align: center;
+}
+
+.pblock .ptitle {
+  font-family: var(--display);
+  font-weight: 700;
+  line-height: 1.02;
+  color: var(--ink);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pblock .psub {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 9.5px;
+  line-height: 1.05;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+/* The crew run: muted, right-aligned, and present only when it fits WHOLE (lib/programs.js
+   fitCrew). nowrap with no ellipsis is deliberate - the fit decision is made in JS, so anything
+   that reaches here is already known to fit and must never be cut by CSS as well. */
+.pblock .pcrew-run {
+  font-size: 8.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mtray-pill[data-kind='eligmissing'] {
+  color: var(--alert);
+  background: #3a1e1e;
+  box-shadow: inset 0 0 0 1px rgba(232, 145, 141, 0.55);
+}
+
+/* ---- the now marker ---------------------------------------------------- */
+
+/* A thin gold hairline at the current ET minute, the full height of the grid. z 2 puts it ABOVE
+   the blocks (auto) and BELOW the sticky rail (3), which is the stacking the contract asks for.
+   Rendered only on TODAY: an archived day is immutable and a week has no single "now". */
+.mnow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--gold);
+  opacity: 0.85;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* ---- the list card ----------------------------------------------------- */
+
+/* .pcard IS .mcard. Everything here fills the BODY track only, so the left time column, the
+   network-mark column and the right slot keep the centrelines prompts 39-42 aligned. */
+.pcard .pbody {
+  min-width: 0;
+}
+
+/* THE TITLE WRAPS; IT DOES NOT ELLIPSISE. Measured on the fixture board at 390: the body track is
+   ~152px (prompt 31), so a 46px endcap left ~106px and "COOK OUT SOUTHERN 500" rendered as
+   "COOK O...". A program title is the ONLY thing naming the row - there is no second line of teams
+   to fall back on - so a truncated one is a card that says nothing. It gets the body's full width
+   beside a compact mark, wraps to as many lines as it needs, and the card grows. That is the same
+   answer the game card gives its team names, which stack rather than share the width (C1). */
+.pcard .pbrand {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+}
+
+.pcard .pcap {
+  position: relative;
+  flex: 0 0 34px;
+  height: 34px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.pcard .pcap img {
+  max-width: 74%;
+  max-height: 62%;
+  object-fit: contain;
+}
+
+.pcard .ptitles {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px;
+  padding: 1px 5px 2px 2px;
+  border-radius: 5px;
+  text-align: left;
+}
+
+.pcard .ptitle {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.04;
+  color: var(--ink);
+  text-transform: uppercase;
+  /* wrap, never clip - and break inside a very long single word rather than overflow the track */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+.pcard .psub {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1.05;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+/* THE CREW GETS ITS OWN LINE, one step quieter than the venue. Inline beside it - which is where a
+   first pass put it - the two facts ran together with no separator at all: "Darlington
+   RacewayMike Joy . Clint Bowyer". They are different KINDS of fact (where it is, who is calling
+   it), so they get a line each rather than a delimiter between them. --faint, not --dim: this is
+   the quietest run on the card, the same step .mgrid-note takes. */
+.pcard .pcrew {
+  display: block;
+  margin-top: 2px;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.15;
+}
+
+/* The eligibility defect cue is never quiet and never inline: an unjudged programme must not read
+   as a footnote to its venue. */
+.pcard .pelig-missing {
+  display: block;
+  margin-top: 3px;
+  color: var(--alert);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* ---- the NASCAR series sub-filter (register section 9) ------------------ */
+
+/* A SECOND ROW under the tiles, never a ninth tile. Section 16 froze the tile row's geometry - the
+   eight tiles flex to fill it exactly, which is what stopped it scrolling - so the series controls
+   sit beneath it and change nothing above. They are TEXT, not marks: NASCAR publishes a series logo
+   for each, but at this size three wordmarks of wildly different widths read as noise where three
+   short words read as a choice. */
+.seriesrow {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.serbtn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 6px 4px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--dim);
+  font-family: var(--body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+/* Register section 14: the ACTIVE control is a charcoal plate with a gold border, never a gold
+   fill - the same single-context rule the sport tiles follow, so the two rows agree. */
+.serbtn[data-active='true'] {
+  color: var(--gold);
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px rgba(240, 200, 80, 0.35);
+}
+

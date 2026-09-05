@@ -234,3 +234,140 @@ export async function gameById(id) {
   const rows = await rest(`games?select=${GAME_SELECT}&id=eq.${encodeURIComponent(id)}&limit=1`);
   return rows[0] || null;
 }
+
+// --------------------------------------------------------------------------- programs (v1.7)
+//
+// A PROGRAM IS NOT A GAME AND DOES NOT LIVE IN `games`. Migration 0009 made `programs` the supertype
+// and a team game one subtype of it; a race, a fight card, a weekly show and a studio bookend have
+// no rows in `games` at all, so they need their own read. `program_type=neq.game` excludes the
+// shadow rows pipeline/programs.py writes beside every real game - those are the game, read above.
+//
+// WHY A start_at RANGE AND NOT viewing_day. `games` carries a `viewing_day` column the pipeline
+// computes; `programs` has none, and adding one would mean writing a value onto 3,966 existing rows.
+// The viewing day IS a range - 03:00 ET to 03:00 ET - so asking for it as one costs nothing and
+// invents nothing. viewingDayBounds() derives the two instants; `programs_sport_start_idx` serves it.
+const PROGRAM_SELECT = [
+  'program_id',
+  'sport',
+  'program_type',
+  'title',
+  'subtitle',
+  'start_at',
+  'expected_duration_min',
+  'open_ended',
+  'location_text',
+  'on_site',
+  'series',
+  'headliners',
+  'hosts_crew',
+  'segments',
+  'brand_key',
+  'bookend',
+  'anchor_program_id',
+  'postponed_to',
+  'source_url',
+  'source_tier',
+  // Windows come along because a UFC card's CBS slice is DATA the detail panel shows; the card
+  // itself renders plain (design of record, "Rulings that shape it").
+  'broadcasts:game_broadcasts(service_id,delivery_surface,feed_side,is_primary,access_status,'
+    + 'carriage_certainty,active,label,window_start,window_end,'
+    + 'network:networks_services(id,canonical_name,type,default_sort_order))',
+  // 0014's own table. Same four fields the game card reads, so web/lib/offservice.js needs no branch.
+  'eligibility:viewer_program_eligibility(eligible,reason,eligible_via_network_id,market_pending)',
+].join(',');
+
+const PROGRAM_ORDER = 'order=start_at.asc.nullslast,program_id.asc';
+
+/** Minutes to add to a UTC instant to read it as ET, for that instant's own DST state. */
+function etOffsetMinutes(instant) {
+  const f = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  });
+  const p = Object.fromEntries(f.formatToParts(instant).map((x) => [x.type, x.value]));
+  const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+  return (asUtc - instant.getTime()) / 60000;
+}
+
+/**
+ * The UTC bounds of one viewing day: `[03:00 ET that day, 03:00 ET the next)`.
+ *
+ * The offset is resolved by ITERATION rather than by a table, because the answer depends on the
+ * instant and the instant depends on the answer. Two passes settle it everywhere except inside the
+ * one-hour spring-forward gap, which 03:00 ET is deliberately not in.
+ */
+export function viewingDayBounds(day, cutoverHour = 3) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day || ''))) return null;
+  const at = (dayStr, addDays) => {
+    const base = Date.parse(`${dayStr}T00:00:00Z`) + addDays * 86400000 + cutoverHour * 3600000;
+    let t = base;
+    for (let i = 0; i < 2; i += 1) t = base - etOffsetMinutes(new Date(t)) * 60000;
+    return new Date(t).toISOString();
+  };
+  return { start: at(day, 0), end: at(day, 1) };
+}
+
+function programSportFilter(sport) {
+  const list = expandSport(sport);
+  if (!list.length) return '';
+  return list.length === 1 ? `&sport=eq.${list[0]}` : `&sport=in.(${list.join(',')})`;
+}
+
+/**
+ * The NASCAR series sub-filter (register section 9).
+ *
+ * IT MUST NOT REMOVE ANYTHING THAT IS NOT NASCAR. `series` is null on every IndyCar race, every
+ * fight card and every wrestling show, so a bare `series=eq.cup` would empty the Racing page of
+ * IndyCar and an all-sports page of everything else. `or=(sport.neq.nascar,series.eq.cup)` keeps
+ * every non-NASCAR row and narrows only the NASCAR ones, which is what a SUB-filter means.
+ */
+function seriesFilter(series) {
+  if (!series) return '';
+  return `&or=(sport.neq.nascar,series.eq.${series})`;
+}
+
+/** Every non-game program on one viewing day, optionally one sport (or the `racing` token). */
+export async function programsForDay(day, sport, series) {
+  const b = viewingDayBounds(day);
+  if (!b) return [];
+  return rest(
+    `programs?select=${PROGRAM_SELECT}&program_type=neq.game`
+    + `&start_at=gte.${b.start}&start_at=lt.${b.end}${programSportFilter(sport)}`
+    + `${seriesFilter(series)}&${PROGRAM_ORDER}`
+  );
+}
+
+/** Every non-game program in an inclusive viewing-day range. Paginated: a week can be large. */
+export async function programsForRange(start, end, sport, series) {
+  const a = viewingDayBounds(start);
+  const z = viewingDayBounds(end);
+  if (!a || !z) return [];
+  return restAll(
+    `programs?select=${PROGRAM_SELECT}&program_type=neq.game`
+    + `&start_at=gte.${a.start}&start_at=lt.${z.end}${programSportFilter(sport)}`
+    + `${seriesFilter(series)}&${PROGRAM_ORDER}`
+  );
+}
+
+/** One program with everything the detail panel shows. */
+export async function programById(id) {
+  const rows = await rest(`programs?select=${PROGRAM_SELECT}&program_id=eq.${encodeURIComponent(id)}&limit=1`);
+  return rows[0] || null;
+}
+
+/**
+ * Programs that have already aired, newest first - the History page's half of `finalGames`.
+ *
+ * A GAME has an observed `result_status`; a PROGRAM does not. Nobody reports that a race is over the
+ * way a scoreboard reports a final, so "already aired" is a question about the clock and is asked as
+ * one: everything that started before now. lib/programs.js toRow() then derives the same three-state
+ * word the game card shows, from the same instant the page rendered at.
+ */
+export async function finalPrograms({ limit = 200, sport, before } = {}) {
+  const cut = before || new Date().toISOString();
+  return rest(
+    `programs?select=${PROGRAM_SELECT}&program_type=neq.game&start_at=lt.${cut}`
+    + `${programSportFilter(sport)}&order=start_at.desc&limit=${limit}`
+  );
+}

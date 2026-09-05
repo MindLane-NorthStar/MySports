@@ -1,5 +1,7 @@
 # Mobile Grid Addendum — v1.6 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04 · per-team cap surface and art, candidate D, 2026-09-04)
 
+> **v1.7 (2026-09-05).** M19 and M20 below add the program block and the now marker. Nothing M1–M18 says changes.
+
 > **Numbering note (v1.5).** v1.4 added the fitted name run and the flat endcap in one commit and
 > numbered **both M17**. The endcap is now **M18**; the name run keeps M17. M13's superseded-gradient
 > note pointed at the ambiguous number and now names M18, which is the rule that actually replaced the
@@ -85,3 +87,35 @@ under a `rgb(189,137,19)` Steelers cap, which reads as a rendering fault rather 
 `.mhair` stays `rgba(0,0,0,.22)`, the record run keeps its 82% opacity, the fitted name run (M17) and the
 `(0-0)` suppression (M16) are untouched, geometry is unmoved, and the archival PC renderer
 `scripts/render_day.py` is not part of this - §3's cap gradient still governs there.
+
+**M19. The program block (contract v1.7 §11.10).** A non-game program — `race_session`, `fight_card`,
+`weekly_show`, `special_event`, `studio_show` — draws the second silhouette on this grid, at M1's 80 %
+exactly as a game block does. The mobile deltas against §11.10:
+
+- **M2 takes the title.** The time scale is derived from the widest rendered line on the slate, and a
+  program has no team lines at all — so a day of nothing but races would measure zero and collapse the
+  axis. A program contributes its **title**, in the same face the block draws it in. Games are
+  unaffected: on a day with any game the widest line is still a team line.
+- **The scale sport ignores programs.** M2's per-day `pxPerMin` is chosen from the SHORTEST standard
+  block on the slate, and a program's length is per-program rather than per-sport policy. Letting a
+  120-minute wrestling show act as the shortest block would rescale every game on the day around a
+  show, so programs are excluded from that choice and keep their own widths.
+- **Block length is `expected_duration_min`,** falling back to `data/duration_defaults.json` by
+  `program_type`, never to the sport's `block_minutes`: a 360-minute fight card and a 120-minute
+  Dynamite cannot share one number.
+- **The endcap yields before the stage does** — `CAP = min(BLOCK_H, max(16, w / 3))`, the game block's
+  own relationship. A first pass fixed the cap at the block height and a 30-minute post-race show came
+  out 24 px wide with a 59 px endcap: the stage measured **zero** and the title had nowhere to go.
+- **The broadcast row is chosen by the program's own rule.** `is_primary` is written by the reconciler,
+  which only ever ran over games, so a program takes its flagged row, else its first LINEAR row, else
+  its first row.
+- Overlap, lane packing, gap collapse (M3), the rail (M4) and the axis (M5) are **unchanged** — a
+  program is packed and placed by the same code a game is.
+
+**M20. The now marker (contract v1.7).** On the **Today** grid only: a vertical `--gold` hairline, 1 px
+at 0.85 opacity, at the current ET minute, spanning the full grid height. `z-index: 2` — above the
+blocks, which stack at auto, and below the sticky rail's 3, so panning never slides it over the rail.
+**It is positioned server-side**: the page computes the minute from the REQUEST time and passes it down
+as a number, so nothing in the component reads a clock and there is no hydration path (the trap prompt
+42 climbed out of twice). M11's existing 15-minute refresh is what moves it. Absent on archived days and
+on Weeks and History; the archival PC renderer never draws it, because the archive is immutable.

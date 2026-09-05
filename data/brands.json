@@ -1,0 +1,168 @@
+{
+  "_about": "Per-program-brand constants for the program card (rendering contract v1.7, design of record docs/design/program-card-design-v1.md). READ, NEVER COMPUTED AT RENDER TIME - the endcap's brand bar, the mirrored stage wash and the subtitle tint all key off `color` here. `mark` null means the tree has no art for this brand: the endcap renders `short_title` as a typographic mark on the charcoal tile instead, and the brand is an open item for the marks pipeline. `provisional: true` means the COLOUR is a placeholder too - nothing in this repo could be derived from, and a network's brand hex typed from memory is an invented fact.",
+  "_neutral": "#4A505A",
+  "brands": {
+    "gameday": {
+      "title": "College GameDay",
+      "short_title": "GAMEDAY",
+      "color": "#F96302",
+      "color_source": "docs/design/program-card-design-v1.md - Home Depot orange, Joe's ruling; replaces the mark-derived red",
+      "mark": null,
+      "mark_dark": null
+    },
+    "ufc": {
+      "title": "UFC",
+      "short_title": "UFC",
+      "color": "#D40707",
+      "color_source": "docs/design/program-card-design-v1.md",
+      "mark": "/leagues/ufc.png",
+      "mark_dark": "/leagues/ufc_dark.png"
+    },
+    "wwe": {
+      "title": "WWE",
+      "short_title": "WWE",
+      "color": "#FD2F25",
+      "color_source": "docs/design/program-card-design-v1.md",
+      "mark": "/leagues/wwe.png",
+      "mark_dark": "/leagues/wwe_dark.png"
+    },
+    "nascar": {
+      "title": "NASCAR",
+      "short_title": "NASCAR",
+      "color": "#E60029",
+      "color_source": "docs/design/program-card-design-v1.md",
+      "mark": "/leagues/nascar.png",
+      "mark_dark": "/leagues/nascar_dark.png"
+    },
+    "aew": {
+      "title": "AEW",
+      "short_title": "AEW",
+      "color": "#F0C850",
+      "color_source": "docs/design/program-card-design-v1.md - the non-red proof against the all-red cluster",
+      "mark": "/leagues/aew.png",
+      "mark_dark": "/leagues/aew_dark.png"
+    },
+    "indycar": {
+      "title": "NTT INDYCAR SERIES",
+      "short_title": "INDYCAR",
+      "color": "#E43146",
+      "color_source": "derived from web/public/leagues/indycar.png - dominant saturated hue bucket, 24% of opaque pixels, median chroma",
+      "mark": "/leagues/indycar.png",
+      "mark_dark": "/leagues/indycar_dark.png"
+    },
+    "bignoon": {
+      "title": "Big Noon Kickoff",
+      "short_title": "BIG NOON",
+      "color": "#4A505A",
+      "color_source": "provisional neutral (globals.css --line-grid)",
+      "mark": null,
+      "mark_dark": null,
+      "provisional": true,
+      "note": "no mark in the tree; FOX's cached wordmark is monochrome, so no colour to derive"
+    },
+    "foxnflkickoff": {
+      "title": "FOX NFL Kickoff",
+      "short_title": "FOX KICKOFF",
+      "color": "#4A505A",
+      "color_source": "provisional neutral (globals.css --line-grid)",
+      "mark": null,
+      "mark_dark": null,
+      "provisional": true,
+      "note": "no mark in the tree; FOX's cached wordmark is monochrome"
+    },
+    "foxnflsunday": {
+      "title": "FOX NFL Sunday",
+      "short_title": "FOX NFL SUNDAY",
+      "color": "#4A505A",
+      "color_source": "provisional neutral (globals.css --line-grid)",
+      "mark": null,
+      "mark_dark": null,
+      "provisional": true,
+      "note": "no mark in the tree; FOX's cached wordmark is monochrome"
+    },
+    "nfltoday": {
+      "title": "The NFL Today",
+      "short_title": "NFL TODAY",
+      "color": "#4A505A",
+      "color_source": "provisional neutral (globals.css --line-grid)",
+      "mark": null,
+      "mark_dark": null,
+      "provisional": true,
+      "note": "no mark in the tree; CBS's cached wordmark is monochrome"
+    },
+    "nflcountdown": {
+      "title": "Sunday NFL Countdown",
+      "short_title": "NFL COUNTDOWN",
+      "color": "#4A505A",
+      "color_source": "provisional neutral (globals.css --line-grid)",
+      "mark": null,
+      "mark_dark": null,
+      "provisional": true,
+      "note": "no mark in the tree"
+    },
+    "fnia": {
+      "title": "Football Night in America",
+      "short_title": "FOOTBALL NIGHT",
+      "color": "#4A505A",
+      "color_source": "provisional neutral (globals.css --line-grid)",
+      "mark": null,
+      "mark_dark": null,
+      "provisional": true,
+      "note": "no mark in the tree"
+    },
+    "mnfcountdown": {
+      "title": "Monday Night Countdown",
+      "short_title": "MNF COUNTDOWN",
+      "color": "#4A505A",
+      "color_source": "provisional neutral (globals.css --line-grid)",
+      "mark": null,
+      "mark_dark": null,
+      "provisional": true,
+      "note": "no mark in the tree"
+    },
+    "tnfpregame": {
+      "title": "TNF Pregame",
+      "short_title": "TNF PREGAME",
+      "color": "#4A505A",
+      "color_source": "provisional neutral (globals.css --line-grid)",
+      "mark": null,
+      "mark_dark": null,
+      "provisional": true,
+      "note": "no mark in the tree"
+    },
+    "netflixpregame": {
+      "title": "Netflix NFL Pregame",
+      "short_title": "NETFLIX PREGAME",
+      "color": "#4A505A",
+      "color_source": "provisional neutral (globals.css --line-grid)",
+      "mark": null,
+      "mark_dark": null,
+      "provisional": true,
+      "note": "no mark in the tree"
+    },
+    "nascarraceday": {
+      "title": "NASCAR RaceDay",
+      "short_title": "RACEDAY",
+      "color": "#E60029",
+      "color_source": "docs/design/program-card-design-v1.md - a NASCAR show, so the NASCAR constant",
+      "mark": "/leagues/nascar.png",
+      "mark_dark": "/leagues/nascar_dark.png"
+    },
+    "nascarprerace": {
+      "title": "NASCAR Pre-Race",
+      "short_title": "PRE-RACE",
+      "color": "#E60029",
+      "color_source": "docs/design/program-card-design-v1.md - a NASCAR show, so the NASCAR constant",
+      "mark": "/leagues/nascar.png",
+      "mark_dark": "/leagues/nascar_dark.png"
+    },
+    "nascarpostrace": {
+      "title": "NASCAR Post-Race",
+      "short_title": "POST-RACE",
+      "color": "#E60029",
+      "color_source": "docs/design/program-card-design-v1.md - a NASCAR show, so the NASCAR constant",
+      "mark": "/leagues/nascar.png",
+      "mark_dark": "/leagues/nascar_dark.png"
+    }
+  }
+}

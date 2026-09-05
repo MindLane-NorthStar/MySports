@@ -22,10 +22,12 @@ import {
   weekIndexRows,
   gamesForRange,
   gamesForSeasonWeek,
+  programsForRange,
   standingsForGames,
   rankingsForGames,
 } from '../../lib/queries.js';
 import { calendarWeeksFrom, seasonWeeksFrom, daySpan, currentWeekKey, usesSeasonWeeks } from '../../lib/weeks.js';
+import { toRows } from '../../lib/programs.js';
 import { daySpanWeekdays, shortDay, todayET } from '../../lib/format.js';
 import { SportFilter } from '../../components/Filters.js';
 import { SPORT_LABEL, resolveSportParam } from '../../lib/config.js';
@@ -136,9 +138,17 @@ async function CalendarWeeks({ index, pick, sport }) {
   const { all, selected } = weekChoices({ index, pick, sport, seasonMode: false });
   if (!all.length) return <p className="empty">No games loaded.</p>;
   const weeks = [selected];
-  const loaded = await Promise.all(weeks.map((w) => gamesForRange(w.start, w.end, sport)));
-  const standings = await Promise.all(loaded.map((g) => standingsForGames(g)));
-  const ranks = await Promise.all(loaded.map((g) => rankingsForGames(g)));
+  // v1.7: the week shows programs beside games. Two reads, merged per week - `programs` has no
+  // `games` row to join to, and keeping the reads apart means a programs failure cannot empty a
+  // week of football.
+  const games = await Promise.all(weeks.map((w) => gamesForRange(w.start, w.end, sport)));
+  const progs = await Promise.all(weeks.map((w) => programsForRange(w.start, w.end, sport)));
+  const now = new Date();
+  const loaded = games.map((g, i) => [...g, ...toRows(progs[i], now)]);
+  // Standings and rankings are asked ONLY about the games: a program has no club to look up, and
+  // handing these the merged list would send program ids to a team query.
+  const standings = await Promise.all(games.map((g) => standingsForGames(g)));
+  const ranks = await Promise.all(games.map((g) => rankingsForGames(g)));
   return (
     <>
       {weeks.map((w, i) => {
@@ -165,9 +175,14 @@ async function SeasonWeeks({ index, pick, sport }) {
   const { all, selected } = weekChoices({ index, pick, sport, seasonMode: true });
   if (!all.length) return <p className="empty">No NFL or college football weeks loaded.</p>;
   const weeks = [selected];
-  const loaded = await Promise.all(weeks.map((w) => gamesForSeasonWeek(w.sport, w.season, w.week)));
-  const standings = await Promise.all(loaded.map((g) => standingsForGames(g)));
-  const ranks = await Promise.all(loaded.map((g) => rankingsForGames(g)));
+  // A SEASON week is a provider label on the GAMES; programs carry no week number, so they are read
+  // by the span that label covers. Same merge as the calendar path.
+  const games = await Promise.all(weeks.map((w) => gamesForSeasonWeek(w.sport, w.season, w.week)));
+  const progs = await Promise.all(weeks.map((w) => programsForRange(w.start, w.end)));
+  const now = new Date();
+  const loaded = games.map((g, i) => [...g, ...toRows(progs[i], now)]);
+  const standings = await Promise.all(games.map((g) => standingsForGames(g)));
+  const ranks = await Promise.all(games.map((g) => rankingsForGames(g)));
   return (
     <>
       {weeks.map((w, i) => {
