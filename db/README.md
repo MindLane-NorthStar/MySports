@@ -649,3 +649,57 @@ broadcast-window versus green-flag, not zone errors:
 `docs/research/indycar.md` §2 says "Milwaukee Aug 29–30" and ESPN's calendar puts race 1 on Aug 29.
 The page is the authority the research verified, so the page is what loaded; the disagreement is a
 watch item, not a silent correction.
+
+## WWE, rest of 2026 — 2026-09-05 (prompt 48 stage 4)
+
+36 programs from wwe.com through `adapters/wwe.py`: **33 weekly shows and 3 premium live events**.
+Backups first: `artifacts/backups/{programs,game_broadcasts}_2026-09-05T210644Z.csv`.
+
+Two surfaces, joined on the date, both verified fetch-clean in `docs/research/wwe.md` §1 and
+re-verified from this laptop at 200: the **"Premier Shows" block** (slots, times, platforms and the
+PLE dates) and **wwe.com/events** (the names and venues the block does not carry).
+
+| | |
+|---|---|
+| programs | 3,984 → **4,020** (exactly +36) |
+| Monday Night Raw | 17 episodes, Netflix |
+| Friday Night SmackDown | 16 episodes, USA Network |
+| PLEs | Money in the Bank (Oct 10, New Orleans), Survivor Series: WarGames (Nov 28, Houston) — both ESPN Unlimited; Sunday Night's Main Event (Sept 6, Atlanta) — Peacock |
+| broadcasts on programs | 116 → **152** |
+| games | 3,868, unchanged |
+
+**Sanity gate: PASS.** Every Monday and every Friday from Sept 5 to Dec 31 carries **exactly one**
+show — 17 and 16 rows, one weekday each, zero duplicates, **zero gaps**. A second load reported 36
+programs and 36 broadcasts with every total unmoved. Reconcile **run id 86**, 152 programs,
+0 uncovered, 0 orphans; the game-side md5 is still `d4fa47cb02ab41427267dfcff1eb8440`.
+
+Verdicts: `stream only: netflix` 17 · `linear usa-network` 16 · `stream only: espn-unlimited` 2 ·
+`stream only: peacock` 1.
+
+### What was deliberately NOT loaded
+
+- **NXT.** Register §7 Q7 dropped it entirely, and the Premier Shows block lists its slot right
+  beside the rest ("Tuesdays at 8 ET/7 CT on The CW"). Dropped, and the drop is reported rather than
+  silent.
+- **AAA's TripleMania 34 (both nights) and the WWE/AAA/NXT Worlds Collide crossover**, which sit in
+  the same events carousel as the PLEs. Not main-roster WWE; two of them are not WWE at all.
+- **The Netflix twin of each PLE.** The block lists both Oct 10 and Nov 28 **twice** — once on "ESPN
+  with the Unlimited Plan" and once on "Netflix" — exactly as `docs/research/wwe.md` §2 flagged.
+  ESPN Unlimited only is loaded. **WATCH ITEM:** if Netflix does carry them in the U.S. it changes
+  nothing about whether Joe can watch (he has both) and changes which chips the card shows. Close it
+  from a U.S.-specific WWE or ESPN release.
+
+### Crews are empty, and that is a decision
+
+`docs/research/wwe.md` §6: *"WWE crews cannot be sourced from WWE itself with any regularity"* — they
+are REPORTED by trades, not announced. The design of record's crew tier takes announcements, so
+`hosts_crew` is `[]` on every WWE row. Register §17's hand-curation amendment covers **College
+GameDay and Big Noon Kickoff only**.
+
+### One thing the page does not carry
+
+**No preemption source.** The brief asked for a gap where "the site lists a preemption"; the Premier
+Shows block states a standing slot and nothing else, so every Monday and Friday gets a row and there
+is no page to consult for a holiday move. `docs/research/wwe.md` §5 notes NBCU has moved SmackDown on
+holidays before, marked UNVERIFIED for 2026. The daily refresh step re-reads the block, so a slot
+change lands; a one-week move will not.
