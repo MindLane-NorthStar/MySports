@@ -407,3 +407,36 @@ standings until a 2026-27 standings load exists; that is not this run's work.
 **No ESPN 403 on the runner** — and none locally either. See the prompt-47 report: prompt 46's
 "ESPN is 403 from this laptop, three times out of three" was an artifact of an ad-hoc User-Agent, not
 Akamai. The project UA in `adapters/common.py` returns 200.
+
+## NASCAR 2026 race sessions — 2026-09-05 (prompt 47 stage 3)
+
+98 race sessions loaded with a broadcast each, through `pipeline/load_programs.py`. Backups first:
+`artifacts/backups/{programs,game_broadcasts}_2026-09-05T183859Z.csv`. Recorded fixtures and a fresh
+fetch produced **identical** row sets (0 drift either way), so no race has moved since Friday.
+
+| | |
+|---|---|
+| programs | 3,868 → **3,966** (exactly +98) |
+| by series | cup 40, oreilly 33, truck 25 |
+| broadcasts on programs | **98**, none carrying a `game_id` |
+| games | 3,868, unchanged |
+| race programs owning a game | 0 |
+
+Per-race outlets, which is the whole point of not writing a per-series constant:
+`the-cw` 33, `fs1` 32, `usa-network` 10, `fox` 7, `prime-video` 5, `tnt` 5, `nbc` 4, `fs2` 2.
+
+**Idempotence proven, not assumed:** running the same load a second time left `programs` at 3,966 and
+program broadcasts at 98 — every row updated, none inserted. That is 0012/0013's partial unique
+indexes doing the job prompt 46 said had to exist before anything could be loaded.
+
+**One thing the load had to learn:** ON CONFLICT will not infer a **partial** unique index unless the
+statement repeats the index predicate. `on conflict (sport, series, start_at, title)` alone fails with
+*"there is no unique or exclusion constraint matching the ON CONFLICT specification"*. `db.upsert()`
+builds no WHERE, so program rows are written with their own statement carrying
+`where program_type = '<type>'`.
+
+**Programs have no eligibility rows, and cannot.** `viewer_game_eligibility.game_id` is `text NOT
+NULL`, so there is nowhere to record whether a race is on a service the viewer has. Answering "can I
+watch this race" needs the same treatment 0012 gave `game_broadcasts` — a nullable `game_id`, a
+`program_id`, and a one-subject check. **Open for rendering-contract v1.7**, which is the first thing
+that will render a program to a reader.

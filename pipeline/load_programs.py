@@ -44,6 +44,13 @@ CONFLICT = {
     "special_event": "sport, start_at, title",
 }
 
+# EVERY ONE OF THOSE INDEXES IS PARTIAL, and ON CONFLICT inference will not match a partial index
+# unless the statement repeats its predicate. `on conflict (sport, series, start_at, title)` alone
+# fails with "there is no unique or exclusion constraint matching the ON CONFLICT specification",
+# which is exactly what the first attempt at this load hit. db.upsert() builds `on conflict (...)`
+# with no room for a WHERE, so program rows are written with a statement of their own.
+PREDICATE = {k: "program_type = '%s'" % k for k in CONFLICT}
+
 PROGRAM_COLS = [
     "sport", "program_type", "title", "subtitle", "start_at", "expected_duration_min",
     "open_ended", "location_text", "on_site", "series", "headliners", "hosts_crew",
@@ -92,9 +99,16 @@ def load(db, rows, known_networks):
         for j in ("headliners", "hosts_crew", "segments"):
             if isinstance(program.get(j), (list, dict)):
                 program[j] = json.dumps(program[j])
-        db.upsert("programs", [program], conflict,
-                  [c for c in program if c not in ("sport", "program_type")],
-                  tag="programs", preserve=PRESERVE)
+        cols = list(program)
+        updatable = [c for c in cols if c not in ("sport", "program_type")]
+        sets = ", ".join(
+            ("%s = coalesce(excluded.%s, programs.%s)" % (c, c, c)) if c in PRESERVE
+            else ("%s = excluded.%s" % (c, c))
+            for c in updatable)
+        db.run(
+            "insert into programs (%s) values (%s) on conflict (%s) where %s do update set %s"
+            % (", ".join(cols), ", ".join("%s" for _ in cols), conflict, PREDICATE[ptype], sets),
+            tuple(program[c] for c in cols), tag="programs")
         counts["programs"] += 1
 
         broadcasts = row.get("broadcasts") or []
