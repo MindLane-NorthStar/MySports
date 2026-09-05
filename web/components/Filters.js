@@ -4,6 +4,8 @@
 // and let the server component re-fetch. No client-side data access anywhere in this app.
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import Picker from './Picker.js';
+import { longDay } from '../lib/format.js';
 import { SPORT_FILTERS, SPORT_LABEL } from '../lib/config.js';
 
 function useSetParam() {
@@ -27,12 +29,21 @@ export function DatePicker({ day }) {
     // name; prompt 45 moved that name up to the heading, which now reads DATE and is wired to this
     // input by htmlFor. Still exactly one label for one control, and still no aria-label - one would
     // OVERRIDE the visible text and lose the word to a screen reader, which was the original point.
-    <input
-      id="viewing-day"
-      type="date"
-      value={day}
-      onChange={(e) => setParam('day', e.target.value)}
-    />
+    //
+    // PROMPT 46 1C: the input keeps its job and loses its looks. A native date input renders the
+    // browser's own locale string - "Sep 4, 2026" - and no CSS reaches inside it, so Joe's
+    // "Friday, September 4, 2026" has to be drawn by us. longDay() already produced exactly that
+    // for the old <h1>, so the face reuses it rather than adding a second formatter.
+    <Picker control={
+      <input
+        id="viewing-day"
+        type="date"
+        value={day}
+        onChange={(e) => setParam('day', e.target.value)}
+      />
+    }>
+      <span className="pk-range pk-range--solo">{longDay(day)}</span>
+    </Picker>
   );
 }
 

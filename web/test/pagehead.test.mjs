@@ -79,6 +79,64 @@ test('History\'s heading is deliberately untouched', () => {
 test('the header row is styled, and the week trigger is allowed to shrink', () => {
   const css = src('app/globals.css');
   assert.match(css, /^\.pagehead \{[\s\S]*?align-items: center;/m, 'centred on the heading text box');
-  assert.match(css, /^\.pagehead \.chip-select \{[\s\S]*?min-width: 0;/m,
+  assert.match(css, /^\.pagehead \.picker \{[\s\S]*?min-width: 0;/m,
                'min-width:0 is what lets the longest week label shrink instead of pushing the row wide');
+});
+
+// ---------------------------------------------------------------- prompt 46 unit 1C: the pickers
+//
+// The native control is what iOS opens; the FACE is what we draw. Both have to stay true, and only
+// the source can say so here - these are server components reading the database.
+
+test('both pickers keep a real native control under a drawn face', () => {
+  const shell = code('components/Picker.js');
+  assert.match(shell, /className=\{`picker /, 'the wrapper carries the shared class');
+  assert.match(shell, /aria-hidden="true"/, 'the face must not be announced - the label already is');
+  assert.match(shell, /\{control\}/, 'and the real control is rendered, not replaced');
+
+  const css = src('app/globals.css');
+  assert.match(css, /\.picker > select,\s*\.picker > input \{[\s\S]*?opacity: 0;/,
+               'the control is transparent, not display:none - that would lose the tap target');
+  assert.match(css, /\.picker > select,\s*\.picker > input \{[\s\S]*?font-size: 16px;/,
+               '16px or Mobile Safari zooms the page when the invisible control takes focus');
+  assert.match(css, /\.picker:focus-within \{[^}]*outline/, 'keyboard focus must still be visible');
+});
+
+test('the WEEK face is built from PARTS, never by splitting the joined label', () => {
+  const page = src('app/weeks/page.js');
+  assert.match(page, /const parts = \(w\) =>/, 'one builder for both forms');
+  assert.match(page, /const join = \(p\) =>/, 'and the option text is assembled FROM the parts');
+  assert.doesNotMatch(page, /\.split\(['"`]\s*·/, 'never parse the separator back out');
+  assert.match(page, /selectedParts: parts\(selected\)/);
+
+  const w = code('components/WeekSelect.js');
+  assert.match(w, /className="pk-sport">\{p\.prefix\}/, 'season week: the sport-week is its own run');
+  assert.match(w, /className="pk-range">\{p\.range\}/);
+  assert.match(w, /pk-range pk-range--solo">\{p\.range\}/, 'calendar week: range only, no prefix');
+  assert.match(w, /id="week-select"/, 'still the labelled native select');
+});
+
+test('the WEEK face colours follow Joe: gold sport-week, standings-grey range', () => {
+  const css = src('app/globals.css');
+  assert.match(css, /\.pk-sport \{[^}]*color: var\(--gold\)/);
+  assert.match(css, /\.pk-range \{[^}]*color: var\(--dim\)/, '--dim is .tcol-rec, the standings line');
+  assert.match(css, /\.pk-range--solo \{[^}]*color: var\(--ink\)/, 'a calendar week keeps trigger ink');
+  // the prefix must never be the part that ellipsizes
+  assert.match(css, /\.pk-sport \{[^}]*flex: 0 0 auto/);
+  assert.match(css, /\.pk-range \{[^}]*text-overflow: ellipsis/);
+});
+
+test('the DATE face is longDay(), not a second formatter', () => {
+  const f = code('components/Filters.js');
+  assert.match(f, /\{longDay\(day\)\}/, 'reuse the formatter the old <h1> used');
+  assert.match(f, /id="viewing-day"/);
+  assert.match(f, /type="date"/, 'still a real date input, so iOS opens its calendar');
+  assert.doesNotMatch(f, /toLocaleDateString/, 'no new date formatting in this component');
+});
+
+test('the header row cannot wrap the picker onto its own line', () => {
+  // flex-wrap decides on an item's CONTENT width before shrinking is considered, so basis auto put
+  // the long NFL face on a second line and broke "directly to the right of the header text".
+  const css = src('app/globals.css');
+  assert.match(css, /\.pagehead \.chip-select,\s*\.pagehead \.picker \{[\s\S]*?flex: 1 1 0;/);
 });

@@ -250,11 +250,19 @@ h3 {
   cursor: pointer;
 }
 
-/* The week trigger takes the rest of the line and is allowed to shrink: the longest option label
-   is far wider than a 390px phone, and min-width:0 is what lets a flex item actually shrink below
-   its content width instead of pushing the row past the viewport. */
-.pagehead .chip-select {
-  flex: 1 1 auto;
+/* The trigger takes the rest of the line and is allowed to shrink: the longest option label is far
+   wider than a 390px phone, and min-width:0 is what lets a flex item shrink below its content width
+   instead of pushing the row past the viewport.
+
+   FLEX-BASIS 0, NOT auto (prompt 46 1C). .pagehead wraps, and wrapping is decided on an item's
+   HYPOTHETICAL main size - its content width - before shrinking is ever considered. With basis auto
+   the styled face's full string (`NFL Week 1 . Wed Sep 9 - Mon Sep 14, 2026`) is wider than the room
+   left beside the heading, so the picker wrapped onto its own line and stopped being "directly to
+   the right of the header text". Basis 0 makes its hypothetical size 0: it never forces a wrap, and
+   it grows into whatever is left. .pk-range ellipsizes if even that is not enough. */
+.pagehead .chip-select,
+.pagehead .picker {
+  flex: 1 1 0;
   min-width: 0;
   max-width: 100%;
 }
@@ -2088,6 +2096,81 @@ main > .pagehead:first-child { margin-top: 0; }
  * A real <select> wearing the chip's visual language: the chip is the wrapper, the select is the
  * control. One line at every width, where a chip per week became a wrapped block of 33 by mid-season,
  * and on a phone it opens the platform picker. */
+/* ---------------------------------------------------------------- the pickers (prompt 46 1C)
+ * A styled FACE we draw, with the native control stretched invisibly over the whole pill. See
+ * components/Picker.js for why. The plate, radius, border, padding and caret are lifted from the
+ * .chip / .chip-select pair this replaces, so the WEEK trigger's box does not move.
+ *
+ * min-width:0 on the flex chain is what actually lets the face shrink instead of pushing the header
+ * row past the viewport; .pk-range is the part allowed to ellipsize, never .pk-sport - losing the
+ * end of a date range still leaves the week identifiable, losing "NFL Week 12" does not. */
+.picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-width: 0;
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  overflow: hidden;
+}
+
+.pk-face {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+
+/* The control is the real one: every tap, focus and change lands here. Transparent, not hidden -
+ * display:none or visibility:hidden would take it out of the hit-testing and the tab order. */
+.picker > select,
+.picker > input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: transparent;
+  /* 16px or Mobile Safari zooms the page when an invisible control takes focus. */
+  font-size: 16px;
+}
+
+.picker:focus-within { outline: 2px solid var(--gold); outline-offset: 2px; }
+.picker select option,
+.picker select optgroup { color: #111; background: #fff; }
+
+.pk-caret {
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  margin-left: 3px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+}
+
+/* Joe, 2026-09-05: the sport-week in app gold, the range in the subtle grey. --dim is the token the
+   list card's standings line uses (.tcol-rec), read from this file rather than retyped. */
+.pk-sport { flex: 0 0 auto; color: var(--gold); font-weight: 700; }
+.pk-sep { flex: 0 0 auto; color: var(--dim); }
+.pk-range { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--dim); }
+/* A calendar week has no prefix, so its range is the trigger's own ink rather than the quiet grey. */
+.pk-range--solo { color: var(--ink); }
+
 .chip-select { padding: 0; display: inline-flex; align-items: center; overflow: hidden; }
 .chip-select select {
   appearance: none;

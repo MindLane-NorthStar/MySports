@@ -109,14 +109,27 @@ function weekChoices({ index, pick, sport, seasonMode }) {
     all[0];
   // C1: no ISO week number, in the picker or in the heading. It was a number nobody navigates by -
   // "Week 35" answers a question no one asked, while the dates answer the one they did.
-  const options = seasonMode
-    ? all.map((w) => ({
-        key: w.key,
-        group: SPORT_LABEL[w.sport] || w.sport.toUpperCase(),
-        label: `${SPORT_TAG[w.sport] || w.sport.toUpperCase()} Week ${w.week} · ${daySpanWeekdays(w.start, w.end)}`,
-      }))
-    : all.map((w) => ({ key: w.key, label: daySpanWeekdays(w.start, w.end) }));
-  return { all, selected, options };
+  // PARTS, AND THE JOINED FORM BUILT FROM THEM. The <option> text has to be one string - a native
+  // select cannot colour half of it - but the styled trigger needs the halves separately so the
+  // sport-week can be gold and the range grey (prompt 46 unit 1C). Both come from here, and the
+  // joined form is assembled from the parts rather than parsed back out of it: splitting on the
+  // separator would break the first time a range or a sport tag contained one.
+  const parts = (w) =>
+    seasonMode
+      ? { prefix: `${SPORT_TAG[w.sport] || w.sport.toUpperCase()} Week ${w.week}`,
+          range: daySpanWeekdays(w.start, w.end) }
+      : { range: daySpanWeekdays(w.start, w.end) };
+  const join = (p) => (p.prefix ? `${p.prefix} · ${p.range}` : p.range);
+  const options = all.map((w) => {
+    const p = parts(w);
+    return {
+      key: w.key,
+      ...(seasonMode ? { group: SPORT_LABEL[w.sport] || w.sport.toUpperCase() } : {}),
+      parts: p,
+      label: join(p),
+    };
+  });
+  return { all, selected, options, selectedParts: parts(selected) };
 }
 
 async function CalendarWeeks({ index, pick, sport }) {
@@ -206,7 +219,8 @@ export default async function WeeksPage({ searchParams }) {
       <div className="pagehead">
         <h1><label htmlFor="week-select">WEEK</label></h1>
         {choices.selected ? (
-          <WeekSelect sport={sport} selected={choices.selected.key} options={choices.options} />
+          <WeekSelect sport={sport} selected={choices.selected.key} options={choices.options}
+                      selectedParts={choices.selectedParts} />
         ) : null}
       </div>
       {/* C2: the Today page's own chip row, IMPORTED rather than reimplemented - useSetParam reads
