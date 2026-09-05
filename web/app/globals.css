@@ -591,15 +591,6 @@ input[type='search'] {
   text-overflow: ellipsis;
 }
 
-.at {
-  flex: 0 0 auto;
-  align-self: flex-start;
-  line-height: 22px;
-  margin: 0;
-  color: var(--faint);
-  font-size: 13px;
-  font-weight: 600;
-}
 
 /* C2: the record, beside the name on line 1. flex 0 0 auto - it never shrinks and never wraps; it is
    four to eight characters, and the name beside it is the thing with room to give. Baseline-ish
@@ -641,6 +632,12 @@ input[type='search'] {
 }
 
 /* network line: grey text under EVERY matchup; the processed mark only for access-profile networks */
+/* STILL A BLOCK, deliberately. Making this a wrapping flex row was tried for v1.6.15's
+   parenthetical and measured: it dropped EVERY card by 2.9px (132.3 -> 129.4), because a flex item
+   takes its own content height and loses the block's line-height leading. Ordinary inline flow
+   already does what the parenthetical needs - the line wraps at the space before it, and
+   white-space: nowrap on the span keeps it whole - at no cost to any card that has no
+   parenthetical at all. */
 .mnet {
   margin-top: 4px;
   min-width: 0;
@@ -691,6 +688,23 @@ input[type='search'] {
    It still reads UNDER the team names, and by size rather than colour: 12px regular against the
    name's 14px. The palette has no step between --dim and --ink to use instead, and inventing one
    would be a fourth grey nobody ruled on. */
+/* THE NEUTRAL-SITE PARENTHETICAL (contract v1.6.15, Joe 2026-09-05). It replaced the `vs` marker
+   between the two team stacks, so it has to read as a note ON the venue rather than as a second
+   venue: one size step down from .mnet-text's 12px, italic, regular weight, and --dim - the
+   standings-line grey (.tcol-rec), read from this file rather than retyped.
+
+   NEITHER PART EVER TRUNCATES. The venue keeps its ellipsis for its own overflow, but this span is
+   nowrap and the line is allowed to wrap BEFORE it, so a long venue pushes the whole parenthetical
+   onto its own line intact instead of clipping either. A neutral card that wraps grows by one line,
+   which Joe accepted. */
+.mnet-neutral {
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--dim);
+  white-space: nowrap;
+  margin-left: 4px;
+}
 .mnet-text {
   color: var(--ink);
   font-size: 12px;

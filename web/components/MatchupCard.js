@@ -195,14 +195,11 @@ export default function MatchupCard({ game, standings, rankings, showDay = false
             rowWidth={bodyWidth} measure={measure}
             probable={game.probable_away_pitcher} showProbable={isMlb}
           />
-          {/* NOTHING between the stacks on an ordinary game - away-above-home carries it, and Joe
-              asked for the @ to go. `vs` STAYS for neutral sites, because there the order carries
-              nothing: 20 games in the loaded season are neutral (11 CFB, 9 NFL), and dropping the
-              marker outright would render an NFL game in London as a home game. Stacked, it is a
-              short row of its own between the two teams rather than a hug between two columns -
-              which is if anything clearer, because a neutral site is a fact about the fixture and
-              now reads on its own line. */}
-          {game.neutral_site ? <span className="at">vs</span> : null}
+          {/* NOTHING between the stacks, on EVERY game. Joe, 2026-09-05: "Eliminate the vs so all
+              cards look the same." This retires prompt 33 stage 1, which kept `vs` on the 20
+              neutral-site games (11 CFB, 9 NFL) so a London game would not read as a home game.
+              The fact did not go away - it moved to the venue line below, where it is a property
+              of the fixture rather than a marker wedged between two teams. */}
           <TeamStack
             team={home} teamId={game.home_team_id} sport={sport} standings={standings}
             rankings={rankings} season={game.season} week={game.week}
@@ -218,6 +215,11 @@ export default function MatchupCard({ game, standings, rankings, showDay = false
               redundant. Nothing renders when a game has no venue row - measured, that is 0 of
               1379 loaded games, so the blank case is theoretical rather than common. */}
           {game.venue?.name ? <span className="mnet-text">{game.venue.name}</span> : null}
+          {/* THE NEUTRAL-SITE FACT LIVES HERE NOW (Joe, 2026-09-05). One size step smaller than the
+              venue, italic, regular weight, --dim - the standings-line grey - so it reads as a note
+              ON the venue rather than as a second venue. It renders even when no venue is loaded,
+              because the fact must never be lost; the line is then the parenthetical alone. */}
+          {game.neutral_site ? <span className="mnet-neutral">(neutral site)</span> : null}
         </div>
       </div>
 

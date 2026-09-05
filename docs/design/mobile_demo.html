@@ -121,7 +121,8 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
    ruled the stack outright, so what was a wrap that happened at narrow widths is now the layout at
    every width. align-items:stretch is the load-bearing part - on a column flex the cross axis is
    horizontal, and without it each stack would size to its own content and gain no width at all.
-   `vs` still renders on the 20 neutral-site games, now as its own short row between the two teams. */
+   `vs` IS RETIRED (contract v1.6.15, Joe 2026-09-05): nothing renders between the two teams on any
+   game, and the neutral-site fact moved to the venue line as a smaller italic grey parenthetical. */
 .duel.hug{display:flex; flex-direction:column; align-items:stretch; gap:6px}
 .duel.hug .tcol{min-width:0}
 .duel.hug .atbig{flex:0 0 auto; align-self:flex-start}
@@ -386,7 +387,7 @@ function card(g, key){
   return `<button class="mcard" data-g="${key}">
     <span class="t">${esc(timeOf(g))}<small>ET</small></span>
     <span class="mid">
-      <span class="duel ${ATSTYLE}">${tcol(g,a,"away")}${g.neutral_site ? `<span class="atbig">vs</span>` : ""}${tcol(g,h,"home")}</span>
+      <span class="duel ${ATSTYLE}">${tcol(g,a,"away")}${tcol(g,h,"home")}</span>
       <span class="lnet">${esc(g.network??"—")}</span>
     </span>
     ${(AVAIL.has(g.network)&&NETLOGOS[g.network])?

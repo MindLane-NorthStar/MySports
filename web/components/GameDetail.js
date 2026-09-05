@@ -49,7 +49,7 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
         <div className="dpanel-head">
           <img src={teamLogoDarkUrl(away?.id)} alt="" />
           <strong>
-            {cardName(away, game.away_team_id)} {game.neutral_site ? 'vs' : '@'} {cardName(home, game.home_team_id)}
+            {cardName(away, game.away_team_id)} @ {cardName(home, game.home_team_id)}
           </strong>
           <img src={teamLogoDarkUrl(home?.id)} alt="" />
           <button type="button" className="dpanel-close" onClick={onClose} aria-label="Close">
@@ -63,11 +63,17 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
               <span>When</span>
               {longDay(game.viewing_day)} · {etTime(game.canonical_kickoff_at_utc, game.kickoff_status)}
             </div>
-            {game.venue?.name ? (
+            {/* The venue line carries the neutral-site fact, the same way the list card does since
+                2026-09-05 - and it renders even with no venue row, because the panel is where a
+                reader goes to find out exactly this. */}
+            {game.venue?.name || game.neutral_site ? (
               <div>
                 <span>Venue</span>
-                {game.venue.name}
-                {game.venue.city ? `, ${game.venue.city}` : ''}
+                {game.venue?.name || ''}
+                {game.venue?.name && game.venue?.city ? `, ${game.venue.city}` : ''}
+                {game.neutral_site ? (
+                  <span className="mnet-neutral">{game.venue?.name ? ' ' : ''}(neutral site)</span>
+                ) : null}
               </div>
             ) : null}
             {score ? (
