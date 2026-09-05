@@ -175,9 +175,17 @@ async function SeasonWeeks({ index, pick, sport }) {
         const grouped = byDay(loaded[i], days);
         return (
           <section className="weekblock" key={`${w.sport}-${w.season}-${w.week}`}>
+            {/* TWO LINES FOR A SEASON WEEK (prompt 46 1D, Joe's item 9: the NFL and CFB headings
+                wrapped). The sport-week keeps its position on line one and the range drops below
+                it. Calendar weeks are one line and are untouched - they have no prefix to split on.
+                The parts come from weekChoices()' builder, the same one the picker's face reads,
+                so the string cannot say two different things in two places. */}
             <div className="weekblock-head">
-              <h3>
-                {SPORT_TAG[w.sport] || w.sport.toUpperCase()} Week {w.week} · {daySpanWeekdays(w.start, w.end)}
+              <h3 className="wb-two">
+                <span className="wb-sport">
+                  {SPORT_TAG[w.sport] || w.sport.toUpperCase()} Week {w.week}
+                </span>
+                <span className="wb-range">{daySpanWeekdays(w.start, w.end)}</span>
               </h3>
             </div>
             <WeekDays days={days} grouped={grouped} standingsRows={standings[i]}

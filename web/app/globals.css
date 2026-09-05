@@ -889,6 +889,29 @@ button.mcard:hover {
   letter-spacing: 0.01em;
 }
 
+/* SEASON-WEEK HEADINGS ARE TWO LINES (prompt 46 1D). At 390 the joined form wrapped mid-range -
+   "NFL WEEK 1 . WED SEP 9 - MON SEP 14," / "2026" - which is the break Joe reported. Splitting it
+   deliberately puts the break where it means something.
+
+   Line one is GOLD, and that is COWORK'S CALL, open to veto: it is the same string the picker's face
+   shows in gold two blocks above, and one string in two places should wear one colour. Joe did not
+   rule on it.
+
+   Line two keeps the heading family at the SAME 24px, chosen by render over the count-line size:
+   the range is the half that answers "which dates", and shrinking it to a caption made the block
+   read as a heading with a footnote rather than as a two-line heading. Nothing shrinks on a phone
+   either - measured at 360, 390 and 428, neither line wraps at 24px, so the calendar heading keeps
+   the size it has always had and this variant matches it. */
+.wb-two {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.wb-sport { color: var(--gold); }
+.wb-range { color: var(--ink); }
+
+
 /* ----------------------------------------------------------------- archived grid */
 .gridpanel {
   border: 1px solid var(--line-soft);
