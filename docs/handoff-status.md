@@ -191,6 +191,29 @@ before touching any count line.
     `bootstrap_season.yml` that Actions could not parse at all, and prompt 46 shipped it green. An
     Actions expression is substituted everywhere in a `run:` block — inside shell comments too — and
     an empty one is a syntax error for the whole file. `tests/test_workflows.py` is the guard.
+29. **A text write with no `newline=` produces different BYTES on Windows than on the runner.**
+    Python's text mode translates every `\n` to the platform separator, so
+    `path.write_text(x, encoding="utf-8")` emitted CRLF on this laptop and LF on Actions - one
+    adapter, two byte streams, depending on where it ran. `adapters/common.py`'s `dump_json` and
+    `write_text` did exactly that, and `scripts/build_cap_table.py` did it to two tracked files.
+    **Any writer that can reach a tracked file passes `newline="\n"` or writes bytes.**
+    This is rule 1 in a costume; it gets its own number because rule 1 did not stop it.
+
+    **`tests/fixtures/*` is `-text` ON PURPOSE** (prompt 48): recorded fetches are asserted as
+    bytes, four tests pin a `sha256` and one pins a byte count, and normalisation on checkout
+    would break those on every machine but the recording one. So a recorded page KEEPS its CRs -
+    `indycar_2026_schedule.html` carries 5,727 of them - and "no CR under `tests/fixtures/`" is
+    the wrong rule. The right one is **disk bytes == index bytes**, which
+    `tests/test_fixture_bytes.py` asserts for both fixture directories.
+
+    **How it hid.** `.gitattributes` declares `*.json text eol=lf`, which normalises on read, so
+    git compared an LF blob against a CRLF working copy and reported the tree clean; git's stat
+    cache then never re-compared them. Prompt 49 stage 0 measured **34 tracked files** whose disk
+    bytes differ from their blobs - pure line-ending churn, identical payload. Five were restored
+    (the four `tests/fixtures/*_raw.json` and `web/test/fixtures/team-colours.json`); the other
+    **29 are an open item**, because renormalising them rewrites 29 files and touches blame, and
+    that deserves its own commit and Joe's sign-off rather than a ride-along.
+
 
 ---
 

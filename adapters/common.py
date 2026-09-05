@@ -431,14 +431,28 @@ def score_int(value: Any, status: str | None) -> int | None:
 
 
 # ----------------------------------------------------------------------------- output
+#
+# `newline="\n"` IS LOAD-BEARING ON WINDOWS, and leaving it off is what put CRLF into four recorded
+# fixtures. Python's text mode translates every "\n" to the platform separator on write, so on this
+# laptop these two functions emitted CRLF while the same code on the Actions runner emitted LF -
+# the same adapter producing different BYTES depending on where it ran.
+#
+# It stayed invisible for months because `.gitattributes` declared `*.json text eol=lf`, which
+# normalises on read: git compared an LF blob against a CRLF working copy and reported clean. When
+# prompt 48 added `tests/fixtures/*.json -text` so recorded fetches could be asserted byte-for-byte,
+# those four became a 26,169-line phantom diff of pure line-ending churn - identical payload, every
+# line "changed" - which prompt 49 stage 1 restored from the index.
+#
+# This is working rule 1 (certify Python for Windows) in a costume nobody had named. Rule 29 names it.
 def dump_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False, sort_keys=False) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False, sort_keys=False) + "\n",
+                    encoding="utf-8", newline="\n")
 
 
 def write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    path.write_text(text, encoding="utf-8", newline="\n")
 
 
 def md_table(headers: list[str], rows: list[list[Any]]) -> str:

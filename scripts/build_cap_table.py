@@ -253,7 +253,10 @@ def main(argv=None) -> int:
                   "dark_margin": DARK_MARGIN, "cap_tint": CAP_TINT, "min_ratio": MIN_RATIO},
         "teams": {k: out[k] for k in sorted(out)},
     }
-    Path(a.out).write_text(json.dumps(doc, indent=1, sort_keys=False) + "\n", encoding="utf-8")
+    # newline pinned for the same reason as the fixture below: web/lib/cap-table.json is
+    # TRACKED and is read by the runtime, and text mode would emit CRLF here on Windows.
+    Path(a.out).write_text(json.dumps(doc, indent=1, sort_keys=False) + "\n",
+                           encoding="utf-8", newline="\n")
     print("wrote %s" % a.out)
 
     # The colours the JS side needs to check ITSELF against this rule, from the same SELECT.
@@ -266,9 +269,12 @@ def main(argv=None) -> int:
                for t in teams if t["id"] in out}
     fixture_path = ROOT / "web" / "test" / "fixtures" / "team-colours.json"
     fixture_path.parent.mkdir(parents=True, exist_ok=True)
+    # newline="\n": this writes a TRACKED test fixture, and Python text mode would emit CRLF here on
+    # Windows and LF on the runner - the same generator producing different bytes per machine. See
+    # adapters/common.py's dump_json for the four fixtures that cost.
     fixture_path.write_text(
         json.dumps({"_generated": doc["_generated"], "teams": {k: colours[k] for k in sorted(colours)}},
-                   indent=1) + "\n", encoding="utf-8")
+                   indent=1) + "\n", encoding="utf-8", newline="\n")
     print("wrote %s (%d teams)" % (fixture_path, len(colours)))
 
     if a.check:
