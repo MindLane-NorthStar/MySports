@@ -129,7 +129,15 @@ test('forWidth picks the breakpoint the media query would', () => {
 });
 
 // ---------------------------------------------------------------- prompt 29's ladder, unchanged
-const G = (o) => ({ sport: 'mlb', canonical_kickoff_at_utc: '2026-09-04T18:00:00Z', ...o });
+// THE DEFAULT KICKOFF IS RELATIVE TO NOW, NOT A LITERAL. It used to be '2026-09-04T18:00:00Z', which
+// made every `in_progress` case a time bomb: slotContent routes in_progress through isStaleLive(),
+// which compares the kickoff against Date.now() with an 8-hour cut (format.js:293-300). At
+// 2026-09-05T02:00:00Z - eight hours after that literal - the `live` case below started returning
+// 'stale' and this file went red on a tree nobody had touched. One hour ago is inside the cut by
+// seven hours and stays there for good; the STALE case supplies its own long-past kickoff, which is
+// the only place a fixed date belongs here.
+const RECENT_KICKOFF = new Date(Date.now() - 3600 * 1000).toISOString();
+const G = (o) => ({ sport: 'mlb', canonical_kickoff_at_utc: RECENT_KICKOFF, ...o });
 
 test("prompt 29's ladder still returns its nine cases unchanged", () => {
   // 1 exception outranks odds
