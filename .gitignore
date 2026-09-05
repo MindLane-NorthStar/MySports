@@ -5,6 +5,8 @@
 # generated validation/rendering artifacts (regenerable; fixtures promoted to tests/ when needed)
 artifacts/
 web/qa/
+# the Claude Project mirror: a regenerable copy of docs, named as the Project names them
+handoff/project-mirror/
 
 # python bytecode
 __pycache__/

@@ -262,3 +262,50 @@ and the horizontal scroll is gone — Joe: *"I find [it] very annoying."*
 **Cost, named and accepted.** Flexing to fit means the tile is no longer a fixed 44 px. On a 390 px
 phone eight tiles land near 40 px, under the 44 px tap target prompt 25 established. That is the trade
 Joe chose: a slightly smaller target on every tile, in exchange for never swiping to reach a sport.
+
+## 17. PROGRAMS GO LIVE — 2026-09-05/06, prompt 47
+
+### Joe's two amendments of 2026-09-05
+
+1. **Hosts and crews for College GameDay and Big Noon Kickoff are static, hand-curated data.**
+   This amends **§7 Q5** ("sourced, never hand-curated") **for those two shows only**. Every other
+   show's crew stays out of the automated path. *Not yet built — see below.*
+2. **IndyCar is built now**, against the 2026 season for History, rather than deferred to the 2027
+   schedule. This amends **§6** and research-summary-2 §6. *Not yet built — see below.*
+
+### What shipped
+
+- **Migrations 0012 and 0013** (`798251c`): a program can own a broadcast row
+  (`game_broadcasts.program_id`, `game_id` nullable, exactly-one-subject check), and every
+  `program_type` has a natural key so a re-load updates instead of duplicating. 0013 turned out to be
+  small: 0009 had already built the studio-show tables, the broadcast windows and every enum value.
+- **NHL and NBA 2026-27 regular seasons** (`34aaef0`): 1,384 → **3,868** games.
+- **NASCAR 2026** (`69aaea5`, `042a231`): 98 race sessions with a per-race broadcast each, idempotent.
+- **Contract v1.6.15** (`8782f94`): the `vs` marker retired, `(neutral site)` on the venue line.
+- **A fail-honest NASCAR refresh step** (`d921576`).
+
+### What did NOT ship, and the single reason
+
+**Stages 4–9 of the brief — the program card (v1.7), IndyCar, WWE, AEW, the studio-show registry and
+UFC — were not built, because every document they load data from is absent from the repository.**
+`claude/program-card-design-v1.md` and all six `research-*.md` files named in the brief are nowhere in
+the tree. The brief requires that every 2026 slot, network, duration and source URL come from those
+documents or from a live fetch of a source they verified; without them there is neither the data nor
+the list of verified URLs, and the obvious guesses 404 or 403.
+
+Writing those schedules from memory would put invented broadcast facts into a production database
+that Joe reads as truth about what he can watch. **§4's standard** — verified sources, cited — is the
+whole point of this register, and it is not negotiable for convenience.
+
+**Unblocking is one step:** put those seven documents in the repo, or name their Project paths.
+
+### Consequently still open
+
+- **E-01…E-06 cannot be closed out** as the brief asked: their numbering lives in the register
+  sections this repo copy does carry (§7, §9, §10, §13), and the "E-0n" close-out list the brief
+  refers to is not in this file. Recorded rather than invented.
+- **§9's UFC odds** (The Odds API `mma_mixed_martial_arts`) — no provider key added, nothing loaded.
+- **§13's chip amendment** — untouched; the chip set was not changed, because stage 4 did not run.
+- **Program eligibility** — `viewer_game_eligibility.game_id` is `NOT NULL`, so a program cannot
+  carry one. This gates v1.7: the first surface that shows a race to a reader has to say whether he
+  can watch it.

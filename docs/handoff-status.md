@@ -7,12 +7,12 @@ Read first for any session picking up MySports. Companions: **`docs/enhancement-
 only in the repo; §1–§13 are still project-only and Joe is supplying them — check there before
 re-raising any decision), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
 amendment, §9 NETWORK TBD, §11 mobile page order, §12 the DATE/WEEK headers, §13 the 2026-09-05
-review), `docs/rendering-contract.md` **v1.6.14**, `docs/rendering-contract-mobile.md` (Addendum
+review), `docs/rendering-contract.md` **v1.6.15**, `docs/rendering-contract-mobile.md` (Addendum
 v1.2), `claude/program-card-design-v1.md`.
 
 ## Repo state
 
-main, HEAD **8f63741**. Gates: **280 Python tests + 1 skipped**, **290 JS unit tests**, smoke
+main, HEAD **d921576**. Gates: **320 Python tests + 1 skipped**, **298 JS unit tests**, smoke
 **30/30**, qa-shots **14/14**. Tree clean apart from always-untracked `assets/` (and `web/qa/`, which
 prompt 46 added to `.gitignore`).
 
@@ -175,6 +175,16 @@ before touching any count line.
 26. **The gate and the commit are SEPARATE COMMANDS.** The runner's exit code and its parsed counts
     decide — never the last command in a chain. `b1b1d9b` went out red because a commit was
     `&&`-chained after a gate whose final command was a `grep` that succeeded.
+27. **Check the schedule before a bulk database write, and never run two at once.** Prompt 46's
+    pre-approved `--all` reconcile started at 13:40:38 and the scheduled daily refresh — already
+    running since 13:37:02 — died five seconds later with `ERROR: deadlock detected` in its fixture
+    loader. The cron is `0 11 * * *` and drifts by up to four hours, so "it is the afternoon" is not
+    an answer; `gh run list --workflow schedule_refresh.yml -L 1` is. The same rule is why prompt
+    47's NASCAR load waited for its own NHL/NBA bootstrap to finish rather than running beside it.
+28. **A Python-side parse is no evidence GitHub Actions agrees.** PyYAML validated a
+    `bootstrap_season.yml` that Actions could not parse at all, and prompt 46 shipped it green. An
+    Actions expression is substituted everywhere in a `run:` block — inside shell comments too — and
+    an empty one is a syntax error for the whole file. `tests/test_workflows.py` is the guard.
 
 ---
 
@@ -227,3 +237,76 @@ nba 16 moved `no_linear_telecast` → `tbd`). Backups at
   on a production page.
 - **`programs == games` is no longer a database-wide invariant** — one-directional now: every game
   has a program, not every program has a game.
+
+---
+
+## 2026-09-06 programs run (prompt 47)
+
+Ran on `main` from `0a6c617`. Final HEAD **d921576**. Gates **280 + 1 / 290 / 30 / 14** →
+**320 + 1 / 298 / 30 / 14**.
+
+| stage | commit | what shipped |
+|---|---|---|
+| 1 | `798251c` | migrations 0012 + 0013; the reconciler guard for a nullable `game_id` |
+| — | `743c2bc` | **fix**: `bootstrap_season.yml` did not parse and never assigned its ranges |
+| 3b | `8782f94` | `vs` retired; `(neutral site)` on the venue line (contract v1.6.15) |
+| 3 code | `69aaea5` | per-race NASCAR broadcasts; `pipeline/load_programs.py` |
+| 2 | `34aaef0` | NHL + NBA 2026-27 loaded via Actions — **1,384 → 3,868 games** |
+| 3 load | `042a231` | 98 NASCAR race sessions + 98 broadcasts, idempotent |
+| 10 | `d921576` | fail-honest NASCAR refresh step |
+
+**Stages 4–9 were not built.** See "What this run could not do" below.
+
+### The two defects this run found in its own predecessors
+
+1. **Prompt 46's `bootstrap_season.yml` never worked.** A shell comment inside the `run:` block
+   contained a literal empty Actions expression, so the file failed to parse — every push since
+   `3fd5f6c` died in 0 s — and separately `NHL_FROM`/`NBA_FROM` were read but never assigned. PyYAML
+   validated it green, which is rule 24 in a new costume. Fixed in `743c2bc` with a 19-assertion
+   guard (`tests/test_workflows.py`).
+2. **Prompt 46's `--all` reconcile deadlocked the scheduled refresh.** Today's 11:00 cron
+   (run `33969416271`) died at 13:40:43 with `ERROR: deadlock detected` in the fixture loader — five
+   seconds after that reconcile began writing at 13:40:38. **New working rule 27** below.
+
+### Corrections to the record
+
+- **ESPN is not blocked from this laptop.** Prompt 46 reported "403 three times out of three"; the
+  403 came from an ad-hoc User-Agent it invented for the probe. Same URL, same second: project UA
+  200, no UA 200, prompt 46's UA 403. NHL's flakiness *is* real and UA-independent (TLS resets).
+- **`nascar_dark.png` was already committed** — stage 0 was told to check whether it needed to ride
+  a commit; it did not.
+- **0009 had already built** `studio_shows`, `studio_show_instances`, `game_broadcasts.window_start/
+  window_end`, and every `sport` and `program_type` enum value. 0013 therefore contains **no
+  `ALTER TYPE`** and extends the studio tables rather than creating them.
+
+### What this run could not do, and why
+
+**Every document naming the 2026 slots, networks, durations and verified source URLs is absent from
+the repository.** `claude/` does not exist; `program-card-design-v1.md`, `research-summary-2.md`,
+`research-studio-shows.md`, `research-wwe.md`, `research-aew.md`, `research-ufc.md`,
+`research-nascar.md` and `research-indycar.md` are nowhere in the tree. What exists is
+`docs/enhancement-register.md` (§1–§16 — the handoff's old "project-only" note was stale) and
+`docs/research/{changelog,mlb,nba,nfl,nhl,summary}.md`.
+
+So **stage 4** had no design of record to build from — its brief says "read it twice" — and
+**stages 5–9** had neither the slots nor the verified URLs. `wwe.com/schedule` and
+`allelitewrestling.com/aew-schedule` both 404 at their obvious paths and `press.wbd.com` 403s, so the
+URLs cannot be recovered by guessing either. Writing those schedules from memory would put invented
+broadcast facts into a production database Joe reads as truth about what he can watch — which the
+brief forbids in its own opening and rule 9 exists to prevent.
+
+**To unblock:** put those seven documents in the repo (or tell me their Project paths to copy from).
+
+### Open items this run created
+
+- **Programs have no eligibility rows and cannot.** `viewer_game_eligibility.game_id` is
+  `text NOT NULL`, so there is nowhere to record whether a race is on a service Joe has. Needs the
+  same treatment 0012 gave `game_broadcasts`. **Gates v1.7**, which is the first thing that shows a
+  program to a reader.
+- **NHL loaded 1,344, not 1,312** — 84 games a club, internally consistent (1,344 distinct ids and
+  external ids, 32 home clubs, no duplicates, all `REGULAR`). Recorded rather than rounded.
+- **NBA loaded 1,206 against ~1,230** — −1.95 %, inside tolerance, cause not investigated.
+- **NHL/NBA `team_records` are still season 2025** (prompt 37); their cards show thin standings.
+- **No wrapped neutral-site case exists** — the longest neutral venue fits on one line even at 360,
+  so v1.6.15's wrap rule is tested by construction, not by a screenshot.
+- The refresh step was **not dispatched** tonight, deliberately — see rule 27.

@@ -116,3 +116,39 @@ Five docs written: `research-nfl.md`, `research-mlb.md`, `research-nba.md`, `res
 - **Source:** https://en.wikipedia.org/wiki/Main_Street_Sports_Group; https://awfulannouncing.com/local-networks/main-street-sports-group-shuttering-13-nba-teams-local-tv.html; https://sports.yahoo.com/articles/fanduel-sports-network-begins-process-161529707.html
 - **How it was caught:** surfaced during NHL research, where the same corporate collapse is the central story.
 - **Rule change earned:** RSN and local-carrier attribution needs an explicit staleness horizon in `authority_rules` — measured in weeks, not seasons — and must be re-verified at every season boundary regardless of source rank. Both sources that produced the error are the kind the authority model would rank highly.
+
+## 2026-09-05 — source reachability, verified live (prompt 47 stage 0)
+
+Every probe below is one real fetch from this laptop with the project User-Agent from
+`adapters/common.py`, unless the row says otherwise.
+
+| source | status | bytes |
+|---|---|---|
+| `cf.nascar.com/cacher/2026/{1,2,3}/race_list_basic.json` | **200 / 200 / 200** | 101,874 / 77,452 / 60,847 |
+| ESPN `racing/nascar-premier` scoreboard | **200** | 11,581 |
+| ESPN `racing/irl` scoreboard | **200** | 5,965 |
+| ESPN `mma/ufc` scoreboard | **200** | 39,736 |
+| ESPN core API, NHL + NBA 2026-27 regular-season bounds | **200** | — |
+| `api-web.nhle.com/v1/schedule/…` | **intermittent** — 200 on ~2 of 6, TLS reset otherwise; UA-independent | — |
+| `indycar.com/Schedule` | **200** | 362,110 |
+| `espnpressroom.com/us/` | **200** | 169,814 |
+| `foxsports.com/presspass/` | **200** | 225,632 |
+| `paramountplus.com` | **200** | 404,949 |
+| `paramountpressexpress.com` | **200** | 68,294 |
+| `wwe.com/schedule` | **404** | — |
+| `allelitewrestling.com/aew-schedule` | **404** | — |
+| `press.wbd.com/us/` | **403** | — |
+
+**The ESPN 403 in prompt 46's report was a User-Agent artifact, not Akamai.** Same URL, same second,
+three UAs: the project UA returned **200**, no UA returned **200**, and the ad-hoc
+`MySportsTV/0.2 (+https://my-sports-xi.vercel.app; contact …)` that prompt 46 invented for its probe
+returned **403**. Register §6's standing rule — never send a browser UA to ESPN — is unaffected and
+still right; what is corrected is the claim that the laptop itself is blocked. It is not.
+
+**No 403s on the GitHub runner either**, across ~371 ESPN and NHL date fetches in
+`bootstrap_season` run 33981953084.
+
+**The three 404/403 rows are not conclusions about those sources.** They are the obvious paths, tried
+without the verified deep URLs, because `research-wwe.md`, `research-aew.md` and the WBD schedule URL
+they cite are not in this repository. They say nothing about whether the real endpoints are
+fetch-clean.
