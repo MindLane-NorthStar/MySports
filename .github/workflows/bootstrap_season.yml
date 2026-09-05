@@ -7,6 +7,12 @@ on:
       sports: { description: "Comma list: cfb,nfl,nhl,nba,mlb", required: true, default: "cfb,nfl,nhl,nba,mlb" }
       cfb_weeks: { description: "CFB regular-season week range, e.g. 1-15", required: false, default: "1-15" }
       nfl_weeks: { description: "NFL regular-season week range, e.g. 1-18", required: false, default: "1-18" }
+      # NHL and NBA are DATE-DRIVEN: their providers answer "what is on this day", not "what is in
+      # week N". Left empty they do nothing, so this workflow behaves exactly as it did before.
+      nhl_from:  { description: "NHL first date, YYYY-MM-DD (empty = skip)",  required: false, default: "" }
+      nhl_to:    { description: "NHL last date, YYYY-MM-DD",                 required: false, default: "" }
+      nba_from:  { description: "NBA first date, YYYY-MM-DD (empty = skip)", required: false, default: "" }
+      nba_to:    { description: "NBA last date, YYYY-MM-DD",                 required: false, default: "" }
 jobs:
   bootstrap:
     runs-on: ubuntu-latest
@@ -72,6 +78,27 @@ jobs:
                   python -m adapters.espn --league nfl --season "$season" --week "$W"                     || echo "nfl week $W: no games or fetch failed - skipped"
                   echo "::endgroup::"
                 done ;;
+              nhl|nba)
+                # ${{ }} is substituted by Actions BEFORE this shell runs, so the range cannot be
+                # selected with a shell variable inside the expression - both are read into plain
+                # shell vars above and chosen here.
+                if [[ "$S" == nhl ]]; then from="$NHL_FROM"; to="$NHL_TO"; else from="$NBA_FROM"; to="$NBA_TO"; fi
+                if [[ -z "$from" || -z "$to" ]]; then
+                  echo "$S: no date range given - teams/logos only"
+                else
+                  d="$from"
+                  while [[ "$d" < "$to" || "$d" == "$to" ]]; do
+                    echo "::group::$S $d"
+                    # A ZERO-GAME DATE IS NORMAL, not fatal: these seasons have dark days and the
+                    # provider answers 200 with an empty list. The `|| echo` keeps the loop going so
+                    # one bad date cannot cost the other 179. api-web.nhle.com also resets
+                    # intermittently; a date it still cannot reach is logged and skipped rather than
+                    # taking the whole run down.
+                    python -m adapters.$S --date "$d" || echo "$S $d: no games or fetch failed - skipped"
+                    echo "::endgroup::"
+                    d=$(date -u -d "$d + 1 day" +%F)
+                  done
+                fi ;;
               *) echo "$S: no week loop (date-driven sport); teams/logos only" ;;
             esac
           done
