@@ -370,3 +370,40 @@ Backups first: `artifacts/backups/{programs,game_broadcasts,games}_2026-09-05T17
 files dry-run (`--dry-run` executes and rolls back) before applying. **Post-check, all eight
 identical:** programs 1,384 and its id checksum `766cc016245c5ef64e26fd8f0856ca73`, broadcasts 1,061,
 rows with a null `game_id` 0, games 1,384, eligible 466, market-pending 176, hidden 918.
+
+## NHL and NBA 2026-27 regular seasons — 2026-09-05 (prompt 47 stage 2)
+
+Loaded through GitHub Actions (`bootstrap_season.yml`, manual dispatch, run
+[33981953084](https://github.com/MindLane-NorthStar/MySports/actions/runs/33981953084)), **47m54s**.
+Date ranges taken from ESPN's core API rather than typed:
+`sports.core.api.espn.com/v2/sports/{hockey/leagues/nhl,basketball/leagues/nba}/seasons/2027/types/2`
+gave **NHL 2026-09-28 → 2027-04-11** and **NBA 2026-10-20 → 2027-04-12**.
+
+Backups first: `artifacts/backups/{games,game_broadcasts,programs}_2026-09-05T172858Z.csv` and
+`viewer_game_eligibility_2026-09-05T174111Z.csv`.
+
+| | before | after |
+|---|---|---|
+| nhl | 47 (2026-10-01 → 10-07) | **1,344** (2026-09-29 → 2027-04-10) |
+| nba | 19 (2026-10-25 → 10-28) | **1,206** (2026-10-20 → 2027-04-11) |
+| cfb / nfl / mlb | 888 / 272 / 158 | unchanged |
+| total games | 1,384 | **3,868** |
+
+Loader run id **82** (10,530 fixture games seen across ~371 per-date files, 6,319 broadcasts);
+reconcile run id **83** — 3,868 games, eligible **986**, market-pending 176, 3,357 changes.
+Only **3** of ~371 dates were empty or unreachable.
+
+**Sanity gate: PASS on every criterion.** No pre-existing count decreased. NHL is **+2.44 % over**
+the 1,312 a 82-game season implies — 1,344 is 84 games per club, and it is internally consistent:
+1,344 distinct ids, 1,344 distinct `external_primary_id`, 32 distinct home clubs, no
+same-matchup-same-day duplicate, every row `competition_context = REGULAR`. It is an overage, not a
+shortfall, so it does not trip the 5 % stop. NBA is **−1.95 %** against 1,230, inside the threshold.
+**All 1,206 NBA ids match `nba-{9-digit espnEventId}`** — the `65cfdf2` guard holds, so the
+live-overlay join is intact. Eligibility coverage **0 uncovered / 0 orphans**.
+
+**NHL/NBA `team_records` remain season 2025 by design** (prompt 37). Their cards will show thin
+standings until a 2026-27 standings load exists; that is not this run's work.
+
+**No ESPN 403 on the runner** — and none locally either. See the prompt-47 report: prompt 46's
+"ESPN is 403 from this laptop, three times out of three" was an artifact of an ad-hoc User-Agent, not
+Akamai. The project UA in `adapters/common.py` returns 200.
