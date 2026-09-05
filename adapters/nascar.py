@@ -63,6 +63,29 @@ def duration_min(race: dict[str, Any], series: str) -> tuple[int, str]:
     return DEFAULT_MIN.get(series, 180), "duration_defaults.json:%s" % series
 
 
+def broadcast_rows(race: dict[str, Any]) -> list[dict[str, Any]]:
+    """The race's television row, if the feed names one.
+
+    The key is passed through as the feed writes it; pipeline/load_programs.py maps it against
+    networks_services and falls back to TBA_NO_RIGHTS_HOLDER with a warning rather than dropping the
+    row - losing the fact that a race is televised is worse than not knowing the channel. Radio is
+    deliberately not loaded: nothing in the app renders a radio row, and a broadcast row the reader
+    cannot act on is noise.
+    """
+    tv = (race.get("television_broadcaster") or "").strip()
+    if not tv:
+        return []
+    return [{
+        "service_id": tv,
+        "delivery_surface": "STREAMING" if tv.upper() in ("PRIME VIDEO", "MAX", "PEACOCK") else "LINEAR",
+        "feed_side": "NATIONAL",
+        "is_primary": True,
+        "requires_auth": tv.upper() in ("PRIME VIDEO", "MAX", "PEACOCK"),
+        "access_status": "available",
+        "label": tv,
+    }]
+
+
 def to_program(race: dict[str, Any], series: str) -> dict[str, Any] | None:
     """One `programs` row, or None when the entry has no usable start."""
     start = parse_iso(race.get("race_date"))
@@ -83,16 +106,23 @@ def to_program(race: dict[str, Any], series: str) -> dict[str, Any] | None:
         # namespace, so the track lands in location_text rather than inventing a mapping.
         "location_text": (race.get("track_name") or "").strip() or None,
         "source_tier": "official_league_feed",
+        "source_url": FEED.format(year=race.get("race_season") or "", series=SERIES_ID[series]),
+        "brand_key": "nascar",
+        # PER-RACE, NEVER A PER-SERIES CONSTANT. The 2026 Cup season is on FOX, FS1, FS2, NBC, Prime
+        # Video, TNT and USA in different weeks; "the Cup series is on FOX" would be wrong for most
+        # of the calendar. Migration 0012 is what lets these attach to a program at all.
+        "broadcasts": broadcast_rows(race),
         "_provenance": {
             "race_id": race.get("race_id"),
             "series_id": SERIES_ID[series],
             "race_type_id": race.get("race_type_id"),
             "track_id": race.get("track_id"),
             "duration": provenance,
-            # Carried, NOT emitted as a broadcast row: game_broadcasts requires a game_id and has no
-            # program_id, so a program cannot own one without DDL. See the module docstring in
-            # tests/test_nascar.py and the migration named in the prompt-46 report.
+            # Kept alongside the broadcast row above as the RAW feed value, so a mapping change can
+            # be re-derived without a re-fetch. Prompt 46 could only carry it here, because a program
+            # could not own a broadcast row at all; migration 0012 fixed that.
             "television_broadcaster": race.get("television_broadcaster"),
+            # Radio is deliberately carried and NOT loaded: nothing in the app renders a radio row.
             "radio_broadcaster": race.get("radio_broadcaster"),
         },
     }
