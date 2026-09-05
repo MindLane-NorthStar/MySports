@@ -6,6 +6,82 @@
 
 ---
 
+## 2026-09-05 — Programs go live: every events & shows source probed from Joe's laptop
+
+The eleven events & shows documents were dropped into the repo (prompt 48 stage 0) and every source
+they name was fetched **once**, with the project UA, from Joe's machine. This is the pass
+`docs/research/events-and-shows-handoff-2026-09-02.md` §5 asked for and could not do.
+
+### Reachability, measured
+
+| source | status | bytes | note |
+|---|---|---|---|
+| `espnpressroom.com/us/press-releases/` | **200** | 227,752 | the index; individual releases resolve from it |
+| ESPN Press Room — the GameDay Week 1 release | **200** | 171,987 | carries the site, the window, the networks **and the announced nine-member 2026 crew** |
+| `espnpressroom.com/us/college-gameday/` | **200** | 172,972 | its one table is a **historical January bowl table**, not the weekly Date/Site/Game table §6 described |
+| `wwe.com/shows/raw`, `/smackdown`, `/events`, `/shows/snme/2026-09-06` | **200** | 417k / 428k / 227k / 135k | the "Premier Shows" block is exactly the season calendar §1 promised |
+| `paramountplus.com/sneak-peak/ufc-schedule-2026/` | **200** | 175,596 | static, labelled lines, nine upcoming cards |
+| `paramountpressexpress.com/cbs-sports/`, `/cbs-entertainment/releases/` | **200** | 100k / 119k | **zero** UFC/CBS sentences today |
+| `indycar.com/Schedule`, `/Schedule/2026` | **200** | 361,003 / 125,231 | the ROOT page carries all 18 2026 races; the per-year page carries only the last and next |
+| `site.api.espn.com` `racing/irl`, `mma/ufc`, `racing/nascar-premier` | **200** | 5,965 / 43,583 / — | **the Akamai 403 is closed from this laptop.** Prompt 47 already established the project UA gets 200 |
+| `cf.nascar.com/cacher/2026/1/race_list_basic.json` | **200** | 101,874 | no allowlisting needed from here |
+| `foxsports.com/presspass`, `/latest-news`, `/latest-news/weekly-schedule` | **200** | 225k / 149k / 99k | **fetch-clean but CONTENT-EMPTY** — zero tables and zero occurrences of "Big Noon" on all three, because the page is JS-rendered |
+| `allelitewrestling.com/` | **200** | 1,408,338 | states both AEW slots verbatim |
+| `press.wbd.com/us/` | **403 → 200** | 118 → 153,344 | the 403 was **transient**; on the retry it answered 200 and carries **no AEW content at its root** |
+| `pwmania.com`, `ewrestlingnews.com` | **200** | 342k / 799k | **no monthly HBO Max schedule republished today** |
+| `tbs.com`, `tntdrama.com` | **403** | — | both refuse |
+| `nbcsportspressbox.com` | **DNS failure** | — | `getaddrinfo failed` from this network |
+| `ufc.com/events` | **SSL CERTIFICATE_VERIFY_FAILED** | — | not a block; a certificate chain this client will not accept |
+| `jayski.com/nascar-cup-series-schedule/` | **403** | — | the root `jayski.com` answers 200 |
+
+`allelitewrestling.com`'s sub-paths returned **429** under rapid probing. Slowed down and not retried
+harder, per `adapters/common.py`'s own rule about 429.
+
+### What the sources said that the documents did not
+
+- **cf.nascar.com publishes NAIVE EASTERN timestamps.** Every 2026 race loaded four hours early.
+  Established against ESPN's `racing/nascar-premier` on six races: five agree with the Eastern
+  reading to the minute, **including the Nov 8 finale, which is in EST**, so it is a wall clock and
+  not a fixed offset. The **DAYTONA 500** is a one-hour SOURCE DISAGREEMENT (cf 14:30 ET, ESPN 13:30
+  ET) and is recorded as one rather than chased.
+- **ESPN's `racing/irl` calendar is not the race time.** `leagues[0].calendar[].startDate` runs a
+  fixed **three hours later** than ESPN's own `events[].date` for the same race, on 15 of 18 entries.
+  Verifying against the calendar reported all 18 IndyCar races as wrong and would have "corrected" a
+  correct adapter into a season-wide three-hour error.
+- **indycar.com's card time is the BROADCAST start, ESPN's is the green flag.** Four races differ,
+  and two of the gaps are pre-race shows the research doc names by name ("Arlington 30 min", the
+  Indy 500's "six-hour window from 10 AM"). The page wins: a TV grid draws what a viewer tunes to.
+- **indycar.com lists BOTH Milwaukee races on Aug 30**, where the research doc says "Aug 29–30" and
+  ESPN's calendar puts race 1 on Aug 29. Recorded, not reconciled.
+- **The wwe.com dual listing is real.** Oct 10 and Nov 28 each appear TWICE in the Premier Shows
+  block — once on "ESPN with the Unlimited Plan" and once on "Netflix" — exactly as
+  `docs/research/wwe.md` §2 flagged. ESPN Unlimited only is loaded.
+- **The Paramount+ page has gained a card** since the research was written: Oct 10, Allen vs. Duncan.
+  Nine upcoming, where the doc listed eight.
+- **No 2026 UFC card flags a CBS simulcast**, and the page says so outright on the Sept 5 card.
+
+### Runner-side findings (dispatched run 33994233255, `refresh` job green)
+
+- The **moved-twin guard fired on all 98 NASCAR races** and logged
+  `MOVED-TWIN SKIPPED 98 row(s)`. Without it that step would have inserted 98 second copies of the
+  2026 season, because the corrected time is a different natural key.
+- IndyCar 18, WWE 36, AEW 35, UFC 9, studio 109 — all loaded, all `access: available`, no fetch or
+  load failure on any of the six new steps.
+- **AEW logged no DRIFT line**, so allelitewrestling.com still agrees with the slot file.
+- **No ESPN 403 on the runner**, consistent with prompt 47.
+
+### Watch-task additions this pass justifies
+
+- **The WBD monthly HBO Max schedule.** It is the only authority for Collision's night and network
+  and was unreachable in every form tried. AEW is on the slot default until it is found.
+- **Big Noon Kickoff's site and crew.** FOX Press Pass is JS-rendered; a human read is the only path.
+- **The weekly GameDay release.** One release is one week; the site is `tba` for every week whose
+  release is not recorded.
+- **The wwe.com dual listing**, from a U.S.-specific WWE or ESPN release.
+- **UFC segment times** (ufc.com or ESPN `mma/ufc`) and **the CBS window** (Press Express), neither of
+  which had anything to give today.
+
+
 ## 2026-09-02 — Design session: icon v6, league/program marks, banner + navbar
 - **Deliverables filed:** `docs/design/banner.md` (composition, mark classes, contrast rulings), `docs/design/banner/` (the two static reference SVGs, the CSS, the navbar markup), `web/lib/banner-layout.json` (both breakpoints), `scripts/build_brand_marks.py` (rebuilds all three mark classes; `--check` diffs against what is committed).
 - **App icon:** v6-B chosen, shipped as `web/public/brand/app-icon-mysports-tv.png` (1024). v5 and v6-A retired/rejected, kept untracked under `assets/brand/`.

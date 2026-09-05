@@ -3,18 +3,23 @@
 **This file lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at
 `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§14
-only in the repo; §1–§13 are still project-only and Joe is supplying them — check there before
-re-raising any decision), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§17, all
+in the repo — check there before re-raising any decision), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
 amendment, §9 NETWORK TBD, §11 mobile page order, §12 the DATE/WEEK headers, §13 the 2026-09-05
-review), `docs/rendering-contract.md` **v1.6.15**, `docs/rendering-contract-mobile.md` (Addendum
-v1.2), `claude/program-card-design-v1.md`.
+review), `docs/rendering-contract.md` **v1.7**, `docs/rendering-contract-mobile.md` (Addendum
+v1.2 + M19/M20), **`docs/design/program-card-design-v1.md`** — the program card's design of record,
+in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
+`docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths.
 
 ## Repo state
 
-main, HEAD **d921576**. Gates: **320 Python tests + 1 skipped**, **298 JS unit tests**, smoke
-**30/30**, qa-shots **14/14**. Tree clean apart from always-untracked `assets/` (and `web/qa/`, which
-prompt 46 added to `.gitignore`).
+main, HEAD is prompt 48's stage-9 commit. Gates: **443 Python tests + 1 skipped**, **329 JS unit
+tests**, smoke **30/30**, qa-shots **14/14**. Tree clean apart from always-untracked `assets/` (and
+`web/qa/`, which prompt 46 added to `.gitignore`).
+
+**PROGRAMS ARE LIVE.** 307 non-game programs render on both the phone grid and the listings -
+NASCAR 98, studio shows 111, AEW 35, WWE 36, IndyCar 18, UFC 9 - under rendering-contract **v1.7**,
+each carrying an eligibility verdict from migration 0014.
 
 Prompt 46 stage 1 — Joe's second installed-app review, 2026-09-05:
 `6d9e168` headroom +7→+4 → `f46a57c` symmetric header spacing, tiles-to-section gap → `56e15f3`
@@ -82,9 +87,10 @@ before touching any count line.
 
 ## Open
 
-- **Rendering-contract v1.7** — the program card (`claude/program-card-design-v1.md`), studio-show
-  bookends, the grid "now" marker, and `open_ended` ↔ `render_policies` reconciled in one change.
-  **This is the gate** for studio shows, WWE/AEW, UFC, and for NASCAR data to become visible.
+- ~~Rendering-contract v1.7~~ **SHIPPED** in prompt 48 stage 2 (`376ef36`) — the program card on both
+  grids, the list-card variant, the now marker, studio bookends, and the `open_ended` ↔
+  `render_policies` reconciliation, all in one change. The gate it held is open: studio shows,
+  WWE, AEW, UFC, IndyCar and NASCAR all render.
 - **506sports NFL maps → `market_coverage_nfl`** (~Sept 8–9). Resolves E5's market-pending games; on
   the critical path for September 13.
 - **NHL and NBA hold only date-driven partial seasons** (47 and 19 games). `nba-BOS`, `nba-PHX`,
@@ -118,7 +124,7 @@ before touching any count line.
   loaded broadcast row publishes the unannounced WUAB/RESN arrangement.
 - **CBJ watch escalation ~Sept 15** (ask first). **IndyCar**: 2027 schedule, October.
 - **The unruled backlog:** E8, E9, E11, E12, E13, E15.
-- **The enhancement register §1–§13 are still project-only.** Joe to supply.
+- ~~The enhancement register §1–§13 are still project-only.~~ **CLOSED** — §1–§17 are in the repo.
 - **The design builders are project-only** — `build_demo.py`, `app_template.html`, `build_banner.py`,
   `markkit.py`. `docs/design/mobile_demo.html` is a TEMPLATE (`__DATA__`, `__GRIDSVG__`, …), so the
   repo copy cannot be rebuilt from the repo. A filing item, not a defect.
@@ -310,3 +316,180 @@ brief forbids in its own opening and rule 9 exists to prevent.
 - **No wrapped neutral-site case exists** — the longest neutral venue fits on one line even at 360,
   so v1.6.15's wrap rule is tested by construction, not by a screenshot.
 - The refresh step was **not dispatched** tonight, deliberately — see rule 27.
+
+---
+
+## 2026-09-05/06 programs-live run (prompt 48)
+
+Ran on `main` from `ef3d826`. Final HEAD is the stage-9 commit that carries this block. Gates moved
+**320 + 1 / 298 / 30 / 14** → **443 + 1 / 329 / 30 / 14**.
+
+**This is the run prompt 47 could not do.** Every document its stages 4–9 load from lived only in the
+Claude.ai Project; Joe dropped the eleven of them into the repo, stage 0 committed them, and the rest
+followed.
+
+| stage | commit | what shipped |
+|---|---|---|
+| 0 | `1b20768` | the eleven events & shows source documents, verbatim from the Project |
+| 1 | `27f570e` | migration 0014 — `viewer_program_eligibility`; the reconciler grows `--programs` |
+| — | `77258ff` | **fix**: the NASCAR feed's times are Eastern, and a corrected time must not double the season |
+| 2 | `376ef36` | rendering-contract **v1.7** — the program card on both grids, the list variant, the now marker |
+| 3 | `5bca121` | IndyCar 2026 + migration 0015 (a NULL series cannot be a natural key) |
+| 4 | `1d21442` | WWE — Raw, SmackDown and the PLEs |
+| 5 | `3ec3231` | AEW — Dynamite and Collision, per-episode network |
+| 6 | `83dea25` | studio shows — registry, 111 instances, the GameDay site parse, the crews |
+| 7 | `50a5826` | UFC — 9 cards, plain, no invented segments and no invented CBS window |
+| 8 | `3076900` | five more fail-honest refresh steps and a program reconcile |
+| 9 | *(this commit)* | this file, the register close-outs, the changelog and the Project mirror |
+
+### The database, before and after
+
+| | before | after |
+|---|---|---|
+| `programs` | 3,966 | **4,190** |
+| non-game programs | 98 (NASCAR only) | **307** — nascar 98 · studio 111 · aew 35 · wwe 36 · indycar 18 · ufc 9 |
+| by type | race_session 98 | race_session 116 · studio_show 111 · weekly_show 68 · fight_card 9 · special_event 3 |
+| `game_broadcasts` | 2,374 (98 on programs) | **2,681** (374 on programs) |
+| `viewer_program_eligibility` | did not exist | **307 rows, 0 uncovered, 0 orphans** |
+| `studio_shows` / `studio_show_instances` | 0 / 0 | **7 / 111**, every instance linked to its program |
+| `games` | 3,868 | 3,883 — **+15 from the refresh run, not from this run** |
+
+**The game side was provably untouched by every program stage.** The md5 over all 3,868 game verdicts
+was `d4fa47cb02ab41427267dfcff1eb8440` before stage 1 and after stages 3, 4, 5, 6 and 7. It changed
+only when the stage-8 refresh reconciled games, which is that workflow's job.
+
+### The migrations
+
+**0014 — `viewer_program_eligibility`.** The brief asked for 0012's shape on
+`viewer_game_eligibility`: nullable `game_id`, a `program_id`, a one-subject check. **That works on
+`game_broadcasts` and not here** — `game_id` is half `viewer_game_eligibility`'s PRIMARY KEY, so
+"make it nullable" means dropping the primary key of the table the whole app reads its access
+verdicts from, and the run's approval is *additive only, never a drop*. Built additively instead: a
+separate table, column for column the sibling. Every existing count is then unchanged **by
+construction** rather than by a `where game_id is not null` guard on each consumer.
+
+**0015 — the race-session natural key survives a NULL series.** 0012's own finding in a second place.
+It wrote *"NULLs are distinct in a unique constraint, so with game_id null every program broadcast
+looks new and a re-load duplicates all of them"* — and the same sentence is true of `programs.series`,
+which 0012's own index depends on. NASCAR carries a series; IndyCar runs one and carries none
+(register §16 named that trap). Measured: two loads of the same 18 races produced 36 rows. 0015 adds
+the `coalesce(series, '')` key, keeps 0012's index, and removes the 18 duplicates this run made —
+scoped to `sport = 'indycar'`, raising rather than committing if any other sport moved.
+
+### The tripwire
+
+Held at CFB `2026-09-05` **62 / {240, 223} / 1073** and MLB `2026-09-03` **3 / 228 / 577** through
+stages 0–5. It moved in stage 6, when the two CFB studio shows landed on that day, and the move is
+fully accounted for:
+
+| | before | after |
+|---|---|---|
+| blocks | 62 | **64** — College GameDay and Big Noon Kickoff |
+| widths | {240, 223} | {240, 223, **205, 136**} — every GAME width unchanged |
+| scrollWidth | 1073 | **1282** — the axis now opens at 9:00 AM for GameDay, earlier than the first kickoff |
+| rows | 15 | 15 — both shows sit on ESPN's and FOX's existing rows |
+| measured name width | 124 / 14744 | 124 / 14744 — **unchanged**, so no game name moved |
+| MLB `2026-09-03` | 3 / 228 / 577 | 3 / 228 / 577 — untouched all night |
+
+**New baseline: CFB `2026-09-05` = 64 / {240, 223, 205, 136} / 1282; MLB `2026-09-03` = 3 / 228 / 577.**
+
+### Four defects this run found in data or code that predates it
+
+1. **Every 2026 NASCAR race was four hours early.** `cf.nascar.com` writes `race_date` as
+   `"2026-09-06T17:00:00"` with no zone and `parse_iso` stamps a naive value UTC, so the Darlington
+   race — the one Joe is being asked to look at — sat at 1:00 PM instead of 5:00 PM. Established
+   against ESPN's `racing/nascar-premier` scoreboard on six races: five agree with the Eastern
+   reading to the minute, **including the Nov 8 finale, which is in EST**, so it is a wall clock and
+   not a fixed offset. The DAYTONA 500 is a one-hour source disagreement and is pinned as one.
+   **The 98 stored rows are still wrong** — correcting them changes a natural key, so it is a
+   database decision and not a load.
+2. **Fixing that would have doubled the season.** Every `program_type`'s natural key contains
+   `start_at`, so a corrected time is a different key and tonight's refresh would have inserted 98
+   second copies. `pipeline/load_programs.py` now refuses a row that matches a stored one on
+   everything but `start_at` and says so with both times. Proved against the live rows: it fires on
+   40 of 40 Cup races, and the stage-8 dispatch confirmed it on the runner.
+3. **Two NASCAR races on FS2 read as watchable.** `adapters/nascar.py` wrote
+   `access_status: "available"` for every broadcaster, and FS2 is in the profile's `unavailable`
+   list. Fixed at the choke point rather than in the adapter: `load_programs.py` now classifies every
+   broadcast row from `data/access_profile.json`, so all five adapters this run shipped inherit it.
+4. **A slate ending at or after 03:00 read as already finished.** `web/lib/bandstate.js` — a UFC card
+   at 9 PM with a 360-minute block closes at `"03:00"`, comes back as 180, and 180 is smaller than
+   the window's own 14:00 opening, so D1 jumped to FINALS and rendered *"Nothing loaded for this
+   viewing day yet"* over a card that had not started. A window cannot close before it opens; that is
+   a wrap and is now read as one.
+
+### Open items this run created
+
+- **The 98 NASCAR rows are four hours early.** The correction changes a natural key, so a plain
+  re-load duplicates rather than fixes — the moved-twin guard is what makes leaving them safe. It
+  needs a Joe-approved delete-and-reload, or a targeted `update`. **This is the one thing on this
+  list that a reader will notice.**
+- **Ten brands have no mark**, so their endcaps render a typographic short title: `gameday`,
+  `bignoon`, and the eight NFL studio-show keys. Nine of those also have **no colour** derivable from
+  anything in the repo — `data/` has no network palette and the cached FOX and CBS wordmarks are
+  monochrome — so they carry the grid's neutral `#4A505A`. Supply the marks through the marks
+  pipeline and the colours derive.
+- **Big Noon Kickoff's site is `tba` and its crew is `TBA`.** FOX Press Pass is now verified as
+  fetch-clean but CONTENT-EMPTY: 200 on three paths, zero tables, zero occurrences of "Big Noon",
+  because it is JS-rendered. The Wednesday research watch is the override path.
+- **GameDay has one week's site**, Sept 5 Baton Rouge, from the one release recorded. Every other week
+  is `tba` until its own release is recorded.
+- **UFC segment times are not loaded** — the Paramount+ page carries the main-card start only.
+- **UFC odds are not loaded** — register §9's provider key was not added, as the brief required.
+- **The wwe.com dual listing** on Oct 10 and Nov 28 (ESPN Unlimited *and* Netflix): ESPN Unlimited
+  only is loaded. Close it from a U.S.-specific release.
+- **AEW ran the slot-default path.** `press.wbd.com` answers 200 but carries no AEW content at its
+  root, and no trade had republished a monthly schedule. 33 of 35 rows are tiered `slot_default`, and
+  the adapter re-reads allelitewrestling.com nightly to report drift.
+- **Countdown to All Out is not loaded** — a source gap, not a scope decision: the doc gives its time
+  but not its network.
+- **Four studio shows named in the brief are not loaded** — Sunday NFL Countdown, the Prime TNF
+  pregame, the Netflix pregames and the NASCAR pre/post shows. None has a verified 2026 slot in
+  `docs/research/studio-shows.md` §1, and the brief's own rule is *"Nothing not in the doc"*. Each is
+  recorded in `data/studio_shows.json` with its reason.
+- **The archived desktop grid is still game-only.** `draw_program_card()` and a `--programs` input
+  exist and are tested, but the daily `render_all` job writes no programs file beside the validation
+  fixture, so nothing feeds it. The drawing is ready; the feed is not built.
+- **NHL and NBA `team_records` are still season 2025** (prompt 37) — unchanged by this run.
+- **The chip row is unchanged.** Register §16's eight tiles plus the ALL bar already matched the
+  rulings; the only thing missing was §9's NASCAR series sub-filter, which lands as a SECOND row
+  beneath the tiles so the tile geometry §16 froze does not move.
+- **Two of Cowork's calls are open to veto**: programs as rows in the D1 first band on the days they
+  air, and the list-card variant derived from the grid card.
+
+### Corrections to the record
+
+- **`src/` does not exist.** The brief calls the Python SVG renderer "the renderer under `src/`"; it
+  is `scripts/render_day.py`.
+- **`docs/research/changelog.md` does not exist** — the file is `docs/research/research-changelog.md`.
+- **Register §16 supersedes §13's chip roster**, which the brief's stage 2c did not account for:
+  NASCAR and IndyCar share one Racing chip and the ALL bar is a full-width row. The shipped
+  `SPORT_FILTERS` already matched §16 and was left alone.
+- **`docs/research/studio-shows.md` §1 does not carry Sunday NFL Countdown**, which the brief lists
+  among the shows to load.
+- **The ESPN Press Room GameDay page has no weekly Date/Site/Game table.** Its one table is a
+  historical January bowl table; the weekly site is prose inside each week's own release.
+
+### Stage 8 dispatched, and every new step ran green on the runner
+
+Rule 27 checked first: the last scheduled run had completed (as a failure - the 0012-era deadlock) at
+13:37Z, the next was thirteen hours out, and nothing from this run was still writing. Dispatched as
+run **33994233255**; the `refresh` job succeeded.
+
+| step | what the runner logged |
+|---|---|
+| NASCAR (prompt 47's) | `programs 0 \| broadcasts 0` and **`MOVED-TWIN SKIPPED 98 row(s)`** - the guard fired on every race and stopped the duplication it was written for |
+| IndyCar | 18 parsed, `programs 18 \| broadcasts 18`, access available 18 |
+| WWE | 33 weekly shows + 3 PLEs, `programs 36 \| broadcasts 36` |
+| AEW | 35 episodes, `programs 35 \| broadcasts 70`, `source tiers: research_document 2 \| slot_default 33`, **no DRIFT line** - the site still agrees with the slot file |
+| UFC | 9 cards, `programs 9 \| broadcasts 9` |
+| Studio shows | 109 instances, `programs 109 \| broadcasts 140`, `registry 7 shows \| instances 109 written, 109 linked` |
+| Reconcile program eligibility | `reconciled 0 game(s) and 307 program(s)` |
+| Reconcile canonical facts (existing) | `reconciled 15 game(s) and 0 program(s)` |
+
+**109 and not 111** because the step passes no `--from` and so starts at today: the Aug 29 GameDay and
+Big Noon instances are not regenerated, and the two already loaded stay. Not a loss - the count in the
+database is still 111.
+
+**The NASCAR line is the one to read.** Without the guard that step would have inserted 98 second
+copies of the 2026 season tonight, and Joe would have seen every race twice.

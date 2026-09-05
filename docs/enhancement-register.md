@@ -309,3 +309,47 @@ whole point of this register, and it is not negotiable for convenience.
 - **Program eligibility** — `viewer_game_eligibility.game_id` is `NOT NULL`, so a program cannot
   carry one. This gates v1.7: the first surface that shows a race to a reader has to say whether he
   can watch it.
+
+### Close-outs — 2026-09-05/06, prompt 48
+
+**Everything §17 recorded as "not yet built" is built.** Joe put the eleven events & shows documents
+in the repo (stage 0, `1b20768`), which was the single blocker, and the rest followed. Each section
+below is closed against what shipped; what remains is named, not implied.
+
+| section | shipped | what remains |
+|---|---|---|
+| **§7 Q2 — motorsport, race only** | NASCAR 98 (prompt 47) and **IndyCar 18** (`5bca121`), races only, no practice or qualifying | the 98 NASCAR rows are **four hours early** — see below |
+| **§7 Q3 — purchasable excluded** | AEW PPVs and the HBO Max "Zero Hour" pre-show are not loaded (`3ec3231`) | nothing |
+| **§7 Q4 — studio shows, bookends only** | 7 shows, **111 instances** (`83dea25`) | four shows the brief named have no verified slot in the doc and are recorded in `data/studio_shows.json` `_not_loaded` |
+| **§7 Q5 / §17 amendment 1 — crews** | GameDay's crew is an **ESPN announcement**, nine seats, each citing the release — stronger than the hand-curation the amendment permits | **Big Noon's seats are `TBA`**: FOX Press Pass is now verified fetch-clean but CONTENT-EMPTY (JS-rendered), so no seat is filled from memory |
+| **§7 Q7 — WWE scope, NXT dropped** | Raw 17, SmackDown 16, 3 PLEs (`1d21442`). NXT's slot is in the same Premier Shows block and is dropped, with the drop reported | the wwe.com dual ESPN/Netflix listing on Oct 10 and Nov 28 — ESPN Unlimited only is loaded |
+| **§8 — SNME on Peacock** | Sunday Night's Main Event, Sept 6, Atlanta, **Peacock** | nothing |
+| **§9 — chips** | The chip roster already matched §16 and was **left alone**. §9's missing half — the **Cup / O'Reilly / Truck sub-filter** — ships as a SECOND row beneath the tiles (`376ef36`) | nothing |
+| **§9 — odds** | **not loaded.** The brief forbade adding a provider key tonight | The Odds API `mma_mixed_martial_arts` and `motorsport_nascar_cup` |
+| **§10 — the program card** | **rendering-contract v1.7** (`376ef36`): the card on both grids, the list variant, the now marker, studio bookends, `open_ended` reconciled | the archived desktop grid is still game-only — the drawing exists and is tested, the daily job writes it no programs file |
+| **§12 — `render_policies` and the now marker** | Both landed **in one change**, as §12 required: the five program sports gained `prime_window_start` beside the `open_ended` reconciliation | nothing |
+| **§13 — the AEW amendment** | Honoured: AEW loads, appears under ALL SPORTS, renders on TBS and TNT, and has **no chip** | nothing |
+| **§17 amendment 2 — IndyCar now** | Built against **2026**, not deferred to 2027 (`5bca121`) | the 2027 schedule publishes in October; `--year` moves then |
+
+**The one thing a reader will notice.** All 98 NASCAR races are **four hours early**: cf.nascar.com
+publishes naive Eastern timestamps and `parse_iso` stamped them UTC. Established against ESPN on six
+races. The adapter is fixed; the stored rows are not, because correcting a `start_at` changes the
+natural key and a plain re-load would insert 98 duplicates rather than fix 98 rows. A guard now
+refuses that (and fired on all 98 on the runner tonight), which is what makes leaving them safe.
+**It needs a Joe-approved delete-and-reload or a targeted update.**
+
+### `docs/research/events-summary-2.md` §6 — the open questions this run settled
+
+| question | settled as | where |
+|---|---|---|
+| FOX NFL Kickoff vs FOX NFL Sunday — one card or two | **two**, the doc's own recommendation | `data/studio_shows.json` |
+| studio-city display when not on-site | **road only** — an in-studio show prints no subtitle at all | contract §11.10, `subtitleFor()` |
+| WWE/AEW crews — "reported" tier or omit | **omit.** The design of record's crew tier takes announcements; both promotions' crews are reported by trades | `adapters/wwe.py`, `adapters/aew.py` |
+| AEW bookends when the PPV is excluded | the doc's recommendation, taken: **linear pre-shows yes** (Tailgate on TNT loads), **HBO Max Zero Hour no** | `data/aew_2026_schedule.json` |
+| UFC CBS partial card shown | **superseded.** The card renders plain; the window is detail-panel data. No 2026 card flags a simulcast, so there is none to draw | design of record; `adapters/ufc.py` |
+| SNME as PLE-class | **confirmed** — `special_event` on Peacock, per §8 | `adapters/wwe.py` |
+| IndyCar deferral to 2027 | **overruled** by §17: built against 2026 | `adapters/indycar.py` |
+| Marquee (gold sunburst) lists per sport | **still open.** No program carries a marquee flag; the criterion is Joe's to set | — |
+
+**§17's two amendments are already recorded there and are not restated here.** Both were honoured:
+GameDay's crew is hand-curatable and turned out to be announceable, and IndyCar was built now.
