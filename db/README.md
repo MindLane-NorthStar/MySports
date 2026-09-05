@@ -703,3 +703,55 @@ Shows block states a standing slot and nothing else, so every Monday and Friday 
 is no page to consult for a holiday move. `docs/research/wwe.md` §5 notes NBCU has moved SmackDown on
 holidays before, marked UNVERIFIED for 2026. The daily refresh step re-reads the block, so a slot
 change lands; a one-week move will not.
+
+## AEW, rest of 2026 — 2026-09-05 (prompt 48 stage 5)
+
+35 episodes through `adapters/aew.py`. Backups first:
+`artifacts/backups/{programs,game_broadcasts}_2026-09-05T211905Z.csv`.
+
+**WHICH PATH RAN, which is the first thing to know about this data.** `docs/research/aew.md` §1 and §5
+are emphatic that the **WBD monthly HBO Max schedule is the ONLY authority** for AEW's night and
+network — Collision aired on TBS rather than TNT on Aug 22 and moved to Thursdays twice in July. The
+brief's fallback order is the WBD schedule, else a trade republication, else the slot default marked
+as such.
+
+**The third path ran.** Measured on the day: `press.wbd.com` answers **200** — its stage-0 403 was
+transient — but carries **no AEW content at its root**, and neither `pwmania.com` nor
+`ewrestlingnews.com` had republished a monthly schedule. So 33 of 35 rows are tiered `slot_default`
+and 2 are `research_document`.
+
+**The slots are sourced, not remembered.** allelitewrestling.com states both verbatim — *"Dynamite
+airs every Wednesday night 8e/7c on TBS + Simulcasted on HBO MAX"*, *"AEW Collision airs every
+Saturday at 8e/7c on TNT + Simulcasted on HBO MAX"* — recorded at `tests/fixtures/aew_slots.html` and
+asserted against its bytes. The adapter **re-reads that page on every run** and reports a DRIFT line
+if the site stops agreeing with `data/aew_2026_schedule.json`, which is the failure mode a slot
+default invites.
+
+| | |
+|---|---|
+| programs | 4,020 → **4,055** (exactly +35) |
+| AEW Dynamite | 17, TBS + HBO Max |
+| AEW Collision | 17, TNT + HBO Max (one of them the All Out–week move) |
+| AEW Collision: Tailgate to All Out | 1, TNT, Sat Sept 26 7 PM |
+| broadcasts on programs | 152 → **222** (two per episode: the linear row and the simulcast) |
+| games | 3,868, unchanged |
+
+**September matches the research doc's list exactly** — Sept 5 / 12 / 19 Collision, Sept 9 / 16 / 23
+Dynamite, Collision moved to **Wed Sept 23 at 10 PM for one hour** in All Out week (and that
+Saturday's regular Collision suppressed, not doubled), and the Tailgate special on Sept 26. Second
+load moved nothing. Reconcile **run id 87**, 187 programs, 0 uncovered, 0 orphans; the game-side md5
+is unchanged.
+
+Verdicts: `linear tbs` 18 · `linear tnt` 17 — **the linear row wins and HBO Max is the chip**, which
+is `docs/research/aew.md` §2's rule. Both rows are written; only the linear one is `is_primary`.
+
+### Not loaded, each with its reason
+
+| what | why |
+|---|---|
+| AEW PPVs | register §7 Q3 — purchasable content is excluded, and v0.5 has no `purchasable` access state |
+| "Zero Hour" HBO Max pre-shows | `docs/research/aew.md` §10's recommendation, taken: it exists only to sell the PPV |
+| **Countdown to All Out, Sept 23 11 PM** | **a source gap, not a scope decision.** A linear pre-show IS in scope by the same §10 recommendation; the doc gives the time but **not the network**, and a network typed from memory is the invented fact this run does not make. It loads the day a network is stated. |
+
+**AEW gets no chip** (register §13's amendment to §9) — it loads, appears under ALL SPORTS and renders
+on its networks. That is a chip-row decision and the adapter is unaffected by it.

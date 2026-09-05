@@ -1,0 +1,64 @@
+{
+  "_about": "AEW 2026 schedule EXCEPTIONS to the standing slots, and the standing slots themselves. THE WBD MONTHLY HBO MAX SCHEDULE IS THE ONLY AUTHORITY for AEW's night and network - docs/research/aew.md section 1 and section 5 both say so, because Collision moves both - and it could not be reached: press.wbd.com answers 200 but carries no AEW content at its root, and neither pwmania.com nor ewrestlingnews.com republished a monthly schedule on the day this ran. So the SLOT DEFAULT path ran, and every generated episode is tiered `slot_default` to say so. The exceptions below are the ones docs/research/aew.md recorded from the September schedule; each carries its own citation. A later WBD parse supersedes this file rather than merging with it. EDITABLE BY JOE: an entry here overrides a generated episode on the same date.",
+  "_slots_source": "allelitewrestling.com states both standing slots verbatim: \"Dynamite airs every Wednesday night 8e/7c on TBS + Simulcasted on HBO MAX\" and \"AEW Collision airs every Saturday at 8e/7c on TNT + Simulcasted on HBO MAX\". Recorded at tests/fixtures/aew_slots.html.",
+  "slots": {
+    "AEW Dynamite": {
+      "weekday": 2,
+      "start_et": "20:00",
+      "duration_min": 120,
+      "linear": "TBS",
+      "simulcast": "HBO Max",
+      "source": "allelitewrestling.com"
+    },
+    "AEW Collision": {
+      "weekday": 5,
+      "start_et": "20:00",
+      "duration_min": 120,
+      "linear": "TNT",
+      "simulcast": "HBO Max",
+      "source": "allelitewrestling.com"
+    }
+  },
+  "exceptions": [
+    {
+      "date": "2026-09-23",
+      "show": "AEW Collision",
+      "action": "move",
+      "start_et": "22:00",
+      "duration_min": 60,
+      "linear": "TBS",
+      "simulcast": "HBO Max",
+      "note": "All Out week: Collision runs one hour at 10 PM Wednesday, after Dynamite",
+      "source": "docs/research/aew.md section 2"
+    },
+    {
+      "date": "2026-09-26",
+      "show": "AEW Collision",
+      "action": "replace",
+      "title": "AEW Collision: Tailgate to All Out",
+      "start_et": "19:00",
+      "duration_min": 120,
+      "linear": "TNT",
+      "simulcast": "HBO Max",
+      "note": "the Saturday Collision that week IS the Tailgate special",
+      "source": "docs/research/aew.md section 2"
+    }
+  ],
+  "not_loaded": [
+    {
+      "what": "Countdown to All Out, Sept 23 11 PM",
+      "why": "the research doc gives the time but NOT the network. A linear pre-show is in scope (docs/research/aew.md section 10's recommendation, taken), so this is a gap in the source rather than a scope decision - it loads the day a network is stated.",
+      "source": "docs/research/aew.md section 2"
+    },
+    {
+      "what": "Zero Hour PPV pre-shows on HBO Max",
+      "why": "docs/research/aew.md section 10 recommends NO: Zero Hour exists only to sell a PPV, and the PPV itself is excluded as purchasable (register section 7 Q3).",
+      "source": "docs/research/aew.md section 10"
+    },
+    {
+      "what": "AEW PPVs (All Out and the rest)",
+      "why": "register section 7 Q3 - purchasable content is excluded, and there is no purchasable access state in v0.5.",
+      "source": "docs/enhancement-register.md section 7"
+    }
+  ]
+}
