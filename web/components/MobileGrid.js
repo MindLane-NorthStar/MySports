@@ -63,6 +63,21 @@ const SEAM_PX = 30; // the dashed cut occupies this much of the axis (M3)
 
 
 /**
+ * Is every component of this record zero? (contract v1.6.14)
+ *
+ * Records arrive as `W-L` (most sports), `W-L-OTL` (NHL) and, in principle, four parts. Splitting on
+ * the separator and testing the numbers covers all of them and cannot be surprised by a new arity;
+ * a literal pattern can, and did. A record with any non-numeric component is NOT all-zero - it is
+ * something this function does not understand, and suppressing it would hide real data.
+ */
+function allZeroRecord(rec) {
+  if (!rec) return false;
+  const parts = String(rec).trim().split('-');
+  if (parts.length < 2) return false;
+  return parts.every((x) => /^\d+$/.test(x) && Number(x) === 0);
+}
+
+/**
  * The record run beside a name (contract v1.1). `games.home_record` / `away_record` are the CFB
  * enrichment path and are null for every game in the database today, so the run falls back to the
  * club's current team_records row - the same number the listings card shows. A club with neither
@@ -74,10 +89,12 @@ function teamLine(game, side, standings) {
   const stored = side === 'home' ? game.home_record : game.away_record;
   const row = standings ? standingFor(standings, t?.id, game.season) : null;
   const rec = stored || (row ? recordText(row, game.sport) : null);
-  // CONTRACT §3: "never (0-0)". A team that has not played tells the reader nothing, and on a
-  // week-1 slate it is every team - the Steelers block read "FALCONS0-0 / @STEELERS0-0" before
-  // this. Suppression was specified and never implemented on the phone.
-  const shownRec = rec && !/^0-0(-0)?$/.test(rec.trim()) ? rec : null;
+  // CONTRACT §3 / v1.6.14: "never (0-0)". A team that has not played tells the reader nothing, and
+  // on a week-1 slate it is every team - the Steelers block read "FALCONS0-0 / @STEELERS0-0" before
+  // prompt 31. PARSED, not matched against literals: the old test was /^0-0(-0)?$/, which covered the
+  // two shapes that existed when it was written and would have missed a four-part record. A record
+  // is absent when every component of it is zero, whatever the arity.
+  const shownRec = allZeroRecord(rec) ? null : rec || null;
   return {
     rank: Number.isInteger(rank) && rank > 0 ? String(rank) : null,
     name: (cardName(t, side === 'home' ? game.home_team_id : game.away_team_id) || '').toUpperCase(),
@@ -116,7 +133,9 @@ export default function MobileGrid({ games, sport, day, standings, onOpen }) {
       for (const side of ['home', 'away']) {
         const l = teamLine(it.game, side, standings);
         const at = side === 'home' ? '@ ' : '';
-        const text = `${at}${l.rank ? `${l.rank} ` : ''}${l.name}${l.record ? `  ${l.record}` : ''}`;
+        // v1.6.14: ONE space before the record, and it is a real space in the NAME's font - the
+        // same thing the block renders, so this measurement and that render cannot disagree.
+        const text = `${at}${l.rank ? `${l.rank} ` : ''}${l.name}${l.record ? ` ${l.record}` : ''}`;
         widest = Math.max(widest, measure(text, nameFont));
       }
     }
@@ -468,8 +487,10 @@ export function fitNameSize(measure, sides, span, marker = '@ ') {
     let w = piece(side.name, fs);
     if (side.rank) w += piece(`${side.rank} `, fs);
     if (withMarker) w += piece(marker, fs);
-    // the record renders at 60% of the name size (contract §3), so it is measured there
-    if (side.record) w += piece(` ${side.record}`, fs * 0.6);
+    // The record renders at 60% of the name size (contract §3) but the SPACE before it does not -
+    // it is a text node in the name's own run - so each is measured at its own size. Folding the
+    // space into the 60% piece measured it 40% narrow on every card that carries a record.
+    if (side.record) w += piece(' ', fs) + piece(side.record, fs * 0.6);
     return w;
   };
   for (let fs = NAME_MAX; fs >= NAME_MIN; fs -= 0.2) {
@@ -556,7 +577,12 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
           <div className="mname" style={{ fontSize: nameSize, background: awaySurface, color: awayInk }}>
             {away.rank ? <span className="mrank">{away.rank}</span> : null}
             {away.name}
-            {away.record ? <span className="mrec">{away.record}</span> : null}
+            {away.record ? (
+              <>
+                {' '}
+                <span className="mrec">{away.record}</span>
+              </>
+            ) : null}
           </div>
           {/* D1: full width, not 86%. An inset rule was right when the two names were floating
               pills on a panel; on one continuous surface it left a 7% notch of band colour at each
@@ -568,7 +594,12 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
             <span className="mat">{game.neutral_site ? 'vs' : '@'}</span>
             {home.rank ? <span className="mrank">{home.rank}</span> : null}
             {home.name}
-            {home.record ? <span className="mrec">{home.record}</span> : null}
+            {home.record ? (
+              <>
+                {' '}
+                <span className="mrec">{home.record}</span>
+              </>
+            ) : null}
           </div>
         </div>
         <div
