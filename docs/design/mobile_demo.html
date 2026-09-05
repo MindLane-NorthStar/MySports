@@ -321,6 +321,9 @@ function tcol(g, t, side){
   const pit = g.sport!=="mlb" ? "" :
     (p && p[side==="home"?"h":"a"]) ? `<span class="tl3">${esc(p[side==="home"?"h":"a"])}</span>`
                                     : `<span class="tl3 tba">Starter TBA</span>`;
+  // The class here is only the FIRST PAINT. fitNames() below re-picks it by measured width after
+  // the DOM exists, which is what the app does - character count cannot know that "South Alabama" is
+  // thirteen characters and still needs 110px in the 81px a 390px card has.
   const nmcls = t.name.length>19 ? " class=\"nm3\"" : t.name.length>13 ? " class=\"nm2\"" : "";
   // C2: the standing string splits at the first separator - the record goes up beside the name and
   // the placement stays on line 2. The app does this properly in lib/standings.js standingParts();
@@ -561,6 +564,43 @@ function boot(el, variant){
   NLSIZE  = "nl23";  // LOCKED per Joe 2026-09-02: network logo = 2/3 height, centered on line 2
   GRIDSTYLE = variant==="A" ? "cut" : "sliver";
   el.innerHTML=appHTML(variant);
+  fitNames(el);
+}
+
+/**
+ * THE NAME OUTRANKS ITS RECORD (Joe, prompt 42), measured against the room the row actually has.
+ *
+ * The app does this in web/lib/cardGeometry.js fitNameAndRecord(); this mirrors it so the reference
+ * shows what ships. Order of concession, least visible first: step the name 15 -> 12.5 -> 11 while it
+ * still fits beside the record, then DROP THE RECORD, and only then let the name truncate. The record
+ * is removed from the flow rather than hidden, because visibility:hidden keeps the box and the gap
+ * and so concedes nothing - the width is the entire point.
+ */
+function fitNames(root){
+  const cv = document.createElement("canvas").getContext("2d");
+  const TIERS = [[15,""],[12.5,"nm2"],[11,"nm3"]];
+  for (const tl1 of root.querySelectorAll(".tcol .tl1")) {
+    const nm = tl1.querySelector("span:not(.rec)"), rec = tl1.querySelector(".rec");
+    if (!nm) continue;
+    const img = tl1.querySelector("img");
+    const cs = getComputedStyle(tl1), ns = getComputedStyle(nm);
+    const gap = parseFloat(cs.columnGap || cs.gap) || 0;
+    const rowW = tl1.getBoundingClientRect().width;
+    const imgW = img ? img.getBoundingClientRect().width : 0;
+    // tabular figures share the widest digit's advance, and canvas cannot ask for them - so every
+    // digit is measured as a '0' rather than as the narrower proportional glyph that would fit.
+    const recW = rec ? (cv.font = getComputedStyle(rec).fontWeight+" "+getComputedStyle(rec).fontSize+" "+ns.fontFamily,
+                        cv.measureText(rec.textContent.replace(/[0-9]/g,"0")).width) : 0;
+    const roomNoRec = rowW - imgW - gap;
+    const roomRec   = rec ? roomNoRec - gap - recW : roomNoRec;
+    const need = (px) => (cv.font = ns.fontWeight+" "+px+"px "+ns.fontFamily, cv.measureText(nm.textContent).width);
+    let picked = null;
+    for (const [px,cls] of TIERS) if (need(px) <= roomRec) { picked = [px,cls,true]; break; }
+    if (!picked) for (const [px,cls] of TIERS) if (need(px) <= roomNoRec) { picked = [px,cls,false]; break; }
+    if (!picked) picked = [11,"nm3",false];
+    nm.className = picked[1];
+    if (rec && !picked[2]) rec.remove();
+  }
 }
 function init(el, variant){ boot(el, variant); wire(el, variant); el.dataset.variant=variant; }
 init($("#appA"),"A"); init($("#appB"),"B");

@@ -206,7 +206,7 @@ export function slotContent(game, fav = null) {
 
   // 1. An exception outranks everything, odds included.
   if (status === 'postponed' || status === 'cancelled') {
-    return { kind: 'exception', markSide: null, tied: false, row2: null,
+    return { kind: 'exception', markSide: null, tied: false, row2: null, row2Px: ROW2_PX.normal,
              row3: resultLabel(game), tone: 'sched' };
   }
 
@@ -217,7 +217,7 @@ export function slotContent(game, fav = null) {
   //     and finished 9 - 6. Suppressing every stale score, not just the empty-looking ones, is what
   //     made this guard right rather than lucky. One quiet row, no number.
   if (isStaleLive(game)) {
-    return { kind: 'stale', markSide: null, tied: false, row2: null,
+    return { kind: 'stale', markSide: null, tied: false, row2: null, row2Px: ROW2_PX.normal,
              row3: 'Final pending', tone: 'sched' };
   }
 
@@ -244,7 +244,7 @@ export function slotContent(game, fav = null) {
 
   // 3. Playing, but the provider has not sent numbers yet.
   if (status === 'in_progress') {
-    return { kind: 'live', markSide: null, tied: false, row2: null,
+    return { kind: 'live', markSide: null, tied: false, row2: null, row2Px: ROW2_PX.normal,
              row3: resultLabel(game), tone: 'live' };
   }
 
@@ -266,7 +266,8 @@ export function slotContent(game, fav = null) {
 
   // 5. Everything else - about four future games in five. The dash replaces the word "Sched", which
   //    restated what the gold kickoff time two columns to the left already said.
-  return { kind: 'none', markSide: null, tied: false, row2: null, row3: '—', tone: 'none' };
+  return { kind: 'none', markSide: null, tied: false, row2: null, row2Px: ROW2_PX.normal,
+           row3: '—', tone: 'none' };
 }
 
 

@@ -134,7 +134,11 @@ test('the word Sched appears nowhere in the ladder', () => {
 });
 
 test('every rung returns the same shape, so the renderer needs no special cases', () => {
-  const keys = ['kind', 'markSide', 'tied', 'row2', 'row3', 'tone'];
+  // row2Px joined the shape in prompt 42 - the size row 2 paints at, so a three-digit NBA score
+  // can step 17 -> 15px and stop setting the slot track's width for every other sport. Every
+  // rung carries it, including the ones with no row 2, because THIS test is the reason the
+  // renderer needs no special cases and that is worth more than a shorter object.
+  const keys = ['kind', 'markSide', 'tied', 'row2', 'row2Px', 'row3', 'tone'];
   const cases = [
     [{ result_status: 'postponed' }, null],
     [{ result_status: 'final', away_score: 1, home_score: 0 }, null],

@@ -67,10 +67,13 @@ test('the mark box fits inside its track at both breakpoints', () => {
 });
 
 test('the slot track fits the widest string the ladder can emit', () => {
-  // Measured in the real faces (stage 2a): portrait 86.06px "116 - 104", desktop 98.52px
-  // "Final pending". A track narrower than either would clip or wrap a real state.
-  assert.ok(SLOT.track.portrait >= 86.06, `portrait track ${SLOT.track.portrait} < 86.06`);
+  // Re-measured in the real faces after prompt 42's three-digit step-down. "116 - 104" was the
+  // binding case at 86.06px (17px); at 15px it is 75.94px, so "Final pending" - the stale-live
+  // guard's string - now binds at 80.05px in portrait and 98.52px on desktop.
+  assert.ok(SLOT.track.portrait >= 80.05, `portrait track ${SLOT.track.portrait} < 80.05`);
   assert.ok(SLOT.track.desktop >= 98.52, `desktop track ${SLOT.track.desktop} < 98.52`);
+  // and still wide enough for a stepped-down three-digit score
+  assert.ok(SLOT.track.portrait >= 75.94, 'a three-digit score must fit at its stepped size');
   // and the old cap that would have clipped a three-digit score is gone
   assert.doesNotMatch(PORTRAIT, /\.mslot\s*\{[^}]*max-width/s, '.mslot must not re-acquire a max-width');
 });
@@ -163,4 +166,101 @@ test('single-row states still emit ONE row - no empty rows are reserved', () => 
     assert.equal(s.row2, null, `${s.kind} must not reserve row 2`);
     assert.equal(s.markSide, null);
   }
+});
+
+// ---------------------------------------------------------------- prompt 42: the name's room
+import { NAME_TIERS, NAME_ROW, fitNameTier, nameRoom, fitNameAndRecord } from '../lib/cardGeometry.js';
+import { row2Size, ROW2_PX, slotContent as ladder } from '../lib/format.js';
+
+/** A stand-in for the canvas: width proportional to size, so the tiers are exercised deterministically. */
+const fake = (perCharAt15) => (text, font) => {
+  const px = parseFloat(String(font).match(/(\d+(?:\.\d+)?)px/)[1]);
+  return text.length * perCharAt15 * (px / 15);
+};
+
+test('the tier is chosen by WIDTH, not character count', () => {
+  const m = fake(9); // "Sanjose" -> 63px at 15, 52.5 at 12.5, 46.2 at 11
+  const font = (px) => `600 ${px}px Inter`;
+  assert.equal(fitNameTier(m, 'Guardians', 200, font).px, 15, 'plenty of room keeps 15');
+  assert.equal(fitNameTier(m, 'Guardians', 70, font).px, 12.5, 'a squeeze steps one down');
+  assert.equal(fitNameTier(m, 'Guardians', 60, font).px, 11, 'tighter still steps to the floor');
+  const tight = fitNameTier(m, 'Guardians', 10, font);
+  assert.equal(tight.px, 11);
+  assert.equal(tight.fits, false, 'below the floor it reports that it does not fit');
+});
+
+test('character count and width disagree, which is the whole point', () => {
+  // "South Alabama" is 13 characters, so the old rule gave it 15px; measured it needs 110px in 81.
+  const m = fake(8.5);
+  const font = (px) => `600 ${px}px Inter`;
+  assert.equal('South Alabama'.length, 13, 'exactly on the old 13-character boundary');
+  assert.equal(fitNameTier(m, 'South Alabama', 81, font).px, 11);
+});
+
+test('nameRoom charges the record its width AND the second gap', () => {
+  const bare = nameRoom(114, 0);
+  assert.equal(bare.withoutRecord, 114 - NAME_ROW.logo - NAME_ROW.gap);
+  assert.equal(bare.withRecord, bare.withoutRecord, 'no record, no second gap');
+  const withRec = nameRoom(114, 30);
+  assert.equal(withRec.withRecord, bare.withoutRecord - NAME_ROW.gap - 30);
+});
+
+test('the record yields before the name, and is dropped rather than shrunk', () => {
+  const m = fake(8);
+  const font = (px) => `600 ${px}px Inter`;
+  // 'Guardians' = 9 chars -> 72px at 15. Room 81 without the record, 44 with it.
+  const r = fitNameAndRecord(m, 'Guardians', 30, 114, font);
+  assert.equal(r.showRecord, false, 'the record goes so the name can stay large');
+  assert.equal(r.px, 15, 'and the name keeps its full size');
+  assert.equal(r.truncates, false);
+});
+
+test('the record survives when the name fits beside it', () => {
+  const m = fake(8);
+  const font = (px) => `600 ${px}px Inter`;
+  const r = fitNameAndRecord(m, 'Reds', 30, 114, font);
+  assert.equal(r.showRecord, true);
+  assert.equal(r.px, 15);
+});
+
+test('a name steps down BEFORE the record is dropped', () => {
+  const m = fake(8);
+  const font = (px) => `600 ${px}px Inter`;
+  // 7 chars: 56px at 15, 46.7 at 12.5. Room with the record is 50 -> 12.5 fits, so the record stays.
+  const r = fitNameAndRecord(m, 'Rutgers', 27, 111, font);
+  assert.equal(r.showRecord, true, 'the least visible concession is taken first');
+  assert.equal(r.px, 12.5);
+});
+
+test('only when nothing fits without the record does the name truncate', () => {
+  const m = fake(20);
+  const font = (px) => `600 ${px}px Inter`;
+  const r = fitNameAndRecord(m, 'UT Rio Grande Valley', 30, 114, font);
+  assert.equal(r.showRecord, false);
+  assert.equal(r.px, Math.min(...NAME_TIERS));
+  assert.equal(r.truncates, true, 'and it says so, rather than pretending');
+});
+
+test('a three-digit score gets the step-down hint; a two-digit one does not', () => {
+  assert.equal(row2Size(9, 6), ROW2_PX.normal);
+  assert.equal(row2Size(99, 98), ROW2_PX.normal);
+  assert.equal(row2Size(116, 104), ROW2_PX.wide);
+  assert.equal(row2Size(100, 98), ROW2_PX.wide);
+  assert.equal(ROW2_PX.normal, 17);
+  assert.equal(ROW2_PX.wide, 15);
+});
+
+test('the moneyline never takes the step-down, however many digits it has', () => {
+  const g = { sport: 'nfl', result_status: 'scheduled', canonical_kickoff_at_utc: '2026-09-13T17:00:00Z' };
+  const odds = ladder(g, { side: 'home', ml: -1200, odds: { total: 47.5 } });
+  assert.equal(odds.kind, 'odds');
+  assert.equal(odds.row2Px, ROW2_PX.normal, '"-1200" is 54.95px at 17px and crowds nothing');
+});
+
+test('a scored game carries its row-2 size through the ladder', () => {
+  const g = { sport: 'nba', result_status: 'final', away_score: 104, home_score: 116,
+              canonical_kickoff_at_utc: '2026-09-13T17:00:00Z' };
+  const s = ladder(g);
+  assert.equal(s.row2, '116 - 104');
+  assert.equal(s.row2Px, ROW2_PX.wide);
 });
