@@ -2,9 +2,10 @@
 //
 // display: 'standalone' removes Safari's chrome, which is the app feel this was asked for - but it
 // also removes the ADDRESS BAR AND THE BROWSER BACK BUTTON, so the app's own navigation has to carry
-// every route on its own. The NavBanner masthead links Today / Weeks / History from every page and
-// the game detail panel has its own dismiss, so every route is reachable and escapable from inside
-// the app. If that ever stops being true, the revert is one line: display: 'browser'.
+// every route on its own. The .homenav row under the banner links Today / Weeks / History from every
+// page - it is the same row on every route since the compact bar was retired - and the game detail
+// panel has its own dismiss, so every route is reachable and escapable from inside the app. If that
+// ever stops being true, the revert is one line: display: 'browser'.
 
 export default function manifest() {
   return {

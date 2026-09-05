@@ -3,13 +3,18 @@
 // WHY THIS IS A TEST AND NOT A CLICK-THROUGH: `next build` cannot run on this laptop (Windows
 // Application Control blocks the SWC binary), so the app cannot be served locally to click. What CAN
 // be asserted without a bundler is the thing that actually decides the answer - that the route list
-// is complete, and that PrimaryNav is mounted on BOTH branches of Chrome. If both hold, every route
+// is complete, and that PrimaryNav is mounted UNCONDITIONALLY in Chrome. If both hold, every route
 // reaches every other route, which is the property display:"standalone" depends on: with no address
 // bar and no back button, a route the app cannot link to is a route the user cannot leave.
+//
+// Chrome used to have two branches - the banner on `/`, the compact NavBanner bar everywhere else -
+// and three tests here pinned that shape by reading the source. Joe's ruling of 2026-09-04 retired
+// the split, so those three are re-based onto the new structure rather than deleted: the assertions
+// still read the source, they just assert that there is ONE masthead instead of two.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -35,27 +40,43 @@ test('the navigation graph is TOTAL: every route reaches every other route', () 
   assert.equal(routes.length, 3);
 });
 
-test('PrimaryNav is mounted on the HOME branch of Chrome - the dead end this fixes', () => {
+test('Chrome no longer branches on the route: one masthead, not two', () => {
   const chrome = src('components/Chrome.js');
-  const home = chrome.slice(chrome.indexOf("usePathname() === '/'"), chrome.indexOf('return <NavBanner'));
-  assert.match(home, /<PrimaryNav/, 'the home route must carry the nav; Banner.js has no links at all');
-  assert.match(home, /\{banner\}/, 'and it must still render the banner itself');
+  assert.doesNotMatch(chrome, /usePathname\(\)\s*===\s*'\/'/, 'the pathname branch is gone');
+  // Matched against USE, not against the word: the comment at the top of Chrome.js records why the
+  // compact bar went, and that history is worth more than a grep-clean file.
+  assert.doesNotMatch(chrome, /^import.*NavBanner/m, 'NavBanner is no longer imported');
+  assert.doesNotMatch(chrome, /<NavBanner/, 'nor mounted');
+  assert.doesNotMatch(chrome, /usePathname/, 'nothing here needs the client any more');
 });
 
-test('PrimaryNav is mounted on the NON-home branch too, via NavBanner', () => {
-  assert.match(src('components/NavBanner.js'), /<PrimaryNav\s+className="nb-nav"/);
+test('the banner and PrimaryNav are rendered UNCONDITIONALLY, so every route carries them', () => {
+  const chrome = src('components/Chrome.js');
+  assert.match(chrome, /\{banner\}/, 'every route renders the banner it is handed');
+  assert.match(chrome, /<PrimaryNav\s+className="hn-nav"/, 'and the tab row beneath it');
+  assert.doesNotMatch(chrome, /return[\s\S]*return/, 'one return, so there is no second shape');
 });
 
-test('NavBanner keeps its existing appearance: same wrapper class as before', () => {
-  const nav = src('components/NavBanner.js');
-  assert.match(nav, /className="nb-nav"/, 'the compact bar must still use nb-nav');
-  assert.match(nav, /className="navbar"/);
-  assert.match(nav, /nb-brand|nb-tv|nb-wm/, 'brand block untouched');
+test('the compact bar is GONE, not merely unused', () => {
+  assert.equal(existsSync(join(HERE, '..', 'components/NavBanner.js')), false, 'NavBanner.js is deleted');
+  const css = src('app/globals.css');
+  assert.doesNotMatch(css, /\.navbar\{/, 'the .navbar rule went with it');
+  assert.doesNotMatch(css, /--nav-safe/, 'and its private safe-area variable');
+  assert.doesNotMatch(css, /\.nb-nav/, 'and the nb-* block');
+});
+
+test('.banner carries the ONLY top safe-area inset, and now it is on every route', () => {
+  // This is what prompt 31 was fixing when it gave .navbar an inset of its own: Weeks and History ran
+  // under the iPhone clock because the single inset rule lived on a component they did not render.
+  // With one masthead there is one inset again, and it is the right one.
+  const css = src('app/globals.css');
+  assert.equal((css.match(/safe-area-inset-top/g) || []).length, 1, 'exactly one top inset rule');
+  assert.match(css, /\.banner\{[\s\S]{0,300}?safe-area-inset-top/, 'and it belongs to .banner');
 });
 
 test('there is exactly ONE definition of the link list', () => {
   // A second literal list is how the two mount points would silently drift.
-  for (const f of ['components/PrimaryNav.js', 'components/NavBanner.js', 'components/Chrome.js']) {
+  for (const f of ['components/PrimaryNav.js', 'components/Chrome.js']) {
     assert.doesNotMatch(src(f), /href:\s*'\/weeks'/, `${f} must not redeclare the route list`);
   }
   assert.match(src('lib/routes.js'), /href:\s*'\/weeks'/, 'routes.js is the one definition');
