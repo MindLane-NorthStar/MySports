@@ -16,6 +16,14 @@ declined to load anything: a second run would have inserted 98 duplicate race se
 updating 98 rows. `--input` twice must report inserts the first time and updates the second, and
 tests/test_load_programs.py asserts exactly that against --emit-sql.
 
+ACCESS COMES FROM THE VIEWER'S PROFILE, NEVER FROM THE ADAPTER. An adapter knows who is airing a
+race; only `data/access_profile.json` knows whether Joe can receive them. `adapters/nascar.py` wrote
+`access_status: "available"` for every broadcaster the feed named, and two 2026 races - the Clash at
+Bowman Gray and the Black's Tire 250 - are on **FS2**, which the profile lists as `unavailable`. So
+this loader classifies every broadcast row itself, through `adapters.common.access_status_for`, and
+an adapter's own `access_status` is accepted only when it is something the profile cannot know
+(`out_of_market`, `unverified` - the regional-window states).
+
 BROADCASTS ARE PER PROGRAM, NEVER A PER-SERIES CONSTANT. A NASCAR season is on FOX, FS1, FS2, NBC,
 Prime Video, TNT and USA in different weeks; writing "the Cup series is on FOX" would be wrong for
 most of the calendar. A broadcaster the network table does not know is loaded as
@@ -33,7 +41,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from pipeline.db import DB
+from adapters.common import access_lookup, access_status_for, normalize_outlet
+from pipeline.db import DB, ROOT
 
 # The conflict target per program type, mirroring the partial unique indexes in 0012 and 0013.
 CONFLICT = {
@@ -83,9 +92,25 @@ def normalise_network(key, known):
     return None, "TBA_NO_RIGHTS_HOLDER", warn
 
 
-def load(db, rows, known_networks):
+# The two states the access profile cannot decide, because they are facts about a regional window
+# rather than about what the viewer subscribes to. An adapter that knows one of them keeps it.
+ADAPTER_OWNED_ACCESS = ("out_of_market", "unverified")
+
+
+def access_for(broadcast: dict, profile: tuple[set[str], set[str]]) -> str:
+    """`access_status` for one broadcast row: the profile decides, unless the row states a window."""
+    stated = (broadcast.get("access_status") or "").strip().lower()
+    if stated in ADAPTER_OWNED_ACCESS:
+        return stated
+    label = broadcast.get("label") or broadcast.get("service_id") or ""
+    return access_status_for(normalize_outlet(label), *profile)
+
+
+def load(db, rows, known_networks, profile=None):
     counts: Counter = Counter()
     now = datetime.now(timezone.utc)
+    if profile is None:
+        profile = access_lookup(ROOT)
     for row in rows:
         ptype = row.get("program_type")
         conflict = CONFLICT.get(ptype)
@@ -119,6 +144,8 @@ def load(db, rows, known_networks):
         # was just inserted or already existed.
         for b in broadcasts:
             sid, certainty, warn = normalise_network(b.get("service_id"), known_networks)
+            access = access_for(b, profile)
+            counts["access:" + access] += 1
             for w in warn:
                 print("WARN unknown network %r on %r - loaded as TBA_NO_RIGHTS_HOLDER"
                       % (w, row.get("title")), file=sys.stderr)
@@ -137,7 +164,7 @@ def load(db, rows, known_networks):
                 "window_start = excluded.window_start, window_end = excluded.window_end",
                 (sid, b.get("delivery_surface") or "LINEAR", b.get("feed_side") or "NATIONAL",
                  bool(b.get("is_primary")), bool(b.get("requires_auth")),
-                 b.get("access_status") or "available", certainty, False, "NONE",
+                 access, certainty, False, "NONE",
                  b.get("label"), now, True, b.get("window_start"), b.get("window_end"),
                  row.get("sport"), ptype, row.get("title"), row.get("start_at")),
                 tag="game_broadcasts.program")
@@ -164,6 +191,9 @@ def main(argv: list[str] | None = None) -> int:
     db.close()
     print("programs %d | broadcasts %d | unknown networks %d | skipped %d"
           % (counts["programs"], counts["broadcasts"], counts["unknown_network"], counts["skipped"]))
+    split = sorted((k[len("access:"):], v) for k, v in counts.items() if k.startswith("access:"))
+    if split:
+        print("access: " + " | ".join("%s %d" % kv for kv in split))
     for table, n in sorted(db.quarantined.items()):
         print("QUARANTINED %s: %d row(s)" % (table, n))
     return 0

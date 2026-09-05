@@ -67,6 +67,20 @@ def test_the_reconcilers_all_branch_excludes_program_rows():
     assert 'bw = ""' not in text, "an empty broadcast where-clause is now a bug, not a default"
 
 
+def test_0014s_program_branch_is_program_scoped_in_its_own_sql():
+    """The mirror of the test above, for the query 0014 added.
+
+    The program branch may pass an empty where-clause, because PBC_SQL is scoped in its own text -
+    and that is exactly what has to be pinned, or a later edit could widen it to every broadcast row
+    in the table and hand a game's telecast to a race.
+    """
+    text = code("pipeline/reconcile.py")
+    assert "PBC_SQL" in text
+    body = text.split("PBC_SQL = ", 1)[1].split('"""', 2)[1]
+    assert "where b.program_id is not null" in body
+    assert "join networks_services" in body
+
+
 @pytest.mark.parametrize("needle", [
     "where b.game_id = any(%s)",                       # the --game branch
     "where b.game_id in (select g.id from games g ",   # the changed-evidence branch

@@ -3,6 +3,8 @@
 
     python -m pipeline.reconcile                       # games with evidence newer than their last decision (default)
     python -m pipeline.reconcile --all                 # every game (after a rule change: bump rule_version first)
+    python -m pipeline.reconcile --programs             # every PROGRAM that is not a game (0014 eligibility)
+    python -m pipeline.reconcile --all --programs       # both
     python -m pipeline.reconcile --game 401856766 --game nhl-2026020011
     python -m pipeline.reconcile --export artifacts/sql/reconcile_input.json      # live read only, no writes
     python -m pipeline.reconcile --input artifacts/sql/reconcile_input.json --emit-sql artifacts/sql/reconcile.sql   # offline dry run
@@ -11,6 +13,14 @@ Reads source_observations (+ sources, networks_services, game_broadcasts), decid
 game through pipeline/resolver.py, then writes: games.canonical_* / primary_network_id / canonical_state / rights_*,
 canonical_decisions (every evaluation), canonical_change_history (changes only), game_broadcasts.is_primary,
 viewer_game_eligibility (profile 1), refresh_runs. Never deletes; never guesses on a top-authority conflict.
+
+PROGRAMS (migration 0014, --programs). A race, a fight card, a weekly show or a studio bookend has no
+opponent, no kickoff to resolve and no observations - so it gets none of the resolver machinery above.
+What it does get is the SAME telecast ladder and the SAME access profile a game gets, through the one
+pure function both call (`telecast_verdict`), writing to `viewer_program_eligibility` instead of
+`viewer_game_eligibility`. A program with no broadcast rows is `tbd` / "no telecast observed", exactly
+like a bare game. Program rows whose `program_type` is `game` are SKIPPED: those are the shadow rows
+`pipeline/programs.py` writes beside real games, and their eligibility already lives on the game.
 """
 from __future__ import annotations
 
@@ -48,6 +58,18 @@ BC_SQL = """
 select b.game_id, b.service_id, b.delivery_surface::text, b.feed_side::text, b.access_status::text, b.carriage_certainty::text,
        b.blackout_rule::text, b.active, n.canonical_name
 from game_broadcasts b left join networks_services n on n.id = b.service_id {where} order by b.game_id, b.id"""
+
+# 0014. Programs that are NOT games: the shadow rows pipeline/programs.py writes beside every game
+# carry program_type = 'game' and their eligibility is the game's, already written above.
+PROGRAMS_SQL = """
+select p.program_id, p.sport::text, p.program_type::text, p.title, p.start_at
+from programs p where p.program_type <> 'game' {where} order by p.program_id"""
+
+PBC_SQL = """
+select b.program_id, b.service_id, b.delivery_surface::text, b.feed_side::text, b.access_status::text,
+       b.carriage_certainty::text, b.blackout_rule::text, b.active, b.is_primary, n.canonical_name
+from game_broadcasts b left join networks_services n on n.id = b.service_id
+where b.program_id is not null {where} order by b.program_id, b.id"""
 
 # Default mode selects games whose evidence CHANGED since their last decision: a new claim (observed_at) or a
 # withdrawn/superseded claim (valid_to). last_seen_at is deliberately excluded - a repeat sighting of the same
@@ -157,6 +179,27 @@ def market_covered(db, game_id: str, network_id: str) -> bool:
     return bool(rows)
 
 
+def market_pending_from(eligible: bool, active: list, rules: dict, covered) -> bool:
+    """The E5 rule itself, with the map lookup injected. Pure given `covered`.
+
+    Lifted out of is_market_pending() so a PROGRAM can be judged by the same rule. `market_coverage`
+    is keyed by game_id and holds nothing about a race, so the program caller passes a `covered` that
+    is always False - which is the honest answer, not a shortcut: an `unverified` program broadcast
+    is unassigned AND has no map to assign it, which is precisely what market-pending means.
+    """
+    if eligible:
+        return False
+    pending_access = set(rules["eligibility"].get("market_pending_access") or ())
+    if not pending_access:
+        return False
+    for b in active:
+        if b.get("access_status") not in pending_access:
+            continue
+        if not covered(b.get("service_id")):
+            return True      # unassigned AND no map to assign it - the honest answer is "not yet"
+    return False
+
+
 def is_market_pending(db, game_id: str, eligible: bool, active: list, rules: dict) -> bool:
     """E5: ineligible ONLY because the regional assignment has not published yet.
 
@@ -172,17 +215,8 @@ def is_market_pending(db, game_id: str, eligible: bool, active: list, rules: dic
     regional-window path, so a sport list would restate the same fact less reliably and could exclude
     a sport that starts using regional windows later.
     """
-    if eligible:
-        return False
-    pending_access = set(rules["eligibility"].get("market_pending_access") or ())
-    if not pending_access:
-        return False
-    for b in active:
-        if b.get("access_status") not in pending_access:
-            continue
-        if not market_covered(db, game_id, b.get("service_id")):
-            return True      # unassigned AND no map to assign it - the honest answer is "not yet"
-    return False
+    return market_pending_from(eligible, active, rules,
+                               lambda sid: market_covered(db, game_id, sid))
 
 
 # ----------------------------------------------------------------------------- the telecast ladder
@@ -326,11 +360,80 @@ def reconcile_game(db: DB, game: dict[str, Any], rows: list[dict[str, Any]], bcs
         stats["market_pending"] += 1
 
 
+# ----------------------------------------------------------------------------- one program (0014)
+def program_network(active: list[dict[str, Any]]) -> tuple[Any, bool]:
+    """`(network_id, stream_exclusive)` for a program's active broadcast rows.
+
+    A game gets these from the resolver, which ranks competing OBSERVATIONS of who is airing it. A
+    program has no observations at all - its broadcasts are loader-written provider facts (working
+    rule 9), so there is nothing to rank and nothing to resolve. The row the loader marked primary
+    wins; failing that, the first LINEAR row; failing that, the first row. `stream_exclusive` is the
+    same fact the game path carries: there is a way to watch this and none of them is a channel.
+    """
+    if not active:
+        return None, False
+    primary = next((b for b in active if b.get("is_primary")), None)
+    linear = next((b for b in active if b.get("delivery_surface") == "LINEAR"), None)
+    chosen = primary or linear or active[0]
+    return chosen.get("service_id"), not any(b.get("delivery_surface") == "LINEAR" for b in active)
+
+
+def reconcile_program(db: DB, program: dict[str, Any], bcs: list[dict[str, Any]], rules: dict[str, Any],
+                      now: datetime, stats: Counter) -> None:
+    """One `viewer_program_eligibility` row, decided by the ladder a game is decided by."""
+    active = [b for b in bcs if b.get("active", True)]
+    network_id, stream_exclusive = program_network(active)
+    reason, network_status, eligible, via_net, via_srv = telecast_verdict(
+        program["sport"], active, rules, network_id=network_id,
+        stream_exclusive=stream_exclusive, canonical_state=None)
+    market_pending = market_pending_from(eligible, active, rules, lambda _sid: False)
+    db.upsert("viewer_program_eligibility",
+              [{"program_id": program["program_id"], "viewer_profile_id": PROFILE_ID, "eligible": eligible,
+                "eligible_via_network_id": via_net, "eligible_via_service_ids": via_srv, "reason": reason,
+                "market_pending": market_pending, "computed_at": now,
+                "entitlement_version": rules["rule_version"]}],
+              "program_id, viewer_profile_id",
+              ["eligible", "eligible_via_network_id", "eligible_via_service_ids", "reason", "market_pending",
+               "computed_at", "entitlement_version"], tag="viewer_program_eligibility")
+    stats["program_eligible" if eligible else "program_not_eligible"] += 1
+    stats["program_network:" + network_status] += 1
+    if market_pending:
+        stats["program_market_pending"] += 1
+
+
+def read_programs(db: DB, program_ids: list[int] | None) -> dict[str, list[dict[str, Any]]]:
+    # These are spelled out rather than abbreviated because the game side's guard test forbids an
+    # empty broadcast where-clause anywhere in this file - the 0012 bug it exists for - and it matches
+    # on literal text, so any short name ending in the same two letters trips it. This branch is safe
+    # for its own reason: PBC_SQL carries `where b.program_id is not null` in its body, pinned by
+    # tests/test_program_broadcasts.py. Distinct names keep that guard sharp rather than teaching it
+    # an exception it would then have to be trusted to apply correctly.
+    if program_ids:
+        prog_where = "and p.program_id = any(%s)"
+        bcast_where = "and b.program_id = any(%s)"
+        params: tuple = (program_ids,)
+    else:
+        prog_where = ""
+        bcast_where = ""
+        params = ()
+    cols_p = ["program_id", "sport", "program_type", "title", "start_at"]
+    cols_b = ["program_id", "service_id", "delivery_surface", "feed_side", "access_status",
+              "carriage_certainty", "blackout_rule", "active", "is_primary", "canonical_name"]
+    progs = [dict(zip(cols_p, r)) for r in db.fetch(PROGRAMS_SQL.format(where=prog_where), params or None)]
+    bcs = [dict(zip(cols_b, r)) for r in db.fetch(PBC_SQL.format(where=bcast_where), params or None)]
+    return {"programs": progs, "program_broadcasts": bcs}
+
+
 # ----------------------------------------------------------------------------- main
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--all", action="store_true", help="every game, not only those with new evidence")
     ap.add_argument("--game", action="append", help="game id (repeatable)")
+    ap.add_argument("--programs", action="store_true",
+                    help="eligibility for non-game programs (0014); ALONE = programs only, "
+                         "with --all/--game = both")
+    ap.add_argument("--program", action="append", type=int,
+                    help="program_id (repeatable); implies --programs")
     ap.add_argument("--export", metavar="FILE", help="write the reconciler's input (games/observations/broadcasts) as JSON and exit; no writes")
     ap.add_argument("--input", metavar="FILE", help="read the input from a JSON export instead of the database (offline dry run)")
     ap.add_argument("--emit-sql", metavar="FILE", help="write the statements to FILE instead of executing them")
@@ -340,16 +443,29 @@ def main(argv: list[str] | None = None) -> int:
     rules = load_rules()
     now = datetime.now(timezone.utc)
 
+    want_programs = bool(args.programs or args.program)
+    # SCOPE, stated once so no caller has to infer it. `--programs` (or `--program N`) ON ITS OWN
+    # reconciles PROGRAMS ONLY - which is what every load in this run needs afterwards, and it means
+    # a race load never drags the game side's default changed-evidence pass in behind it. Combined
+    # with `--all` or `--game`, it ADDS programs to that game scope. Without it, nothing changes: the
+    # game side behaves exactly as it did before 0014.
+    want_games = bool(args.all or args.game) or not want_programs
+
     if args.input:
         data = json.loads(Path(args.input).read_text(encoding="utf-8"))
         db = DB(args.emit_sql or str(ROOT / "artifacts" / "sql" / "reconcile_offline.sql"))
     else:
         db = DB(args.emit_sql)
-        data = read_input(db, args.game, args.all)
+        data = (read_input(db, args.game, args.all) if want_games
+                else {"games": [], "observations": [], "broadcasts": []})
+        if want_programs:
+            data.update(read_programs(db, args.program))
         if args.export:
             p = Path(args.export); p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text(json.dumps(data, default=str, indent=1), encoding="utf-8")
-            print(f"exported {len(data['games'])} games, {len(data['observations'])} observations, {len(data['broadcasts'])} broadcast rows -> {args.export}")
+            print(f"exported {len(data['games'])} games, {len(data['observations'])} observations, "
+                  f"{len(data['broadcasts'])} broadcast rows, {len(data.get('programs') or [])} programs, "
+                  f"{len(data.get('program_broadcasts') or [])} program broadcast rows -> {args.export}")
             db.close()
             return 0
     obs_by: dict[str, list[dict[str, Any]]] = {}
@@ -367,7 +483,13 @@ def main(argv: list[str] | None = None) -> int:
         run_id = rows[0][0] if rows else None
         for g in data["games"]:
             reconcile_game(db, g, obs_by.get(g["id"], []), bc_by.get(g["id"], []), rules, rails, now, stats, log)
+        pbc_by: dict[int, list[dict[str, Any]]] = {}
+        for r in data.get("program_broadcasts") or []:
+            pbc_by.setdefault(r["program_id"], []).append(r)
+        for pr in data.get("programs") or []:
+            reconcile_program(db, pr, pbc_by.get(pr["program_id"], []), rules, now, stats)
         n = len(data["games"])
+        n_prog = len(data.get("programs") or [])
         summary = {k: v for k, v in sorted(stats.items())}
         if run_id is not None:
             db.run("update refresh_runs set completed_at = now(), status = 'succeeded', games_checked = %s, games_changed = %s, conflicts_found = %s, notes = %s where run_id = %s",
@@ -376,13 +498,13 @@ def main(argv: list[str] | None = None) -> int:
             db.run("insert into refresh_runs (workflow, completed_at, status, providers_called, games_checked, games_changed, conflicts_found, notes) values (%s, now(), 'succeeded', %s, %s, %s, %s, %s)",
                    (args.workflow, ["reconcile"], n, stats["changes"], stats["conflicts"], json.dumps({"rule_version": rules["rule_version"], **summary})), tag="refresh_runs")
         db.commit()
-        print(f"reconciled {n} game(s) under {rules['rule_version']}: " + " · ".join(f"{k} {v}" for k, v in summary.items()) +
+        print(f"reconciled {n} game(s) and {n_prog} program(s) under {rules['rule_version']}: " + " · ".join(f"{k} {v}" for k, v in summary.items()) +
               (f" · run_id {run_id}" if run_id else "") + ("" if db.conn is None else " · committed"))
         if db.conn is None and db.emit_path:
             print(f"wrote {db.emit_path} ({len(db.emitted)} statements)")
         logp = Path(args.log) if args.log else ROOT / "artifacts" / "reconcile" / f"reconcile_{now.strftime('%Y-%m-%d_%H%M%S')}.md"
         logp.parent.mkdir(parents=True, exist_ok=True)
-        logp.write_text(f"# reconcile {now.isoformat()} - {rules['rule_version']} - {n} games\n\n" + "\n".join(f"- {line}" for line in log) + "\n", encoding="utf-8")
+        logp.write_text(f"# reconcile {now.isoformat()} - {rules['rule_version']} - {n} games, {n_prog} programs\n\n" + "\n".join(f"- {line}" for line in log) + "\n", encoding="utf-8")
         print(f"log: {_rel(logp)} ({len(log)} line(s))")
     except Exception as e:  # noqa: BLE001
         if db.conn is not None:

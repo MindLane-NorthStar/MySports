@@ -325,6 +325,57 @@ def outlet_access(outlet: str, available: set[str], unavailable: set[str]) -> st
     return "UNKNOWN"
 
 
+# The schema's `access_status` enum, keyed by what outlet_access() returns. pipeline/load.py has
+# carried this map privately since Milestone 2; it is lifted here so the PROGRAM loader can use the
+# same one rather than a second copy that drifts.
+ACCESS_STATUS_OF = {
+    "AVAILABLE": "available",
+    "UNAVAILABLE": "unavailable",
+    "UNKNOWN": "unknown",
+    "CONDITIONAL/VERIFY": "conditional",
+    "OUT_OF_MARKET": "out_of_market",
+    "UNVERIFIED": "unverified",
+}
+
+
+def canonical_outlet(outlet: str, available: set[str], unavailable: set[str]) -> str:
+    """`normalize_outlet()`, then ONE case-insensitive pass against the alias table and the profile.
+
+    EXACT MATCH WITHIN A KNOWN SET, never substring and never fuzzy (working rule 18) - the only
+    thing relaxed is letter case. cf.nascar.com writes `"PRIME VIDEO"`, the alias table keys on
+    `"Prime"`/`"Amazon"` and the profile on `"Prime Video"`, so five 2026 Cup races resolved to
+    `unknown` under exact matching alone. Case is a spelling difference, not a different network.
+    """
+    o = normalize_outlet(outlet)
+    if o in available or o in unavailable:
+        return o
+    folded = o.casefold()
+    for alias, canon in OUTLET_ALIASES.items():
+        if alias.casefold() == folded:
+            return canon
+    for known in (*available, *unavailable):
+        if known.casefold() == folded:
+            return known
+    return o
+
+
+def access_status_for(outlet: str, available: set[str], unavailable: set[str]) -> str:
+    """`game_broadcasts.access_status` for one outlet label, decided by the viewer's access profile.
+
+    THE PROFILE DECIDES, NEVER THE ADAPTER. `adapters/nascar.py` wrote `access_status: "available"`
+    for every broadcaster the feed named, which put two 2026 races - the Clash at Bowman Gray and the
+    Black's Tire 250 - on the grid as watchable when they are on **FS2**, which
+    `data/access_profile.json` lists under `unavailable`. Telling Joe he can watch something he
+    cannot is the same class of error as inventing a network, and it is worse than saying "unknown".
+
+    An outlet the profile does not mention resolves to `unknown`, which is neither eligible nor
+    off-service - the honest answer for a service nobody has ruled on.
+    """
+    return ACCESS_STATUS_OF.get(
+        outlet_access(canonical_outlet(outlet, available, unavailable), available, unavailable),
+        "unknown")
+
+
 def media_row(media_type: str, outlet: str, access: str, *, market: str = "national",
               certainty: str = "CONFIRMED", start_time: str | None = None, tbd: bool = False,
               source: str = "", label: str | None = None) -> dict[str, Any]:
