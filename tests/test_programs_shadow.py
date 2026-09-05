@@ -68,7 +68,15 @@ class OneShadowPerGame(unittest.TestCase):
         self.assertTrue(any("insert into programs" in s for s in stmts))
         self.assertTrue(any("update programs" in s for s in stmts))
 
-    def test_the_programs_counter_equals_the_games_counter(self):
+    def test_every_game_emits_exactly_one_program(self):
+        """ONE-DIRECTIONAL, and prompt 46 is why the direction now matters.
+
+        This counts the statements a GAMES fixture emits, so it says "every game has a program".
+        It has never said the converse, and since prompt 46 the converse is false: NASCAR race
+        sessions are programs with no game at all (adapters/nascar.py, migration 0009). Read
+        database-wide, `programs == games` is not an invariant any more - read here, per load, it
+        still is.
+        """
         counts, _ = emitted_for([GAME, {**GAME, "id": "nba-2"}, {**GAME, "id": "nba-3"}])
         self.assertEqual(counts["games"], 3)
         self.assertEqual(counts["programs"], counts["games"])
