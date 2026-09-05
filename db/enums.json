@@ -1,0 +1,191 @@
+{
+ "types": {
+  "access_status": [
+   "available",
+   "unavailable",
+   "verify",
+   "conditional",
+   "out_of_market",
+   "unverified",
+   "unknown"
+  ],
+  "authority_role": [
+   "rights_controller",
+   "broadcaster",
+   "host_school",
+   "visitor_school",
+   "structured_provider",
+   "official_aggregator",
+   "secondary_aggregator",
+   "league_api",
+   "hand_entered"
+  ],
+  "blackout_rule": [
+   "NONE",
+   "IN_MARKET",
+   "OUT_OF_MARKET",
+   "NATIONAL_EXCLUSIVE"
+  ],
+  "canonical_state": [
+   "fully_assigned",
+   "time_tbd",
+   "network_tbd",
+   "time_and_network_tbd",
+   "authority_conflict"
+  ],
+  "carriage_certainty": [
+   "CONFIRMED",
+   "AFFILIATE_DISCRETION",
+   "UNANNOUNCED",
+   "TBA_NO_RIGHTS_HOLDER"
+  ],
+  "claim_certainty": [
+   "definite",
+   "window",
+   "choice_set",
+   "flex",
+   "tbd"
+  ],
+  "competition_context": [
+   "REGULAR",
+   "CUP_GROUP",
+   "CUP_KNOCKOUT",
+   "PLAY_IN",
+   "PLAYOFF",
+   "EXHIBITION"
+  ],
+  "decision_status": [
+   "accepted",
+   "retained_last_known_good",
+   "unresolved_conflict",
+   "no_change"
+  ],
+  "delivery_surface": [
+   "LINEAR",
+   "STREAMING"
+  ],
+  "feed_side": [
+   "HOME",
+   "AWAY",
+   "NATIONAL"
+  ],
+  "lane_policy": [
+   "alt_lane",
+   "market_filter"
+  ],
+  "network_type": [
+   "linear_broadcast",
+   "linear_cable",
+   "streaming",
+   "authenticated_stream",
+   "hybrid",
+   "local_rsn",
+   "local_tba"
+  ],
+  "parse_status": [
+   "ok",
+   "partial",
+   "failed"
+  ],
+  "poll_type": [
+   "AP",
+   "CFP",
+   "Coaches"
+  ],
+  "primary_line": [
+   "spread",
+   "moneyline"
+  ],
+  "program_type": [
+   "game",
+   "race_session",
+   "fight_card",
+   "weekly_show",
+   "special_event",
+   "studio_show"
+  ],
+  "rights_controller_type": [
+   "conference",
+   "network_or_rights_holder",
+   "independent_school",
+   "event_organizer",
+   "postseason_body",
+   "league",
+   "unknown"
+  ],
+  "run_status": [
+   "running",
+   "succeeded",
+   "failed",
+   "partial"
+  ],
+  "schedule_certainty": [
+   "FINAL",
+   "FLEX_PENDING",
+   "TBD",
+   "TBD_FOLLOWS"
+  ],
+  "source_tier": [
+   "announced",
+   "reported"
+  ],
+  "sport": [
+   "cfb",
+   "nfl",
+   "nhl",
+   "nba",
+   "mlb",
+   "nascar",
+   "indycar",
+   "ufc",
+   "wwe",
+   "aew"
+  ],
+  "territory_type": [
+   "Inner",
+   "Outer",
+   "Sphere"
+  ]
+ },
+ "columns": {
+  "canonical_decisions.decision_status": "decision_status",
+  "canonical_decisions.result_certainty": "claim_certainty",
+  "carriage_status.status": "access_status",
+  "conferences.sport": "sport",
+  "game_broadcasts.access_status": "access_status",
+  "game_broadcasts.blackout_rule": "blackout_rule",
+  "game_broadcasts.carriage_certainty": "carriage_certainty",
+  "game_broadcasts.delivery_surface": "delivery_surface",
+  "game_broadcasts.feed_side": "feed_side",
+  "games.canonical_state": "canonical_state",
+  "games.competition_context": "competition_context",
+  "games.kickoff_certainty": "claim_certainty",
+  "games.network_certainty": "claim_certainty",
+  "games.ranking_system": "poll_type",
+  "games.rights_controller_type": "rights_controller_type",
+  "games.schedule_certainty": "schedule_certainty",
+  "games.sport": "sport",
+  "generated_grids.sport": "sport",
+  "networks_services.type": "network_type",
+  "programs.program_type": "program_type",
+  "programs.sport": "sport",
+  "rankings.poll_type": "poll_type",
+  "rankings.sport": "sport",
+  "refresh_runs.status": "run_status",
+  "render_policies.lane_policy": "lane_policy",
+  "render_policies.primary_line": "primary_line",
+  "render_policies.sport": "sport",
+  "rivalries.sport": "sport",
+  "source_observations.authority_role": "authority_role",
+  "source_observations.claim_certainty": "claim_certainty",
+  "source_snapshots.parse_status": "parse_status",
+  "sources.authority_role": "authority_role",
+  "sources.sport": "sport",
+  "studio_show_instances.source_tier": "source_tier",
+  "studio_shows.sport_covered": "sport",
+  "team_territories.network_type": "territory_type",
+  "teams.sport": "sport",
+  "viewer_services.access_status": "access_status",
+  "whip_around_broadcasts.sport": "sport"
+ }
+}

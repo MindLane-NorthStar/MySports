@@ -48,6 +48,62 @@ def qlit(v: Any) -> str:
 
 
 # ----------------------------------------------------------------------------- connection
+# ----------------------------------------------------------------------------- enum hardening
+# db/enums.json is generated from db/migrations/*.sql by scripts/build_enums.py and checked by
+# tests/test_enums.py, so this validation cannot drift from the schema it is defending.
+_ENUMS_PATH = Path(__file__).resolve().parents[1] / "db" / "enums.json"
+try:
+    with open(_ENUMS_PATH, encoding="utf-8") as _fh:
+        _ENUMS = json.load(_fh)
+except (OSError, ValueError):        # never let a missing map stop a load - it only stops the CHECK
+    _ENUMS = {"types": {}, "columns": {}}
+
+# `{"table.column": frozenset(values)}`, resolved once.
+ENUM_COLUMNS: dict[str, frozenset[str]] = {
+    key: frozenset(_ENUMS["types"].get(typ, ()))
+    for key, typ in _ENUMS.get("columns", {}).items()
+}
+ENUM_TYPE_OF: dict[str, str] = dict(_ENUMS.get("columns", {}))
+
+# The column a quarantine warning should name the row by, per table. Falls back to whatever id-ish
+# column the row carries, so a table added later still logs something a human can find.
+_NATURAL_KEYS = {
+    "games": ("id",),
+    "game_broadcasts": ("game_id", "service_id"),
+    "programs": ("id",),
+    "teams": ("id",),
+    "observations": ("game_id", "field_name"),
+    "viewer_game_eligibility": ("game_id", "viewer_profile_id"),
+}
+
+
+def enum_violations(table: str, row: dict[str, Any]) -> list[tuple[str, str, Any]]:
+    """Every `(column, enum_type, value)` in `row` that the schema's enum cannot hold.
+
+    NULL is not a violation - a nullable enum column takes it, and "I did not find out" is a real
+    answer this pipeline depends on (see `preserve` above). A column this map does not know is not a
+    violation either: the map covers what the migrations declare, and inventing a rule for anything
+    else would quarantine good rows.
+    """
+    out: list[tuple[str, str, Any]] = []
+    for col, value in row.items():
+        if value is None:
+            continue
+        allowed = ENUM_COLUMNS.get("%s.%s" % (table, col))
+        if allowed is None:
+            continue
+        if value not in allowed:
+            out.append((col, ENUM_TYPE_OF["%s.%s" % (table, col)], value))
+    return out
+
+
+def _natural_key(table: str, row: dict[str, Any]) -> str:
+    cols = _NATURAL_KEYS.get(table)
+    if not cols:
+        cols = tuple(c for c in ("id", "game_id", "program_id", "key") if c in row) or tuple(row)[:1]
+    return " ".join("%s=%r" % (c, row.get(c)) for c in cols if c in row) or "<no key>"
+
+
 class DB:
     """Executes statements against SUPABASE_DB_URL, or collects them into an SQL file when emit_path is set."""
 
@@ -56,6 +112,7 @@ class DB:
         self.emitted: list[str] = []
         self.conn = None
         self.stats: dict[str, int] = {}
+        self.quarantined: dict[str, int] = {}
         if self.emit_path is None:
             dsn = os.getenv("SUPABASE_DB_URL")
             if not dsn:
@@ -111,6 +168,19 @@ class DB:
         preserve = set(preserve or ())
         n = 0
         for r in rows:
+            bad = enum_violations(table, r)
+            if bad:
+                # QUARANTINE THE ROW, NOT THE RUN. One mistyped enum once aborted a whole daily
+                # refresh: carriageCertainty="UNVERIFIED" went into an access_status slot, Postgres
+                # rejected the statement, and every good row in the batch died with it. A value the
+                # schema cannot hold is one row's problem; the other 1,383 are fine and the reader
+                # needs them tonight. Same fail-honest-per-unit shape the standings step uses.
+                key = _natural_key(table, r)
+                for col, typ, value in bad:
+                    print("WARN quarantine %s.%s = %r (not a %s) on %s"
+                          % (table, col, value, typ, key), file=sys.stderr)
+                self.quarantined[table] = self.quarantined.get(table, 0) + 1
+                continue
             cols = list(r.keys())
             placeholders = ", ".join("%s" for _ in cols)
             if update:
@@ -122,6 +192,11 @@ class DB:
             sql = f"insert into {table} ({', '.join(cols)}) values ({placeholders}) on conflict ({conflict}) {action}"
             self.run(sql, tuple(r[c] for c in cols), tag=tag or table)
             n += 1
+        q = self.quarantined.get(table, 0)
+        if q:
+            # A WARNING, never a failure. The run continues and the step reports what it dropped.
+            print("WARN %s: %d row(s) quarantined on an invalid enum value" % (table, q),
+                  file=sys.stderr)
         return n
 
     def fetch(self, sql: str, params: tuple | None = None) -> list[tuple]:
