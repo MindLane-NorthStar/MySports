@@ -5,9 +5,10 @@ briefs lived here: 01–44 in the Claude.ai Project, 45–49 in `Claude outputs\
 `.gitignore` excludes as `/Claude outputs/`. So the repo carried forty-nine prompts' worth of commits
 and not one of the documents that produced them.
 
-**As of prompt 50 stage 0 the archive is complete except for two acknowledged gaps.** Prompt 49
+**As of 2026-09-06 the archive is complete except for two acknowledged gaps.** Prompt 49
 stage 2 filed the fifteen it could reach from the laptop; prompt 50 filed the **36** that existed
-only in the Project or under gitignored `artifacts/`. **51 briefs are here. 39 and 42 are missing,
+only in the Project or under gitignored `artifacts/`; prompt 52 stage 8 filed itself; and 50 and 51
+were filed from `Claude outputs\` afterwards. **54 briefs are here. 39 and 42 are missing,
 and they are not going to be found** — see "The two gaps" below.
 
 That is the failure prompt 47 hit from the other side — the events & shows research lived only in the
@@ -86,6 +87,9 @@ the number alone suggests; everything else is one brief, one file.
 | 47 | `47-programs-migrations-nhl-nba-nascar.md` |
 | 48 | `48-programs-live-source-docs-v1.7.md` |
 | 49 | `49-nascar-times-race-key.md` |
+| 50 | `50-schedule-hub-foundation.md` |
+| 51 | `51-one-gap-shorter-toggles-my-teams.md` |
+| 52 | `52-metallic-gold-rail-nascar-studio-marks.md` |
 
 ## What is NOT here — the two gaps
 
@@ -153,7 +157,10 @@ the same rule `docs/research/README-events-docs.md` established for the events d
 of them are wrong about the codebase**, sometimes in ways their own run reports then corrected. That
 is why the reports matter, and why nothing here is edited to look better in hindsight.
 
-**Prompt 50's own brief is not yet filed.** It is on the laptop at
-`Claude outputs\prompt 50 - schedule hub foundation, controls restack, hiding restored, grid header
-retired.md`. Prompt 49 filed itself; prompt 50 was told to file 01–44 and to expect 52 files here
-afterwards, so 50 is left for the next run rather than quietly changing that count.
+**50 and 51 were filed late, and the miss is worth recording.** Prompt 50 was told to file 01–44
+and to expect a fixed count here afterwards, so it left itself out rather than quietly changing that
+count — deliberate, and this note is what it left behind. Prompt 51 then inherited the same omission.
+Prompt 52 stage 8 went looking for both, reported them as unreconstructable, and closed. **They were
+never lost:** both sat in `Claude outputs\` the whole time, and the paragraph this replaces named
+prompt 50's path exactly. A "not yet filed" note is not a gap, and a run that finds one should read
+the note before concluding the document is gone.
