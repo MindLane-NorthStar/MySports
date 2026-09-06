@@ -2591,3 +2591,191 @@ main > .pagehead:first-child { margin-top: 0; }
   box-shadow: inset 0 0 0 1px rgba(240, 200, 80, 0.35);
 }
 
+
+/* ================================================================= PROTOTYPE: the grid owns its
+ * viewport (branch audit/sticky-grid; spec section 18, triage C-3). NOT ON MAIN, NOT MERGED.
+ *
+ * WHY THE SIMPLE THING DOES NOT WORK, measured rather than argued. `.mgrid-scroll` is declared
+ * `overflow-x: auto; overflow-y: hidden`, and per CSS Overflow ANY non-visible overflow value makes
+ * an element a scroll container - `hidden` included. So `.mgrid-scroll` is already the nearest
+ * scrollport for everything inside it, the time axis among them. Its own vertical extent is
+ * scrollHeight 2960 against clientHeight 2960 on CFB 2026-09-05 at 390: zero vertical scrollable
+ * overflow. A sticky box resolves `top` against its nearest scrollport, so with nothing to scroll
+ * there the constraint is satisfied at the static position forever and the box never moves. Applying
+ * `position: sticky; top: 0` to `.mgrid-axis` on main and scrolling the PAGE 300px moved the axis
+ * 300px - one-for-one, no stickiness at all - because the page is not the axis's scrollport.
+ * `.mgrid` above it also carries `overflow: hidden`, which would clip a stuck axis even if the
+ * chain were otherwise right.
+ *
+ * So the fix is structural, not a property: the element that scrolls VERTICALLY has to be the same
+ * element the axis is sticky inside. That is only possible when the grid is a view of its own -
+ * interleaved between page sections it cannot own the viewport.
+ *
+ * HEIGHT IS LAYOUT-DRIVEN, NOT A MEASURED CONSTANT. The brief asked for
+ * `height: calc(100dvh - <measured controls height>)`. Measured, that constant does not exist: the
+ * masthead is a width-proportional SVG, so everything above the grid totals 350.2px at 360, 361.0px
+ * at 390 and 375.5px at 430. One literal is wrong at two of the three widths by -10.8px and
+ * +14.5px. A `100dvh` flex column with the grid as the only growing item expresses the same intent
+ * and is correct at every width - and it re-solves itself for free when Safari's chrome collapses,
+ * which is the case the constant would have been most wrong about.
+ *
+ * NO TRANSFORM is introduced anywhere between the rail and the scroller (M4 v1.2). Zoom stays
+ * layout-driven and the pinch handler is untouched.
+ */
+/* THE CHAIN, and there is no constant anywhere in it. A first pass wrote
+ * `height: calc(100dvh - 18px - 64px)` and measured `page_itself_scrolls: true`: the shell's padding
+ * is not what sits above the grid - the banner, the tab row, the DATE row, the sport tiles and the
+ * grid's own head and jump-nav are, and together they are 505.1px at 390 and 519.6px at 430. Any
+ * literal is wrong at every width but the one it was measured at.
+ *
+ * So the viewport is handed DOWN the tree instead: body is one 100dvh flex column, and each link in
+ * the chain gives all its spare height to the next. Nothing is measured, nothing is width-specific,
+ * and it re-solves itself when Safari's chrome collapses - which is the case a constant would have
+ * been most wrong about.
+ *
+ * SCOPED WITH :has() so no other page is touched. Every route shares this stylesheet, and the
+ * alternative - a class on <body> - would need the layout to know which page it is rendering.
+ * :has() is CSS-only, so there is still no JS width state and no hydration path (the reason every
+ * breakpoint in this app is a media query). */
+body:has(main.gridview) {
+  /* HEIGHT, not min-height. Measured: with `min-height: 100dvh` the chain is unconstrained - flex
+     only distributes SPARE space, so a grid taller than the viewport simply grew the body and the
+     scroller never shrank (`grid_owns_vertical_scroll: false`, the page carrying the scroll again).
+     A hard height is what makes `flex: 1 1 auto; min-height: 0` on the links below actually shrink. */
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* The masthead must not be squeezed. Body is a flex column, so its children are `flex-shrink: 1`
+   by default and the banner - a width-proportional SVG with no intrinsic min-height - collapsed
+   from 142.2px to 9.1px the moment the column was constrained, taking the whole layout with it.
+   Only the shell gives ground. */
+body:has(main.gridview) > * { flex: 0 0 auto; }
+body:has(main.gridview) > .shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  /* `width: 100%` IS THE WHOLE FIX for a trap this cost half an hour. `.shell` is
+     `max-width: 1100px; margin: 0 auto`, which centres it at 390 while body is a BLOCK container.
+     Make body a flex column and the cross-axis auto margins suppress the default `stretch`, so the
+     item sizes to its own max-width instead: measured, `.shell` came out 1100px inside a 390px
+     screen, the scroller inherited 1074px of it, and the page - not the grid - took the horizontal
+     scroll, carrying the sticky rail off the side of the phone. The canvas geometry never moved,
+     which is exactly why the tripwire passed while the layout was wrong; only clientWidth said so
+     (1074 against main's 364). */
+  width: 100%;
+}
+.gridview {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* every child keeps its natural height; only the grid grows.
+ *
+ * `min-width: 0` ON EVERY LINK, and it is not decoration. A flex item's `min-width` defaults to
+ * `auto`, which refuses to shrink below the content's own width - and the grid canvas is 1,256px
+ * wide on CFB 2026-09-05. Measured without these: the scroller's clientWidth came out 1,074px
+ * inside a 390px screen, so the PAGE took the horizontal scroll and the sticky rail went with it,
+ * off the side of the phone. Every link in a chain that contains a deliberately-overwide canvas
+ * needs it, not just the last one. */
+.gridview > .listing { flex: 1 1 auto; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
+.gridview .mgrid-only-vp { flex: 1 1 auto; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
+
+/* THE GRID IS THE VIEWPORT. Both axes scroll HERE, which is what makes the axis's sticky `top`
+   resolve against something that actually moves. */
+.mgrid-vp {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  /* the base rule's `overflow: hidden` would clip the sticky axis; the scroller below owns clipping */
+  overflow: visible;
+}
+.mgrid-vp > .mgrid-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  /* one finger pans either axis; the pinch handler preventDefaults the two-finger case itself, so
+     this must NOT be `none` or the one-finger scroll dies with it. Unchanged from the base rule. */
+  touch-action: pan-x pan-y;
+  overscroll-behavior: contain;
+}
+
+/* THE AXIS STICKS TO THE TOP of that scroller. */
+.mgrid-vp .mgrid-axis {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  /* OPAQUE, from the existing token (rule 16): a translucent axis lets the blocks it is meant to
+     label paint straight through it. The base rule sets no background at all, which is correct
+     while the axis is in flow and wrong the moment it floats over content. */
+  background: var(--panel);
+}
+
+/* THE RAIL STICKS TO THE LEFT - already true on main, and the z-index steps down so the axis wins
+   the overlap. */
+.mgrid-vp .mrail-cell { z-index: 4; }
+
+/* THE CORNER STICKS TO BOTH, and outranks both. It is inside the axis, so it is already above the
+   axis's own background; the explicit value is here so the intent survives a later edit. */
+.mgrid-vp .mgrid-corner {
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 6;
+  background: var(--panel);
+}
+
+/* The now marker keeps its place in the order: above the blocks, below everything sticky. */
+.mgrid-vp .mnow { z-index: 2; }
+
+/* In viewport mode the head, the jump-nav and the footers are the page's chrome rather than the
+   grid's, so they must not eat the scrolling area. */
+.mgrid-vp > .mgrid-head,
+.mgrid-vp > .mgrid-nav { flex: 0 0 auto; }
+.mgrid-vp > .mgrid-foot,
+.mgrid-vp > .mtbd,
+.mgrid-vp > .mgrid-note { flex: 0 0 auto; }
+
+/* The prototype is a PHONE surface (R5). Above the breakpoint .mgrid-only is display:none already,
+   so this whole block is inert there; the height rule is scoped anyway so a desktop visit to
+   ?view=grid does not get a 100dvh empty column. */
+@media (min-width: 700px) {
+  body:has(main.gridview) { display: block; height: auto; overflow: visible; }
+  body:has(main.gridview) > .shell { display: block; }
+  .gridview { display: block; }
+}
+
+/* ---- the viewport BUDGET, and what the prototype spends to get one ----------------------------
+ *
+ * Measured at 390x844 with the chrome exactly as main renders it, the grid's scroller came out
+ * 63px tall. The sticky mechanism was already working perfectly at that size - the axis held, the
+ * rail held - but 63px is not a grid, and Joe cannot judge a sticky axis through a letterbox.
+ * Where the 844 goes, before any of this block:
+ *
+ *     banner 142.2 | tab row 45.3 | shell padding 18 + 64 | DATE row 43.5 | sport block 94
+ *     grid head 60.1 | jump-nav 61 | grid foot 40.2 | two global footnotes 46.3 + 29.7
+ *     .mgrid margins 14 + 20                                              = 781, leaving 63.
+ *
+ * This block gives back the four that are page chrome for a SCROLLING page and make no sense
+ * pinned under a viewport-owning grid. It does NOT touch the DATE row or the sport block, which
+ * are the hub's own controls, and it does not touch the grid head or M8's jump-nav, which are
+ * contract surfaces. Everything here is scoped to the prototype.
+ *
+ * WHAT IT DOES NOT SOLVE, and this is the finding rather than the fix: even after giving all four
+ * back, the masthead plus the tab row is 187.5px of an 844px phone before the app has said anything
+ * about sport. A grid that owns the viewport wants that space, and only a ruling can release it.
+ * Named in the audit as a decision for Joe, not resolved here.
+ */
+body:has(main.gridview) > .shell > .footnote { display: none; }
+body:has(main.gridview) > .shell { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.mgrid-vp { margin: 8px 0 0; }
+.mgrid-vp > div.mgrid-foot { display: none; }

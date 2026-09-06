@@ -117,6 +117,10 @@ export default async function TodayPage({ searchParams }) {
   const day = /^\d{4}-\d{2}-\d{2}$/.test(params?.day || '') ? params.day : todayET();
   const sport = resolveSportParam(params?.sport);
   const series = resolveSeriesParam(params?.series);
+  // PROTOTYPE GATE (branch audit/sticky-grid). `?view=grid` and nothing else. Every other URL on
+  // this page renders exactly what main renders, which is the whole point of gating it: the
+  // prototype has to be measurable beside the thing it is trying to replace, not instead of it.
+  const gridView = params?.view === 'grid';
 
   let games = [];
   let programs = [];
@@ -168,7 +172,7 @@ export default async function TodayPage({ searchParams }) {
   const band = bandState(rows, now, policies, { dayLabel: longDay(day) });
 
   return (
-    <main>
+    <main className={gridView ? 'gridview' : undefined}>
       {/* Joe's ruling from the installed app, 2026-09-04: the heading is the word DATE and the
           picker sits on the heading's own line, to its right. The heading IS the control's label -
           <label htmlFor> inside an <h1> is valid phrasing content - so the visible name prompt 25
@@ -199,6 +203,17 @@ export default async function TodayPage({ searchParams }) {
         </p>
       ) : null}
 
+      {/* PROTOTYPE: when the grid is the VIEW it is the only content, so it can own the viewport.
+          Nothing else renders - no D1 band, no sport bands, no "data as of", no archived render.
+          That is not a simplification of the page; it is the structural precondition for a sticky
+          axis, measured in the note on `.mgrid-vp`. */}
+      {gridView ? (
+        !error && rows.length ? (
+          <Listing games={rows} standingsRows={standingsRows} rankingsRows={rankingsRows}
+                   day={day} sport={sport} grid nowMinute={nowMinute} gridViewport />
+        ) : null
+      ) : (
+        <>
       {/* D1 above, the day below. .today-split only becomes two columns at 1592px (D5); under that
           it is a plain block, so the band sits ABOVE the grid and never after it. */}
       <div className="today-split">
@@ -220,6 +235,8 @@ export default async function TodayPage({ searchParams }) {
           <ArchivedGrid sport={sport} day={day} />
         </Suspense>
       ) : null}
+        </>
+      )}
     </main>
   );
 }

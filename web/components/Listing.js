@@ -29,7 +29,8 @@ function anyInFlight(games) {
 
 export default function Listing({ games, standingsRows, rankingsRows, day, sport, generatedAt,
                                   showDay = false, grid = false, bands = false, heading = null,
-                                  headingClass = 'favlabel', nowMinute = null }) {
+                                  headingClass = 'favlabel', nowMinute = null,
+                                  gridViewport = false }) {
   const [open, setOpen] = useState(null);
 
   /**
@@ -119,7 +120,11 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
   // to jump past.
   return (
     <div className="listing">
-      {bands ? (
+      {/* PROTOTYPE: in viewport mode the grid IS the view, so no cards render beneath it. Without
+          this the flat branch below still emitted the whole day as a list - measured at 9,087px of
+          cards under the grid, which left `.mgrid-scroll` 0px tall and handed the scroll back to
+          the page, the exact thing the prototype exists to take away from it. */}
+      {gridViewport ? null : bands ? (
         <>
           {favorites.length ? (
             <SportBand sport={null} label="Your teams" sectionLabel="Your teams" games={favorites}
@@ -150,9 +155,9 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
           breakpoint the desktop grid is the archived PC render and nothing else. CSS-gated at the
           same 699px the rest of the app uses, so no JS width state and no hydration mismatch. */}
       {showGrid ? (
-        <div className="mgrid-only">
+        <div className={gridViewport ? 'mgrid-only mgrid-only-vp' : 'mgrid-only'}>
           <MobileGrid games={gridGames} sport={sport} day={day} standings={standings} onOpen={setOpen}
-                      nowMinute={nowMinute} />
+                      nowMinute={nowMinute} viewport={gridViewport} />
         </div>
       ) : null}
 

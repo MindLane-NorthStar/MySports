@@ -110,7 +110,13 @@ function teamLine(game, side, standings) {
   };
 }
 
-export default function MobileGrid({ games, sport, day, standings, onOpen, nowMinute = null }) {
+// PROTOTYPE (branch audit/sticky-grid, spec section 18 / triage C-3). `viewport` is the only new
+// input: when true the grid owns its own vertical scroll instead of letting the page carry it, which
+// is the ONLY arrangement in which a sticky time axis can work. See the block comment on
+// `.mgrid-vp` in globals.css for the measurement that proves why. Default false, so every existing
+// call site renders byte-for-byte what it rendered before.
+export default function MobileGrid({ games, sport, day, standings, onOpen, nowMinute = null,
+                                     viewport = false }) {
   const { measure, ready } = useTextMeasurer();
 
   const model = useMemo(() => {
@@ -289,7 +295,7 @@ export default function MobileGrid({ games, sport, day, standings, onOpen, nowMi
   }
 
   return (
-    <section className="mgrid" aria-label="Mobile grid">
+    <section className={viewport ? 'mgrid mgrid-vp' : 'mgrid'} aria-label="Mobile grid">
       {/* D4: "(mark) College Football Broadcasts · Saturday September 12, 2026 · 70 GAMES". It read
           "CFB GRID" over a bare ISO date - the sport as a code, the word GRID naming the widget
           rather than its contents, and a date in a format nobody says out loud.
@@ -362,7 +368,7 @@ export default function MobileGrid({ games, sport, day, standings, onOpen, nowMi
         >
           {/* M5: hour-only gold shorthand labels. Gridlines stay on :15. */}
           <div className="mgrid-axis">
-            <div className="mgrid-axis-rail" />
+            <div className="mgrid-axis-rail mgrid-corner" />
             <div className="mgrid-axis-track" style={{ width: scale.width }}>
               {ticks.lines.map((l) => (
                 <div
