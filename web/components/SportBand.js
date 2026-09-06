@@ -16,12 +16,12 @@
 // Grid Addendum v1.0): the off-service dim, the MARKET TBD cue, the favourites rule and the YOUR TEAMS
 // label all live on wrappers and band-level elements.
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import MatchupCard from './MatchupCard.js';
 import ProgramCard from './ProgramCard.js';
 import { isProgram } from '../lib/programs.js';
-import { offServiceSummary, countParts } from '../lib/offservice.js';
-import { favoriteIds, isFavorite, splitFavorites } from '../lib/favorites.js';
+import { offServiceSummary } from '../lib/offservice.js';
+import { favoriteIds, splitFavorites } from '../lib/favorites.js';
 import favoritesDoc from '../../data/favorites.json';
 // D4: the mark table now lives in config.js - the mobile grid header needs the same one.
 import { sportMarkUrl } from '../lib/config.js';
@@ -34,8 +34,13 @@ import { sportMarkUrl } from '../lib/config.js';
 export default function SportBand({ sport, label, games, standings, rankings, showDay = false, onOpen,
                                     showHeader = true, floatFavorites = true, sectionLabel = null,
                                     headingClass = 'favlabel' }) {
-  const [showAll, setShowAll] = useState(false);
-
+  // THE BAND NO LONGER FILTERS AND NO LONGER COUNTS (prompt 50 stage 4). Both moved to the page:
+  // one count line at the foot, and the hiding decided once by splitHidden() before these rows are
+  // handed down. The band renders what it is given.
+  //
+  // The summary survives for ONE job - the row wrapper classes below. `offServiceSummary`'s buckets
+  // are what put MARKET TBD and NETWORK TBD on the card and the dim on an off-service row, and those
+  // are card states that R3's retirement of the COUNT LINE does not touch.
   const summary = useMemo(() => offServiceSummary(games), [games]);
   const offIds = useMemo(() => new Set(summary.off.map((g) => g.id)), [summary]);
   const pendingIds = useMemo(() => new Set(summary.pending.map((g) => g.id)), [summary]);
@@ -43,40 +48,12 @@ export default function SportBand({ sport, label, games, standings, rankings, sh
 
   const favIds = useMemo(() => favoriteIds(favoritesDoc), []);
 
-  // How many games the toggle would actually REVEAL. Since A1 a favourite is never hidden, so a
-  // section made entirely of favourites can report "1 unavailable" and have nothing to show - the
-  // YOUR TEAMS section does exactly that. The count still says unavailable, because they are; it
-  // just is not a control when pressing it would do nothing.
-  const hiddenCount = useMemo(
-    () => summary.off.filter((g) => !isFavorite(g, favIds)).length,
-    [summary, favIds],
-  );
-
-  // E5 + 05 section 9: only genuinely ineligible games are hidden. Market-pending AND network-TBD
-  // games are exempt in BOTH toggle states, and the visible set is the original array minus `off`,
-  // so everything keeps its chronological position rather than being regrouped. Both carve-outs are
-  // free here: neither state is ever IN `off`, so subtracting `off` exempts them by construction.
-
-  // A FAVOURITED TEAM'S GAME IS NEVER HIDDEN, in either toggle state. Market-pending and network-TBD
-  // are already exempt by construction; favourites join them by name.
-  //
-  // Without this the game vanished from the page entirely, and the page said so without showing it.
-  // On `/` the favourites are hoisted to a page-level section from the UNFILTERED day (Listing.js),
-  // which is correct - but this section then applied D4's filter to the very games it was handed for
-  // being favourites, and they were already gone from their sport's band. Measured on 2026-09-12:
-  // YOUR TEAMS read "5 airing · 1 unavailable" and rendered five rows, and Fresno State - a favourite
-  // - appeared nowhere on the page.
-  const shown = useMemo(
-    () => (showAll ? games : (games || []).filter((g) => !offIds.has(g.id) || isFavorite(g, favIds))),
-    [showAll, games, offIds, favIds],
-  );
-
   // D6's in-band float, retained for /weeks and /history. On `/` this is switched off and the page
   // hoists favourites into their own section instead (05 section 11), so `favorites` is empty and
   // `rest` is everything - one flat list, no marker and no trailing rule.
-  const split = useMemo(() => splitFavorites(shown, favIds), [shown, favIds]);
+  const split = useMemo(() => splitFavorites(games || [], favIds), [games, favIds]);
   const favorites = floatFavorites ? split.favorites : [];
-  const rest = floatFavorites ? split.rest : shown;
+  const rest = floatFavorites ? split.rest : (games || []);
 
   if (!games?.length) return null;
 
@@ -122,28 +99,10 @@ export default function SportBand({ sport, label, games, standings, rankings, sh
           </header>
         ) : null}
 
-        {/* B3: ONE count, and the unavailable part IS the control - there is no second
-            "Show N unavailable" saying the same number again. Still a real <button> with
-            aria-expanded, because it is a disclosure, whatever it looks like. */}
-        {games.length ? (
-          <div className="offsvc">
-            <span className="offsvc-line">
-              {countParts(summary.lines).map((part, i) => (
-                <span key={part.key}>
-                  {i > 0 ? <span className="offsvc-sep">·</span> : null}
-                  {part.key === 'unavailable' && hiddenCount ? (
-                    <button type="button" className="offsvc-toggle" aria-expanded={showAll}
-                            onClick={() => setShowAll((v) => !v)}>
-                      {part.text}
-                    </button>
-                  ) : (
-                    part.text
-                  )}
-                </span>
-              ))}
-            </span>
-          </div>
-        ) : null}
+        {/* THE PER-BAND COUNT LINE IS GONE (prompt 50 stage 4b). One line renders at the FOOT of the
+            page instead - components/PageCount.js. This retires "every band reports its counts",
+            the `4250aa9` fix carried as do-not-regress since prompt 21; Joe's instruction supersedes
+            it and stage 6 strikes the old note rather than leaving it standing. */}
       </div>
 
       {favorites.length ? (

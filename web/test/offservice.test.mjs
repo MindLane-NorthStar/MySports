@@ -338,3 +338,83 @@ test('a day with no bare games still renders three segments', () => {
   assert.equal(countSummary(countLines(68, 62, [{}, {}], new Array(4).fill({}))),
     '62 airing · 2 TBD · 4 unavailable');
 });
+
+// ---------------------------------------------------------------- prompt 50 stage 4: the page count
+//
+// D4's filter-by-default is unchanged in substance and moved from the band to the page, and the
+// three carve-outs are what these pin. If any of them ever starts hiding a game, the page tells Joe
+// he cannot watch something nobody has decided about yet.
+
+import { splitHidden, pageCountLine, revealLabel } from '../lib/offservice.js';
+
+const fav = (id, home) => ({ ...game(id, false, ['CBS Sports Network']), home_team_id: home });
+
+test('stage 4a: an off-service game is HIDDEN', () => {
+  const { visible, hidden } = splitHidden(
+    [game('1', true, ['ABC']), game('2', false, ['NFL+'])], new Set());
+  assert.deepEqual(visible.map((g) => g.id), ['1']);
+  assert.deepEqual(hidden.map((g) => g.id), ['2']);
+});
+
+test('stage 4a: NETWORK TBD is NEVER hidden - nobody has decided whether he can watch it', () => {
+  // 529 games were in this state on the season load. Hiding them would be a false statement about
+  // every one of them (05 §9).
+  const { visible, hidden } = splitHidden([bare('1'), bare('2'), game('3', true, ['ABC'])], new Set());
+  assert.equal(hidden.length, 0, 'not one of them may be hidden');
+  assert.deepEqual(visible.map((g) => g.id), ['1', '2', '3']);
+});
+
+test('stage 4a: MARKET PENDING is NEVER hidden either', () => {
+  const { visible, hidden } = splitHidden([pend('1', ['FOX']), game('2', false, ['NFL+'])], new Set());
+  assert.deepEqual(visible.map((g) => g.id), ['1'], 'E5 games stay on the page');
+  assert.deepEqual(hidden.map((g) => g.id), ['2']);
+});
+
+test('stage 4a: a FAVOURITE is never hidden, even when it is off-service', () => {
+  // Measured on 2026-09-12 before this guard existed: Fresno State appeared nowhere on the page
+  // while the count line still counted it.
+  const ids = new Set(['cle']);
+  const { visible, hidden } = splitHidden([fav('1', 'cle'), game('2', false, ['NFL+'])], ids);
+  assert.deepEqual(visible.map((g) => g.id), ['1'], 'the favourite survives the filter');
+  assert.deepEqual(hidden.map((g) => g.id), ['2']);
+});
+
+test('stage 4b: the page line reads "N games on your services", with TBD only when there are some', () => {
+  const s = (rows) => splitHidden(rows, new Set()).summary;
+  assert.equal(pageCountLine(s([game('1', true, ['ABC']), game('2', true, ['CBS'])])),
+               '2 games on your services');
+  assert.equal(pageCountLine(s([game('1', true, ['ABC']), bare('2'), pend('3', ['FOX'])])),
+               '1 game on your services · 2 TBD', 'the two TBD states sum on the line, as §10 had it');
+  assert.equal(pageCountLine(s([bare('1')])), '0 games on your services · 1 TBD');
+  // zero-count segments stay omitted
+  assert.doesNotMatch(pageCountLine(s([game('1', true, ['ABC'])])), /TBD/);
+  assert.doesNotMatch(pageCountLine(s([game('1', true, ['ABC'])])), /0 /);
+});
+
+test('stage 4b: singular and plural', () => {
+  const s = (rows) => splitHidden(rows, new Set()).summary;
+  assert.match(pageCountLine(s([game('1', true, ['ABC'])])), /^1 game on/);
+  assert.match(pageCountLine(s([game('1', true, ['ABC']), game('2', true, ['CBS'])])), /^2 games on/);
+});
+
+test('stage 4b: the reveal names its own number, and is absent when there is nothing to reveal', () => {
+  assert.equal(revealLabel(18), 'Show 18 not on your services');
+  assert.equal(revealLabel(1), 'Show 1 not on your services');
+  assert.equal(revealLabel(0), null, 'no control when pressing it would do nothing');
+});
+
+test('stage 4: the line and the reveal ACCOUNT FOR EVERY ROW, with nothing counted twice', () => {
+  // This is the property the per-band lines had and the page-level line must keep: every row is in
+  // exactly one of on / TBD / hidden.
+  const rows = [
+    game('1', true, ['ABC']), game('2', true, ['CBS']),
+    pend('3', ['FOX']), bare('4'), bare('5'),
+    game('6', false, ['NFL+']), game('7', false, ['CBS Sports Network']),
+  ];
+  const { visible, hidden, summary } = splitHidden(rows, new Set());
+  assert.equal(visible.length + hidden.length, rows.length, 'no row is dropped');
+  assert.equal(summary.onCount + summary.pendingCount + summary.tbdCount + summary.offCount, rows.length);
+  assert.equal(hidden.length, summary.offCount, 'hidden is exactly the off-service set');
+  assert.equal(pageCountLine(summary), '2 games on your services · 3 TBD');
+  assert.equal(revealLabel(hidden.length), 'Show 2 not on your services');
+});

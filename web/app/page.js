@@ -40,7 +40,9 @@ import { overlayForDay, applyOverlay } from '../lib/livescores.js';
 import { resolveHubParams } from '../lib/hubparams.js';
 import { calendarWeeksFrom, seasonWeeksFrom, daySpan, currentWeekKey, usesSeasonWeeks } from '../lib/weeks.js';
 import { favoriteIds, splitFavorites } from '../lib/favorites.js';
+import { splitHidden } from '../lib/offservice.js';
 import favoritesDoc from '../../data/favorites.json';
+import PageCount from '../components/PageCount.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -241,7 +243,11 @@ export default async function HubPage({ searchParams }) {
     // destroys the thing a week view exists to show.
     const favIds = favoriteIds(favoritesDoc);
     const scoped = P.isMine ? splitFavorites(rows, favIds).favorites : rows;
-    const grouped = byDay(scoped, days);
+    // D4, restored and moved to the page (stage 4a): off-service games are hidden, network-TBD and
+    // market-pending never are, and a favourite never is. Decided ONCE for the whole week so the
+    // count line at the foot describes every day above it.
+    const { visible, hidden, summary } = splitHidden(scoped, favIds);
+    const grouped = byDay(visible, days);
 
     return (
       <main>
@@ -252,12 +258,12 @@ export default async function HubPage({ searchParams }) {
             {seasonMode ? 'No NFL or college football weeks loaded.' : 'No games loaded.'}
           </p>
         ) : null}
-        {!error && wk && scoped.length === 0 ? (
+        {!error && wk && visible.length === 0 && !hidden.length ? (
           <p className="empty">
             {P.isMine ? 'None of your teams play this week.' : emptyFor(P.sport)}
           </p>
         ) : null}
-        {!error && wk && scoped.length ? (
+        {!error && wk && (visible.length || hidden.length) ? (
           <>
             {days.map((d) =>
               grouped[d]?.length ? (
@@ -269,6 +275,8 @@ export default async function HubPage({ searchParams }) {
                 </div>
               ) : null
             )}
+            <PageCount summary={summary} hidden={hidden} standingsRows={standingsRows}
+                       rankingsRows={rankingsRows} />
           </>
         ) : null}
       </main>
@@ -316,7 +324,10 @@ export default async function HubPage({ searchParams }) {
   // R4: MY TEAMS is a scope - favourites only, chronological across every sport. `allRows` arrives
   // ordered by kickoff and splitFavorites keeps input order, so "chronological" is free.
   const favIds = favoriteIds(favoritesDoc);
-  const rows = P.isMine ? splitFavorites(allRows, favIds).favorites : allRows;
+  const scoped = P.isMine ? splitFavorites(allRows, favIds).favorites : allRows;
+  // D4, restored and moved to the page (stage 4a). Decided ONCE here so the bands below render only
+  // what is visible and the single count line at the foot describes all of them.
+  const { visible: rows, hidden, summary } = splitHidden(scoped, favIds);
 
   // D1. Computed ONCE, here, from the request time - the page is force-dynamic, so this is the
   // clock the reader is actually looking at. It reaches the band as data; nothing recomputes it on
@@ -329,7 +340,7 @@ export default async function HubPage({ searchParams }) {
 
       {error ? <p className="error">Could not read the database: {error}</p> : null}
 
-      {!error && rows.length === 0 ? (
+      {!error && rows.length === 0 && !hidden.length ? (
         <p className="empty">
           {P.isMine ? (
             'None of your teams play on this viewing day.'
@@ -360,6 +371,11 @@ export default async function HubPage({ searchParams }) {
                    nowMinute={nowMinute} />
         </div>
       </div>
+
+      {!error && (rows.length || hidden.length) ? (
+        <PageCount summary={summary} hidden={hidden} standingsRows={standingsRows}
+                       rankingsRows={rankingsRows} />
+      ) : null}
 
       {!error && rows.length ? <DataAsOf day={day} today={today} overlay={overlay} /> : null}
 

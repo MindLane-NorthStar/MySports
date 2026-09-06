@@ -245,3 +245,72 @@ export function countLine(total, offCount, outlets, maxOutlets = 3) {
   const tail = outletClause(outlets, maxOutlets);
   return tail ? `${head} · ${missed} · ${tail}` : `${head} · ${missed}`;
 }
+
+/**
+ * WHAT THE PAGE HIDES, and what it must never hide (prompt 50 stage 4a).
+ *
+ * D4's filter-by-default, unchanged in substance and moved from the band to the page. A game on a
+ * service Joe does not have is hidden; everything else is shown.
+ *
+ * THREE CARVE-OUTS, and none of them is negotiable:
+ *
+ *   NETWORK TBD    nobody has announced a broadcaster. Hiding a game because you cannot watch it,
+ *                  when nobody has yet decided whether you can, is a false statement about 529 of
+ *                  them (05 §9). Exempt by construction - a network-TBD game is never in `off`.
+ *   MARKET PENDING the broadcaster is known and Cleveland's coverage is not confirmed (E5). Same
+ *                  reasoning, same construction.
+ *   FAVOURITES     a favourited team's game is never hidden. Without this it vanished from the page
+ *                  entirely while the count still counted it - measured on 2026-09-12, Fresno State
+ *                  appeared nowhere while the line said "1 unavailable".
+ *
+ * The first two are free: `offServiceSummary`'s if/else tests them BEFORE `off`, so neither can fall
+ * into it. Only favourites need naming here.
+ *
+ * @returns {{visible: Array, hidden: Array, summary: object}}
+ */
+export function splitHidden(rows, favIds) {
+  const summary = offServiceSummary(rows);
+  const offIds = new Set(summary.off.map((g) => g.id));
+  const isFav = (g) => Boolean(favIds && favIds.size && (
+    favIds.has(String(g?.home_team_id ?? g?.home?.id ?? '')) ||
+    favIds.has(String(g?.away_team_id ?? g?.away?.id ?? ''))));
+  const visible = [];
+  const hidden = [];
+  for (const g of rows || []) {
+    if (offIds.has(g.id) && !isFav(g)) hidden.push(g);
+    else visible.push(g);
+  }
+  return { visible, hidden, summary };
+}
+
+/**
+ * THE PAGE'S ONE COUNT LINE (prompt 50 stage 4b).
+ *
+ * `8 games on your services`, plus `· 3 TBD` when any are, and that is the whole line. It renders
+ * ONCE, at the foot of the page, where the old per-band lines rendered once per band.
+ *
+ * THIS SUPERSEDES 05 §10's `6 airing · 48 TBD · 5 unavailable`, which prompt 26 shipped and which
+ * Joe worded himself. Two of its three segments are gone by consequence rather than by preference:
+ * `unavailable` became the reveal control, and `airing` became `on your services` - which is the
+ * phrase D4 originally used and §10 shortened to fit a 390px band header. At page level there is
+ * room for the accurate word again.
+ *
+ * THE `TBD` SEGMENT IS COWORK'S CALL AND IS FLAGGED FOR VETO. Joe's renderings show one segment.
+ * Without a second, a day carrying 45 network-TBD games would render `6 games on your services`
+ * above 51 rows, and the line would be undercounting what is on screen by a factor of eight. The
+ * alternative is that TBD games are shown but uncounted. One line to remove if Joe prefers his.
+ *
+ * Zero-count segments stay omitted, so a day with nothing pending reads exactly as the rendering
+ * shows it.
+ */
+export function pageCountLine(summary) {
+  const on = summary?.onCount ?? 0;
+  const tbd = (summary?.pendingCount ?? 0) + (summary?.tbdCount ?? 0);
+  const head = `${on} ${on === 1 ? 'game' : 'games'} on your services`;
+  return tbd ? `${head} · ${tbd} TBD` : head;
+}
+
+/** `Show 5 not on your services` - the reveal's label. Null when there is nothing to reveal. */
+export function revealLabel(hiddenCount) {
+  return hiddenCount ? `Show ${hiddenCount} not on your services` : null;
+}

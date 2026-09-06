@@ -2685,3 +2685,30 @@ main > .hubctl:first-child { margin-top: 0; }
 }
 .pk-arrow:disabled { color: var(--faint); opacity: .5; cursor: default; }
 .pk-arrow:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* ---- THE PAGE'S COUNT LINE (prompt 50 stage 4b) ----------------------------------------------
+ * One line at the FOOT of the page, where every sport band used to carry its own. It reads
+ * `8 games on your services`, plus `· 3 TBD` when any are, then the reveal.
+ * Quiet but always present: hiding games and saying nothing would be a page that lies by omission,
+ * which is the reason D4 demanded a count line in the first place and is unchanged by moving it. */
+.pagecount { margin: 18px 0 6px; }
+
+.pagecount-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--dim);
+  font-size: 13px;
+}
+
+.pagecount-total { color: var(--dim); }
+
+/* The revealed games sit IMMEDIATELY BELOW the line, so nothing above the reader moves when the
+   disclosure opens. They keep `.offsvc-row`'s dim, because they are on screen for the specific
+   reason that they were hidden. */
+.pagecount-hidden { margin-top: 14px; }
+.pagecount-hidden > .band:last-child { margin-bottom: 0; }
