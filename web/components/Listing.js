@@ -142,6 +142,12 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
           `display: none`, added NOTHING: it was one click from LIST and strictly worse.
 
           The grid is the primary object in this view. Nothing else renders beside it. */}
+      {/* THE CALLER'S HEADING SURVIVES `gridOnly` (prompt 54 stage 1). Week mode stacks one grid per
+          day and each one has to say WHICH day it is - a column of unlabelled grids is unreadable,
+          and Joe's model is explicit that the grid comes "from Wednesday, Thursday and Sunday".
+          `gridOnly` suppresses the CARDS; it was never meant to suppress the label above them.
+          Day mode passes no heading, so this renders nothing there and that path is unchanged. */}
+      {gridOnly && heading ? <p className={headingClass}>{heading}</p> : null}
       {gridOnly ? null : bands ? (
         <>
           {/* THE CALLER'S HEADING, WHEN THERE IS ONE, RENDERS ABOVE THE BANDS. In the flat branch it

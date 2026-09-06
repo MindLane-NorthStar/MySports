@@ -283,6 +283,14 @@ export default async function HubPage({ searchParams }) {
     const { visible, hidden, summary } = splitHidden(scoped, favIds);
     const grouped = byDay(visible, days);
 
+    // THE NOW MARKER, COMPUTED ON THE SERVER, exactly as day mode does it (see the note further
+    // down beside day mode's own `now`). No clock reaches the client, so nothing here enters the
+    // hydration path - the trap prompt 42 fell into twice.
+    //
+    // ONLY THE DAY THAT IS TODAY GETS ONE. A week is up to ten days and at most one of them can be
+    // now; every other day is an archived day, which is immutable and has no "now" to mark.
+    const weekNow = viewingMinutes(new Date().toISOString());
+
     return (
       <main>
         <Controls P={P} choices={choices} />
@@ -311,9 +319,24 @@ export default async function HubPage({ searchParams }) {
                       Week mode passed no `bands` at all, so `Listing` defaulted it false and an NFL
                       game and an MLB game sat adjacent under ALL SPORTS with nothing between them.
                       With a sport selected the flat shape is retained exactly as before. */}
+                  {/* THE WEEK GRID (prompt 54 stage 1). Joe: "Choosing 'Week 1 NFL' displays all
+                      cards for that week's NFL games - cards from Wednesday, Thursday and Sunday -
+                      and TV grid from Wednesday, Thursday and Sunday."
+
+                      A TV GRID'S X-AXIS IS ONE VIEWING DAY'S MINUTES, so seven days cannot share one
+                      horizontal ruler. A week grid is therefore N grids STACKED, one per day that
+                      has games, each under its own day heading - which is exactly what Joe
+                      described. `Listing` already renders a grid for whatever day it is handed
+                      (`showGrid = Boolean(grid && games.length)`); the week branch was calling it
+                      once per day already and simply passing none of the grid props.
+
+                      `gridOnly` carries prompt 53 stage 3's suppression down PER DAY: in week +
+                      GRID each day shows its heading and its grid and no cards. */}
                   <Listing games={grouped[d]} standingsRows={standingsRows} rankingsRows={rankingsRows}
                            day={d} heading={shortDay(d)} headingClass="weekday-head"
-                           bands={!P.sport} sport={P.sport} floatFavorites={!P.isMine} />
+                           bands={!P.sport} sport={P.sport} floatFavorites={!P.isMine}
+                           grid={P.isGrid} gridOnly={P.isGrid}
+                           nowMinute={d === today ? weekNow : null} />
                 </div>
               ) : null
             )}
