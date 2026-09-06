@@ -12,7 +12,7 @@ review), `docs/rendering-contract.md` **v1.7**, `docs/rendering-contract-mobile.
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. **54 files, covering prompts 01-52** - four numbers (13, 23, 26, 43) carry
+edited after the fact. **55 files, covering prompts 01-53** - four numbers (13, 23, 26, 43) carry
 two files each, which is why the file count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -41,9 +41,48 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 52's stage-8 commit. Gates: **466 Python tests + 1 skipped**, **367 JS unit
+main, HEAD is prompt 53's stage-9 commit. Gates: **466 Python tests + 1 skipped**, **367 JS unit
 tests**, smoke **30/30**, qa-shots **14/14**. Tree clean apart from always-untracked `assets/` (and
 `web/qa/`, which prompt 46 added to `.gitignore`).
+
+**PROMPT 53 — the hub's display architecture corrected, and the studio logos.** Nine commits, from
+`61469b6`:
+
+| stage | commit | what shipped |
+|---|---|---|
+| 1 | `08be11a` | the archive is 54 files; **working rule 30** |
+| 2 | `022b02b` | a season week shows its own sport's programs |
+| 3 | `a1baa78` | GRID VIEW shows a grid and nothing else |
+| 4 | `2aa07fb` | a week says why a chip is empty, and where its scores came from |
+| 5 | `6bfbe4e` | an all-sports week separates its sports |
+| 6 | `3e0451b` | MY TEAMS does not label every row as yours |
+| 7 | `fdce95d` | four studio-show marks — **all 18 brands now have art** |
+| 8 | `19a2f83` | the program logo renders first, the title only when it fits |
+| 9 | *(this commit)* | register §21, this file, the prompt filed |
+
+**Read `docs/enhancement-register.md` §21** before touching the hub's display logic. Six of the ten
+stages fixed things that were WRONG rather than adding anything, and two had shipped since prompt 50.
+
+### THE MLB TRIPWIRE MOVED, AND NO CODE CAUSED IT
+
+**CFB `2026-09-05` = 64 blocks / {240, 223, 205, 136} / scrollWidth 1273 — unchanged.**
+**MLB `2026-09-03` now reads 3 / {226} / 564 against the recorded 3 / {228} / 568.**
+
+Measured at `61469b6` with every file of prompt 53 reverted, it is **already** 226/564 — the change
+predates the run. **Block count is unchanged**, which is the part that signals a regression. The
+cause is DATA: `MobileGrid.js:143-163` derives `pxPerMin` from a runtime measurement of the widest
+rendered team line *in the real fonts*, and that line carries the record — every MLB record on this
+slate is now five characters wide. **This figure drifts with the standings.** Whether to re-baseline
+it or to pin the tripwire to something that does not move with the season is Joe's call; it is
+recorded rather than silently adopted.
+
+### THE GRID'S LOGO-PRIORITY RULE (§21f, Joe's ruling)
+
+A program block draws its mark at its clear height — `blockH x 0.62 x aspect / 0.78` — and renders
+the title **only if what remains fits it at 18 x SCALE (14.4px)**. Below that the block is LOGO ONLY:
+the mark fills the body, the wash, seam and tray stay, the brand bar and subtitle go. Aspect is read
+from `web/public/programs/manifest.json` and `web/public/leagues/leagues-manifest.json`
+(`dark_w`/`dark_h`), **never measured in the DOM**. A brand with no art keeps the old `w/3` treatment.
 
 **PROMPT 52 — the metallic gold, the rail, NASCAR unfiltered, the studio art.** Nine commits:
 

@@ -839,3 +839,220 @@ provisional brand carries the neutral.
 **A pre-existing drift found while checking, not caused here:** the published program PNGs already
 disagreed with their own manifest — `big-noon` ink area re-measures at 10609 against the recorded
 10085 (5.2%), `college-gameday` 7975 against 7947. Any rebuild was always going to move those numbers.
+
+---
+
+## 21. THE HUB'S DISPLAY ARCHITECTURE, CORRECTED — 2026-09-06, prompt 53
+
+Prompt 53 implements a read-only analysis of the Schedule Hub done at `61469b6`. Six of its ten
+stages fix things that were wrong rather than adding anything, and two of those had been shipping
+since prompt 50 built the hub.
+
+### 21a. GRID VIEW means the grid is the primary object
+
+**`gridOnly` was DEAD.** `page.js` passed `gridOnly={P.isGrid}` to `Listing` and **`Listing` never
+destructured it** — `git grep gridOnly` returned exactly one line in the whole repo, the call site,
+and no CSS compensated. So GRID VIEW never suppressed anything. `bands={!P.isGrid}` merely collapsed
+the sport bands into one flat unheaded block, which is a *degraded* list.
+
+Measured before the fix, CFB 2026-09-05:
+
+| | cards | bands | grid |
+|---|---|---|---|
+| GRID @390 | 64 | 1 | phone grid + the whole list |
+| GRID @1440 | 64 | 1 | a degraded list, archived grid at the FOOT |
+
+It was one click from LIST and strictly worse at both widths.
+
+**Now:** on a phone GRID VIEW renders the mobile grid and **zero** cards. On desktop the **archived
+PC grid is promoted to the top** and the list is suppressed. With **ALL SPORTS on desktop** there is
+no archived grid to promote — it is per `(sport, day)` by construction — so one honest line says the
+desktop grid is per league and to pick one, reusing `ArchivedGrid`'s own voice.
+
+**The mobile grid is NOT lifted to desktop.** The Mobile Grid Addendum's deviations are phone-only
+and M5 says "PC keeps v1.2 labels". **CSS-gated, not JS-gated:** both grids render and one is hidden
+by a media query at the same 699px boundary the rest of the app uses, because a JS width state would
+reintroduce the hydration mismatch every breakpoint here is CSS-gated to avoid. `.deskgrid-only` is
+the mirror of `.mgrid-only`.
+
+**LIST VIEW is unchanged**, proven by the same probe before and after: 64 cards / 1 band / 3866 DOM
+nodes at both widths, 70 / 5 / 4278 under ALL SPORTS.
+
+### 21b. A season week showed every sport's programs
+
+`page.js` had:
+
+```js
+const progs = seasonMode
+  ? await programsForRange(wk.start, wk.end)          // <- no sport
+  : await programsForRange(wk.start, wk.end, P.sport);
+```
+
+`seasonMode` is `Boolean(P.sport) && usesSeasonWeeks(P.sport)`, so it is true **only when a sport is
+selected** — the branch that knows the sport was the one discarding it.
+
+| | before | after |
+|---|---|---|
+| CFB week 2026-08-29 | 14 programs: 4 cfb + 10 aew/indycar/nascar/ufc/wwe | 4, all cfb |
+| NFL week 2026-09-09 | 14 programs: 5 nfl + 9 aew/cfb/nascar/ufc/wwe | 5, all nfl |
+
+**It loses nothing wanted**, checked against the database rather than assumed: a studio show carries
+the sport it BOOKENDS — nfl 80, cfb 31 — never one of its own, so filtering by sport keeps every show
+that belongs on the week. The ternary is gone rather than half-fixed: both arms were the same call,
+and a two-armed ternary with identical arms invites the bug back.
+
+### 21c. Week mode inherits the empty state and the provenance line
+
+**The empty state.** `emptyFor()` returned the bare "No UFC games loaded for this week." — the dead
+end register §13 rules out, and exactly what day mode had already been given bespoke `SPORT_EMPTY`
+copy to avoid. One tile, the same absent data, two answers depending on which toggle you were on.
+**Only the explanatory half is shared**; week mode keeps its own "loaded for this week" framing,
+because the two prisms ask different questions.
+
+**The provenance line.** `DataAsOf` was day-only and so is the live overlay, so a week containing
+today rendered today's games with database scores and nothing saying they were not live — the case
+`DataAsOf`'s own docstring calls out. **The overlay is deliberately NOT added to week mode:**
+`overlayForDay` is a per-day fetch and a week is up to ten days. The line says so instead. One
+accurate sentence beats silence, and it beats ten fetches.
+
+### 21d. Sport bands in a week, under ALL SPORTS only
+
+**Joe's ruling:** banding adds information exactly when more than one sport is on screen, and adds
+only heading noise when the tiles have already narrowed it to one. Week mode passed no `bands` prop
+at all, so an NFL game and an MLB game sat adjacent with nothing between them.
+
+**`bands={!P.sport}`.** With a sport selected the flat shape is retained exactly.
+
+**The nesting is the part that needed care.** Passing `bands` initially dropped the weekday heading
+entirely, because `heading` only reached the DOM through the flat branch (where it goes into
+`SportBand` as `sectionLabel` so C3's count could share its row). With bands there are several
+SportBands and no single one to carry it, so it now renders above them — and nothing is lost by
+moving it out, because the per-band count was retired in prompt 50 stage 4.
+
+Then the sizes: `.weekday-head` is 21px and `.band-title` is 22.5/25.5px, so **the day would have
+read as subordinate to the sport nested inside it.** The day keeps its size and the sports step DOWN
+to 16/17px, scoped to `.weekday` so day mode — where `.band-title` IS the outer level — is untouched.
+The band mark comes down with the title, or a 27px logo beside 16px type becomes the heading.
+
+### 21e. MY TEAMS does not label every row as yours
+
+The band float tests `isFavorite`; the scope tests `isMine`. They are deliberately different
+questions — a race has no team to be one of — and under `scope=mine` that surfaced as nonsense:
+
+| band | rows | label |
+|---|---|---|
+| College Football | 4 | "Your teams" — every row in the band |
+| MLB | 1 | "Your teams" |
+| NASCAR / UFC / AEW | 1 each | none — in scope via `TEAMLESS_SPORTS`, fails `isFavorite` |
+
+One page, some bands entirely labelled and others entirely not, for a reason invisible to the reader.
+**`floatFavorites={!P.isMine}`**: under MY TEAMS the *page* is the label. ALL GAMES is untouched and
+was re-measured to prove it. Item 9 — the FirstBand double-label — is closed both ways.
+
+### 21f. The logo comes first in the grid — JOE'S RULING
+
+> "I want the pregame/postgame program logos to appear clearly no matter what. Priority should be
+> given to the LOGO to render clearly — even if it prevents text from rendering… if it fills the
+> entire space that is fine — only if there's enough room to render the logo clearly on the left in
+> the logo tile, then open up the text portion of the card to the right, only then should logo AND
+> text both render."
+
+**What was backwards:** `cap = max(16, min(blockH, w/3))` gave the mark a third of the block and the
+title took the largest ladder step that fitted, **falling through to the smallest when none did** —
+so the logo was squeezed and the text always rendered, at 8.8px if that was what it took.
+
+**The rule, as a rule rather than a number:** the mark takes the width it needs to draw at its clear
+height — `blockH × 0.62 × aspect ÷ 0.78`, the two fractions being `.pblock .pcap img`'s own
+max-height and max-width — and **the title renders only if what remains fits it at 18 × SCALE
+(14.4px)**. That floor is the fourth rung of the existing ladder, not a new number: the three below
+it were always the "it only just fits" sizes.
+
+**LOGO ONLY** fit-boxes the mark into the whole body at up to 86% × 80%. The **wash stays** — it is
+what tells four red-branded shows apart — and moves inside the endcap. The **seam and tray stay**:
+the tray carries the start time and venue and a reader needs those whether or not the title
+rendered. The 3px brand bar goes (it marks the endcap's edge against a stage that no longer exists)
+and the subtitle goes with the title.
+
+**Aspect is read from the manifests, never measured in the DOM** — measuring an `<img>` after load
+would reflow every program on the grid when the PNG arrived. Two manifests, because a studio show
+points at `/programs/<slug>.png` while a race, fight card or wrestling show shares a league mark;
+`dark_w`/`dark_h` were added to the league manifest because its own `aspect` is measured on the RAW
+file and these brands render the `_dark` variant.
+
+**Zoom is correct by construction and measured.** `capNeeded` derives from `blockH`, which pinch does
+not change, while `w` grows — so the logo holds its size and every extra pixel goes to the text. At
+390, zoom 1 → 2 on NFL 2026-09-13, three blocks flip from LOGO ONLY to logo+text with their caps
+settling at exactly what each mark needs.
+
+**A brand with no art keeps today's treatment**, so the gap stays visible rather than disguised.
+
+**The consequence worth watching:** the NASCAR-marked brands need **282px** of endcap because the
+wordmark is 6:1, and their titles run to 50 characters. Those blocks will be LOGO ONLY at almost
+every width. The tray still carries the time and venue. That is the trade the ruling accepts, and it
+is the most visible thing it does.
+
+### 21g. Four studio-show marks, and every brand now has art
+
+`foxnflsunday` (replacing the retired lockup prompt 52 shipped and flagged), `foxnflkickoff`,
+`netflixpregame` and `tnfpregame`. **All eighteen brands now have art.**
+
+**All four ship RAW or nearly so, and that is a finding.** `whiten_below_gap` — the treatment the
+brief expected for the two FOX shields — **is a no-op here**: it locates a band of transparent ROWS
+separating a badge from a wordmark, and these shields are one solid stack with no gap. `floor_l` was
+the obvious second try and is **wrong**, measured at the real endcap size: lifting the black shield
+body produces exactly the grey backing plate contract v1.3e forbids, and drags the yellow NFL band
+down with it. Raw is crisper and keeps FOX's own colours; the black body receding while the mark
+reads by its white type and yellow band **is** the NHL/ABC ruling working.
+
+`netflix-gameday` did want `alpha_harden` — its soft near-black halo reads as a smudge at card size.
+
+**Two portrait marks, not one.** `fox-nfl-sunday` publishes at **0.656**, more portrait than
+`fox-nfl-kickoff`'s 0.688 — the two that demand the most width per unit of height.
+
+**Colours**, all derived by the rule that derived `indycar`, all strong enough to clear provisional:
+`#FEC00F` (18.1%), `#FEC00E` (17.8%), `#E60914` (15.4% — within 1/255 of Netflix's published
+`#E50914`, a check on the method), `#055BD1` (40.7%).
+
+**One rename, one deliberate non-rename.** `netflixpregame` becomes **Netflix Gameday** — the art
+says so and there are zero loaded rows, so the art is the only evidence. `tnfpregame` is **left
+alone and reported**: the art is the THURSDAY NIGHT FOOTBALL *game* shield, not a pregame-show
+lockup (Amazon's pregame show is "TNF Tonight"), and with zero loaded rows there is no title to
+check against. Joe's call, not a guess.
+
+**The normalization hazard runs one way only**, verified by reading and then proven: `target()`
+recovers the ink-area target from the FROZEN network manifest and never recomputes it from the
+programs. `web/public/marks/manifest.json` diffed before and after — **empty**.
+
+### 21h. Two tests hit the escape hatch they were given
+
+Both the Python and JS "a brand with no art draws a typographic mark" tests asserted that some brand
+still had none, each carrying a note saying *"if every brand has art this test is retired, not edited
+to pass"*. Stage 7 wired the last four and both fired.
+
+**The fallback is not dead code** — it is reached by an **unknown brand_key**, a show loaded before
+its art is sourced, which is the normal order of events and was true of every brand in the file at
+some point. Both tests now pin that path, which cannot go stale, plus the two invariants that
+replaced the old one: art ships with recorded provenance, and every brand keeps a short title for the
+endcap to fall back to.
+
+### 21i. Three stale comments, all naming retired routes
+
+`Listing`'s flat branch said *"/weeks and /history keep their flat structure"* and `SportBand`
+carried the same claim twice. **Both routes have been redirects since prompt 50 made the app one
+route.** They now say what the arrangements are actually for. `Listing`'s band-order comment also
+listed SPORTS as "(cfb, nfl, nba, nhl, mlb)" — three of five in the wrong place, four sports missing;
+it now names the constant rather than restating it, so it cannot drift again.
+
+### 21j. The MLB tripwire moved, and NOT because of this run
+
+`MLB 2026-09-03` reads **3 blocks / {226} / 564** against the recorded **3 / {228} / 568**. Measured
+at `61469b6` with every file of this run reverted, **it is already 226/564** — the change predates
+prompt 53 entirely. **Block count is unchanged**, which is the part that signals a regression.
+
+**The cause is data, not code.** `MobileGrid.js:143-163` derives `pxPerMin` from a **runtime
+measurement of the widest rendered team line in the real fonts**, and that line carries the record —
+every MLB record on this slate is now five characters wide. **The MLB tripwire figure drifts with the
+standings.** CFB's is stable and unchanged at 64 / {240, 223, 205, 136} / 1273.
+
+Recorded rather than silently adopted: whether to re-baseline it, or to pin the tripwire to something
+that does not move with the season, is Joe's call.
