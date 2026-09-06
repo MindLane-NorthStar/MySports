@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start",
     "smoke": "node scripts/smoke.mjs",
+    "geometry": "node scripts/geometry.mjs",
     "test:unit": "node --test \"test/**/*.test.mjs\""
   },
   "dependencies": {

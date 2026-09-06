@@ -339,6 +339,18 @@ export default function MobileGrid({ games, sport, day, standings, onOpen, nowMi
         <div
           className="mgrid-canvas"
           style={{ width: `calc(var(--rail-w) + ${scale.width}px)` }}
+          /* DIAGNOSTICS, and they exist to make one specific question answerable in one step.
+           *
+           * Every block width and the canvas width derive from `widest` - M2 measures the widest
+           * rendered team line ON THIS SLATE, in the real fonts, and that line carries the team's
+           * RECORD and its CFB poll rank. Both drift all season. Prompt 53 found the MLB tripwire
+           * had moved with no code change at all, and it took a full stash-and-remeasure to prove
+           * that. With these on the element, the next run compares `scrollWidth / widest`: if
+           * `widest` moved and the RATIO held, that is the standings; if the RATIO moved, that is
+           * code, and that is the stop. */
+          data-day={day}
+          data-widest={model.widest.toFixed(3)}
+          data-pxpermin={model.pxPerMin.toFixed(6)}
         >
           {/* M5: hour-only gold shorthand labels. Gridlines stay on :15. */}
           <div className="mgrid-axis">
