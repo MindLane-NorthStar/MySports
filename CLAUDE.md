@@ -100,11 +100,12 @@ never renumber, even around the retired stub.
     `tests/fixtures/*` is `-text` on purpose; the rule there is **disk bytes == index bytes**,
     asserted by `tests/test_fixture_bytes.py`.
 
-**A note that records an absence is a timestamp, not a fact.** Before acting on "missing",
-"not yet filed", "no mark in the tree", "none exists" or "TBD", check the thing itself — and when
-the note turns out to be stale, correct the note in the same commit as the work it misled you about.
-Two instances in one run: `bignoon`'s "no mark in the tree" when the mark had existed for four days,
-and the prompt archive's deliberate "not yet filed" read as a permanent gap.
+30. **A note recording an absence is a timestamp, not a fact.** Before acting on "missing", "not yet
+    filed", "no mark in the tree", "none exists" or "TBD", check the thing itself — and when the note
+    turns out to be stale, correct the note **in the same commit as the work it misled you about**.
+    Two instances in one run: `bignoon`'s "no mark in the tree" when the mark had existed for four
+    days, and the prompt archive's deliberate "not yet filed" read as a permanent gap. A note ages;
+    the tree does not.
 
 ---
 

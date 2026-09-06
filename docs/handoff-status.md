@@ -12,13 +12,19 @@ review), `docs/rendering-contract.md` **v1.7**, `docs/rendering-contract-mobile.
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. **THE ARCHIVE HAS SLIPPED: 50 and 51 were never filed**, found by prompt 52
-stage 8 — the newest file before it was `49-nascar-times-race-key.md`. Prompt 52 is filed at
-`52-metallic-gold-rail-nascar-studio-marks.md`; 50 and 51 could not be reconstructed and no
-placeholder was written for either. The archive is otherwise complete but for **39, which exists
-nowhere at all**, and **42, whose brief is gone though its handoff survives** at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`;
-neither was reconstructed and no placeholder was written for either. Prompts are the as-run record of
-why a commit exists; THIS file is what is current.
+edited after the fact. **54 files, covering prompts 01-52** - four numbers (13, 23, 26, 43) carry
+two files each, which is why the file count runs ahead of the highest number. **39 and 42 are the
+only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
+though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
+reconstructed and no placeholder was written for either. Prompts are the as-run record of why a
+commit exists; THIS file is what is current.
+
+> **A correction this file owes, and the reason working rule 30 exists.** Until `cdfae84` these
+> lines said 50 and 51 "were never filed" and "could not be reconstructed". **Both statements were
+> false.** Prompt 52 stage 8 read `docs/prompts/README.md`, saw a deliberate "not yet filed" note,
+> and reported a permanent gap - while the very paragraph it was reading named prompt 50's path in
+> `Claude outputs\` exactly. The briefs were never lost; nobody had walked the last step, and filing
+> them was a copy rather than a reconstruction.
 
 **`docs/hub/` - THE SCHEDULE HUB, the largest structural change queued for this app**, and four
 files that have to be read in this order:
@@ -265,8 +271,11 @@ cloud workspace. **Never reapply a bare browser UA.**
   Its three sites are small metadata labels.
 - **`--hairline` HAS ZERO CONSUMERS.** A dead token, found during the §9 border audit. Left in place;
   removing it is a tidy-up nobody asked for.
-- **PROMPTS 50 AND 51 WERE NEVER FILED** in `docs/prompts/`. Found at stage 8. They could not be
-  reconstructed from here and no placeholder was written.
+- ~~**PROMPTS 50 AND 51 WERE NEVER FILED** in `docs/prompts/`. Found at stage 8. They could not be
+  reconstructed from here and no placeholder was written.~~ **CLOSED by `cdfae84`, and the entry
+  was wrong twice over:** both briefs had been sitting in `Claude outputs\` the whole time, and
+  the README paragraph prompt 52 was reading named prompt 50's path. Filing them was a copy, not
+  a reconstruction. **Working rule 30 exists because of this.**
 
 ## THE HEADLINE OPEN ITEM — the announcement horizon
 
@@ -403,6 +412,33 @@ before touching any count line.
     (the four `tests/fixtures/*_raw.json` and `web/test/fixtures/team-colours.json`); the other
     **29 are an open item**, because renormalising them rewrites 29 files and touches blame, and
     that deserves its own commit and Joe's sign-off rather than a ride-along.
+
+30. **A NOTE RECORDING AN ABSENCE IS A TIMESTAMP, NOT A FACT.** Before acting on "missing", "not yet
+    filed", "no mark in the tree", "none exists" or "TBD", **check the thing itself** - and when the
+    note turns out to be stale, **correct the note in the same commit as the work it misled you
+    about**, rather than leaving a corrected repo described by an uncorrected file.
+
+    Two instances in one run, prompt 52, which is why this is a rule and not an anecdote:
+
+    - **`data/brands.json`'s `bignoon` carried "no mark in the tree; FOX's cached wordmark is
+      monochrome, so no colour to derive."** `web/public/programs/big-noon-kickoff.png` had existed
+      since 2026-09-02 - four days - built correctly through the pipeline and referenced by nothing.
+      The note was true when written and false when read. Stage 6 caught it only because the prompt
+      named it; the colour it said could not be derived came out at 70.9 % saturated pixels.
+    - **`docs/prompts/README.md` carried a deliberate "Prompt 50's own brief is not yet filed",
+      naming its exact path in `Claude outputs\`.** Stage 8 read that section, concluded 50 and 51
+      were permanently lost, wrote "could not be reconstructed" into `docs/handoff-status.md`, and
+      moved on - without opening the path the note had just given it. Both briefs were filed from
+      that path minutes later (`cdfae84`) by copying, not reconstructing.
+
+    **The failure mode is the same both times: a note about an absence was read as evidence of the
+    absence.** The two are different ages. A note ages; the tree does not. The check is cheap - one
+    `ls`, one `git grep`, one `Test-Path` - and both misses cost a stage each.
+
+    **The second half of the rule is the half that was missed.** Prompt 52 corrected `bignoon`'s note
+    in the same commit as the wiring, which is the rule working; it then left its own false claim
+    standing in `handoff-status.md` for two commits after `cdfae84` had disproved it. Prompt 53
+    stage 1 is that cleanup, and it should not have needed a stage.
 
 
 ---
