@@ -967,71 +967,9 @@ input:focus-visible {
   margin: 14px 0 20px;
 }
 
-.mgrid-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px 12px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.mgrid-head h3 {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--display);
-  font-size: 17px;
-  letter-spacing: 0.05em;
-  color: var(--ink);
-}
-
-/* B1: the two lines are a COLUMN beside the mark, which is why the mark can span both. The heading
-   is a flex row of exactly two things now - mark, then this stack - rather than a mark and one long
-   run of text that wrapped wherever it ran out of room. min-width:0 so a long sport name shrinks the
-   stack instead of pushing the mark off. */
-.mgrid-headlines {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 1px;
-  min-width: 0;
-}
-
-/* Line 1 names the grid. It keeps the heading's own type. */
-.mgrid-line1 {
-  white-space: nowrap;
-  line-height: 1.15;
-}
-
-/* Line 2 dates it and counts it. Smaller and dimmer, because the date is the qualifier and the sport
-   is the subject - and small enough that the longest weekday-plus-date-plus-count still holds one
-   line at 360px, which is the whole point of the split. */
-.mgrid-line2 {
-  font-family: var(--body);
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  line-height: 1.25;
-  color: var(--dim);
-  white-space: nowrap;
-}
-
-/* D4: the league mark, sized to the heading it sits in rather than to a fixed pixel count, so it
-   tracks the text if that ever moves.
-   B1: 2.3em now rather than 1.55em - the heading is two lines tall, and Joe asked for the mark to
-   span their COMBINED height at its current generous size. Still em-based, so it keeps tracking. */
-.mgrid-mark {
-  height: 2.3em;
-  width: auto;
-  flex: 0 0 auto;
-}
-
-.mgrid-head .mgrid-meta {
-  color: var(--dim);
-  font-size: 11.5px;
-}
+/* The grid's own header (.mgrid-head, .mgrid-headlines, .mgrid-line1/2, .mgrid-mark, .mgrid-meta)
+   was REMOVED by prompt 50 stage 5a - see the note in MobileGrid.js for where each piece it carried
+   now lives. It reversed prompt 37 stage B1, which had rebuilt that header into two lines. */
 
 /* M8: jump-to-network quick nav */
 .mgrid-nav {

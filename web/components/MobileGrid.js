@@ -44,9 +44,12 @@ import {
 import { splitOverlaps } from '../lib/overlap.js';
 // Moved to lib so the listings card can measure with the same canvas and the same faces.
 import { useTextMeasurer } from '../lib/useTextMeasurer.js';
-import { teamLogoUrl, teamLogoDarkUrl, sportMarkUrl, SPORT_LABEL } from '../lib/config.js';
+// sportMarkUrl and SPORT_LABEL went with the grid's header (prompt 50 stage 5a): the tile row
+// above the grid is what states the sport now.
+import { teamLogoUrl, teamLogoDarkUrl } from '../lib/config.js';
 import { markStyle, hasMark } from '../lib/marks.js';
-import { etTime, longDay } from '../lib/format.js';
+// longDay went with the header too - the picker directly above the grid carries the date.
+import { etTime } from '../lib/format.js';
 import { cardName, cardBroadcast } from './MatchupCard.js';
 import { recordText, standingFor } from '../lib/standings.js';
 import { railLabel } from '../lib/raillabel.js';
@@ -277,7 +280,6 @@ export default function MobileGrid({ games, sport, day, standings, onOpen, nowMi
   const trayH = TRAY_H * SCALE;
   const laneH = blockH + trayH + LANE_GAP * SCALE;
   const onGrid = rows.reduce((n, r) => n + r.items.length, 0);
-  const onProgram = rows.some((r) => r.items.some((it) => it.program));
 
   function jumpTo(id) {
     const node = document.getElementById(`mrow-${id}`);
@@ -290,46 +292,23 @@ export default function MobileGrid({ games, sport, day, standings, onOpen, nowMi
 
   return (
     <section className="mgrid" aria-label="Mobile grid">
-      {/* D4: "(mark) College Football Broadcasts · Saturday September 12, 2026 · 70 GAMES". It read
-          "CFB GRID" over a bare ISO date - the sport as a code, the word GRID naming the widget
-          rather than its contents, and a date in a format nobody says out loud.
-          longDay() emits "Saturday, September 12, 2026"; the comma after the weekday goes, because
-          this line is already separated by middots and a second punctuation mark inside one segment
-          reads as a stutter.
-          With no sport selected there is no league mark to show and the slate really is every sport,
-          so it says so rather than leaving the line to start with a middot. */}
-      <div className="mgrid-head">
-        <h3>
-          {sportMarkUrl(sport) ? <img className="mgrid-mark" src={sportMarkUrl(sport)} alt="" /> : null}
-          {/* B1: TWO LINES, split deliberately rather than left to wrap. As one run of text this
-              broke mid-date - "MLB Broadcasts - Saturday September 5," then "2026 - 3 games" - which
-              is the worst place it could break, because a year on its own line reads as a separate
-              fact. The line that names the grid and the line that dates it are different kinds of
-              information, so they get a line each and the break stops being the browser's choice. */}
-          <span className="mgrid-headlines">
-            <span className="mgrid-line1">
-              {sport ? SPORT_LABEL[sport] || sport.toUpperCase() : 'All Sports'} Broadcasts
-            </span>
-            <span className="mgrid-line2">
-              {/* v1.7: the grid holds programmes as well as games now, so it stops calling a
-                  race a game. A day with no programme on it reads exactly as it did. */}
-              {longDay(day).replace(/,/, '')} · {onGrid}{' '}
-              {onGrid === 1 ? (onProgram ? 'PROGRAM' : 'GAME') : (onProgram ? 'ON THE GRID' : 'GAMES')}
-            </span>
-          </span>
-        </h3>
-        {/* The count moved into the heading, so this keeps only what the heading cannot say: the
-            games that could NOT be placed, and the dead time M3 collapsed. Both explain something
-            the reader would otherwise have to notice was missing. */}
-        {tbd.length || cuts.length ? (
-          <span className="mgrid-meta">
-            {tbd.length ? `${tbd.length} awaiting kickoff / network` : ''}
-            {tbd.length && cuts.length ? ' · ' : ''}
-            {cuts.length ? `${cuts.length} gap${cuts.length > 1 ? 's' : ''} cut` : ''}
-          </span>
-        ) : null}
-      </div>
+      {/* THE GRID'S OWN HEADER IS GONE (prompt 50 stage 5a), and this REVERSES prompt 37 stage B1,
+          which rebuilt it into two lines with the league mark spanning both. Deliberate, and every
+          piece it carried was checked against where that piece now lives before it was deleted:
 
+            the league mark and the sport name -> the tile row above, which states the sport
+            the date                           -> the picker, now directly above the grid
+            "N ON THE GRID"                    -> the footer's own `{onGrid} on the grid` pill,
+                                                  which is the SAME number, not stage 4's page line
+            "N awaiting kickoff / network"     -> the footer splits it into its two honest halves:
+                                                  the `N kickoff TBA` pill and .mgrid-note's
+                                                  network-TBD line
+            "N gaps cut"                       -> the footer prints one pill PER cut, naming the
+                                                  range it skipped
+
+          The last two are MORE information in the footer than the header carried, not less: the
+          header summed two different unknowns into one number, which is the conflation prompt 24
+          split apart in the first place. */}
       {/* M8: jump-to-network quick nav */}
       {rows.length > 1 ? (
         <nav className="mgrid-nav" aria-label="Jump to network">
