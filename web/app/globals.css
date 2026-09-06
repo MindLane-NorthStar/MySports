@@ -1654,22 +1654,47 @@ input:focus-visible {
  * removed the subtraction and let the whole inset through.
  *
  * Then Joe saw it installed: "the tight distance between the bezel and top of the MySports TV text
- * ... we need to add a smidge of padding." His ruling is 18px of clear space, and he made both
- * calls, so the later one wins. The 11 stays in the ARTWORK - coordinates are never hand-edited -
- * and the extra 7 comes from the wrapper, in the @media block below so it applies only where an
- * inset exists. env()'s own fallback is 0px, so no max() is needed and a browser without a safe
- * area still gets exactly nothing from either rule. */
+ * ... we need to add a smidge of padding." His ruling was 18px of clear space, and the extra came
+ * from the wrapper in the @media block below so it applied only where an inset exists.
+ *
+ * THAT DIRECTION HAS SINCE REVERSED, TWICE, ON THE DEVICE. Prompt 46 halved the addition 7 -> 4,
+ * prompt 50 absorbed 8 back out of the inset, and prompt 51 absorbs 6 more. The rule below carries
+ * the current numbers and the measurements behind them; this paragraph is the history of how it got
+ * there. A max() guard IS now needed, because the expression subtracts. */
 .banner{position:relative;overflow:hidden;border-bottom:1px solid var(--line-soft);
-  /* PROMPT 50 STAGE 3: THE BANNER RISES 8px. Joe: it sits significantly lower on the page than it
-     needs to. The 8 is ABSORBED INTO THE INSET rather than subtracted from the element, which is
-     prompt 28's mechanism brought back for a different reason - and max(0px, ...) is what makes it
-     safe, because a browser with no safe area reports 0 and 0 - 8 would be negative padding.
-     WHERE IT SHOWS: only where an inset exists, which is the installed app. In a desktop browser
-     env() is already 0, max() clamps to 0, and nothing moves - so this is invisible in Chromium by
-     design and has to be judged on the phone (rule 25).
-     WHAT IT DOES NOT TOUCH: the artwork's own 11px of headroom, because coordinates are never
-     hand-edited, and the left/right/bottom insets, which Joe confirmed correct on the device. */
-  padding-top:max(0px, calc(env(safe-area-inset-top, 0px) - 8px));
+  /* THE BANNER RISES 14px, ABSORBED INTO THE INSET (prompt 50 stage 3 took 8, prompt 51 stage 3
+     takes 6 more on Joe's device ruling of 2026-09-06: "remove 6px from the dead space atop the
+     banner bar. We already removed 8 now take 6 more.").
+
+     max(0px, ...) is load-bearing: a browser with no safe area reports 0, and 0 - 14 is negative
+     padding. WHERE IT SHOWS: only where an inset exists, which is the installed app. env() is 0 in
+     every desktop browser, max() clamps to 0, and nothing moves - so this change is INVISIBLE IN
+     CHROMIUM BY CONSTRUCTION and can only be judged on the phone (rule 25).
+
+     THIS SUPERSEDES PROMPT 44's "absorb nothing of the inset" ruling (`a68af01`). That ruling
+     protected banner v2's own headroom - the gap Joe set in the September 4 phone iteration - and
+     Joe's later device observations override it. The artwork is still not touched: coordinates are
+     never hand-edited and the 11 stays in the drawing.
+
+     WHERE THE INK ACTUALLY LANDS, measured by scanning rendered pixels rather than by arithmetic,
+     because a <text> element's bounding box is its em box and not its ink:
+
+       no inset          padding 0    first ink y = 10.0 at 390, 11.0 at 430   (unchanged)
+       inset 47, before  padding 43   first ink y = 53.0   6px below the band
+       inset 47, AFTER   padding 37   first ink y = 47.0   EXACTLY at the band's lower edge
+       inset 59, before  padding 55   first ink y = 65.0   6px below
+       inset 59, AFTER   padding 49   first ink y = 59.0   EXACTLY at the band's lower edge
+
+     So 14 does NOT push the wordmark into the status bar, and the arithmetic that suggested it
+     would missed the standalone rule's +4: net absorption is 14 - 4 = 10 CSS px, which is exactly
+     the artwork's measured headroom (11 STAGE px = 10.0 CSS px at 390, the SVG scaling 390/428).
+     There is zero overlap with the clock and battery glyphs, and nothing is clipped - the padding
+     resolves positive at every inset, so the artwork's top is never above y = 0.
+
+     A THIRD 6px WOULD BE THE ONE THAT BITES. At -20px the ink would sit 6px inside the band.
+
+     WHAT IT DOES NOT TOUCH: the left, right and bottom insets, which Joe confirmed correct. */
+  padding-top:max(0px, calc(env(safe-area-inset-top, 0px) - 14px));
   /* THE GROUND IS THE STAGE. The old radial was drawn for the old artwork; banner v2 paints its
      own stage, so the wrapper only has to continue it. Same three stops as the SVG's bdBg/bnBg,
      which is what makes the wings past the 1600px block invisible instead of a halo. It is now a
@@ -1689,10 +1714,10 @@ input:focus-visible {
    integer pixel; at 3x DPR the half-pixel is a third of a device pixel, below anything the panel can
    show. Wordmark first ink now sits 15px below the inset: 4 here + the artwork's own 11. */
 @media (display-mode: standalone){
-  /* The installed app keeps prompt 46's +4, and takes stage 3's -8 through the same max() guard, so
-     the two never fight: on a 47px inset the wordmark's first ink moves from 62px to 54px below the
-     bezel (47 + 4 + the artwork's 11, less the 8). */
-  .banner{padding-top:max(0px, calc(env(safe-area-inset-top, 0px) + 4px - 8px))}
+  /* The installed app keeps prompt 46's +4 and takes the -14 through the same max() guard, so the
+     two never fight. NET ABSORPTION IS 10px, and that is why the wordmark lands exactly on the
+     inset's lower edge rather than inside it - see the measured table above. */
+  .banner{padding-top:max(0px, calc(env(safe-area-inset-top, 0px) + 4px - 14px))}
 }
 .bn-pc{position:relative}
 /* The desktop stage is 1400 wide and the banner is full-bleed to the viewport, so past 1600px the
