@@ -303,9 +303,17 @@ export default async function HubPage({ searchParams }) {
               grouped[d]?.length ? (
                 <div key={d} className="weekday">
                   {/* C3: the day heading renders THROUGH Listing -> SportBand, so it shares the
-                      header row exactly as a sport band does. */}
+                      header row exactly as a sport band does.
+
+                      BANDS UNDER ALL SPORTS ONLY (prompt 53 stage 5, Joe's ruling). Banding adds
+                      information exactly when more than one sport is on screen; with a tile
+                      selected it adds only a heading that repeats what the tile already says.
+                      Week mode passed no `bands` at all, so `Listing` defaulted it false and an NFL
+                      game and an MLB game sat adjacent under ALL SPORTS with nothing between them.
+                      With a sport selected the flat shape is retained exactly as before. */}
                   <Listing games={grouped[d]} standingsRows={standingsRows} rankingsRows={rankingsRows}
-                           day={d} heading={shortDay(d)} headingClass="weekday-head" />
+                           day={d} heading={shortDay(d)} headingClass="weekday-head"
+                           bands={!P.sport} sport={P.sport} />
                 </div>
               ) : null
             )}

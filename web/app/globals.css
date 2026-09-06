@@ -1667,6 +1667,25 @@ input:focus-visible {
   margin-bottom: 14px;
 }
 
+/* THE NESTING, and it only exists under ALL SPORTS (prompt 53 stage 5).
+ *
+ * A week under ALL SPORTS now has TWO heading levels - the weekday, then the sports inside it - and
+ * the eye reads size before position. `.weekday-head` is 21px while `.band-title` is 22.5px on a
+ * phone and 25.5px above it, so left alone the DAY would read as subordinate to the sport nested
+ * inside it, which is backwards.
+ *
+ * The day keeps its size and the sports step DOWN beneath it, rather than the day growing: 21px is
+ * the size prompt 50 measured for this heading and the day is not the thing that changed. Scoped to
+ * `.weekday` so day mode's bands - where `.band-title` IS the outer level - are untouched.
+ *
+ * The band mark comes down with the title, or a 27px logo beside 16px type reads as the heading. */
+.weekday .band-title { font-size: 17px; }
+.weekday .band-mark { height: 21px; }
+@media (max-width: 699px) {
+  .weekday .band-title { font-size: 16px; }
+  .weekday .band-mark { height: 20px; }
+}
+
 /* B1/C3: the Weeks day heading is NOT .band-title - it is its own 14px gold rule, which the brief
    allowed for. It takes the same 1.5x (14 -> 21px) and keeps its gold, and it now renders THROUGH
    SportBand so the count joins it exactly as it joins a band header. */

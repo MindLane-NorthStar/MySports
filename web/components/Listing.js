@@ -125,6 +125,13 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
           The grid is the primary object in this view. Nothing else renders beside it. */}
       {gridOnly ? null : bands ? (
         <>
+          {/* THE CALLER'S HEADING, WHEN THERE IS ONE, RENDERS ABOVE THE BANDS. In the flat branch it
+              goes down INTO SportBand as `sectionLabel` (C3, so the count could share its row); with
+              bands there are several SportBands and no single one to carry it, so it renders here as
+              the OUTER level. Nothing is lost: the per-band count was retired in prompt 50 stage 4
+              and the count line is page-level now, so the reason it had to live inside the band is
+              gone. Day mode passes no heading and is unaffected. */}
+          {heading ? <p className={headingClass}>{heading}</p> : null}
           {/* No page-level section. `floatFavorites` is left at its DEFAULT of true, which is D6's
               in-band float - the hairline and the YOUR TEAMS micro-label inside each sport band.
               Prompt 50 passed false here because the page-level section was doing that job. */}

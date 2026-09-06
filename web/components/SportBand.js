@@ -8,9 +8,11 @@
 // services" across a mixed day tells a viewer nothing, while "18 not on your services" under MLB
 // tells them their baseball night is mostly out-of-market RSNs.
 //
-// The same component renders the FLAT case with `showHeader={false}`, so /weeks and /history keep
-// their current structure without a second copy of the count line, the toggle, the favourites float
-// and the row wrappers. One implementation, two arrangements.
+// The same component renders the FLAT case with `showHeader={false}` - today that is WEEK MODE
+// with a sport selected, where the weekday is already the heading - without a second copy of the
+// count line, the toggle, the favourites float and the row wrappers. One implementation, two
+// arrangements. (This said "/weeks and /history" until prompt 53; both routes have been redirects
+// since prompt 50 made the app one route.)
 //
 // It renders AROUND MatchupCard and never inside it. The card is locked (contract v1.6.4 + Mobile
 // Grid Addendum v1.0): the off-service dim, the MARKET TBD cue, the favourites rule and the YOUR TEAMS
@@ -26,11 +28,16 @@ import favoritesDoc from '../../data/favorites.json';
 // D4: the mark table now lives in config.js - the mobile grid header needs the same one.
 import { sportMarkUrl } from '../lib/config.js';
 
-// `floatFavorites` and `sectionLabel` exist for 05 section 11. On the Today page the favourites
-// are hoisted to a PAGE-LEVEL section, so the in-band float is switched off there and the section
-// carries the marker instead. /weeks and /history keep the float on - section 11 is scoped to `/`,
-// because those two group by DAY and lifting a favourite out of its day destroys the calendar they
-// exist to be. Defaults preserve their behaviour exactly.
+// `floatFavorites` and `sectionLabel` exist for 05 section 11. The page-level YOUR TEAMS section
+// they were written against was retired by prompt 51 stage 4a, so the float is D6's only mechanism
+// now and lives at BAND level. WEEK MODE keeps it on: it groups by DAY, and lifting a favourite out
+// of its day destroys the calendar the week exists to be.
+//
+// PROMPT 53 STAGE 6 ADDED THE ONE EXCEPTION: under `scope=mine` the caller passes
+// `floatFavorites={false}`, because a band that contains nothing BUT favourites has nothing to
+// float them away from. See Listing's note.
+//
+// (This said "/weeks and /history keep the float on" until prompt 53; both are redirects.)
 export default function SportBand({ sport, label, games, standings, rankings, showDay = false, onOpen,
                                     showHeader = true, floatFavorites = true, sectionLabel = null,
                                     headingClass = 'favlabel' }) {
