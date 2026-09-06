@@ -30,7 +30,13 @@
   /* --faint was #6A7078 here; prompt 25 lifted the APP's to #868d96 because the old value failed
      WCAG AA at every background it landed on. Synced so this file does not specify a colour the
      app deliberately stopped using. --live added for the in-progress rung below. */
-  --ink:#F2F2F0; --dim:#9AA0A8; --faint:#868D96; --gold:#F0C850; --gold-dim:#8A7530;
+  /* THE METALLIC GOLD (prompt 52 stage 3). Synced from web/app/globals.css, whose block cites
+     docs/ux-reference/visual-refinement-handoff-2026-09-06.md §4. Rule 23: this reference changes
+     in the same commit as the app, or it stops being an authority and becomes a second opinion.
+     Was --gold:#F0C850 / --gold-dim:#8A7530. The four supporting tones are carried too, so a
+     measurement taken here uses the same family the app ships. */
+  --ink:#F2F2F0; --dim:#9AA0A8; --faint:#868D96; --gold:#C6AF7A; --gold-dim:#8C7650;
+  --gold-hi:#E0D1A5; --gold-mid:#B39A69; --gold-glow:rgba(198,175,122,.22); --gold-line:rgba(198,175,122,.55);
   --live:#7FD1A3; --alert:#E8918D;
   /* C4 drift check (prompt 29's rule). --body said "Barlow" here while the app has shipped INTER
      since it was written, which is the worst kind of drift in a reference used for measurement: every
@@ -71,7 +77,7 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 
 .abar{display:flex; align-items:center; gap:10px; padding:12px 14px 8px}
 .abar .wm{font-family:var(--disp); font-weight:700; font-size:22px; letter-spacing:.05em; text-transform:uppercase;
-  color:#fff; text-shadow:0 0 2px #F0C850, 0 0 8px rgba(240,200,80,.5)}
+  color:#fff; text-shadow:0 0 2px #C6AF7A, 0 0 8px rgba(198,175,122,.5)}
 .abar .wm b{color:var(--gold)}
 .abar .day{margin-left:auto; font-family:var(--disp); font-weight:600; font-size:15px; color:var(--dim); letter-spacing:.06em}
 /* REGISTER §16 (prompt 31). The row NO LONGER SCROLLS: ALL moved out to a full-width bar of its own

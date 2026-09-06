@@ -189,7 +189,11 @@ for (const dev of DEVICES) {
   );
   record(
     'M5: axis labels are gold',
-    labels.length > 0 && labels.every((l) => l.color === 'rgb(240, 200, 80)'),
+    // PROMPT 52 STAGE 3: the metallic gold. --gold moved #f0c850 -> #C6AF7A (handoff §4), so the
+    // computed colour moves with it. The assertion is RE-BASED on the new token, not weakened -
+    // it still pins that every axis label carries the app's gold and no other colour. Addendum
+    // M5 is amended to match in the same run.
+    labels.length > 0 && labels.every((l) => l.color === 'rgb(198, 175, 122)'),
     labels[0]?.color || 'none'
   );
 

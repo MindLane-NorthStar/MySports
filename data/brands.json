@@ -38,7 +38,7 @@
       "title": "AEW",
       "short_title": "AEW",
       "color": "#F0C850",
-      "color_source": "docs/design/program-card-design-v1.md - the non-red proof against the all-red cluster",
+      "color_source": "docs/design/program-card-design-v1.md - the non-red proof against the all-red cluster. NOT A USE OF THE --gold TOKEN: this hex was byte-identical to the OLD web/app/globals.css --gold (#f0c850), which prompt 52 stage 3 moved to the metallic #C6AF7A. AEW KEEPS #F0C850 - it is a brand constant, and a find-and-replace on the hex would silently repaint a brand.",
       "mark": "/leagues/aew.png",
       "mark_dark": "/leagues/aew_dark.png"
     },

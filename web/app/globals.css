@@ -82,8 +82,34 @@
      without moving --dim or lightening the gradient's top end. Both are Joe's call. */
   --faint: #868d96;
 
-  --gold: #f0c850;
-  --gold-dim: #8a7530;
+  /* THE METALLIC GOLD FAMILY - docs/ux-reference/visual-refinement-handoff-2026-09-06.md §4,
+     "the current gold/yellow should be replaced with the new approved metallic gold family".
+     Joe's handoff is the design of record; the rendering beside it
+     (visual-refinement-metallic-gold.png) is a DIRECTION reference, not a specification (§18).
+
+     THESE SIX VALUES ARE THE ONE AUTHORIZED EXCEPTION TO WORKING RULE 16 in this run: they are
+     transcribed once, here, from §4 of that document, and every consumer reads them from here.
+     Nothing downstream retypes a gold hex.
+
+     CONTRAST, measured against the tokens as read from THIS block (rule 13 - the local ground,
+     never a corner sample). #C6AF7A: 9.02:1 on --spot-3, 8.05 on --spot-2, 7.35 on --spot-1,
+     5.24 on --spot-0, 7.09 on --panel, 5.69 on --panel-top, 7.55 on --panel-bottom. Dark text on
+     the gold plate (.seg button[data-active], color: var(--spot-3)) is 9.02:1 - down from
+     #f0c850's 12.03:1 and still far above AA.
+
+     WHAT IS NOT A USE OF THIS TOKEN: data/brands.json's AEW colour is #F0C850, byte-identical to
+     the OLD --gold and NOT a reference to it. It is a brand constant (program-card-design-v1.md,
+     "the non-red proof against the all-red cluster") and it keeps its value. A find-and-replace on
+     that hex would silently repaint a brand. */
+  --gold: #C6AF7A;      /* §4 primary metallic gold  (was #f0c850) */
+  --gold-dim: #8C7650;  /* §4 deep gold              (was #8a7530; 4.43:1 on --spot-3, was 4.29) */
+  --gold-hi: #E0D1A5;   /* §4 highlight gold */
+  --gold-mid: #B39A69;  /* §4 mid gold */
+  --gold-glow: rgba(198, 175, 122, 0.22);  /* §4 soft gold glow */
+  /* §4 "gold border / fine accent". §9 of the same document suggests 0.40 for the selected edge;
+     §4's 0.55 is the token and is what this file uses, because the eight border/glow literals it
+     replaces already ran at 0.25-0.60 and 0.55 keeps them where prompt 25 and 34 tuned them. */
+  --gold-line: rgba(198, 175, 122, 0.55);
 
   --live: #7fd1a3;
   --alert: #e8918d;
@@ -352,7 +378,7 @@ input[type='search'] {
 
 .pill[data-tone='final'] {
   color: var(--gold);
-  border-color: rgba(240, 200, 80, 0.4);
+  border-color: rgba(198, 175, 122, 0.4);
 }
 
 .pill[data-tone='live'] {
@@ -775,7 +801,7 @@ button.mcard {
 }
 
 button.mcard:hover {
-  border-color: rgba(240, 200, 80, 0.45);
+  border-color: rgba(198, 175, 122, 0.45);
 }
 
 /* ----------------------------------------------------------------- day columns (/weeks) */
@@ -1171,7 +1197,8 @@ input:focus-visible {
   top: 0;
   bottom: 0;
   width: 0;
-  border-left: 1px dashed rgba(240, 200, 80, 0.55);
+  /* §9's gold-emphasized edge, on the token rather than a literal - byte-identical pixels. */
+  border-left: 1px dashed var(--gold-line);
   z-index: 2;
 }
 
@@ -1204,8 +1231,9 @@ input:focus-visible {
 }
 
 .mblock[data-marquee='true'] {
-  border-color: rgba(240, 200, 80, 0.55);
-  box-shadow: inset 0 0 0 1px rgba(240, 200, 80, 0.25);
+  /* §9's gold-emphasized edge on the token; the 0.25 inner ring keeps its own tuned alpha. */
+  border-color: var(--gold-line);
+  box-shadow: inset 0 0 0 1px rgba(198, 175, 122, 0.25);
 }
 
 .mblock-body {
@@ -1345,13 +1373,13 @@ input:focus-visible {
 .mtray-pill[data-kind='rivalry'] {
   color: var(--gold);
   background: #3a3218;
-  box-shadow: inset 0 0 0 1px rgba(240, 200, 80, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(198, 175, 122, 0.6);
 }
 
 .mplate {
   position: absolute;
   inset: 0;
-  background: rgba(240, 200, 80, 0.09);
+  background: rgba(198, 175, 122, 0.09);
   pointer-events: none;
 }
 
@@ -1551,7 +1579,7 @@ input:focus-visible {
   display: inline-block;
   padding: 6px 12px;
   border-radius: 6px;
-  border: 1px solid rgba(240, 200, 80, 0.45);
+  border: 1px solid rgba(198, 175, 122, 0.45);
   color: var(--gold);
   font-size: 12px;
   font-weight: 600;
@@ -2661,3 +2689,59 @@ main > .hubctl:first-child { margin-top: 0; }
    reason that they were hidden. */
 .pagecount-hidden { margin-top: 14px; }
 .pagecount-hidden > .band:last-child { margin-bottom: 0; }
+
+/* ---- MICRO-INTERACTIONS (handoff §16) --------------------------------------------------------
+ *
+ * §16 authorizes restrained motion at 120-220ms: a segmented-control slide, a subtle press, a hover
+ * brighten on desktop, a smooth selected-state transition. Before this block the app had NO
+ * transition and NO animation anywhere - so this is the first motion it has ever carried, and it is
+ * deliberately the smallest set that satisfies §16.
+ *
+ * §16 OMITS `prefers-reduced-motion` AND THAT IS NOT OPTIONAL. A reader who has asked their
+ * operating system to stop animating things is not asking for a restrained version, so every rule
+ * here lives inside `no-preference` and there is no motion at all to turn off in `reduce`. That is
+ * why the guard is a WRAPPER rather than a `reduce` block that undoes things: nothing to undo.
+ *
+ * NOTHING HERE CAN MOVE A BOX. Only `color`, `background-color`, `border-color`, `box-shadow`,
+ * `filter` and `transform` are touched - none of them reflow - so the row heights, tile sizes and
+ * gaps prompt 51 tuned and prompt 52 stage 2 re-measured are untouched by construction.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  /* THE SELECTED-STATE TRANSITION. 160ms sits mid-range in §16's 120-220ms, and `ease` rather than
+     anything springy because §16 forbids bouncing and exaggerated easing. */
+  .seg button,
+  .spbtn,
+  .chip,
+  .pk-arrow,
+  .dlink,
+  .offsvc-toggle {
+    transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease,
+                box-shadow 160ms ease, filter 160ms ease;
+  }
+
+  /* THE PRESS. A segment cannot scale - it sits flush inside `.seg`'s `overflow: hidden` and a
+     scaled child would show the track through its corners - so it dims instead. */
+  .seg button:active { filter: brightness(0.92); }
+
+  /* The tiles and chips are free-standing, so they take §16's "tiny scale/press feedback". 0.97 is
+     ~1.3px on a 44px tile: felt, not seen. `transform` does not reflow, so the frozen tile-row
+     geometry (register §16) is untouched. */
+  .spbtn:active,
+  .chip:active,
+  .pk-arrow:not(:disabled):active { transform: scale(0.97); }
+
+  .spbtn,
+  .chip,
+  .pk-arrow { transition: transform 120ms ease, color 160ms ease, border-color 160ms ease; }
+
+  /* HOVER BRIGHTEN, DESKTOP ONLY. Gated on a real pointer: a touch device fires `:hover` on tap and
+     leaves it stuck until the next tap elsewhere, which would read as a stray highlight. */
+  @media (hover: hover) and (pointer: fine) {
+    .seg button:not([data-active='true']):hover,
+    .spbtn:not([data-active='true']):hover,
+    .chip:not([data-active='true']):hover { color: var(--ink); }
+    .seg button[data-active='true']:hover { background: var(--gold-hi); }
+    .dlink:hover,
+    .offsvc-toggle:hover { color: var(--gold-hi); }
+  }
+}
