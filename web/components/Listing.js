@@ -27,7 +27,7 @@ function anyInFlight(games) {
 
 export default function Listing({ games, standingsRows, rankingsRows, day, sport, generatedAt,
                                   showDay = false, grid = false, bands = false, heading = null,
-                                  headingClass = 'favlabel', nowMinute = null }) {
+                                  headingClass = 'favlabel', nowMinute = null, gridOnly = false }) {
   const [open, setOpen] = useState(null);
 
   /**
@@ -116,7 +116,14 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
   // to jump past.
   return (
     <div className="listing">
-      {bands ? (
+      {/* GRID VIEW SUPPRESSES THE LIST (prompt 53 stage 3). `gridOnly` was passed by page.js and
+          NEVER DESTRUCTURED here - `git grep gridOnly` returned exactly one line in the whole repo,
+          the call site - so GRID VIEW removed the sport bands' headings via `bands={!P.isGrid}` and
+          changed nothing else. It added a grid on a phone and, above 699px where `.mgrid-only` is
+          `display: none`, added NOTHING: it was one click from LIST and strictly worse.
+
+          The grid is the primary object in this view. Nothing else renders beside it. */}
+      {gridOnly ? null : bands ? (
         <>
           {/* No page-level section. `floatFavorites` is left at its DEFAULT of true, which is D6's
               in-band float - the hairline and the YOUR TEAMS micro-label inside each sport band.
@@ -127,11 +134,18 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
           ))}
         </>
       ) : (
-        // /weeks and /history keep their flat structure - the same component, header off, so the
-        // count line, the toggle, the favourites float and the row wrappers have one implementation.
-        // C3: /weeks passes its day heading down so it renders through the SAME header row the
-        // sport bands use, and the count joins it identically. It used to be an <h3> outside this
-        // component, which is why the count could only sit below it.
+        // THE FLAT ARRANGEMENT: one SportBand with its header off, used where the caller supplies
+        // its own heading. Today that is WEEK MODE with a sport selected, where the weekday is the
+        // heading and a sport band beneath it would repeat what the tile already says.
+        //
+        // This comment used to read "/weeks and /history keep their flat structure". BOTH ROUTES ARE
+        // RETIRED - they are redirects (web/app/weeks/page.js, web/app/history/page.js) and have
+        // been since prompt 50 made the app one route.
+        //
+        // Same component, header off, so the count line, the toggle, the favourites float and the
+        // row wrappers have one implementation. The caller's heading renders through the SAME header
+        // row the sport bands use, and the count joins it identically; it used to be an <h3> outside
+        // this component, which is why the count could only sit below it.
         <SportBand sport={sport} label={null} games={games} standings={standings}
                    rankings={rankings} showDay={showDay} onOpen={setOpen} showHeader={false}
                    sectionLabel={heading} headingClass={headingClass} />

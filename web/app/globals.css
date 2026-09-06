@@ -1987,6 +1987,16 @@ input:focus-visible {
   .mgrid-only { display: block; }
 }
 
+/* The mirror of `.mgrid-only`, and it exists for the same reason: GRID VIEW means a different grid
+   at each width - the phone grid below 699px, the archived PC render above it (Mobile Grid Addendum
+   M5, "PC keeps v1.2 labels") - and BOTH are rendered with one hidden by a media query rather than
+   chosen in JS, so there is no server/client hydration mismatch. Same 699px boundary as everything
+   else in this file. */
+.deskgrid-only { display: block; }
+@media (max-width: 699px) {
+  .deskgrid-only { display: none; }
+}
+
 /* 05 SECTION 11, THE PAGE ORDER. DOM order is YOUR TEAMS -> bands -> grid, which is what desktop
  * reads. On a phone the grid moves between the section and the bands, with CSS `order` rather than
  * a second DOM tree or a JS width state - every breakpoint in this app is CSS-gated at 699px

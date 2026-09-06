@@ -369,6 +369,37 @@ export default async function HubPage({ searchParams }) {
         </p>
       ) : null}
 
+      {/* GRID VIEW ON DESKTOP: the archived PC grid is the grid, and it is promoted to the TOP.
+       *
+       * THE MOBILE GRID STAYS PHONE-ONLY and is deliberately not lifted here. The Mobile Grid
+       * Addendum's deviations are phone-only - M5 is explicit that "PC keeps v1.2 labels" - so above
+       * 699px the desktop grid is the archived PC render and nothing else.
+       *
+       * CSS-GATED, NOT JS-GATED. Both this and the phone grid are rendered and one is hidden by a
+       * media query, because every breakpoint in this app is CSS-gated at 699px precisely so there
+       * is no server/client hydration mismatch. A JS width state here would reintroduce one.
+       *
+       * ALL SPORTS HAS NO ARCHIVED GRID TO PROMOTE: it is per (sport, day) by construction, which is
+       * why ArchivedGrid returns null without a sport. One honest line instead, in the same voice as
+       * its own empty state, rather than falling back to a phone grid stretched across a desktop
+       * column - which is the thing prompt 50 removed. */}
+      {P.isGrid ? (
+        <div className="deskgrid-only">
+          {P.sport ? (
+            !error && games.length ? (
+              <Suspense fallback={null}>
+                <ArchivedGrid sport={P.sport} day={day} />
+              </Suspense>
+            ) : null
+          ) : (
+            <p className="gridnone">
+              The desktop grid is rendered per league — pick one above to see it. On a phone, GRID
+              VIEW shows every sport on one timeline.
+            </p>
+          )}
+        </div>
+      ) : null}
+
       {/* D1 above, the day below. .today-split only becomes two columns at 1592px (D5); under that
           it is a plain block, so the band sits ABOVE the grid and never after it.
           The D1 band is a LIST-view thing: in GRID VIEW there is no list beneath it for "See all
@@ -393,7 +424,10 @@ export default async function HubPage({ searchParams }) {
 
       {!error && rows.length ? <DataAsOf day={day} today={today} overlay={overlay} /> : null}
 
-      {P.sport && !error && games.length ? (
+      {/* LIST VIEW keeps the archived grid where it has always been - at the FOOT, after the list.
+          In GRID VIEW it is promoted to the top instead (above); rendering it in both places would
+          put two copies on a desktop grid page. */}
+      {!P.isGrid && P.sport && !error && games.length ? (
         <Suspense fallback={null}>
           <ArchivedGrid sport={P.sport} day={day} />
         </Suspense>
