@@ -8,7 +8,7 @@
 // computes a height from `hf`, the frozen ink-area normalization factor, but THE RAIL NEVER
 // APPLIED IT: MobileGrid called `markStyle(row.id, 42).src` and used only `.src`, so the <img>
 // carried no height and CSS fit-boxed every mark on its own. `hf` played no part in the rail for
-// ANY of the 28 marks. These assertions are on the DATA and the FUNCTION, which is what decides
+// ANY of the marks. These assertions are on the DATA and the FUNCTION, which is what decides
 // the answer - the browser-side numbers live in the addendum's v2.0 amendment under M4.
 
 import test from 'node:test';
@@ -23,7 +23,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const manifest = JSON.parse(readFileSync(join(HERE, '..', 'public/marks/manifest.json'), 'utf8'));
 
 test('the manifest carries published geometry for every mark, and h is PUBLISH_H', () => {
-  assert.equal(manifest.length, 28);
+  // 28 -> 32: prompt 55 stage 2 added nfl-network, tbs, trutv and accnx.
+  assert.equal(manifest.length, 32);
   for (const m of manifest) {
     assert.ok(Number.isInteger(m.w) && m.w > 0, `${m.slug} has a width`);
     // build_web_marks.py PUBLISH_H = 128. Anything else means the published suite is not what the
@@ -33,7 +34,7 @@ test('the manifest carries published geometry for every mark, and h is PUBLISH_H
   }
 });
 
-test('27 of 28 marks land on the 600px^2 target; the one exception is the widest lockup', () => {
+test('31 of 32 marks land on the 600px^2 target; the one exception is the widest lockup', () => {
   // Stage 5 landed 26 of 28, with ESPN2 and HBO Max short because their aspect put them against the
   // `RAIL_BOX_W / a` ceiling. Stage 7 replaced HBO Max's wide wordmark with the stacked 2025 lockup
   // (aspect 6.30 -> 2.14) and it came onto the target with NO CODE CHANGE - the fit recomputed from
@@ -45,7 +46,7 @@ test('27 of 28 marks land on the 600px^2 target; the one exception is the widest
     if (Math.abs(r.height * r.width - RAIL_TARGET_AREA) > 1) off.push(m.slug);
   }
   assert.deepEqual(off.sort(), ['espn2']);
-  assert.equal(manifest.length - off.length, 27);
+  assert.equal(manifest.length - off.length, 31);
 });
 
 test('NO mark is drawn wider than the rail content box - the CSS clamp must not bind', () => {
@@ -118,7 +119,12 @@ test('markStyle is NOT changed - its other two callers are different surfaces', 
 });
 
 test('a network with no published mark gets no rail fit', () => {
-  assert.equal(railMark('tbs'), null, 'TBS has no art - the rail renders call letters');
+  // WAS `tbs`, and prompt 55 stage 2 gave TBS art - so the case moves onto a network that still
+  // has none. ESPN3 is the only one left in the access profile, and it is unmarked on purpose:
+  // the art supplied for it carries a "clearpng" watermark baked over the letterforms, which the
+  // flood key cannot reach because it is not connected to the border. Recorded in register §23 so
+  // nobody re-sources it blind.
+  assert.equal(railMark('espn3'), null, 'ESPN3 has no art - the rail renders call letters');
   assert.equal(railMark(''), null);
   assert.equal(railMark(null), null);
 });

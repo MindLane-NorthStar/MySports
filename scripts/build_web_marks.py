@@ -178,6 +178,46 @@ def key_plate(im: Image.Image, tol: int = 34) -> Image.Image:
     return Image.fromarray(np.dstack([a[:, :, :3].astype("uint8"), alpha]), "RGBA")
 
 
+def key_neutral(im: Image.Image, spread: int = 18, floor: int = 170) -> Image.Image:
+    """Knock out a LIGHT NEUTRAL background by flooding inward from every edge.
+
+    THE PROBLEM `key_plate` CANNOT SOLVE. Some sources come from PNG-aggregator sites that FLATTEN
+    TRANSPARENCY ONTO A CHECKERBOARD and ship it as opaque pixels - it looks transparent in a
+    thumbnail and is not. `nfl-network` measures 0% clear with its two tones at 255 and 204;
+    `accnx` the same at 254 and 237. `key_plate` samples an EDGE MEDIAN and keys that, so a two-tone
+    checkerboard defeats it: the median sits between the tones and matches neither.
+
+    So the test here is a PREDICATE rather than a sampled colour - "is this pixel light and roughly
+    neutral" - which both tones of a checkerboard satisfy and coloured ink does not:
+
+        |R-G| < spread  and  |G-B| < spread  and  mean(RGB) > floor
+
+    FLOODING FROM THE BORDER IS WHAT MAKES IT SAFE, and it is the same reason `key_plate` and
+    IndyCar flood rather than testing globally: the NFL shield's interior WHITE STARS pass the
+    predicate exactly as the background does, and a global test would eat them. They are not
+    connected to any edge, so a flood never reaches them.
+
+    Anything the flood does not reach keeps alpha 255.
+    """
+    import numpy as np
+    from scipy import ndimage
+
+    im = im.convert("RGBA")
+    a = np.asarray(im).astype(int)
+    r, g, bl = a[:, :, 0], a[:, :, 1], a[:, :, 2]
+    eligible = (
+        (np.abs(r - g) < spread)
+        & (np.abs(g - bl) < spread)
+        & (((r + g + bl) / 3.0) > floor)
+    )
+    lab, _ = ndimage.label(eligible)
+    edge = set(lab[0, :]) | set(lab[-1, :]) | set(lab[:, 0]) | set(lab[:, -1])
+    edge.discard(0)
+    bg = np.isin(lab, list(edge))
+    alpha = np.where(bg, 0, a[:, :, 3]).astype("uint8")
+    return Image.fromarray(np.dstack([a[:, :, :3].astype("uint8"), alpha]), "RGBA")
+
+
 def dark_ready(im: Image.Image) -> Image.Image:
     """The general rule for every network without a recipe of its own.
 
@@ -308,6 +348,54 @@ RECIPES: dict[str, tuple[str, Callable[[Image.Image], Image.Image]]] = {
     # normal chain sees only the red logo and white wordmark.
     "guardians-tv":     ("png", lambda im: dark_ready(key_plate(im))),
     "mlb-network":      ("png", dark_ready),                          # brand composite
+
+    # ---- added 2026-09-06, prompt 55 stage 2. All four supplied by Joe. -----------------------
+    #
+    # TWO OF THEM ARRIVED WITH A CHECKERBOARD BAKED IN. `nfl-network` and `accnx` came from a
+    # PNG-aggregator that FLATTENS transparency onto a checkerboard and ships it as opaque pixels:
+    # both measure 0% clear, at 255/204 and 254/237 respectively. `key_plate` cannot key that - it
+    # samples an EDGE MEDIAN, and a two-tone checkerboard puts the median between the tones where it
+    # matches neither. `key_neutral` tests a PREDICATE instead and floods from the border, which is
+    # what saves the NFL shield's interior white stars: they pass the predicate exactly as the
+    # background does, but a flood never reaches them. Keyed 78.1% and 91.4% of their canvases.
+
+    # The NETWORK wordmark is navy TYPE, and that is why the NHL/ABC ruling does NOT transfer here.
+    # ABC and nfl-today are legal because a dark BODY carries LIGHT ink - nfl-today's navy measures
+    # 1.17:1 on charcoal and is invisible, but its white text is 17.22:1 and that is what reads.
+    # Here the navy IS the word: raw it is 1.45:1, and losing it leaves the NFL league shield, which
+    # is a different mark. dark_ready takes it to 4.20:1 and leaves the shield's red and white alone.
+    "nfl-network":      ("png", lambda im: dark_ready(key_neutral(im))),
+
+    # `dark_ready` is a NO-OP here, measured: the grey swoosh and ESPN wordmark sit at 7.28:1 and
+    # pull the mark's mean up, so the chain decides it is already light and leaves the blue at
+    # 2.03:1 - below the 3.0 floor, for the brand's own name. floor_l is the treatment the app
+    # already uses for exactly this (fs1: "FS1's red stays red - it just stops disappearing"), and
+    # 0.45 brings the blue to 4.75:1 while leaving the grey untouched.
+    "accnx":            ("png", lambda im: floor_l(key_neutral(im), 0.45)),
+
+    # THE ABC CASE, almost exactly: a black plate carrying white letters, where the black is the
+    # logo's own parallelogram and not a background. key_plate lifts the flat white surround; the
+    # plate then recedes into the charcoal and the white letters read as designed. dark_ready was
+    # tested and inverts it into a WHITE PLATE with grey letters - the backing card v1.3e forbids,
+    # which is the same failure ABC's own note describes.
+    "tbs":              ("png", key_plate),
+
+    # THE ONE HONEST COMPROMISE IN THIS SET, and it is measured rather than eyeballed. Both inks
+    # start black: "tru" needs to lift off the charcoal, and the "TV" inside the green circle needs
+    # to stay dark against it. They pull against each other, and there is no row gap for
+    # whiten_below_gap to find because the lockup is horizontal.
+    #
+    #   treatment      "tru" on charcoal   "TV" on green
+    #   RAW                    1.22:1  x        14.00:1
+    #   whiten_dark .35       15.80:1           1.38:1  x   <- whitens the TV too
+    #   dark_ready             4.30:1           2.67:1  x
+    #   floor_l .45            3.58:1           3.21:1      <- both clear the 3.0 floor
+    #   floor_l .55            5.12:1           1.11:1  x
+    #
+    # 0.45 is the only value that keeps BOTH above 3.0. There is no plate to grey here - the
+    # background is keyed transparent - so this is not the trap prompt 53 hit with floor_l on the
+    # FOX shields.
+    "trutv":            ("png", lambda im: floor_l(key_plate(im), 0.45)),
 }
 # SEC Network+ has no vector of its own: it is the SEC Network lockup plus a '+'.
 SVG_ALIAS = {"sec-network-plus": "sec-network"}
