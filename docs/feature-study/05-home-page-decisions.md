@@ -309,3 +309,103 @@ History's heading is deliberately unchanged; Joe will rule on it separately.
 6. **Grid cards:** a space before the record; an all-zero record is absent (contract v1.6.14).
 7. **List card venue** is one step brighter than the standings lines (token recorded in the
    commit).
+
+---
+
+## 14. THE SCHEDULE HUB — 2026-09-06, prompt 50. One page, and four earlier rulings amended
+
+The app is now **one route**. `TODAY`, `WEEKS` and `HISTORY` are no longer places; they are `?mode=`,
+`?day=` and `?w=` on a single page whose entire state is the query string. Joe's ruling **R1**
+(`docs/hub/restructure-triage-2026-09-05.md` §6a), built by prompt 50 stage 1.
+
+The controls read downward as a sentence, and the order **is** the ruling:
+
+```
+DAY | WEEK                                   the time prism
+ALL GAMES | MY TEAMS · LIST VIEW | GRID VIEW scope and presentation, one row
+ALL SPORTS bar                               full width, 24px tall
+the eight league tiles                       unchanged, 44px
+the picker, with ‹ and ›                     BELOW the tiles, which is the change
+the schedule
+```
+
+### What this supersedes
+
+**§11's page order is superseded — but only partly, and the difference matters.** §11 ruled the page
+reads YOUR TEAMS → grid → sport bands, with favourites hoisted into a page-level section. R4 replaces
+that section with the **MY TEAMS scope**: `?scope=mine` shows favourites only, chronological across
+every sport in DAY mode and per day group in WEEK mode.
+
+> **NOT YET FULLY BUILT, and recorded as such rather than as done.** Prompt 50 built the *scope* —
+> `?scope=mine` filters correctly in both modes. It did **not** retire the page-level YOUR TEAMS
+> section under ALL GAMES, and it did not add D6's band-level favourite mark in its place. So today
+> both mechanisms exist: the toggle filters, and the section still renders under ALL GAMES. **No
+> stage of prompt 50 was scoped to remove it** — the brief recorded the retirement in this section
+> while assigning the work to no stage. Until a build prompt closes it, §11's section stands and R4
+> is half-implemented.
+
+**§10's count-line vocabulary is superseded.** `6 airing · 48 TBD · 5 unavailable` — Joe's own
+wording from prompt 26 — becomes one line at the **foot of the page**:
+
+```
+68 games on your services · 2 TBD    Show 18 not on your services
+```
+
+Two of §10's three segments went by consequence rather than preference. `unavailable` became the
+reveal control, and `airing` went back to **`on your services`**, which is D4's original phrase;
+§10 had shortened it only to fit a 390px band header, and at page level there is room for the
+accurate word again. The `· N TBD` segment is **Cowork's call, open to Joe's veto** — his renderings
+show one segment, but without a second the line undercounts what is on screen by a factor of six on
+a day like 2026-11-14.
+
+**"Every band reports its counts" is retired** with the per-band lines. That was `4250aa9`, carried
+on the handoff as do-not-regress since prompt 21. One page-level line replaces it.
+
+**§12's DATE / WEEK headings are retired.** The `DAY | WEEK` toggle sits one row above the picker and
+says the same word, so repeating it was noise. Prompt 45's ruling is superseded. The headings were
+real `<label htmlFor>` elements, so both pickers are now named by `aria-labelledby` pointing at the
+matching segment of that toggle — the name is still visible, still says what the control selects,
+and is still said exactly once.
+
+### D4 is restored in full, and R3b is reversed
+
+R3b — *show everything, dim off-service rows in place* — **is reversed and was never built.** Games
+on services Joe does not have are **hidden by default**, exactly as D4 ruled.
+
+**The reason is measured, not aesthetic.** `docs/hub/hub-audit-2026-09-05.md` §I rendered the
+heaviest loaded week under ALL both ways:
+
+| | hidden (D4) | shown (R3b) |
+|---|---|---|
+| cards | 109 | **195** |
+| DOM nodes | 3,038 | **5,344** |
+| page height | 17,971 px | **32,917 px** |
+
+32,917 px is a 39-screen page on a 390 × 844 phone, past the point Chromium will rasterize in one
+pass. Prompt 50 stage 4 reproduced both figures exactly. **The day-strip mitigation the audit floated
+for WEEK + LIST is therefore not needed and was not built.**
+
+**Three carve-outs are unchanged and are not negotiable**, now enforced in one place
+(`splitHidden()`, `web/lib/offservice.js`) instead of per band:
+
+- **NETWORK TBD (§9)** is never hidden. Hiding a game because you cannot watch it, when nobody has
+  decided whether you can, is a false statement about 529 of them.
+- **MARKET PENDING (§8, E5)** is never hidden.
+- **A favourite** is never hidden, even off-service.
+
+Both card badges survive untouched, and prompt 24's mutual-exclusivity test is still green.
+`viewer_game_eligibility` remains the sole source of the verdict and is never recomputed in JS.
+
+**D6's in-band favourites float is NOT yet retired on the hub** — see the note above. It still runs
+in every `SportBand` that receives `floatFavorites` at its default, which includes the D1 band and
+every WEEK day group.
+
+### What is unchanged
+
+**D1's first band stays** (R2), atop DAY + LIST when the selected date is today, with "See all today"
+intact. It does not render in GRID VIEW, because there is no list beneath it to jump to.
+**D5's 1592 px composition is untouched.** **D2, D3 and the four broadcast/access states are
+untouched.** History is retired as *navigation only*: a past `day` renders that day's finals with
+their scores and box-score links through the same card, and `/history` still resolves — it redirects.
+Its cross-date `?q=` search does **not** survive (R8) and is held as a MY TEAMS sub-feature in
+`docs/enhancement-register.md` §17.

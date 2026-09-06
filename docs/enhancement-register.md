@@ -353,3 +353,88 @@ refuses that (and fired on all 98 on the runner tonight), which is what makes le
 
 **§17's two amendments are already recorded there and are not restated here.** Both were honoured:
 GameDay's crew is hand-curatable and turned out to be announceable, and IndyCar was built now.
+
+---
+
+## 18. THE SCHEDULE HUB'S CONTROLS — 2026-09-06, prompt 50
+
+**Numbered 18, not 17.** Prompt 50's brief asked for a "§17"; §17 was already **PROGRAMS GO LIVE**
+(prompt 47), so this takes the next free number rather than overwriting a section three days old.
+
+### 18a. Two active-state treatments on one screen, and they differ on purpose
+
+**The six text toggles take a GOLD FILL when active**, with `--spot-3` text on it: `DAY | WEEK`,
+`ALL GAMES | MY TEAMS`, `LIST VIEW | GRID VIEW`. That is what
+`docs/ux-reference/schedule-hub-concept.png` shows.
+
+**The eight league tiles keep §14's inverted state** — charcoal plate, gold border, gold text.
+**The ALL SPORTS bar keeps it too**; Joe asked to change its height, not its colour.
+
+**This does not reopen §14, and the distinction is the whole entry.** §14 inverted the tile state
+because prompt 25 *measured* five of ten league **marks** under 3:1 on gold, with the CFP mark a
+ghost at 1.61:1. That is a fact about **artwork** on a light plate. The six toggles are **text**, and
+text on gold is not the problem §14 solved.
+
+**Do not harmonise one to the other.** Making the toggles charcoal-and-gold-border would lose the
+selection emphasis Joe's rendering asks for; making the tiles gold-filled would re-break the five
+marks §14 was written to protect.
+
+### 18b. The 44 px tap-target minimum is AMENDED for one control
+
+**The ALL SPORTS bar is 24 px tall — 45 % shorter than the 44 px it was**, and that breaks the
+minimum tap target prompt 25 established and prompt 34 restored after WebKit collapsed the tiles on
+Joe's phone.
+
+**Joe ruled it. The reasoning, on the record:** that rule protects **small** targets. At 390 px the
+bar is a 366 × 24 px full-width control — about **8,800 px²** — against a 44 × 44 tile's **1,936 px²**.
+It carries **over four times the tappable area** of a control the rule considers compliant. The type
+came down 16 px → 14 px so it still sits comfortably inside a shorter plate; the width is unchanged
+and still flush with the tile row.
+
+**Two things not to do.** Do not restore the height. Do not add invisible padding or an `::after` to
+fake 44 px of hit area — that returns **zero** vertical space and defeats the entire instruction,
+which was to reclaim height.
+
+**The amendment is for this one control.** The eight tiles, all six toggles and both picker arrows
+keep 44 px, and so does the count line's reveal — that one gates access to every hidden game, which
+is why prompt 25 called it the most important of the three.
+
+### 18c. MY TEAMS runs on a file, and an in-app team picker is a NAMED FUTURE FEATURE
+
+`?scope=mine` filters on the thirteen ids in `data/favorites.json`, resolved once by exact match
+within sport and frozen (D6's trap: "Ohio" is Ohio University, not Ohio State).
+
+**Letting a user choose their own teams in the app needs storage and identity this app does not
+have.** Every piece of state is in the URL precisely so there is no hydration mismatch and no
+per-user store; a team picker needs a per-user list that survives a reload, which means either
+`localStorage` — deliberately absent — or an account. **Scoping it is a project, not a stage.** Until
+then MY TEAMS is Joe's list, edited by editing the file, which is what D6 ruled it should be.
+
+### 18d. Five sports are permanently part of MY TEAMS
+
+**NASCAR, IndyCar, UFC, WWE and AEW are always included in `scope=mine`**, whatever the favourites
+file says. They have **no rosters to pick from** — a race, a fight card and a wrestling show have no
+home and away club — so `isFavorite()` can never match one, and following the sport is following all
+of it. Filtering them out of MY TEAMS would mean the scope silently drops every program the app
+loads, which is 307 of them.
+
+> **NOT YET BUILT.** `splitFavorites()` leaves every program in `rest` by construction, because
+> `favoriteIds()` matches team ids and a program has none — so today `scope=mine` shows **no
+> programs at all**. This entry records the ruling; the build is owed.
+
+### 18e. History's cross-date search is HELD, not deleted
+
+`?q=` searched team and network names across every completed game (`matchesSearch`, and `v1.7`'s
+`matchesProgram`). R8 retires it **from navigation** and holds it as a **MY TEAMS sub-feature**: a
+lookup *inside* the favourites scope rather than a search of the whole database.
+
+What it would need: a control that narrows the favourites set client-side over `favoriteIds` — not a
+new query, since the thirteen ids are already in memory — and explicitly **not** a reuse of
+`matchesSearch`, which searches everything and is the behaviour being retired. The `/history`
+redirect deliberately does not forward `?q=`: carrying a parameter with nothing on the other side to
+read it is worse than dropping one visibly.
+
+### 18f. The desktop live grid stays queued
+
+R5 is unchanged: `GRID VIEW` above 699 px keeps the archived PC render for one sport and an honest
+line for ALL. Sticky axes, the NOW marker and any live desktop grid remain a separate project.

@@ -1,6 +1,9 @@
-# Mobile Grid Addendum — v1.6 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04 · per-team cap surface and art, candidate D, 2026-09-04)
+# Mobile Grid Addendum — v1.8 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04 · per-team cap surface and art, candidate D, 2026-09-04)
 
 > **v1.7 (2026-09-05).** M19 and M20 below add the program block and the now marker. Nothing M1–M18 says changes.
+>
+> **v1.8 (2026-09-06, prompt 50).** **M21** below removes the grid's own header. Nothing M1–M20 says
+> changes — the geometry this addendum freezes was re-measured before and after and is identical.
 
 > **Numbering note (v1.5).** v1.4 added the fitted name run and the flat endcap in one commit and
 > numbered **both M17**. The endcap is now **M18**; the name run keeps M17. M13's superseded-gradient
@@ -119,3 +122,39 @@ blocks, which stack at auto, and below the sticky rail's 3, so panning never sli
 as a number, so nothing in the component reads a clock and there is no hydration path (the trap prompt
 42 climbed out of twice). M11's existing 15-minute refresh is what moves it. Absent on archived days and
 on Weeks and History; the archival PC renderer never draws it, because the archive is immutable.
+
+**M21. The grid carries no header of its own (2026-09-06, prompt 50 stage 5a).** The block that read
+*"(mark) College Football Broadcasts · Saturday September 5 2026 · 64 ON THE GRID"* over a meta line
+of exceptions is **deleted**, along with `.mgrid-head`, `.mgrid-headlines`, `.mgrid-line1/2`,
+`.mgrid-mark` and `.mgrid-meta`.
+
+**This reverses prompt 37's stage B1**, which built that header into two lines with the league mark
+spanning both — recorded plainly because it is a deletion of recent work.
+
+**Why it can go: under the Schedule Hub every one of its five facts is already stated by the row
+above it.** The header was written when the grid sat on a page whose heading said only `DATE`; the
+hub's control stack puts the league tiles and the picker directly above the grid, so the header
+restated both.
+
+| the header carried | where it lives now |
+|---|---|
+| the league mark, the sport name | the league tile row above the grid |
+| the viewing day | the picker, directly above the grid |
+| `N ON THE GRID` | **the footer's own `N on the grid` pill** — the same number, unchanged |
+| `N awaiting kickoff / network` | the footer's `N kickoff TBA` pill **and** `.mgrid-note`'s network-TBD line |
+| `N gaps cut` | the footer's one pill **per cut**, each naming the range it skipped |
+
+The last two rows are **more** information than the header carried, not less: it summed two
+different unknowns — nobody has announced a kickoff, nobody has announced a broadcaster — into one
+number, which is precisely the conflation prompt 24 split apart and 05 §9 ruled on.
+
+**The footer is unchanged and keeps every exception** (M9): the on-the-grid count, the kickoff-TBA
+pill, the cut-seam pills and `.mgrid-note`. Those are notes about what the grid *did*, not a title.
+
+**M4, M5, M6 and the frozen geometry are untouched.** Verified across this change: CFB `2026-09-05`
+64 blocks / {240, 223, 205, 136} / scrollWidth 1282 and MLB `2026-09-03` 3 / {228} / 577, identical
+before and after, with the rail still pinned at the scroller edge (delta 0.0 px) after panning fully
+right at zoom 0.6, 1.0 and 2.5.
+
+**Numbering checked before this rule was added**, because v1.4 once shipped two rules both called
+M17: M1 through M20 each appear exactly once in this document, so M21 is genuinely free.

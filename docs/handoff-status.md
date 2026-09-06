@@ -7,7 +7,7 @@ Read first for any session picking up MySports. Companions: **`docs/enhancement-
 in the repo — check there before re-raising any decision), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
 amendment, §9 NETWORK TBD, §11 mobile page order, §12 the DATE/WEEK headers, §13 the 2026-09-05
 review), `docs/rendering-contract.md` **v1.7**, `docs/rendering-contract-mobile.md` (Addendum
-v1.2 + M19/M20), **`docs/design/program-card-design-v1.md`** — the program card's design of record,
+v1.8, Addendum v1.2 + M19-M21), **`docs/design/program-card-design-v1.md`** — the program card's design of record,
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves - **51 of them as of prompt 50 stage 0**, verbatim and never
@@ -31,14 +31,24 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 50's stage-0 commit. Gates: **465 Python tests + 1 skipped**, **329 JS unit
+main, HEAD is prompt 50's stage-6 commit. Gates: **465 Python tests + 1 skipped**, **345 JS unit
 tests**, smoke **30/30**, qa-shots **14/14**. Tree clean apart from always-untracked `assets/` (and
 `web/qa/`, which prompt 46 added to `.gitignore`).
 
-**PROMPT 50 IS THE SCHEDULE HUB'S FIRST BUILD.** It turns the three routes into one page whose whole
-state is the query string, restacks the controls, restores D4's hiding with a page-level count, and
-retires the grid's own header. Read `docs/hub/` before touching the app's chrome, its routes or its
-count lines - every one of those is now governed by a ruling recorded there.
+**THE APP IS ONE PAGE.** Prompt 50 built the Schedule Hub. Six commits:
+
+| stage | commit | what shipped |
+|---|---|---|
+| 0 | `17a7429` | `docs/ux-reference/`, the 36 missing prompts, the hub pointer |
+| 1 | `494dd7b` | one route, the six-parameter model, the redirects, the tab row retired |
+| 2 | `eb4f0ed` | the two toggle rows, the 24px ALL SPORTS bar, the picker below the tiles |
+| 3 | `92a8055` | the banner up 8px, the picker's vertical space |
+| 4 | `fe075da` | off-service games hidden again, one page-level count line |
+| 5 | `eb0e5db` | the grid's own header removed |
+| 6 | *(this commit)* | this file, 05 §14, register §18, addendum v1.8, the locked reference |
+
+Read **`docs/hub/`** before touching the app's chrome, its routes or its count lines — every one of
+those is now governed by a ruling recorded there, and 05 **§14** is where the amendments land.
 
 **PROGRAMS ARE LIVE.** 307 non-game programs render on both the phone grid and the listings -
 NASCAR 98, studio shows 111, AEW 35, WWE 36, IndyCar 18, UFC 9 - under rendering-contract **v1.7**,
@@ -97,9 +107,47 @@ cloud workspace. **Never reapply a bare browser UA.**
 - **Off-service (D4/E3)** from `mysports.viewer_game_eligibility`, never recomputed in JS.
   **Favorites (D6):** `data/favorites.json`, 13 teams. **Market-pending (E5)** in
   `pipeline/reconcile.py`; the rule is `access_status = 'unverified'`.
-- **Per-sport bands:** every band reports its counts, not only bands with something hidden
-  (`4250aa9` — do not regress).
-- **Navigation:** `web/lib/routes.js` is the single route-list definition.
+- ~~**Per-sport bands:** every band reports its counts (`4250aa9` — do not regress).~~
+  **RETIRED 2026-09-06 by prompt 50 stage 4.** A single page-level count line at the FOOT of the page
+  superseded it — `68 games on your services · 2 TBD` plus the reveal. There is no per-band count any
+  more, so there is nothing left to regress. 05 §14 records the supersession.
+- **Navigation:** `web/lib/routes.js` is still the single route-list definition, and since prompt 50
+  it holds **one** route: the app is the Schedule Hub at `/` and its whole state is the query string.
+
+## The hub's open items (prompt 50)
+
+- **R4 IS HALF BUILT.** `?scope=mine` filters correctly in both modes, but the **page-level YOUR
+  TEAMS section still renders under ALL GAMES**, and D6's band-level favourite mark was not added in
+  its place. Both mechanisms are on screen at once. **No stage of prompt 50 was scoped to remove the
+  section** — the brief recorded the retirement in 05 §14 while assigning the work to no stage. This
+  is the largest thing the hub still owes.
+- **`scope=mine` SHOWS NO PROGRAMS.** `favoriteIds()` matches team ids and a race, a fight card and a
+  wrestling show have none, so `splitFavorites()` leaves every program in `rest` by construction.
+  Register §18d rules that NASCAR, IndyCar, UFC, WWE and AEW are permanently part of MY TEAMS; the
+  build is owed.
+- **The `· N TBD` segment on the count line is Cowork's call**, flagged for Joe's veto — his
+  renderings show one segment. Without it the line undercounts what is on screen by a factor of six
+  on 2026-11-14.
+- **Grouping the revealed games by sport is Cowork's call** too; one flat chronological list is the
+  alternative and is a two-line change.
+- **The restack COSTS vertical space, it does not save it.** Measured at 390: the first content row
+  moved from 367.0px to 406.2px, +39.2px, because two 46px toggle rows were added where a 45.3px tab
+  row and a 43.5px heading row came out. On the installed app the banner nudge takes 8 of that back.
+  The audit's §F2 question — how much of an 844px phone a viewport-owning grid gets — moves the wrong
+  way by this.
+- **`.mgrid-note` and the page count line say the same number in different words** on a
+  network-TBD day: "58 games not on the grid · network TBD" and "· 58 TBD". Not contradictory,
+  but duplicated.
+- **The grid footer's `N on the grid` and the page line's `N games on your services` disagree on
+  market-pending days** — 17 against 6 on NFL 2026-09-13 — because a market-pending game takes a lane
+  but is not on a confirmed service. Both true, different questions, and 8,539px apart on screen so
+  they are never read together. Joe's call whether that matters.
+- **`countParts()` and `countSummary()` have no app caller** since stage 4. Retained deliberately:
+  ~15 assertions pin the four-state vocabulary through them, and `countLines()` is still called by
+  `offServiceSummary` itself.
+- **D1's first band can say "Nothing loaded for this viewing day yet" above a full slate** — seen on
+  NFL 2026-09-13 and MLB 2026-09-03, where the band's window finds nothing while the sport bands
+  below render every game. Pre-dates the hub; unchanged by it.
 
 ## THE HEADLINE OPEN ITEM — the announcement horizon
 

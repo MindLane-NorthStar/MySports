@@ -82,9 +82,16 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .chiprow{display:flex; gap:6px}
 .spbtn{flex:1 1 0; min-width:0; aspect-ratio:1/1; padding:5px; border:1px solid var(--line); border-radius:10px;
   background:linear-gradient(180deg, var(--panel-hi), var(--panel-lo)); display:flex; align-items:center; justify-content:center}
-/* The ALL bar: a tile as wide as the row, one tile tall, edges flush with it. */
-.spbtn.bar{flex:0 0 auto; width:auto; aspect-ratio:auto; align-self:stretch; min-height:44px;
-  font-family:var(--disp); font-weight:700; font-size:17px; letter-spacing:.04em; text-transform:uppercase; color:var(--dim)}
+/* The ALL SPORTS bar: as wide as the row, edges flush with it, and 24px TALL since prompt 50
+   stage 2c - Joe shortened it by 45% from the 44px a tile is. That deliberately breaks the 44px
+   minimum tap target, and the reasoning is on the record in docs/enhancement-register.md §17: the
+   rule protects SMALL targets, and a ~366 x 24px full-width bar carries over four times the
+   tappable area of a compliant 44 x 44 tile. Type came down 17px -> 14px with the box.
+   DO NOT restore the height, and do not add invisible padding to fake 44px of hit area - that
+   returns zero vertical space and defeats the change. The eight TILES keep 44px. */
+.spbtn.bar{flex:0 0 auto; width:auto; aspect-ratio:auto; align-self:stretch; height:24px; min-height:24px;
+  padding:0; line-height:1;
+  font-family:var(--disp); font-weight:700; font-size:14px; letter-spacing:.04em; text-transform:uppercase; color:var(--dim)}
 .spbtn.bar.on{color:var(--gold)}
 .spbtn img{max-height:100%; max-width:100%; object-fit:contain; opacity:.8}
 .spbtn.on{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset}
@@ -544,7 +551,7 @@ function buildMobileGrid(style){
 function appHTML(variant){
   const mlb4 = GAMES.filter(g=>g.sport==="mlb");
   const cfb4 = GAMES.filter(g=>g.sport==="cfb");
-  const chips = `<div class="sportbar"><span class="spbtn bar on">ALL</span><div class="chiprow">
+  const chips = `<div class="sportbar"><span class="spbtn bar on">ALL SPORTS</span><div class="chiprow">
     <span class="spbtn"><img src="${LEAGUE.cfb}" alt="CFB"></span>
     <span class="spbtn"><img src="${LEAGUE.mlb}" alt="MLB"></span>
   </div></div>`;
