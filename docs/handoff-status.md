@@ -529,6 +529,35 @@ before touching any count line.
     standing in `handoff-status.md` for two commits after `cdfae84` had disproved it. Prompt 53
     stage 1 is that cleanup, and it should not have needed a stage.
 
+31. **A SEARCH THAT FINDS NOTHING IS EVIDENCE ABOUT THE QUERY, NOT ABOUT THE REPO.** Before reporting
+    something absent, check that you searched **the representation the file actually uses** - label
+    versus slug, display name versus id, the enum versus the filter token, `+` versus `-plus`. **Name
+    the search you ran** in the report, so the reader can see what was and was not asked.
+
+    **THIS IS NOT RULE 30 IN A COSTUME, and the distinction is the remedy.** Rule 30 is about a claim
+    that was TRUE WHEN WRITTEN and went stale; its fix is "check the thing itself". Here the files
+    were correct and current, the thing itself WAS checked, and the answer was still wrong - because
+    the question was asked in the wrong vocabulary. Rule 30's remedy does not catch this one.
+
+    **Four instances, three of them in one week:**
+
+    - **`nfl-network`, reported absent from `data/access_profile.json` and `data/row_order.json`
+      TWICE** (prompt 54's report and the exchange before it). Both files carried it the whole time
+      under the label **`NFL Network`**. The search was `'nfl-network' in json.dumps(...)` - the
+      SLUG, against files that are LABEL-KEYED. The recommendation built on it was to ask Joe whether
+      he even receives the channel, which was a real question made to look like a blocker.
+    - **`truTV` and `TBS`**, the same shape: `trutv` and `tbs` find nothing, `truTV` and `TBS` find
+      both files.
+    - **`Paramount+` and `Disney+`, prompt 55 stage 2, caught mid-stage.** A slugify that mapped
+      non-alphanumerics to `-` turned `Paramount+` into `paramount`, so a count of "access-profile
+      networks without a mark" reported three when the answer was one. The published slugs are
+      `paramount-plus` and `disney-plus`. **The rule was being written while the mistake was being
+      made**, which is the best argument for it.
+
+    **The cheap defence is to search for the THING, not your spelling of it** - grep the file for a
+    distinctive substring (`NFL`, `Paramount`) before concluding, and read what shape came back. One
+    extra command; the misses above cost a wrong recommendation and a stage of rework.
+
 
 ---
 

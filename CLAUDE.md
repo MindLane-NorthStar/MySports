@@ -107,6 +107,13 @@ never renumber, even around the retired stub.
     days, and the prompt archive's deliberate "not yet filed" read as a permanent gap. A note ages;
     the tree does not.
 
+31. **A search that finds nothing is evidence about the query, not about the repo.** Before reporting
+    something absent, check you searched **the representation the file uses** — label vs slug,
+    display name vs id, enum vs filter token, `+` vs `-plus` — and **name the search you ran**.
+    `nfl-network` finds nothing in `access_profile.json`; `NFL Network` finds it, and did all along.
+    **Distinct from 30:** there the note was stale, and "check the thing itself" fixes it; here the
+    file was correct, it *was* checked, and the vocabulary was wrong.
+
 ---
 
 ## Gates
