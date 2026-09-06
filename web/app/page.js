@@ -39,7 +39,7 @@ import { RestError } from '../lib/rest.js';
 import { overlayForDay, applyOverlay } from '../lib/livescores.js';
 import { resolveHubParams } from '../lib/hubparams.js';
 import { calendarWeeksFrom, seasonWeeksFrom, daySpan, currentWeekKey, usesSeasonWeeks } from '../lib/weeks.js';
-import { favoriteIds, splitFavorites } from '../lib/favorites.js';
+import { favoriteIds, splitMine } from '../lib/favorites.js';
 import { splitHidden } from '../lib/offservice.js';
 import favoritesDoc from '../../data/favorites.json';
 import PageCount from '../components/PageCount.js';
@@ -242,7 +242,8 @@ export default async function HubPage({ searchParams }) {
     // survives - 05 section 11's scope note is explicit that hoisting a favourite out of its day
     // destroys the thing a week view exists to show.
     const favIds = favoriteIds(favoritesDoc);
-    const scoped = P.isMine ? splitFavorites(rows, favIds).favorites : rows;
+    // R4 + register §18d: MY TEAMS is the thirteen clubs AND the five team-less sports.
+    const scoped = P.isMine ? splitMine(rows, favIds).mine : rows;
     // D4, restored and moved to the page (stage 4a): off-service games are hidden, network-TBD and
     // market-pending never are, and a favourite never is. Decided ONCE for the whole week so the
     // count line at the foot describes every day above it.
@@ -324,7 +325,9 @@ export default async function HubPage({ searchParams }) {
   // R4: MY TEAMS is a scope - favourites only, chronological across every sport. `allRows` arrives
   // ordered by kickoff and splitFavorites keeps input order, so "chronological" is free.
   const favIds = favoriteIds(favoritesDoc);
-  const scoped = P.isMine ? splitFavorites(allRows, favIds).favorites : allRows;
+  // R4 + register §18d. `allRows` arrives ordered by kickoff and splitMine keeps input order, so
+  // "chronological across every sport" is free.
+  const scoped = P.isMine ? splitMine(allRows, favIds).mine : allRows;
   // D4, restored and moved to the page (stage 4a). Decided ONCE here so the bands below render only
   // what is visible and the single count line at the foot describes all of them.
   const { visible: rows, hidden, summary } = splitHidden(scoped, favIds);

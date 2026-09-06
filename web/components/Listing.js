@@ -14,8 +14,6 @@ import GameDetail from './GameDetail.js';
 import { indexStandings, indexRankings } from '../lib/standings.js';
 import { REFRESH_SECONDS, SPORTS, SPORT_LABEL } from '../lib/config.js';
 import { offServiceSummary } from '../lib/offservice.js';
-import { favoriteIds, splitFavorites } from '../lib/favorites.js';
-import favoritesDoc from '../../data/favorites.json';
 
 function anyInFlight(games) {
   const now = Date.now();
@@ -61,37 +59,35 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
     return () => clearInterval(id);
   }, [games, router]);
 
-  // 05 section 11: on the Today page the favourites are lifted OUT of their sport bands into one
-  // page-level section, across every sport, chronological among themselves. splitFavorites keeps
-  // input order, and `games` arrives ordered by kickoff, so that is chronological for free.
+  // THE PAGE-LEVEL YOUR TEAMS SECTION IS RETIRED (prompt 51 stage 4a, R4).
   //
-  // The two sets are DISJOINT, which is what makes the counting work: each section is handed only
-  // the games it shows, so its own count line describes the rows beneath it and a favourite is
-  // counted once, in YOUR TEAMS, and not again in its sport's band.
-  // 05 section 11 + v1.7: a PROGRAM can never be a favourite - it has no team - so splitFavorites
-  // leaves every one of them in `rest`, and YOUR TEAMS stays a section about teams. That is true by
-  // construction rather than by a filter: favoriteIds() matches team ids and a program has none.
-  const favIds = useMemo(() => favoriteIds(favoritesDoc), []);
-  const { favorites, rest } = useMemo(
-    () => (bands ? splitFavorites(games || [], favIds) : { favorites: [], rest: games || [] }),
-    [bands, games, favIds],
-  );
-
+  // 05 §11 lifted favourites OUT of their sport bands into one page-level section. R4 replaces that
+  // with the MY TEAMS SCOPE - the toggle in the control stack - and D6's original arrangement comes
+  // back in its place: favourites float to the top of THEIR OWN sport band, marked by a hairline and
+  // a faint uppercase micro-label at BAND level.
+  //
+  // Until this stage both mechanisms were on screen at once: prompt 50 built the scope and recorded
+  // the section's retirement in its docs stage, but assigned the work to no build stage. This is the
+  // build catching up to the record.
+  //
+  // THE CARD IS UNTOUCHED, which is the one thing that survived D6 unchanged: the marker lives at
+  // band level and never on the card, so the locked card contract stays closed.
+  //
   // Bands render in SPORTS order (cfb, nfl, nba, nhl, mlb), not in kickoff order - the order is the
-  // product's, so a quiet sport does not jump the page because it happened to start first. Only
-  // sports with games that day appear - and since the bands are built from `rest`, a sport whose
-  // only games were favourites now has no band at all rather than a header over nothing.
+  // product's, so a quiet sport does not jump the page because it happened to start first. They are
+  // built from ALL the games now rather than from a `rest` remainder, because nothing is hoisted out
+  // of them any more.
   const grouped = useMemo(() => {
     if (!bands) return null;
     const by = new Map();
-    for (const g of rest) {
+    for (const g of games || []) {
       if (!by.has(g.sport)) by.set(g.sport, []);
       by.get(g.sport).push(g);
     }
     const known = SPORTS.filter((s) => by.has(s));
     const extra = [...by.keys()].filter((s) => !SPORTS.includes(s)).sort();
     return [...known, ...extra].map((s) => [s, by.get(s)]);
-  }, [bands, rest]);
+  }, [bands, games]);
 
   // D3: the grid no longer requires a single selected sport. It was gated on `sport` because block
   // length is per-sport policy and one grid could only use one number; MobileGrid now takes that
@@ -121,15 +117,12 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
     <div className="listing">
       {bands ? (
         <>
-          {favorites.length ? (
-            <SportBand sport={null} label="Your teams" sectionLabel="Your teams" games={favorites}
-                       standings={standings} rankings={rankings} showDay={showDay} onOpen={setOpen}
-                       showHeader={false} floatFavorites={false} />
-          ) : null}
+          {/* No page-level section. `floatFavorites` is left at its DEFAULT of true, which is D6's
+              in-band float - the hairline and the YOUR TEAMS micro-label inside each sport band.
+              Prompt 50 passed false here because the page-level section was doing that job. */}
           {grouped.map(([s, rows]) => (
             <SportBand key={s} sport={s} label={SPORT_LABEL[s] || s} games={rows}
-                       standings={standings} rankings={rankings} showDay={showDay} onOpen={setOpen}
-                       floatFavorites={false} />
+                       standings={standings} rankings={rankings} showDay={showDay} onOpen={setOpen} />
           ))}
         </>
       ) : (

@@ -94,3 +94,82 @@ test('the file documents that these are TEAM ids, not game ids', () => {
   assert.match(doc._about, /TEAM ids/);
   assert.match(doc._resolved, /EXACT match/);
 });
+
+// ---------------------------------------------------------------- prompt 51 stage 4b: the scope
+//
+// MY TEAMS is the thirteen clubs AND the five team-less sports (Joe's ruling, register §18d). These
+// pin the rule with FIXTURES rather than a DOM, because the failure mode is a silent one: a scope
+// that quietly drops 196 rows looks exactly like a quiet day.
+
+import { isMine, splitMine, TEAMLESS_SPORTS } from '../lib/favorites.js';
+
+const FAVS = new Set(['cle', 'osu']);
+const teamGame = (id, sport, home, away) => ({ id, sport, home_team_id: home, away_team_id: away });
+const program = (id, sport, program_type = 'race_session') => ({ id, sport, program_type, title: id });
+
+test('a favourite team\'s game qualifies, on either side', () => {
+  assert.equal(isMine(teamGame('1', 'nfl', 'cle', 'pit'), FAVS), true, 'home');
+  assert.equal(isMine(teamGame('2', 'cfb', 'mich', 'osu'), FAVS), true, 'away');
+});
+
+test('a non-favourite team\'s game does NOT qualify', () => {
+  assert.equal(isMine(teamGame('3', 'nfl', 'pit', 'bal'), FAVS), false);
+  assert.equal(isMine(teamGame('4', 'mlb', 'nyy', 'bos'), FAVS), false);
+});
+
+test('a NASCAR race qualifies with no team on it at all', () => {
+  // This is the whole point: favoriteIds() matches team ids and a race has none, so before the
+  // sport rule `scope=mine` showed zero of the 98 loaded races.
+  assert.equal(isMine(program('r1', 'nascar'), FAVS), true);
+  assert.equal(isMine(program('r1', 'nascar'), new Set()), true, 'even with no favourites at all');
+});
+
+test('all five team-less sports qualify, and only those five', () => {
+  assert.deepEqual(TEAMLESS_SPORTS, ['nascar', 'indycar', 'ufc', 'wwe', 'aew']);
+  for (const s of TEAMLESS_SPORTS) {
+    assert.equal(isMine(program(`p-${s}`, s), new Set()), true, `${s} must qualify`);
+  }
+  for (const s of ['nfl', 'cfb', 'mlb', 'nba', 'nhl']) {
+    assert.equal(isMine(program(`p-${s}`, s), new Set()), false, `${s} must NOT qualify by sport`);
+  }
+});
+
+test('a STUDIO SHOW does not qualify - it carries the sport it bookends', () => {
+  // Measured against the live database: studio shows carry sport `nfl` (80) or `cfb` (31), never a
+  // sport of their own. So they are excluded BY CONSTRUCTION rather than by a special case - which
+  // is also why the exclusion is right: a GameDay instance is a pregame show attached to a sport
+  // that does have teams, not a thing to follow in its own right.
+  assert.equal(isMine(program('gameday', 'cfb', 'studio_show'), new Set()), false);
+  assert.equal(isMine(program('fnia', 'nfl', 'studio_show'), new Set()), false);
+  // ...unless one of its teams is a favourite, which a studio show never carries anyway
+  assert.equal(isMine({ id: 'x', sport: 'cfb', program_type: 'studio_show' }, FAVS), false);
+});
+
+test('a row with a null or missing sport does not crash and does not qualify', () => {
+  assert.equal(isMine({ id: 'n1', sport: null }, FAVS), false);
+  assert.equal(isMine({ id: 'n2' }, FAVS), false);
+  assert.equal(isMine({}, FAVS), false);
+  assert.equal(isMine(null, FAVS), false);
+  assert.equal(isMine(undefined, new Set()), false);
+});
+
+test('splitMine keeps input order, so the scope stays chronological', () => {
+  const day = [
+    teamGame('1', 'nfl', 'cle', 'pit'),   // favourite
+    teamGame('2', 'mlb', 'nyy', 'bos'),   // not
+    program('3', 'nascar'),               // team-less sport
+    teamGame('4', 'cfb', 'osu', 'mich'),  // favourite
+    program('5', 'cfb', 'studio_show'),   // studio show - excluded
+    program('6', 'aew', 'weekly_show'),   // team-less sport
+  ];
+  const { mine, rest } = splitMine(day, FAVS);
+  assert.deepEqual(mine.map((g) => g.id), ['1', '3', '4', '6'], 'order preserved');
+  assert.deepEqual(rest.map((g) => g.id), ['2', '5']);
+  assert.equal(mine.length + rest.length, day.length, 'nothing dropped');
+});
+
+test('splitMine is a SUBSET of the day, never an invention', () => {
+  const day = [teamGame('a', 'nfl', 'x', 'y'), program('b', 'wwe', 'weekly_show')];
+  const { mine } = splitMine(day, new Set());
+  for (const g of mine) assert.ok(day.includes(g), 'every scoped row came from the day');
+});
