@@ -23,8 +23,7 @@
 
 import { Suspense } from 'react';
 import Listing from '../components/Listing.js';
-import { DatePicker, SeriesFilter, SportFilter, ModeToggle, ScopeViewToggles } from '../components/Filters.js';
-import WeekSelect from '../components/WeekSelect.js';
+import { SeriesFilter, SportFilter, ModeToggle, ScopeViewToggles, DayPicker, WeekPicker } from '../components/Filters.js';
 import {
   gamesForDay, programsForDay, newestGridFor, gridIndex, standingsForGames, rankingsForGames,
   weekIndexRows, gamesForRange, gamesForSeasonWeek, programsForRange,
@@ -387,30 +386,27 @@ export default async function HubPage({ searchParams }) {
  */
 function Controls({ P, choices }) {
   return (
-    <>
-      {/* STAGE 1 keeps the arrangement the three retired routes had - heading and picker on one
-          row, then the sport block - and only makes it serve the new parameter model. The RESTACK
-          (toggles first, picker below the tiles, the heading retired) is stage 2's job, so that
-          this commit can be judged on routing alone. */}
+    <div className="hubctl">
+      {/* 1. DAY | WEEK - the time prism, and since prompt 50 also the pickers' visible label. */}
       <ModeToggle mode={P.mode} />
+      {/* 2. ALL GAMES | MY TEAMS and LIST VIEW | GRID VIEW, four buttons on ONE row (spec §9). */}
       <ScopeViewToggles scope={P.scope} view={P.view} />
-      <div className="pagehead">
-        <h1>
-          <label htmlFor={P.isWeek ? 'week-select' : 'viewing-day'}>{P.isWeek ? 'WEEK' : 'DATE'}</label>
-        </h1>
-        {P.isWeek
-          ? (choices?.selected ? (
-              <WeekSelect sport={P.sport} selected={choices.selected.key} options={choices.options}
-                          selectedParts={choices.selectedParts} />
-            ) : null)
-          : <DatePicker day={P.day} />}
-      </div>
+      {/* 3-4. The ALL SPORTS bar, then the eight league tiles. Untouched by the restack except for
+              the bar's height (stage 2c); register §16 froze the tile row's geometry. */}
       <div className="controls controls-stack">
         <SportFilter sport={P.sport} />
-        {/* Register section 9's series sub-filter. A SECOND row under the tiles - the tile row's
-            geometry is untouched, which section 16 froze deliberately. */}
+        {/* Register §9's series sub-filter. A SECOND row under the tiles - the tile row's geometry
+            is untouched, which §16 froze deliberately. */}
         <SeriesFilter sport={P.sport} series={P.series} />
       </div>
-    </>
+      {/* 5. The picker, with its prev/next arrows. */}
+      <div className="pickrow">
+        {P.isWeek ? (
+          <WeekPicker choices={choices} sport={P.sport} />
+        ) : (
+          <DayPicker day={P.day} />
+        )}
+      </div>
+    </div>
   );
 }

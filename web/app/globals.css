@@ -209,50 +209,14 @@ h3 {
   margin: 0 0 18px;
 }
 
-/* THE PAGE HEADER CARRIES ITS PICKER (prompt 45, Joe's ruling from the installed app).
-   Today reads DATE with the date input beside it, Weeks reads WEEK with the week select; the
-   heading is the control's own <label>, so tapping the word opens the picker. This replaces the
-   .dayrow / .daycount pair, which put the Day label and input BELOW the tiles with a broadcast
-   count on the right - Joe eliminated the count and moved the picker up to the heading line.
-
-   align-items:center is what "aligned with it" means here: the picker is centred on the heading's
-   text box, not on its baseline. The h1's own top margin moves to the ROW, or the flex line would
-   inherit it and the picker would sit low by 22px. 12px is a literal because this stylesheet has no
-   spacing scale to read (rule 16 - there are no --gap/--space tokens to use). */
-.pagehead {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin: 22px 0 2px;
-}
-
-.pagehead h1 {
-  margin: 0;
-  flex: 0 0 auto;
-}
-
-/* The heading IS the label, so it has to look clickable without looking like a link. */
-.pagehead h1 label {
-  cursor: pointer;
-}
-
-/* The trigger takes the rest of the line and is allowed to shrink: the longest option label is far
-   wider than a 390px phone, and min-width:0 is what lets a flex item shrink below its content width
-   instead of pushing the row past the viewport.
-
-   FLEX-BASIS 0, NOT auto (prompt 46 1C). .pagehead wraps, and wrapping is decided on an item's
-   HYPOTHETICAL main size - its content width - before shrinking is ever considered. With basis auto
-   the styled face's full string (`NFL Week 1 . Wed Sep 9 - Mon Sep 14, 2026`) is wider than the room
-   left beside the heading, so the picker wrapped onto its own line and stopped being "directly to
-   the right of the header text". Basis 0 makes its hypothetical size 0: it never forces a wrap, and
-   it grows into whatever is left. .pk-range ellipsizes if even that is not enough. */
-.pagehead .chip-select,
-.pagehead .picker {
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: 100%;
-}
+/* The DATE / WEEK header row (05 §12, prompts 45-46) was REMOVED by prompt 50 stage 2d. The heading
+   beside the picker was the word DATE or WEEK, and the DAY | WEEK toggle at the top of the control
+   stack now says the same thing one row up - so repeating it was noise.
+   Its accessible-name job did NOT vanish with it: the heading was a real <label htmlFor>, and the
+   drawn picker face is aria-hidden, so removing it would have left both pickers unnamed. Each is now
+   named by `aria-labelledby` pointing at the matching segment of that toggle - see DayPicker in
+   components/Filters.js and the select in components/WeekSelect.js. Still visible, still exactly one
+   name. `.pickrow` is the row that replaced it. */
 
 /* THE HEADER ROW BREATHES EVENLY, AND THE CONTROL BLOCK IS ONE THING (prompt 46 unit 1B, Joe's
    2026-09-05 review, items 2-4 and 8). Two equations, and this one rule carries both because it is
@@ -2075,16 +2039,36 @@ input:focus-visible {
    active state - comes from .spbtn, so there is one definition of what these controls look like.
    The descendant selector is deliberate: .spbtn sets an explicit width in both breakpoints, and a
    single-class rule would lose to it on source order. */
+/* THE ALL SPORTS BAR IS SHORTENED BY 45%, 44px to 24px (prompt 50 stage 2c), and this DELIBERATELY
+ * BREAKS THE 44px MINIMUM TAP TARGET that prompt 25 established and prompt 34 restored.
+ *
+ * JOE RULED IT, and the reasoning is on the record rather than implied: that rule protects SMALL
+ * targets, and this one is not small in the direction that matters. At 390px the bar is a
+ * ~350 x 24px full-width control - about 8,400px2 - against a 44 x 44px tile's 1,936px2. It carries
+ * over four times the tappable area of a control the rule considers compliant.
+ *
+ * DO NOT "FIX" THIS BACK, and do not add invisible padding or an ::after to restore 44px of hit
+ * area: that returns ZERO vertical space to the page and defeats the entire instruction, which was
+ * to reclaim height. The 44px rule still governs everywhere else - the tiles, the toggles, the
+ * picker arrows all keep it. Recorded as an amendment in docs/enhancement-register.md §17.
+ *
+ * WIDTH IS UNCHANGED: full width, flush with the tile row beneath it. Only the height moved. */
 .sportbar > .spbtn-bar {
   width: auto;
   align-self: stretch;
   min-width: 0;
   font-size: 15px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  line-height: 1;
 }
 
 @media (max-width: 699px) {
   .sportbar { width: auto; }
-  .sportbar > .spbtn-bar { font-size: 17px; }
+  /* 17px filled a 44px bar; in 24px it would crowd the box. Scaled with the height so the text
+     still sits comfortably inside rather than touching both edges. */
+  .sportbar > .spbtn-bar { font-size: 14px; }
   /* The tiles share the row. width/min-width/min-height are cleared so aspect-ratio governs and
      the tile is genuinely square at whatever width eight of them work out to. */
   /* A DEFINITE HEIGHT, and the width flexes. This shipped as `aspect-ratio: 1/1` with
@@ -2166,7 +2150,11 @@ input:focus-visible {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-@media (max-width: 699px) { .spbtn-all { font-size: 16px; } }
+/* 16px was sized for a 44px bar. The bar is 24px since prompt 50 stage 2c, so the type comes down
+   with it - the box shrank 45%, the type 12.5%, which keeps the text dominant inside a shorter
+   plate rather than shrinking it in proportion and losing the "largest control on the page" reading
+   that §16 gave the bar on purpose. */
+@media (max-width: 699px) { .spbtn-all { font-size: 14px; } }
 
 /* §14's inverted active state, unchanged and applied to the tile exactly as it applied to the
    chip: charcoal ground, gold border, and gold text on the one tile that has text. */
@@ -2176,13 +2164,14 @@ input:focus-visible {
  * margin, stacked. The h1 is the first thing under the chrome, so its top margin is pure duplication
  * of the shell's padding - zeroed at the source rather than cancelled with a negative margin.
  *
- * .pagehead IS ALSO A FIRST CHILD (prompt 46 unit 1B). Prompt 45 wrapped the heading and its picker
- * in .pagehead, which made this selector stop matching on Today and Weeks - so both silently got the
- * 22px duplication back, 40px of air above the header row against History's 18. That is the uneven
- * spacing Joe reported. Both selectors now, so the rule means what it said. */
+ * THE FIRST CHILD KEEPS CHANGING, and each time it does this selector silently stops matching:
+ * prompt 45 wrapped the heading in .pagehead and both pages got 40px of air against History's 18,
+ * which is the uneven spacing Joe reported. Prompt 50 replaced .pagehead with .hubctl, so it moved
+ * again. If a wrapper is ever added around the control stack, this rule needs it. */
 .shell { padding-top: 18px; }
 main > h1:first-child,
-main > .pagehead:first-child { margin-top: 0; }
+/* .hubctl is the control stack that replaced .pagehead as main's first child (prompt 50). */
+main > .hubctl:first-child { margin-top: 0; }
 
 /* 5c. One line, so it lays out as a line rather than a stack - and since 05 section 10 it holds
  * one line at 360px too. It got there by shedding a segment and shortening the other three:
@@ -2578,12 +2567,34 @@ main > .pagehead:first-child { margin-top: 0; }
   box-shadow: inset 0 0 0 1px rgba(240, 200, 80, 0.35);
 }
 
-/* ---- the hub's segmented toggles (prompt 50 stage 1) -----------------------------------------
- * DAY | WEEK, ALL GAMES | MY TEAMS, LIST VIEW | GRID VIEW. Functional here; stage 2 restacks them
- * and gives them their gold-filled active state. Tokens only (rule 16). */
+/* ---- THE HUB'S CONTROL STACK (prompt 50 stage 2) ---------------------------------------------
+ *
+ * Top to bottom: DAY | WEEK, then ALL GAMES | MY TEAMS + LIST VIEW | GRID VIEW on one row, then the
+ * ALL SPORTS bar, then the eight league tiles, then the picker. Joe's ordering, and the reason is
+ * that the page then reads downward as a sentence: I am looking at the DAY view, ALL GAMES, LIST
+ * VIEW, ALL SPORTS (or one league), and here is the day I picked.
+ *
+ * THE PICKER MOVED BELOW THE TILES. It sat above them on all three retired routes. Joe's own
+ * renderings in docs/ux-reference/ show it above - that difference is deliberate and is recorded in
+ * the run report, because the sentence only reads in this order.
+ */
+.hubctl { display: flex; flex-direction: column; }
+
+/* ---- the three segmented toggles
+ * GOLD FILL when active, with dark text on it. That is what docs/ux-reference/schedule-hub-concept.png
+ * shows, and it does NOT reopen register §14.
+ *
+ * §14 inverted the LEAGUE TILE active state to a charcoal plate with a gold border because prompt 25
+ * measured five of ten league MARKS under 3:1 on gold, with the CFP mark a ghost at 1.61:1. That is
+ * a fact about ARTWORK on a light plate. These six controls are TEXT, and text on gold is not the
+ * problem §14 solved - --spot-3 on --gold measures far above the 4.5:1 that matters for a 14px run.
+ * So: text toggles gold-filled; the eight tiles keep §14 unchanged. Register §17 records the split
+ * so nobody harmonises one to the other.
+ */
 .segrow { display: flex; gap: 8px; align-items: stretch; margin: 0 0 8px; }
 .segrow-mode > .seg { flex: 1 1 auto; }
 .segrow-pair > .seg { flex: 1 1 0; min-width: 0; }
+
 .seg {
   display: flex;
   border: 1px solid var(--line);
@@ -2591,16 +2602,17 @@ main > .pagehead:first-child { margin-top: 0; }
   background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
   overflow: hidden;
 }
+
 .seg button {
   flex: 1 1 0;
   min-width: 0;
-  height: 44px;
+  height: 44px;              /* prompt 25's target, and these are NOT the stage-2c exception */
   border: 0;
   background: transparent;
   color: var(--dim);
   font-family: var(--display);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 14px;           /* measured to fit at 360: the pair needs 289.5px of 320px available */
   letter-spacing: .04em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -2608,5 +2620,44 @@ main > .pagehead:first-child { margin-top: 0; }
   cursor: pointer;
   appearance: none;
 }
-.seg button[data-active='true'] { color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); border-radius: 9px; }
-.seg button:focus-visible { outline: 2px solid var(--gold); outline-offset: -3px; }
+
+/* THE ACTIVE STATE. --spot-3 rather than black: it is the page's own darkest ground, so the fill
+   reads as the app's gold rather than as a foreign swatch. */
+.seg button[data-active='true'] {
+  background: var(--gold);
+  color: var(--spot-3);
+}
+
+.seg button:focus-visible { outline: 2px solid var(--ink); outline-offset: -3px; }
+
+/* ---- the picker row: < picker > */
+.pickrow {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  /* Stage 3 owns these two numbers; they are the space above and below the picker. */
+  margin: 8px 0 6px;
+}
+
+/* The picker takes the room the arrows leave and is allowed to shrink - the longest week label is
+   far wider than a 390px phone, and min-width:0 is what lets a flex item shrink below its content
+   width instead of pushing the row past the viewport. FLEX-BASIS 0, not auto, for the reason
+   prompt 46 1C recorded: wrapping is decided on an item's content width before shrinking is ever
+   considered, so basis auto would push the arrows onto their own line. */
+.pickrow > .picker { flex: 1 1 0; min-width: 0; }
+
+.pk-arrow {
+  flex: 0 0 auto;
+  width: 44px;               /* prompt 25's target, kept */
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  appearance: none;
+}
+.pk-arrow:disabled { color: var(--faint); opacity: .5; cursor: default; }
+.pk-arrow:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }

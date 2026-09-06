@@ -5,6 +5,7 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Picker from './Picker.js';
+import WeekSelect from './WeekSelect.js';
 import { longDay } from '../lib/format.js';
 import { NASCAR_SERIES, SERIES_LABEL, SPORT_FILTERS, SPORT_LABEL, showsNascar } from '../lib/config.js';
 
@@ -114,6 +115,87 @@ export function ScopeViewToggles({ scope, view }) {
   );
 }
 
+/**
+ * THE PREV / NEXT ARROWS (prompt 50 stage 2d, and Joe's renderings show them either side of the
+ * picker). They did not exist: the date control was a native input behind a drawn face with no way
+ * to step a day without opening the calendar.
+ *
+ * REAL BUTTONS, not styled spans, and each says WHAT it steps - "Previous day" / "Next day" becomes
+ * "Previous week" / "Next week" with the mode, because "Previous" alone is meaningless to a screen
+ * reader out of context. They keep the 44px target; the shortened ALL SPORTS bar is the one
+ * deliberate exception to that rule (register §17) and it does not extend here.
+ *
+ * A DISABLED ARROW IS A HONEST ARROW. At the ends of the loaded week list there is nowhere to step,
+ * and an enabled control that does nothing is worse than a dimmed one that explains itself.
+ */
+function Arrow({ dir, label, onClick, disabled = false }) {
+  return (
+    <button type="button" className="pk-arrow" aria-label={label}
+            disabled={disabled} onClick={onClick}>
+      <span aria-hidden="true">{dir === 'prev' ? '‹' : '›'}</span>
+    </button>
+  );
+}
+
+/** ISO day arithmetic, in UTC so it cannot be dragged across a boundary by the local zone. */
+function shiftDay(day, n) {
+  const d = new Date(`${day}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return day;
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * DAY MODE's picker row: < , the drawn date face over the native input, > .
+ *
+ * THE ACCESSIBLE NAME MOVED HERE, and this is the part that would break silently. Until prompt 50
+ * the name came from `<h1><label htmlFor="viewing-day">DATE</label></h1>`, and pagehead.test.mjs
+ * forbade an aria-label on the control because one would OVERRIDE that visible text. Stage 2d
+ * retires the heading - the DAY | WEEK toggle above is the label now - which would have left the
+ * input with NO accessible name at all, because the drawn face is aria-hidden.
+ *
+ * So the input is named by `aria-labelledby="mode-day"`: the DAY segment of the toggle. The name is
+ * still VISIBLE, still says what the picker selects, and is still exactly one of it - which is what
+ * prompt 25 insisted on and what the heading was only ever a way of providing.
+ */
+export function DayPicker({ day }) {
+  const setParam = useSetParam();
+  return (
+    <>
+      <Arrow dir="prev" label="Previous day" onClick={() => setParam('day', shiftDay(day, -1))} />
+      <DatePicker day={day} />
+      <Arrow dir="next" label="Next day" onClick={() => setParam('day', shiftDay(day, 1))} />
+    </>
+  );
+}
+
+/**
+ * WEEK MODE's picker row. The arrows step the SPORT'S OWN WEEK LIST, not seven days - an NFL week
+ * steps to the next NFL week, and CFB week 1 is ten days long, so a date step would be wrong on
+ * both counts. The list is `choices.all`, already derived once on the page, so the arrows and the
+ * select cannot disagree about what comes next.
+ */
+export function WeekPicker({ choices, sport }) {
+  const setParam = useSetParam();
+  const all = choices?.all || [];
+  const selected = choices?.selected || null;
+  const i = selected ? all.findIndex((w) => w.key === selected.key) : -1;
+  const step = (n) => {
+    const next = all[i + n];
+    if (next) setParam('w', next.key);
+  };
+  return (
+    <>
+      <Arrow dir="prev" label="Previous week" disabled={i <= 0} onClick={() => step(-1)} />
+      {selected ? (
+        <WeekSelect sport={sport} selected={selected.key} options={choices.options}
+                    selectedParts={choices.selectedParts} />
+      ) : null}
+      <Arrow dir="next" label="Next week" disabled={i < 0 || i >= all.length - 1} onClick={() => step(1)} />
+    </>
+  );
+}
+
 export function DatePicker({ day }) {
   const setParam = useSetParam();
   return (
@@ -132,6 +214,10 @@ export function DatePicker({ day }) {
         id="viewing-day"
         type="date"
         value={day}
+        // NOT aria-label: that would be a second, invisible name competing with the visible one.
+        // aria-labelledby points at the DAY segment of the mode toggle, which is on screen, says
+        // what this control selects, and is the only place it is said. See DayPicker's note.
+        aria-labelledby="mode-day"
         onChange={(e) => setParam('day', e.target.value)}
       />
     }>
