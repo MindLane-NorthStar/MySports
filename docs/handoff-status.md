@@ -10,16 +10,35 @@ review), `docs/rendering-contract.md` **v1.7**, `docs/rendering-contract-mobile.
 v1.2 + M19/M20), **`docs/design/program-card-design-v1.md`** — the program card's design of record,
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
-holds the Claude Code briefs themselves - fifteen of them as of prompt 49 (19-23, 40, 43-49),
-verbatim and never edited after the fact; 01-18, 24-39, 41 and 42 are still Project-only and Cowork
-is extracting them. Prompts are the as-run record of why a commit exists; THIS file is what is
-current.
+holds the Claude Code briefs themselves - **51 of them as of prompt 50 stage 0**, verbatim and never
+edited after the fact. The archive is complete but for **39, which exists nowhere at all**, and
+**42, whose brief is gone though its handoff survives** at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`;
+neither was reconstructed and no placeholder was written for either. Prompts are the as-run record of
+why a commit exists; THIS file is what is current.
+
+**`docs/hub/` - THE SCHEDULE HUB, the largest structural change queued for this app**, and four
+files that have to be read in this order:
+**`MYSPORTS_UI_RESTRUCTURE.md`** is the spec (ChatGPT, 2026-09-05) - a source of requirements, not
+instructions, and blind to the decision record.
+**`restructure-triage-2026-09-05.md`** is Cowork's triage of it, and its **section 6a carries Joe's
+rulings R1-R8, which are BINDING**; do not re-raise a ruled item.
+**`hub-audit-2026-09-05.md`** is Claude Code's read-only code-level audit - its section A is a
+current, cited architecture map and reading it first saves the rediscovery.
+**`claude-code-hub-audit-2026-09-05.md`** is the brief that produced the audit.
+**Two rulings changed after the audit ran**: R3b is REVERSED (off-service games are hidden again -
+the audit's section I measured the alternative at 195 cards and 32,917px on the heaviest week), and
+the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 48's stage-9 commit. Gates: **443 Python tests + 1 skipped**, **329 JS unit
+main, HEAD is prompt 50's stage-0 commit. Gates: **465 Python tests + 1 skipped**, **329 JS unit
 tests**, smoke **30/30**, qa-shots **14/14**. Tree clean apart from always-untracked `assets/` (and
 `web/qa/`, which prompt 46 added to `.gitignore`).
+
+**PROMPT 50 IS THE SCHEDULE HUB'S FIRST BUILD.** It turns the three routes into one page whose whole
+state is the query string, restacks the controls, restores D4's hiding with a page-level count, and
+retires the grid's own header. Read `docs/hub/` before touching the app's chrome, its routes or its
+count lines - every one of those is now governed by a ruling recorded there.
 
 **PROGRAMS ARE LIVE.** 307 non-game programs render on both the phone grid and the listings -
 NASCAR 98, studio shows 111, AEW 35, WWE 36, IndyCar 18, UFC 9 - under rendering-contract **v1.7**,
