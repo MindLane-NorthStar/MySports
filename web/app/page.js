@@ -82,21 +82,34 @@ const SPORT_EMPTY = {
 // SPORT_LABEL is the display name ("College Football"); the week label wants the short sport tag.
 const SPORT_TAG = { cfb: 'CFB', nfl: 'NFL', nba: 'NBA', nhl: 'NHL', mlb: 'MLB' };
 
-async function ArchivedGrid({ sport, day }) {
-  // Only offered when exactly one sport is selected: a grid is per (sport, day) by construction.
-  if (!sport) return null;
-  const grid = await newestGridFor(sport, day);
+/**
+ * THE ONE SENTENCE FOR "ALL SPORTS ON DESKTOP", written once and used twice.
+ *
+ * An archived grid is per (sport, day) BY CONSTRUCTION - `newestGridFor` takes both - so with no
+ * sport selected there is nothing to promote. Day mode said this first (prompt 53 stage 3); week
+ * mode says exactly the same thing (prompt 54 stage 2), so it is a component rather than a second
+ * copy that would be free to drift.
+ */
+function DesktopGridPerLeague() {
+  return (
+    <p className="gridnone">
+      The desktop grid is rendered per league — pick one above to see it. On a phone, GRID VIEW shows
+      every sport on one timeline.
+    </p>
+  );
+}
+
+/**
+ * The archived PC grid FIGURE, given an already-resolved row.
+ *
+ * Split out of `ArchivedGrid` in prompt 54 stage 2 so the WEEK can do its lookups once, up front,
+ * and then report the misses in a single line instead of stacking seven identical apologies. Day
+ * mode still goes through `ArchivedGrid` below, which does its own lookup and keeps its own
+ * one-liner - that is right for a single day, where the note IS the answer.
+ */
+function ArchivedGridFigure({ grid, sport, day }) {
   const src = gridAssetUrl(grid?.svg_asset_url);
-  if (!src) {
-    // E10-adjacent, one line: desktop says plainly that no PC grid was rendered for this pair rather
-    // than falling back to a phone grid stretched across a desktop column.
-    return (
-      <p className="gridnone">
-        No archived PC grid for {SPORT_LABEL[sport] || sport} on {longDay(day)} yet — it is rendered
-        by the daily job once the slate is loaded.
-      </p>
-    );
-  }
+  if (!src) return null;
   return (
     <figure className="gridpanel">
       {/* The PC grid is drawn at 2862px for a 1398px-plus page (rendering contract v1.3). Fitting it
@@ -111,6 +124,24 @@ async function ArchivedGrid({ sport, day }) {
       </figcaption>
     </figure>
   );
+}
+
+/** DAY MODE's archived grid: resolve, then render the figure or the honest one-liner. */
+async function ArchivedGrid({ sport, day }) {
+  // Only offered when exactly one sport is selected: a grid is per (sport, day) by construction.
+  if (!sport) return null;
+  const grid = await newestGridFor(sport, day);
+  if (!gridAssetUrl(grid?.svg_asset_url)) {
+    // E10-adjacent, one line: desktop says plainly that no PC grid was rendered for this pair rather
+    // than falling back to a phone grid stretched across a desktop column.
+    return (
+      <p className="gridnone">
+        No archived PC grid for {SPORT_LABEL[sport] || sport} on {longDay(day)} yet — it is rendered
+        by the daily job once the slate is loaded.
+      </p>
+    );
+  }
+  return <ArchivedGridFigure grid={grid} sport={sport} day={day} />;
 }
 
 /**
@@ -283,6 +314,26 @@ export default async function HubPage({ searchParams }) {
     const { visible, hidden, summary } = splitHidden(scoped, favIds);
     const grouped = byDay(visible, days);
 
+    // THE WEEK'S ARCHIVED PC GRIDS, RESOLVED ONCE, UP FRONT (prompt 54 stage 2).
+    //
+    // Desktop GRID VIEW promotes the archived render, per day, exactly as prompt 53 stage 3 settled
+    // it for day mode - the mobile grid stays phone-only, because the Mobile Grid Addendum's
+    // deviations are phone-only and M5 says "PC keeps v1.2 labels".
+    //
+    // WHY THE LOOKUP IS HOISTED HERE RATHER THAN LEFT INSIDE EACH DAY'S <ArchivedGrid>. That
+    // component renders its own honest one-liner when a day has no render, which is right for ONE
+    // day where the note IS the answer - but seven of them stacked is noise. Resolving the week here
+    // lets the misses be named in a SINGLE line, and costs the same queries either way.
+    //
+    // Only with a sport selected: an archived grid is per (sport, day) by construction.
+    const gridDays = P.isGrid && P.sport
+      ? days.filter((d) => grouped[d]?.length)
+      : [];
+    const weekGrids = new Map(
+      await Promise.all(gridDays.map(async (d) => [d, await newestGridFor(P.sport, d)])),
+    );
+    const gridMissing = gridDays.filter((d) => !gridAssetUrl(weekGrids.get(d)?.svg_asset_url));
+
     // THE NOW MARKER, COMPUTED ON THE SERVER, exactly as day mode does it (see the note further
     // down beside day mode's own `now`). No clock reaches the client, so nothing here enters the
     // hydration path - the trap prompt 42 fell into twice.
@@ -337,9 +388,37 @@ export default async function HubPage({ searchParams }) {
                            bands={!P.sport} sport={P.sport} floatFavorites={!P.isMine}
                            grid={P.isGrid} gridOnly={P.isGrid}
                            nowMinute={d === today ? weekNow : null} />
+                  {/* DESKTOP, GRID VIEW: this day's archived PC render, under this day's heading.
+                      `.deskgrid-only` hides it below 699px, the mirror of `.mgrid-only` above it,
+                      so both grids are in the DOM and one is chosen by a media query - never by a
+                      JS width state, which would put a hydration mismatch back. A day with no
+                      render contributes nothing here; the week names them all once, below. */}
+                  {P.isGrid && P.sport && weekGrids.get(d) ? (
+                    <div className="deskgrid-only">
+                      <ArchivedGridFigure grid={weekGrids.get(d)} sport={P.sport} day={d} />
+                    </div>
+                  ) : null}
                 </div>
               ) : null
             )}
+            {/* ONE LINE FOR THE WHOLE WEEK, not one per day. Desktop only, and only when something
+                is actually missing. */}
+            {P.isGrid && P.sport && gridMissing.length ? (
+              <div className="deskgrid-only">
+                <p className="gridnone">
+                  No archived PC grid yet for {SPORT_LABEL[P.sport] || P.sport} on{' '}
+                  {gridMissing.map((d) => shortDay(d)).join(', ')} — they are rendered by the daily
+                  job once each slate is loaded.
+                </p>
+              </div>
+            ) : null}
+            {/* ALL SPORTS on desktop has nothing to promote - the same sentence day mode uses, from
+                the same component rather than a second copy. */}
+            {P.isGrid && !P.sport ? (
+              <div className="deskgrid-only">
+                <DesktopGridPerLeague />
+              </div>
+            ) : null}
             <PageCount summary={summary} hidden={hidden} standingsRows={standingsRows}
                        rankingsRows={rankingsRows} />
             <DataAsOf week />
@@ -446,10 +525,7 @@ export default async function HubPage({ searchParams }) {
               </Suspense>
             ) : null
           ) : (
-            <p className="gridnone">
-              The desktop grid is rendered per league — pick one above to see it. On a phone, GRID
-              VIEW shows every sport on one timeline.
-            </p>
+            <DesktopGridPerLeague />
           )}
         </div>
       ) : null}
