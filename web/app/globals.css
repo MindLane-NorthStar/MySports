@@ -218,27 +218,34 @@ h3 {
    components/Filters.js and the select in components/WeekSelect.js. Still visible, still exactly one
    name. `.pickrow` is the row that replaced it. */
 
-/* THE HEADER ROW BREATHES EVENLY, AND THE CONTROL BLOCK IS ONE THING (prompt 46 unit 1B, Joe's
-   2026-09-05 review, items 2-4 and 8). Two equations, and this one rule carries both because it is
-   the block that sits between all four edges:
+/* THE CONTROL BLOCK IS ONE THING (prompt 46 unit 1B, Joe's 2026-09-05 review items 2-4 and 8,
+   amended by prompt 50 stage 3).
 
-     margin-top    = the space from the header row down to the ALL SPORTS bar. It is set to 18px to
-                     match the space ABOVE the header row, which is .shell's own padding-top - so
-                     the row has the same air on both sides. Adjacent margins collapse, so this
-                     wins over .pagehead's 2px bottom and is the only number that matters.
-     margin-bottom = the space from the tile row down to the first section. Set to 6px, the same
-                     6px .sportbar puts BETWEEN the bar and the tiles, so bar, tiles and the
-                     section below read as one block rather than three.
+   1B carried TWO equations here. One of them is gone: margin-top was 18px so it would match
+   `.shell`'s padding-top and give the DATE / WEEK header row equal air above and below. Stage 2d
+   retired that header row, so there is no longer a row to balance and the 18 was only making the
+   largest gap in the stack. It is 6px now.
 
-   Deliberately on the tile row's WRAPPER and not on .favlabel: the first section below the tiles
-   changes (YOUR TEAMS on Today, the week block on Weeks, the first band on History, and the D1
-   band when it lands), and a margin on the wrapper is inherited by whichever one is first. */
+   The one that survives is margin-bottom: 6px, the same 6px `.sportbar` puts BETWEEN the bar and
+   the tiles, so the bar, the tiles and whatever follows read as one block rather than three. In the
+   restacked order what follows is the picker, which is still part of that block - so the rhythm now
+   runs the whole way down it.
+
+   Deliberately on the tile row's WRAPPER and not on the section below: what comes next changes with
+   the mode and the view, and a margin on the wrapper is inherited by whichever one is first. */
 .controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  margin: 18px 0 6px;
+  /* 18px -> 6px (prompt 50 stage 3). THE EQUATION THIS NUMBER SERVED NO LONGER EXISTS: prompt 46
+     unit 1B set it to 18 so it would MATCH `.shell`'s padding-top and give the DATE / WEEK header
+     row the same air above and below. Stage 2d retired that header row, so 18px was no longer
+     balancing anything - it was just the largest gap in the stack, 26px rendered once `.segrow`'s
+     own 8px bottom margin is added, against 8px between the two toggle rows. At 6px the whole
+     control block reads on one rhythm. The comment block above this rule is prompt 46's and
+     describes a layout that is gone; it is rewritten rather than left to mislead. */
+  margin: 6px 0 6px;
 }
 
 /* Today's controls stack: the sport block, then the day row. Its OWN class, not a change to
@@ -1722,7 +1729,16 @@ input:focus-visible {
  * inset exists. env()'s own fallback is 0px, so no max() is needed and a browser without a safe
  * area still gets exactly nothing from either rule. */
 .banner{position:relative;overflow:hidden;border-bottom:1px solid var(--line-soft);
-  padding-top:env(safe-area-inset-top, 0px);
+  /* PROMPT 50 STAGE 3: THE BANNER RISES 8px. Joe: it sits significantly lower on the page than it
+     needs to. The 8 is ABSORBED INTO THE INSET rather than subtracted from the element, which is
+     prompt 28's mechanism brought back for a different reason - and max(0px, ...) is what makes it
+     safe, because a browser with no safe area reports 0 and 0 - 8 would be negative padding.
+     WHERE IT SHOWS: only where an inset exists, which is the installed app. In a desktop browser
+     env() is already 0, max() clamps to 0, and nothing moves - so this is invisible in Chromium by
+     design and has to be judged on the phone (rule 25).
+     WHAT IT DOES NOT TOUCH: the artwork's own 11px of headroom, because coordinates are never
+     hand-edited, and the left/right/bottom insets, which Joe confirmed correct on the device. */
+  padding-top:max(0px, calc(env(safe-area-inset-top, 0px) - 8px));
   /* THE GROUND IS THE STAGE. The old radial was drawn for the old artwork; banner v2 paints its
      own stage, so the wrapper only has to continue it. Same three stops as the SVG's bdBg/bnBg,
      which is what makes the wings past the 1600px block invisible instead of a halo. It is now a
@@ -1742,7 +1758,10 @@ input:focus-visible {
    integer pixel; at 3x DPR the half-pixel is a third of a device pixel, below anything the panel can
    show. Wordmark first ink now sits 15px below the inset: 4 here + the artwork's own 11. */
 @media (display-mode: standalone){
-  .banner{padding-top:calc(env(safe-area-inset-top, 0px) + 4px)}
+  /* The installed app keeps prompt 46's +4, and takes stage 3's -8 through the same max() guard, so
+     the two never fight: on a 47px inset the wordmark's first ink moves from 62px to 54px below the
+     bezel (47 + 4 + the artwork's 11, less the 8). */
+  .banner{padding-top:max(0px, calc(env(safe-area-inset-top, 0px) + 4px - 8px))}
 }
 .bn-pc{position:relative}
 /* The desktop stage is 1400 wide and the banner is full-bleed to the viewport, so past 1600px the
@@ -2635,8 +2654,13 @@ main > .hubctl:first-child { margin-top: 0; }
   display: flex;
   align-items: stretch;
   gap: 8px;
-  /* Stage 3 owns these two numbers; they are the space above and below the picker. */
-  margin: 8px 0 6px;
+  /* THE SPACE ABOVE AND BELOW THE PICKER (prompt 50 stage 3), and both are measured gaps rather
+     than these literals: `.controls` contributes its own 6px bottom margin above, so the rendered
+     gap above the picker is 6 + 2 = 8px, down from 14px after the restack and from 22px in the
+     header row this replaced. Below the picker the 6px IS the gap - the picker is the last thing in
+     the control stack - which is already stage 3's target, reached by the restack rather than by a
+     number changed here. */
+  margin: 2px 0 6px;
 }
 
 /* The picker takes the room the arrows leave and is allowed to shrink - the longest week label is
