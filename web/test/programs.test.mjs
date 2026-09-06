@@ -84,13 +84,18 @@ test('every brand the design of record fixes carries its exact constant', () => 
 });
 
 test('a brand with no art in the tree has a null mark, so the endcap goes typographic', () => {
-  // RE-BASED at prompt 52 stage 6, not weakened. This used `gameday`, which had no art - but the art
-  // existed all along at web/public/programs/college-gameday.png and nothing referenced the folder.
-  // The FALLBACK still has to work, so the case moves onto a brand that genuinely still has none.
-  const fb = brandFor('foxnflsunday');
-  assert.equal(fb.mark, null);
-  assert.equal(fb.mark_dark, null);
-  assert.ok(fb.short_title, 'and it has a short title to set instead');
+  // RE-BASED TWICE, and that is why it no longer names a brand. Stage 6 moved it off `gameday`
+  // (whose art existed all along and was simply unwired) onto `foxnflsunday`, and stage 7 then
+  // sourced art for that one too. Hardcoding a slug here just schedules the next failure, so the
+  // case now PICKS a brand that still has none - and asserts there is one to pick.
+  const bare = Object.entries(brandsDoc.brands).filter(([, v]) => !v.mark && !v.mark_dark);
+  assert.ok(bare.length, 'if every brand has art this test is retired, not edited to pass');
+  for (const [key] of bare) {
+    const fb = brandFor(key);
+    assert.equal(fb.mark, null, key);
+    assert.equal(fb.mark_dark, null, key);
+    assert.ok(fb.short_title, `${key} has a short title to set instead`);
+  }
   const nascar = brandFor('nascar');
   assert.equal(nascar.mark_dark, '/leagues/nascar_dark.png');
 });
@@ -128,9 +133,31 @@ test('an unknown brand key is a neutral card, never a blank or a throw', () => {
   assert.equal(b.provisional, true);
 });
 
-test('every provisional brand is one with no mark - the colour and the art are missing together', () => {
+test('provisional now means the COLOUR is a placeholder, which is not the same as having no art', () => {
+  // THE OLD INVARIANT WAS "the colour and the art are missing together", and prompt 52 stage 7
+  // broke it for a real reason rather than a sloppy one. Football Night in America HAS art now, and
+  // still has no derivable colour: after the dark-context lift the wordmark is white and only 1.3%
+  // of opaque pixels are saturated at all - the NBC peacock, which is multicolour by design. There
+  // is no single hue that represents the brand, and picking one arm of a peacock would be an
+  // invented fact. So it keeps the neutral AND keeps the flag.
+  //
+  // What still holds, and is the part worth pinning: a provisional brand carries the NEUTRAL.
   for (const key of provisionalBrands()) {
-    assert.equal(brandFor(key).mark, null, `${key} has art but a provisional colour`);
+    assert.equal(brandFor(key).color, brandsDoc._neutral, `${key} is provisional, so it is neutral`);
+  }
+  // and every brand that is NOT provisional has a real colour of its own
+  for (const [key, v] of Object.entries(brandsDoc.brands)) {
+    if (v.provisional) continue;
+    assert.notEqual(brandFor(key).color, brandsDoc._neutral, `${key} is not provisional`);
+    assert.ok(brandFor(key).color_source, `${key} says where its colour came from`);
+  }
+});
+
+test('every sourced mark records its provenance - a mark with no recorded source does not ship', () => {
+  for (const [key, v] of Object.entries(brandsDoc.brands)) {
+    if (!v.mark_dark) continue;
+    if (v.mark_dark.startsWith('/leagues/')) continue;   // league marks, provenance in the contract
+    assert.ok(v.mark_source, `${key} ships art with no recorded source`);
   }
 });
 

@@ -231,7 +231,8 @@ def build_leagues(out_dir: Path) -> list[dict[str, Any]]:
         rows.append({"slug": slug, "raw_lum": lum(raw), "dark_lum": lum(dark),
                      "dark_source": how, "aspect": aspect(raw)})
         print("  league %-8s raw %-11s dark %-11s" % (slug, "%dx%d" % raw.size, "%dx%d" % dark.size))
-    (out_dir / "leagues-manifest.json").write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
+    (out_dir / "leagues-manifest.json").write_text(
+        json.dumps(rows, indent=2) + "\n", encoding="utf-8", newline="\n")
     return rows
 
 
@@ -260,14 +261,66 @@ def target() -> float:
     return statistics.median(vals) if vals else 1.0
 
 
-# Frozen in the 2026-09-02 design session.
-PROGRAMS: list[tuple[str, str, str]] = [
-    ("big-noon-kickoff", "svg", "floor_l 0.55 (FOX blue lifted; white + yellow untouched)"),
+# THE PROGRAM MARK TABLE.  (slug, source kind, treatment, recipe note, provenance)
+#
+# The first two were frozen in the 2026-09-02 design session and their sources were supplied. The
+# five added on 2026-09-06 (prompt 52 stage 7) were SOURCED FROM THE PUBLIC INTERNET, which prompts
+# 25, 34 and 38 forbade ("if the source art is not in assets/, stop and report") and which Joe lifted
+# FOR THAT RUN ONLY so the logos could land unattended. The next prompt inherits the old rule unless
+# it says otherwise.
+#
+# PROVENANCE IS MANDATORY - a mark with no recorded source does not ship. The quality floor is on the
+# FILE, not the source: >=256px on the long edge (or vector), transparent or a flat background that
+# keys cleanly, no watermark, no comp overlay, no JPEG ringing.
+#
+# `treatment` is a callable applied at WORK_H, replacing the per-slug `if slug == ...` branch that
+# build_programs() used to carry for Big Noon alone.
+PROGRAMS: list[tuple[str, str, Any, str, str]] = [
+    ("big-noon-kickoff", "svg", lambda im: floor_l(im, 0.55),
+     "floor_l 0.55 (FOX blue lifted; white + yellow untouched)",
+     "supplied 2026-09-02 design session"),
     # The sponsor-free shield was rebuilt by hand; the source PNG IS the deliverable, so any recipe
     # here would only degrade it. Its dark body is legal under the NHL/ABC ruling: it reads by rim
     # and white text, and lifting it would produce the grey plate the no-plate rule forbids.
-    ("college-gameday", "png", "RAW — sponsor block removed, shield rebuilt; dark body reads by "
-                               "rim + white text (NHL/ABC ruling)"),
+    ("college-gameday", "png", None,
+     "RAW — sponsor block removed, shield rebuilt; dark body reads by rim + white text "
+     "(NHL/ABC ruling)",
+     "supplied 2026-09-02 design session"),
+
+    # ---- added 2026-09-06, prompt 52 stage 7 -------------------------------------------------
+    # Flat WHITE plate, keyed by flooding inward from the border (key_white - the same reason
+    # IndyCar floods rather than keying a colour globally: a global test would delete that colour
+    # INSIDE the artwork too). What is left is the navy shield with white text, which reads on
+    # charcoal by body + text under the NHL/ABC ruling.
+    ("nfl-today", "png", key_white,
+     "key_white — flat white plate flooded out; navy shield reads by body + white text",
+     "en.wikipedia.org File:The NFL Today logo.png, 314x318 PNG, fetched 2026-09-06"),
+
+    # Transparent already, but the wordmark is BLACK - invisible on charcoal. whiten_below_gap lifts
+    # the dark ink and leaves the NBC peacock and the NFL shield their own colours.
+    ("football-night-in-america", "png", lambda im: whiten_below_gap(im, 0.42),
+     "whiten_below_gap 0.42 — black wordmark lifted; peacock and NFL shield keep their colour",
+     "en.wikipedia.org File:Football Night in America logo.png, 419x238 PNG, fetched 2026-09-06"),
+
+    # Same shape of problem, from a vector source: black type, ESPN red, NFL shield in colour.
+    ("sunday-nfl-countdown", "svg", lambda im: whiten_below_gap(im, 0.42),
+     "whiten_below_gap 0.42 — black type lifted; ESPN red and the NFL shield untouched",
+     "en.wikipedia.org File:Sunday NFL Countdown logo.svg, vector, fetched 2026-09-06"),
+
+    # RAW. A dark shield with a silver rim and white type - the NHL/ABC case exactly, where lifting
+    # would produce the grey backing plate contract v1.3e forbids.
+    ("monday-night-countdown", "svg", None,
+     "RAW — dark shield reads by silver rim + white type (NHL/ABC ruling)",
+     "en.wikipedia.org File:Monday Night Countdown logo.svg, vector, fetched 2026-09-06"),
+
+    # Flat BLACK plate, keyed the same way the white one is - key_white samples the BORDER rather
+    # than assuming a colour, so it handles either. What survives is the white FOX, the yellow NFL
+    # band and the white SUNDAY, which is a better charcoal rendering than the plated original.
+    # RETIRED LOCKUP: this is the classic mark, not Fox's current branding. Shipped and flagged.
+    ("fox-nfl-sunday", "png", key_white,
+     "key_white — flat black plate flooded out; white FOX + yellow NFL band + white SUNDAY. "
+     "RETIRED LOCKUP, not the current Fox branding",
+     "commons.wikimedia.org File:FOX NFL Sunday.png, 388x395 PNG, fetched 2026-09-06"),
 ]
 
 
@@ -276,7 +329,7 @@ def build_programs(out_dir: Path) -> list[dict[str, Any]]:
     tmp = Path(tempfile.mkdtemp(prefix="mysports-prog-"))
     tgt = target()
     rows: list[dict[str, Any]] = []
-    for slug, kind, recipe in PROGRAMS:
+    for slug, kind, treatment, recipe, source in PROGRAMS:
         if kind == "svg":
             out = tmp / ("%s.png" % slug)
             if not rasterize(PROG_SRC / ("%s.svg" % slug), out, PROG_RASTER_H):
@@ -291,16 +344,22 @@ def build_programs(out_dir: Path) -> list[dict[str, Any]]:
             im = Image.open(p).convert("RGBA")
 
         work = resize_h(trim(im), WORK_H)
-        work = floor_l(work, 0.55) if slug == "big-noon-kickoff" else work
+        # The treatment is per-row now, not a per-slug branch. Big Noon's floor_l 0.55 is
+        # unchanged; it just lives in the table beside its note instead of inside an `if`.
+        if treatment is not None:
+            work = treatment(work)
         pub = resize_h(trim(work), PROG_H)
         area = ink_area(pub)
         hf = round(min(HF_MAX, max(HF_MIN, (tgt / area) ** 0.5 if area else 1.0)), 3)
         pub.save(out_dir / ("%s.png" % slug), "PNG", optimize=True)
-        rows.append({"slug": slug, "hf": float(hf), "recipe": recipe,
+        rows.append({"slug": slug, "hf": float(hf), "recipe": recipe, "source": source,
+                     "w": int(pub.width), "h": int(pub.height),
                      "ink_area": round(area), "target": round(tgt), "lum": lum(pub)})
         print("  program %-18s %-9s hf %.3f ink %d (target %d)"
               % (slug, "%dx%d" % pub.size, hf, round(area), round(tgt)))
-    (out_dir / "manifest.json").write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
+    # newline= is working rule 29 - the same fix build_web_marks.py needed.
+    (out_dir / "manifest.json").write_text(
+        json.dumps(rows, indent=2) + "\n", encoding="utf-8", newline="\n")
     return rows
 
 

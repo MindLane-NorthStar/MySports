@@ -74,52 +74,53 @@
     "foxnflsunday": {
       "title": "FOX NFL Sunday",
       "short_title": "FOX NFL SUNDAY",
-      "color": "#4A505A",
-      "color_source": "provisional neutral (globals.css --line-grid)",
+      "color": "#FFC500",
+      "color_source": "derived from web/public/programs/fox-nfl-sunday.png - dominant saturated hue bucket (45-60deg), 16.1% of opaque pixels, median chroma. The yellow NFL band of the lockup.",
       "mark": null,
-      "mark_dark": null,
-      "provisional": true,
-      "note": "no mark in the tree; FOX's cached wordmark is monochrome"
+      "mark_dark": "/programs/fox-nfl-sunday.png",
+      "note": "Colour derived 2026-09-06 when the art landed. The previous note - \"no mark in the tree; FOX's cached wordmark is monochrome\" - described a different asset and is superseded.",
+      "mark_source": "prompt 52 stage 7 - sourced from the public internet under Joe's one-run lift of the \"sourcing art is Cowork's job\" rule (prompts 25, 34, 38). Built through scripts/build_brand_marks.py; provenance is in that script's PROGRAMS table."
     },
     "nfltoday": {
       "title": "The NFL Today",
       "short_title": "NFL TODAY",
-      "color": "#4A505A",
-      "color_source": "provisional neutral (globals.css --line-grid)",
+      "color": "#11284A",
+      "color_source": "derived from web/public/programs/nfl-today.png - dominant saturated hue bucket (210-225deg), 55.5% of opaque pixels, median chroma. The CBS Sports shield navy.",
       "mark": null,
-      "mark_dark": null,
-      "provisional": true,
-      "note": "no mark in the tree; CBS's cached wordmark is monochrome"
+      "mark_dark": "/programs/nfl-today.png",
+      "note": "Colour derived 2026-09-06 when the art landed. The previous note - \"no mark in the tree; FOX's cached wordmark is monochrome\" - described a different asset and is superseded.",
+      "mark_source": "prompt 52 stage 7 - sourced from the public internet under Joe's one-run lift of the \"sourcing art is Cowork's job\" rule (prompts 25, 34, 38). Built through scripts/build_brand_marks.py; provenance is in that script's PROGRAMS table."
     },
     "nflcountdown": {
       "title": "Sunday NFL Countdown",
       "short_title": "NFL COUNTDOWN",
-      "color": "#4A505A",
-      "color_source": "provisional neutral (globals.css --line-grid)",
+      "color": "#F12E31",
+      "color_source": "derived from web/public/programs/sunday-nfl-countdown.png - dominant saturated hue bucket (345-360deg), 7.7% of opaque pixels, median chroma. ESPN red. THE SHARE IS THIN - indycar's derivation ran at 24% - because most of this lockup is white type after the lift; it is taken because the red is unambiguously the brand accent, and the share is recorded so Joe can judge.",
       "mark": null,
-      "mark_dark": null,
-      "provisional": true,
-      "note": "no mark in the tree"
+      "mark_dark": "/programs/sunday-nfl-countdown.png",
+      "note": "Colour derived 2026-09-06 when the art landed. The previous note - \"no mark in the tree; FOX's cached wordmark is monochrome\" - described a different asset and is superseded.",
+      "mark_source": "prompt 52 stage 7 - sourced from the public internet under Joe's one-run lift of the \"sourcing art is Cowork's job\" rule (prompts 25, 34, 38). Built through scripts/build_brand_marks.py; provenance is in that script's PROGRAMS table."
     },
     "fnia": {
       "title": "Football Night in America",
       "short_title": "FOOTBALL NIGHT",
       "color": "#4A505A",
-      "color_source": "provisional neutral (globals.css --line-grid)",
+      "color_source": "NO COLOUR DERIVED, and the neutral is kept deliberately. After the lift the wordmark is white and only 1.3% of opaque pixels are saturated at all - the NBC peacock, which is multicolour by design, plus the NFL shield. No single hue represents this brand, and picking one arm of a peacock would be an invented fact.",
       "mark": null,
-      "mark_dark": null,
+      "mark_dark": "/programs/football-night-in-america.png",
       "provisional": true,
-      "note": "no mark in the tree"
+      "note": "Art landed 2026-09-06; the COLOUR is still provisional. See color_source - there is no derivable hue, which is a different situation from having no art.",
+      "mark_source": "prompt 52 stage 7 - sourced from the public internet under Joe's one-run lift of the \"sourcing art is Cowork's job\" rule (prompts 25, 34, 38). Built through scripts/build_brand_marks.py; provenance is in that script's PROGRAMS table."
     },
     "mnfcountdown": {
       "title": "Monday Night Countdown",
       "short_title": "MNF COUNTDOWN",
-      "color": "#4A505A",
-      "color_source": "provisional neutral (globals.css --line-grid)",
+      "color": "#C61313",
+      "color_source": "derived from web/public/programs/monday-night-countdown.png - dominant saturated hue bucket (0-15deg), 12.6% of opaque pixels, median chroma. ESPN red, same accent as nflcountdown.",
       "mark": null,
-      "mark_dark": null,
-      "provisional": true,
-      "note": "no mark in the tree"
+      "mark_dark": "/programs/monday-night-countdown.png",
+      "note": "Colour derived 2026-09-06 when the art landed. The previous note - \"no mark in the tree; FOX's cached wordmark is monochrome\" - described a different asset and is superseded.",
+      "mark_source": "prompt 52 stage 7 - sourced from the public internet under Joe's one-run lift of the \"sourcing art is Cowork's job\" rule (prompts 25, 34, 38). Built through scripts/build_brand_marks.py; provenance is in that script's PROGRAMS table."
     },
     "tnfpregame": {
       "title": "TNF Pregame",

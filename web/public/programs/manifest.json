@@ -1,18 +1,79 @@
 [
   {
     "slug": "big-noon-kickoff",
-    "hf": 1.079,
+    "hf": 1.058,
     "recipe": "floor_l 0.55 (FOX blue lifted; white + yellow untouched)",
-    "ink_area": 10085,
-    "target": 11734,
-    "lum": 196.2
+    "source": "supplied 2026-09-02 design session",
+    "w": 212,
+    "h": 128,
+    "ink_area": 10490,
+    "target": 11739,
+    "lum": 195.8
   },
   {
     "slug": "college-gameday",
     "hf": 1.15,
     "recipe": "RAW \u2014 sponsor block removed, shield rebuilt; dark body reads by rim + white text (NHL/ABC ruling)",
-    "ink_area": 7947,
-    "target": 11734,
+    "source": "supplied 2026-09-02 design session",
+    "w": 118,
+    "h": 128,
+    "ink_area": 7958,
+    "target": 11739,
     "lum": 77.5
+  },
+  {
+    "slug": "nfl-today",
+    "hf": 1.15,
+    "recipe": "key_white \u2014 flat white plate flooded out; navy shield reads by body + white text",
+    "source": "en.wikipedia.org File:The NFL Today logo.png, 314x318 PNG, fetched 2026-09-06",
+    "w": 124,
+    "h": 128,
+    "ink_area": 6114,
+    "target": 11739,
+    "lum": 90.3
+  },
+  {
+    "slug": "football-night-in-america",
+    "hf": 1.15,
+    "recipe": "whiten_below_gap 0.42 \u2014 black wordmark lifted; peacock and NFL shield keep their colour",
+    "source": "en.wikipedia.org File:Football Night in America logo.png, 419x238 PNG, fetched 2026-09-06",
+    "w": 225,
+    "h": 128,
+    "ink_area": 6613,
+    "target": 11739,
+    "lum": 232.8
+  },
+  {
+    "slug": "sunday-nfl-countdown",
+    "hf": 1.15,
+    "recipe": "whiten_below_gap 0.42 \u2014 black type lifted; ESPN red and the NFL shield untouched",
+    "source": "en.wikipedia.org File:Sunday NFL Countdown logo.svg, vector, fetched 2026-09-06",
+    "w": 244,
+    "h": 128,
+    "ink_area": 8558,
+    "target": 11739,
+    "lum": 234.6
+  },
+  {
+    "slug": "monday-night-countdown",
+    "hf": 1.112,
+    "recipe": "RAW \u2014 dark shield reads by silver rim + white type (NHL/ABC ruling)",
+    "source": "en.wikipedia.org File:Monday Night Countdown logo.svg, vector, fetched 2026-09-06",
+    "w": 164,
+    "h": 128,
+    "ink_area": 9495,
+    "target": 11739,
+    "lum": 86.6
+  },
+  {
+    "slug": "fox-nfl-sunday",
+    "hf": 1.092,
+    "recipe": "key_white \u2014 flat black plate flooded out; white FOX + yellow NFL band + white SUNDAY. RETIRED LOCKUP, not the current Fox branding",
+    "source": "commons.wikimedia.org File:FOX NFL Sunday.png, 388x395 PNG, fetched 2026-09-06",
+    "w": 126,
+    "h": 128,
+    "ink_area": 9844,
+    "target": 11739,
+    "lum": 117.0
   }
 ]
