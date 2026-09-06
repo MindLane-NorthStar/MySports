@@ -33,15 +33,19 @@ test('the manifest carries published geometry for every mark, and h is PUBLISH_H
   }
 });
 
-test('26 of 28 marks land on the 600px^2 target; the two exceptions are the two widest lockups', () => {
+test('27 of 28 marks land on the 600px^2 target; the one exception is the widest lockup', () => {
+  // Stage 5 landed 26 of 28, with ESPN2 and HBO Max short because their aspect put them against the
+  // `RAIL_BOX_W / a` ceiling. Stage 7 replaced HBO Max's wide wordmark with the stacked 2025 lockup
+  // (aspect 6.30 -> 2.14) and it came onto the target with NO CODE CHANGE - the fit recomputed from
+  // the manifest, which is the whole point of making it data-driven. ESPN2 has no compact variant:
+  // its brand IS a wide wordmark, and none was found.
   const off = [];
   for (const m of manifest) {
     const r = railMark(m.slug);
-    const area = r.height * r.width;
-    if (Math.abs(area - RAIL_TARGET_AREA) > 1) off.push(m.slug);
+    if (Math.abs(r.height * r.width - RAIL_TARGET_AREA) > 1) off.push(m.slug);
   }
-  assert.deepEqual(off.sort(), ['espn2', 'hbo-max']);
-  assert.equal(manifest.length - off.length, 26);
+  assert.deepEqual(off.sort(), ['espn2']);
+  assert.equal(manifest.length - off.length, 27);
 });
 
 test('NO mark is drawn wider than the rail content box - the CSS clamp must not bind', () => {
@@ -54,23 +58,43 @@ test('NO mark is drawn wider than the rail content box - the CSS clamp must not 
   }
 });
 
-test('the ink-area spread collapses from 3.00x to at most 1.45x', () => {
+test('the ink-area spread collapses from 3.00x to at most 1.20x', () => {
+  // 3.00x before stage 5; 1.40x after it; 1.16x once stage 7's compact HBO Max landed.
   const areas = manifest.map((m) => { const r = railMark(m.slug); return r.height * r.width; });
   const spread = Math.max(...areas) / Math.min(...areas);
-  assert.ok(spread <= 1.45, `spread ${spread.toFixed(2)}x`);
-  // and it is a real improvement, not a tautology: the OLD rule was the CSS box 61 x 30.
+  assert.ok(spread <= 1.20, `spread ${spread.toFixed(2)}x`);
+  // AND IT IS THE FIT FUNCTION DOING THE WORK, not the art. Run the OLD rule - the bare CSS box,
+  // 61 x 30 with object-fit: contain and no height on the <img> - over the SAME manifest and it is
+  // still materially worse. (Measured against the pre-stage-5 art the old rule gave 3.00x; that
+  // number is history and is not recomputed here, because the art it described has since changed.)
   const old = manifest.map((m) => {
     const a = m.w / m.h; const h = Math.min(30, 61 / a); return h * (h * a);
   });
   const oldSpread = Math.max(...old) / Math.min(...old);
-  assert.ok(oldSpread > 2.9, `the old spread was ${oldSpread.toFixed(2)}x`);
+  assert.ok(oldSpread > spread * 1.5,
+    `the CSS-box rule spreads ${oldSpread.toFixed(2)}x against the fit function's ${spread.toFixed(2)}x`);
 });
 
-test('the two exceptions are the SMALLEST marks, so nothing new becomes the worst offender', () => {
+test('the one exception is the SMALLEST mark, so nothing new becomes the worst offender', () => {
+  // The point of the assertion, which survives the count change: a mark that cannot reach the
+  // target must not END UP LARGER than one that can. Below target is fine; above it is a bug.
   const byArea = manifest
     .map((m) => ({ slug: m.slug, area: (() => { const r = railMark(m.slug); return r.height * r.width; })() }))
     .sort((a, b) => a.area - b.area);
-  assert.deepEqual(byArea.slice(0, 2).map((x) => x.slug).sort(), ['espn2', 'hbo-max']);
+  assert.equal(byArea[0].slug, 'espn2');
+  assert.ok(byArea[0].area < RAIL_TARGET_AREA);
+  assert.ok(byArea.slice(1).every((x) => Math.abs(x.area - RAIL_TARGET_AREA) <= 1),
+    'every other mark is exactly on target');
+});
+
+test('HBO Max came onto the target from ART ALONE, with no code change', () => {
+  // Stage 5 predicted this: the `RAIL_BOX_W / a` term stops binding at aspect 4.51, so compact art
+  // at or below that closes a short mark because the fit recomputes from the manifest.
+  const hbo = manifest.find((m) => m.slug === 'hbo-max');
+  const a = hbo.w / hbo.h;
+  assert.ok(a <= 4.51, `aspect ${a.toFixed(2)} - was 6.30 before the 2025 stacked lockup`);
+  const r = railMark('hbo-max');
+  assert.ok(Math.abs(r.height * r.width - RAIL_TARGET_AREA) <= 1);
 });
 
 test('compact art at aspect <= 4.51 closes them, with NO code change', () => {

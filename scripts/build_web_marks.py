@@ -315,6 +315,26 @@ SVG_ALIAS = {"sec-network-plus": "sec-network"}
 HF_OVERRIDE = {"guardians-tv": 1.25}
 HF_MIN, HF_MAX = 0.62, 1.15
 
+# THE INK-AREA TARGET IS FROZEN, AND THIS IS THE NUMBER (prompt 52 stage 7).
+#
+# It used to be `statistics.median(areas.values())` computed fresh on every run - which meant ANY
+# change to the source set silently renormalized all 28 marks. Measured: swapping HBO Max's wide
+# wordmark for the stacked 2025 lockup moves the median 11646 -> 10731, -7.9%, which rewrites every
+# hf in the suite AND drags build_brand_marks.target() with it, because that function RECOVERS this
+# number from the frozen manifest to size program marks against the networks. One art swap, two
+# suites moved.
+#
+# So the median is taken ONCE and recorded. This value is the median over the 2026-09-02 source set
+# and it is what every published hf was derived from - verified by rebuilding to a temp directory
+# and diffing: the manifest and all 28 PNGs came back byte-identical.
+#
+# `--recompute-target` re-derives it deliberately. That is a suite-wide renormalization, not a
+# routine rebuild: it resizes every mark, so do it on purpose and re-record the number here.
+NET_TARGET = 11646.499633789062
+
+# Sentinel for --recompute-target: 'take the median over whatever we just processed'.
+RECOMPUTE = object()
+
 
 # ----------------------------------------------------------------------------- sources
 def slugs() -> list[str]:
@@ -353,7 +373,8 @@ def load_source(slug: str, kind: str, rasters: dict[str, Path]) -> Image.Image |
 
 
 # ----------------------------------------------------------------------------- build
-def build(only: list[str] | None = None, out_dir: Path | None = None) -> list[dict[str, Any]]:
+def build(only: list[str] | None = None, out_dir: Path | None = None,
+          pin: Any = None) -> list[dict[str, Any]]:
     """Process every mark and publish it, writing the manifest as [{slug, hf, w, h}].
 
     `out_dir` exists so a caller can build to a TEMPORARY directory and diff the result against
@@ -395,7 +416,16 @@ def build(only: list[str] | None = None, out_dir: Path | None = None) -> list[di
 
     # ---- ink-area normalization, frozen into the manifest
     areas = {s: ink_area(im) for s, im in processed.items()}
-    target = statistics.median(areas.values()) if areas else 1.0
+    # THE TARGET IS FROZEN AT NET_TARGET - read the comment there for why. In short: it used to be
+    # the median over whatever was just processed, so replacing ONE mark's art silently renormalized
+    # all 28 and dragged build_brand_marks.target() along with it. `pin` is a one-off override;
+    # RECOMPUTE deliberately re-derives it and renormalizes the suite.
+    if pin is RECOMPUTE:
+        target = statistics.median(areas.values()) if areas else 1.0
+    else:
+        target = pin if pin is not None else NET_TARGET
+    _median = statistics.median(areas.values()) if areas else 1.0
+    print(f"  target {target:.0f}  (median over these {len(areas)} sources: {_median:.0f})")
     manifest: list[dict[str, Any]] = []
     for slug in sorted(processed):
         im = processed[slug]
@@ -462,6 +492,13 @@ def main(argv: list[str] | None = None) -> int:
                          "manifest.json to the subset and takes the ink-area median over it")
     ap.add_argument("--out-dir", help="write here instead of web/public/marks - use a temp dir "
                                       "to check for drift without publishing")
+    ap.add_argument("--pin-target", type=float,
+                    help="normalize against THIS ink-area target instead of the frozen NET_TARGET. "
+                         "A one-off experiment; the frozen value is the default.")
+    ap.add_argument("--recompute-target", action="store_true",
+                    help="re-derive the ink-area target as the median over the current sources. "
+                         "THIS RENORMALIZES THE WHOLE SUITE and resizes every mark - do it on "
+                         "purpose, then record the new number in NET_TARGET.")
     ap.add_argument("--list", action="store_true", help="print the recipe per slug and exit")
     ap.add_argument("--team-logos", action="store_true",
                     help="also build assets/logos/{id}_dark.png for charcoal-floating contexts")
@@ -481,7 +518,13 @@ def main(argv: list[str] | None = None) -> int:
         print("refusing: --only truncates the published manifest to that subset and takes the "
               "ink-area median over it. Pass --out-dir to build a subset somewhere safe.")
         return 2
-    manifest = build(args.only, out_dir)
+    pin = args.pin_target
+    if args.recompute_target:
+        if pin is not None:
+            print('refusing: --pin-target and --recompute-target contradict each other.')
+            return 2
+        pin = RECOMPUTE
+    manifest = build(args.only, out_dir, pin)
     print(f"marks: {len(manifest)} -> {out_dir}")
     print("  slug                     hf      w    h")
     for m in manifest:
