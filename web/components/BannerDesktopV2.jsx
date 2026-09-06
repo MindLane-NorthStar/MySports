@@ -9,7 +9,7 @@ export default function BannerDesktopV2() {
     <linearGradient id="bdBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#272727"/><stop offset=".45" stopColor="#232323"/><stop offset="1" stopColor="#1A1A1A"/></linearGradient>
     <radialGradient id="bdGlow0" cx=".5" cy=".5" r=".5"><stop offset="0%" stopColor="rgb(255,170,60)" stopOpacity="0.32"/><stop offset="45.3%" stopColor="rgb(255,170,60)" stopOpacity="0.176"/><stop offset="82%" stopColor="rgb(255,170,60)" stopOpacity="0.058"/><stop offset="100%" stopColor="rgb(255,170,60)" stopOpacity="0.021"/></radialGradient>
     <radialGradient id="bdGlow1" cx=".5" cy=".5" r=".5"><stop offset="0%" stopColor="rgb(255,170,60)" stopOpacity="0.42"/><stop offset="45.3%" stopColor="rgb(255,170,60)" stopOpacity="0.231"/><stop offset="82%" stopColor="rgb(255,170,60)" stopOpacity="0.076"/><stop offset="100%" stopColor="rgb(255,170,60)" stopOpacity="0.028"/></radialGradient>
-    <linearGradient id="bdGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#FBE59A"/><stop offset=".42" stopColor="#F2CD62"/><stop offset=".7" stopColor="#E4B646"/><stop offset="1" stopColor="#D2A038"/></linearGradient>
+    <linearGradient id="bdGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#E0D1A5"/><stop offset=".42" stopColor="#C6AF7A"/><stop offset=".7" stopColor="#B39A69"/><stop offset="1" stopColor="#8C7650"/></linearGradient>
     <filter id="bdTitleGlow" x="-20%" y="-100%" width="140%" height="300%"><feGaussianBlur stdDeviation="10.0"/></filter>
     <filter id="bdMark" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="0" stdDeviation="1.2" floodColor="#ffffff" floodOpacity=".22" result="halo"/><feDropShadow in="halo" dx="0" dy="2" stdDeviation="1.2" floodColor="#000000" floodOpacity=".55"/></filter>
     <filter id="bdTv" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="6" stdDeviation="4" floodColor="#000000" floodOpacity=".65" result="s"/><feDropShadow in="s" dx="0" dy="0" stdDeviation="6" floodColor="rgb(255,150,40)" floodOpacity=".28"/></filter>
@@ -46,7 +46,7 @@ export default function BannerDesktopV2() {
     <image href="/banner/nba.png" x="1132.62" y="128.0" width="16.76" height="38" preserveAspectRatio="xMidYMid meet" filter="url(#bdMark)"/>
     <image href="/banner/wwe.png" x="1269.9" y="131.5" width="34.19" height="31" preserveAspectRatio="xMidYMid meet" filter="url(#bdMark)"/>
     <image href="/banner/nascar.png" x="1164.03" y="166.5" width="101.93" height="17" preserveAspectRatio="xMidYMid meet" filter="url(#bdMark)"/>
-    <text x="60" y="51.76" fontFamily="'Barlow Condensed', 'Barlow Condensed Fallback', Impact, sans-serif" fontWeight="700" fontSize="55" letterSpacing="2.48" fill="#F3CC5A" opacity=".55" filter="url(#bdTitleGlow)">MYSPORTS TV</text>
+    <text x="60" y="51.76" fontFamily="'Barlow Condensed', 'Barlow Condensed Fallback', Impact, sans-serif" fontWeight="700" fontSize="55" letterSpacing="2.48" fill="#C6AF7A" opacity=".55" filter="url(#bdTitleGlow)">MYSPORTS TV</text>
     <text x="60" y="51.76" fontFamily="'Barlow Condensed', 'Barlow Condensed Fallback', Impact, sans-serif" fontWeight="700" fontSize="55" letterSpacing="2.48" fill="url(#bdGold)">MYSPORTS TV</text>
     <text x="62" y="80.0" fontFamily="'Barlow Condensed', 'Barlow Condensed Fallback', Impact, sans-serif" fontWeight="600" fontSize="15" letterSpacing="3.0" fill="#A4AAB2">EVERY GAME. EVERY CHANNEL. ONE PLACE.</text>
     </svg>
