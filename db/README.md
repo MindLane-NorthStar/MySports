@@ -937,3 +937,81 @@ the feed's value, matching ESPN's `2026-09-06T21:00Z`. Screenshots in
 **The DAYTONA 500 keeps cf.nascar.com's 2:30 PM ET**, which prompt 48 recorded as a one-hour
 disagreement with ESPN's 1:30 PM. This correction fixes the **timezone** defect only; the source
 disagreement is untouched and still open.
+
+## 0016 — a race session's natural key stops depending on start_at — 2026-09-05 (prompt 49 stage 4)
+
+**Approved by Joe, 2026-09-06:** migration 0016, additive. Applied through
+`scripts/apply_migration.py` (dry run first). Backups:
+`artifacts/backups/programs_2026-09-05T235356Z.csv` (4,190 rows) and
+`..._235713Z.csv` before the verification load. `db/enums.json` regenerated and **byte-identical** —
+`external_id` is `text`, so no enum type, value or column moved (22 / 102 / 39, unchanged).
+
+**Why 0012's key was never a key.** `(sport, series, start_at, title)` holds while a schedule only
+gains races and breaks the moment one MOVES: a corrected or postponed time is a different key,
+`ON CONFLICT` matches nothing, and the loader inserts a second copy. Prompt 48 proved it on the
+runner — the moved-twin guard logged `MOVED-TWIN SKIPPED 98 row(s)` and refused to load one.
+`docs/research/nascar.md` §5 makes it permanent: rain moves races to Monday.
+
+### The DDL, verbatim
+
+```sql
+alter table programs add column if not exists external_id text;
+
+create unique index if not exists programs_race_session_external_uq
+  on programs (sport, (coalesce(series, '')), external_id)
+  where program_type = 'race_session' and external_id is not null;
+```
+
+Plus two `comment on` statements. **0012's `programs_race_session_uq` and 0015's
+`programs_race_session_key_uq` are both KEPT** — dropping one is not additive and this run's approval
+does not allow it. They still apply to rows with no `external_id` and are superseded for rows that
+have one; **drop them in a later, separately approved migration** once every race session carries an
+id.
+
+**`coalesce(series, '')` and not the bare `series` the brief specified.** That is 0015's lesson
+applied one migration later rather than relearned: NULLs are distinct in a unique index, NASCAR
+carries a series on every row and IndyCar runs one and carries none (register §16). The bare form
+would have made every IndyCar row invisible to its own key — the exact bug 0015 exists to fix.
+
+### The backfill — within write (a): the same 98 rows, one more column
+
+`scripts/fix_nascar_start_times.py --backfill-external-id --apply`, on the same feed-id match stage 3
+used. **98 non-null, 98 distinct within series.** Every checksum unchanged.
+
+The script is **re-runnable**: it recognises a row still carrying the defect (holding the naive wall
+clock read as UTC) *and* a row already corrected (holding the right instant), so a second invocation
+reports `98 matched, 0 need moving, 98 already correct` instead of looking like a failure. The first
+version matched 0 of 98 on its second run, which is exactly the misleading signal a one-state matcher
+gives.
+
+### The loader
+
+Race sessions upsert on `(sport, coalesce(series, ''), external_id)` when the adapter supplies one —
+repeating both the expression **and** the partial predicate, which is prompt 47's finding — and fall
+back to 0015's key when it does not. `adapters/nascar.py` supplies the feed's `race_id`;
+`adapters/indycar.py` supplies its schedule slug.
+
+**ADOPTION is the part with teeth.** A row loaded before 0016 has `external_id` null, so the new key
+cannot see it and an insert would duplicate the race it already holds. The loader stamps the id onto
+that row first, matched on series, title **and** `start_at` so it can only ever adopt an otherwise
+identical row — the two Daytona Duels share a title, a series and a day, and adopting on title alone
+would stamp one id onto both and violate the new index. Exactly one match, or nothing is stamped.
+
+The moved-twin guard is **relaxed for keyed rows** and unchanged for keyless ones. A keyed race that
+moves is an UPDATE and says so: `moved: 'Race' (nascar 5624) <old> -> <new>`.
+
+### Verification load, and two writes beyond the letter of the approval
+
+Re-loading the corrected feed reported **98 programs, 98 broadcasts, 0 inserted** — `programs` still
+4,190, NASCAR still 98. But a load writes the `game_broadcasts` rows it owns, and **2 changed**: the
+Cook Out Clash and the Black's Tire 250, both on **FS2**, from `available` to `unavailable`. That is
+the defect prompt 48 found and could not fix. No row was added (2,681 before and after).
+
+A `--programs` reconcile (**run id 96**) then followed, because those two rows had left
+`viewer_program_eligibility` contradicting `game_broadcasts`. They now read
+`not receivable: fs2=unavailable`; NASCAR is **96 eligible / 2 not**; 307 rows, 0 uncovered, and the
+game-verdict md5 `1517d6f676eb710b30fc3b35516f37a5` is unchanged.
+
+**Both writes were outside the approval's letter**, both only propagate already-approved facts into
+derived tables, and reverting either would restore a state prompt 48 documented as wrong — but a dry
+run should have come first, and this records that it did not.

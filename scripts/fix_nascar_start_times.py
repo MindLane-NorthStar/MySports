@@ -124,6 +124,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--year", type=int, default=2026)
     ap.add_argument("--apply", action="store_true", help="write; otherwise this is a dry run")
     ap.add_argument("--fixtures", action="store_true", help="read the recorded feeds")
+    ap.add_argument("--backfill-external-id", action="store_true",
+                    help="0016: also stamp the feed's race_id onto each matched row")
     args = ap.parse_args(argv)
 
     db = DB()
@@ -132,17 +134,26 @@ def main(argv: list[str] | None = None) -> int:
     print("stored race sessions: %d | feed races: %d | source: %s"
           % (len(stored), len(feed), "recorded fixtures" if args.fixtures else "cf.nascar.com"))
 
-    # ---- match on (series, title, the value the buggy loader would have written)
-    by_key: dict[tuple, list[dict]] = {}
+    # ---- MATCH, and the script is RE-RUNNABLE because it recognises both states.
+    #
+    # A row still carrying the defect holds the value the buggy loader wrote - the naive wall clock
+    # read as UTC. A row already corrected holds the right instant. Both are exact three-part keys,
+    # and trying the broken one first means a half-finished run resumes rather than stalling.
+    # Without this the second invocation matched 0 of 98 and looked like a failure when it was
+    # actually the success of the first.
+    broken: dict[tuple, list[dict]] = {}
+    fixed: dict[tuple, list[dict]] = {}
     for f in feed:
-        by_key.setdefault((f["series"], f["title"], f["stored_expected"]), []).append(f)
+        broken.setdefault((f["series"], f["title"], f["stored_expected"]), []).append(f)
+        fixed.setdefault((f["series"], f["title"], f["correct"]), []).append(f)
 
     plan, unmatched_rows = [], []
     used = set()
     for row in stored:
         key = (row["series"], row["title"], row["start_at"])
-        hits = by_key.get(key) or []
-        hits = [h for h in hits if id(h) not in used]
+        hits = [h for h in (broken.get(key) or []) if id(h) not in used]
+        if not hits:
+            hits = [h for h in (fixed.get(key) or []) if id(h) not in used]
         if len(hits) != 1:
             unmatched_rows.append((row, len(hits)))
             continue
@@ -183,7 +194,8 @@ def main(argv: list[str] | None = None) -> int:
     if unmatched_rows or unmatched_feed:
         problems.append("%d stored and %d feed races unmatched"
                         % (len(unmatched_rows), len(unmatched_feed)))
-    bad_offset = [p for p in plan if p["offset_h"] not in (4.0, 5.0)]
+    # 0.0 is a row that is ALREADY correct - the expected state on a re-run.
+    bad_offset = [p for p in plan if p["offset_h"] not in (0.0, 4.0, 5.0)]
     if bad_offset:
         problems.append("%d rows with an offset other than +4h/+5h" % len(bad_offset))
         for p in bad_offset[:5]:
@@ -195,6 +207,8 @@ def main(argv: list[str] | None = None) -> int:
     # what the offset is at that instant cannot be wrong about a transition week.
     for p in plan:
         want = -p["new"].astimezone(ET).utcoffset().total_seconds() / 3600.0
+        if p["offset_h"] == 0.0:
+            continue                       # already corrected by an earlier run
         if p["offset_h"] != want:
             problems.append("%s %s: offset %+gh but %s is UTC%+g, wanting %+gh"
                             % (p["series"], p["title"][:36], p["offset_h"],
@@ -207,7 +221,9 @@ def main(argv: list[str] | None = None) -> int:
             print("   " + x)
         db.close()
         return 1
-    print("GATE PASSED: 98 rows, every offset +4h in EDT and +5h in EST, nothing else touched.")
+    moving = sum(1 for p in plan if p["offset_h"] != 0.0)
+    print("GATE PASSED: %d rows matched, %d need moving (+4h in EDT, +5h in EST), %d already "
+          "correct, nothing else touched." % (len(plan), moving, len(plan) - moving))
 
     if not args.apply:
         print("\ndry run - nothing written. Re-run with --apply.")
@@ -216,9 +232,21 @@ def main(argv: list[str] | None = None) -> int:
 
     before = checksums(db)
     for p in plan:
-        db.run("update programs set start_at = %s, updated_at = now() "
-               "where program_id = %s and sport = 'nascar' and program_type = 'race_session'",
-               (p["new"], p["program_id"]), tag="programs.start_at")
+        # MIGRATION 0016's backfill rides the SAME match, on the SAME rows, in the same
+        # transaction. It is one more column on the 98 rows write (a) already covers, and it
+        # is what makes this correction the last one: with `external_id` set, a race that
+        # moves UPDATES instead of inserting a second copy - which is the whole reason the
+        # moved-twin guard had to skip all 98 on the runner rather than load them.
+        if args.backfill_external_id and p["race_id"] is not None:
+            db.run("update programs set start_at = %s, external_id = %s, updated_at = now() "
+                   "where program_id = %s and sport = 'nascar' "
+                   "and program_type = 'race_session'",
+                   (p["new"], str(p["race_id"]), p["program_id"]), tag="programs.start_at")
+        else:
+            db.run("update programs set start_at = %s, updated_at = now() "
+                   "where program_id = %s and sport = 'nascar' "
+                   "and program_type = 'race_session'",
+                   (p["new"], p["program_id"]), tag="programs.start_at")
     db.commit()
     after = checksums(db)
 
@@ -234,6 +262,12 @@ def main(argv: list[str] | None = None) -> int:
                                              "YES" if same else "**NO**"))
     n = db.fetch("select count(*) from programs where sport='nascar' and program_type='race_session'")[0][0]
     print("\nnascar race sessions still: %d" % n)
+    if args.backfill_external_id:
+        keyed, distinct = db.fetch(
+            "select count(external_id), count(distinct (coalesce(series, ''), external_id)) "
+            "from programs where sport = 'nascar' and program_type = 'race_session'")[0]
+        print("external_id: %d non-null, %d distinct within series" % (keyed, distinct))
+        ok = ok and keyed == 98 and distinct == 98
     db.close()
     return 0 if ok and n == 98 else 1
 

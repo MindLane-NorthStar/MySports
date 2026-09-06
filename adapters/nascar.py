@@ -160,6 +160,11 @@ def to_program(race: dict[str, Any], series: str) -> dict[str, Any] | None:
         # exactly what open_ended means. data/duration_defaults.json says so for every race_session;
         # this reads that file rather than restating its answer.
         "open_ended": OPEN_ENDED,
+        # MIGRATION 0016. The feed's own race_id, which this adapter has always carried in
+        # `_provenance` and which never reached the database because PROGRAM_COLS did not list it.
+        # With it stored, a race that MOVES - a corrected time, a rain postponement to Monday -
+        # updates its row instead of inserting a second copy of itself.
+        "external_id": str(race.get("race_id")) if race.get("race_id") is not None else None,
         "source_tier": "official_league_feed",
         "source_url": FEED.format(year=race.get("race_season") or "", series=SERIES_ID[series]),
         "brand_key": "nascar",

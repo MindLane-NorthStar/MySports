@@ -175,6 +175,12 @@ def parse(page: str, year: int) -> list[dict[str, Any]]:
             # rather than restated.
             "open_ended": bool((defaults.get("race_session") or {}).get("open_ended_default")),
             "brand_key": "indycar",
+            # MIGRATION 0016. indycar.com's schedule SLUG is the stable per-race id - it is what
+            # every race page is addressed by, it survives a time change, and it is already what
+            # `source_url` is built from. With it stored, a moved race updates instead of inserting
+            # a second copy. The 18 rows loaded before 0016 carry no id; the loader ADOPTS them on
+            # the next run rather than duplicating them, matching on series, title and start_at.
+            "external_id": slug,
             "source_url": RACE_URL.format(year=year, slug=slug),
             "source_tier": "official_league_site",
             "broadcasts": [{

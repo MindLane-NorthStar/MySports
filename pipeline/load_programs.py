@@ -90,11 +90,42 @@ CONFLICT = {
 # with no room for a WHERE, so program rows are written with a statement of their own.
 PREDICATE = {k: "program_type = '%s'" % k for k in CONFLICT}
 
+# MIGRATION 0016: the race-session key that does NOT contain start_at. A race carrying the provider's
+# own id is identified by that id, so a corrected or postponed time is an UPDATE rather than a second
+# copy - which is the whole reason the moved-twin guard below had to skip all 98 races on the runner
+# instead of loading them. `coalesce(series, '')` for 0015's reason: NULLs are distinct in a unique
+# index and IndyCar carries no series.
+RACE_EXTERNAL_CONFLICT = "sport, (coalesce(series, '')), external_id"
+RACE_EXTERNAL_PREDICATE = "program_type = 'race_session' and external_id is not null"
+
+# ADOPTION. A row loaded before 0016 has `external_id` null, so the new key cannot see it and an
+# insert would duplicate the race it already holds. This stamps the id onto that row first, matched
+# on 0015's key - series, title AND start_at - so it can only ever adopt a row that is otherwise
+# identical. A row whose time has ALSO moved is deliberately not adopted: that is ambiguous, and it
+# falls through to the moved-twin guard, which reports rather than guesses.
+ADOPT_SQL = """
+update programs set external_id = %s
+ where sport = %s and program_type = 'race_session' and coalesce(series, '') = coalesce(%s, '')
+   and title = %s and start_at = %s and external_id is null"""
+
+ADOPT_COUNT_SQL = """
+select count(*) from programs
+ where sport = %s and program_type = 'race_session' and coalesce(series, '') = coalesce(%s, '')
+   and title = %s and start_at = %s and external_id is null"""
+
+# A keyed race whose time has changed is an UPDATE, not a duplicate - but it is still worth saying
+# out loud, because a schedule that moves silently is a schedule nobody checks. This reports it with
+# both times, which is what the moved-twin guard used to do before refusing the write.
+KEYED_MOVE_SQL = """
+select start_at from programs
+ where sport = %s and program_type = 'race_session' and coalesce(series, '') = coalesce(%s, '')
+   and external_id = %s and start_at <> %s"""
+
 PROGRAM_COLS = [
     "sport", "program_type", "title", "subtitle", "start_at", "expected_duration_min",
     "open_ended", "location_text", "on_site", "series", "headliners", "hosts_crew",
     "brand_key", "bookend", "anchor_program_id", "segments", "postponed_to",
-    "source_url", "source_tier",
+    "source_url", "source_tier", "external_id",
 ]
 # Null means "I did not find out", never "erase what is there" - the same rule pipeline/db.py's
 # `preserve` documents for teams.
@@ -137,7 +168,15 @@ def access_for(broadcast: dict, profile: tuple[set[str], set[str]]) -> str:
 
 
 def moved_twin(db, row, ptype):
-    """`(program_id, stored_start)` when a stored row is this row at a different time, else None."""
+    """`(program_id, stored_start)` when a stored row is this row at a different time, else None.
+
+    MIGRATION 0016 RELAXES THIS FOR KEYED ROWS. The guard exists only because the natural key
+    contained `start_at`, so a moved race read as a new one; a race carrying an `external_id` is
+    identified by that id, and a changed time is simply an update. Keeping the guard on those rows
+    would refuse the very correction it was built to make safe. Keyless rows are unchanged.
+    """
+    if row.get("external_id"):
+        return None
     if db.conn is None or not row.get("start_at"):
         return None                    # offline --emit-sql has nothing to ask
     found = db.fetch(MOVED_TWIN_SQL, (row.get("sport"), ptype, row.get("title"),
@@ -157,6 +196,33 @@ def load(db, rows, known_networks, profile=None):
             print("WARN skip: no natural key for program_type %r" % ptype, file=sys.stderr)
             counts["skipped"] += 1
             continue
+
+        # 0016: a race with a provider id is keyed on the id, not on the time it starts.
+        keyed = ptype == "race_session" and bool(row.get("external_id"))
+        if keyed:
+            conflict = RACE_EXTERNAL_CONFLICT
+            predicate = RACE_EXTERNAL_PREDICATE
+            if db.conn is not None:
+                # Adopt an equivalent pre-0016 row before inserting, or the insert would duplicate
+                # it. Exactly one match, or nothing is adopted and the normal path decides.
+                n = db.fetch(ADOPT_COUNT_SQL, (row.get("sport"), row.get("series"),
+                                               row.get("title"), row.get("start_at")))[0][0]
+                if n == 1:
+                    db.run(ADOPT_SQL, (row["external_id"], row.get("sport"), row.get("series"),
+                                       row.get("title"), row.get("start_at")), tag="programs.adopt")
+                    counts["adopted"] += 1
+                elif n > 1:
+                    print("WARN adopt skipped: %d keyless rows match %r - none stamped"
+                          % (n, row.get("title")), file=sys.stderr)
+                moved = db.fetch(KEYED_MOVE_SQL, (row.get("sport"), row.get("series"),
+                                                  row["external_id"], row.get("start_at")))
+                if moved:
+                    print("moved: %r (%s %s) %s -> %s"
+                          % (row.get("title"), row.get("sport"), row["external_id"],
+                             moved[0][0], row.get("start_at")))
+                    counts["moved"] += 1
+        else:
+            predicate = PREDICATE[ptype]
 
         twin = moved_twin(db, row, ptype)
         if twin is not None:
@@ -179,7 +245,7 @@ def load(db, rows, known_networks, profile=None):
             for c in updatable)
         db.run(
             "insert into programs (%s) values (%s) on conflict (%s) where %s do update set %s"
-            % (", ".join(cols), ", ".join("%s" for _ in cols), conflict, PREDICATE[ptype], sets),
+            % (", ".join(cols), ", ".join("%s" for _ in cols), conflict, predicate, sets),
             tuple(program[c] for c in cols), tag="programs")
         counts["programs"] += 1
 
@@ -238,6 +304,12 @@ def main(argv: list[str] | None = None) -> int:
     db.close()
     print("programs %d | broadcasts %d | unknown networks %d | skipped %d"
           % (counts["programs"], counts["broadcasts"], counts["unknown_network"], counts["skipped"]))
+    if counts["moved"]:
+        print("moved %d race(s): a keyed race changed time and was UPDATED in place - which is what "
+              "migration 0016 exists for" % counts["moved"])
+    if counts["adopted"]:
+        print("adopted %d pre-0016 row(s): an existing keyless race was stamped with the feed's id "
+              "rather than duplicated" % counts["adopted"])
     if counts["moved_twin_skipped"]:
         print("MOVED-TWIN SKIPPED %d row(s): a stored program matches on everything but start_at. "
               "Correcting those times is a database decision, not a load - see pipeline/load_programs.py"

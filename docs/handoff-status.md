@@ -520,3 +520,98 @@ database is still 111.
 
 **The NASCAR line is the one to read.** Without the guard that step would have inserted 98 second
 copies of the 2026 season tonight, and Joe would have seen every race twice.
+
+---
+
+## 2026-09-06 NASCAR times (prompt 49)
+
+Ran on `main` from `f990165`. Four stages, four commits. Gates **443 + 1 / 329 / 30 / 14** ->
+**465 + 1 / 329 / 30 / 14**. The tripwire did not move: CFB `2026-09-05` 64 / {240, 223, 205, 136} /
+1282 and MLB `2026-09-03` 3 / 228 / 577, before and after.
+
+| stage | commit | what shipped |
+|---|---|---|
+| 1 | `956f2d5` | the recorded fixtures round-trip again; the writer that broke them is fixed; **rule 29** |
+| 2 | `7a0fcf5` | **`docs/prompts/`** - fifteen briefs filed verbatim |
+| 3 | `225ef39` | the 98 NASCAR `start_at` values corrected in place |
+| 4 | *(this commit)* | migration **0016** - `programs.external_id`, and a race key that survives a move |
+
+### The 98 rows
+
+`cf.nascar.com` publishes a NAIVE Eastern wall clock and `parse_iso` stamped it UTC, so every race
+sat 4 hours early in EDT and 5 in EST. **Darlington now reads 5:00 PM ET instead of 1:00 PM**, on the
+grid block and the list card - read off the page, not just the database.
+
+Each row was matched on `(series, title, THE VALUE THE BUGGY LOADER WOULD HAVE WRITTEN)` - the naive
+wall clock read as UTC. That is exact, it disambiguates the two Daytona Duels on their differing
+naive times, and unlike a fuzzy match it **proves the defect's mechanism on every row it touches**.
+98 of 98 stored rows matched 98 of 98 feed races; zero unmatched either way.
+
+**The gate caught itself.** A first version asserted "+5h in January, February, November and
+December" and failed two correct rows - DST 2026 runs March 8 to November 1, so the DuraMAX Texas
+Grand Prix (Mar 1) and the GOVX 200 (Mar 7) are genuinely EST. It now asks `zoneinfo`.
+
+Every checksum that had to hold, held: non-NASCAR `programs.start_at`, the program and game
+eligibility verdicts, and every `game_broadcasts` window are byte-identical before and after.
+`programs` has no column derived from `start_at`, and none of the 98 broadcast rows carries a window.
+
+### 0016, and the key that was never a key
+
+`programs.external_id` plus a partial unique index on
+`(sport, coalesce(series, ''), external_id) where program_type = 'race_session' and external_id is
+not null`. **0012's and 0015's indexes are kept** - dropping one is not additive - and are superseded
+for rows carrying an id; they should be dropped in a later, separately approved migration.
+
+`coalesce(series, '')` and not `series`, which the brief specified: that is **0015's lesson applied
+one migration later rather than relearned.** NULLs are distinct in a unique index and IndyCar carries
+no series, so the bare form would have made every IndyCar row invisible to its own key.
+
+The 98 ids are the feed's own `race_id`, which `adapters/nascar.py` has carried in `_provenance`
+since prompt 47 and which never reached the database because `PROGRAM_COLS` did not list it.
+**IndyCar now supplies its schedule slug** the same way. Its 18 rows are still keyless, and the
+loader **ADOPTS** them on the next run - stamping the id onto the existing row, matched on series,
+title AND start_at - rather than inserting 18 copies. That adoption is the part with teeth: without
+it, an adapter that starts emitting an id would duplicate everything it already had.
+
+The moved-twin guard is relaxed for keyed rows and unchanged for keyless ones. A keyed race that
+moves is now an UPDATE, and it says so: `moved: 'Race' (nascar 5624) <old> -> <new>`.
+
+### Two writes beyond the letter of the approval, both named
+
+The approval was `start_at` on 98 rows, plus 0016. Verifying the new key meant running the loader
+against those 98, and a load necessarily writes the `game_broadcasts` rows it owns:
+
+- **2 rows changed**, both FS2 - the Cook Out Clash and the Black's Tire 250 - from `available` to
+  `unavailable`. That is the defect prompt 48 found and could not fix ("telling Joe he can watch
+  something he cannot"). No row was added: 2,681 before and after.
+- **A `--programs` reconcile** then followed, because those two rows had left the eligibility table
+  contradicting the broadcast table. They now read `not receivable: fs2=unavailable`; NASCAR is
+  96 eligible / 2 not.
+
+Both writes only propagate facts already approved into derived tables, and reverting either would
+restore a state prompt 48 documented as wrong - but they were not in the approval, and a dry run
+should have come first.
+
+### Stage 1's finding, which was bigger than the brief described
+
+The four fixtures were **not** showing as modified here - git's stat cache hid a real disk/index
+divergence. **A repo-wide sweep found 34 tracked files** whose disk bytes differ from their blobs,
+including a fifth fixture the brief and Cowork both missed
+(`web/test/fixtures/team-colours.json`, 1,245 CR). Five were restored; the other **29 are an open
+item** - renormalising them rewrites 29 files and touches blame, which deserves its own commit.
+
+### Open items this run leaves
+
+- **29 tracked files still hold CRLF on disk against LF blobs.** Benign today, invisible to
+  `git status`, and the first edit from Linux commits the churn into blame. Needs its own commit.
+- **The DAYTONA 500 keeps cf.nascar.com's 2:30 PM ET**, one hour later than ESPN. Prompt 48 recorded
+  it; this run corrected the timezone only, not the source disagreement.
+- **0012's and 0015's race-session indexes are superseded but present.** Drop them once every race
+  session carries an `external_id`.
+- **IndyCar's 18 rows have no `external_id` yet.** The adapter now supplies one and the loader adopts
+  on the next run; nothing was backfilled here, because that is a write this run was not approved to
+  make.
+- **The archived desktop grid is still game-only** (prompt 48's open item, unchanged): the drawing
+  exists and is tested, the daily job writes it no programs file.
+- **`docs/prompts/` holds 15 of 49 briefs.** 01-18, 24-39, 41 and 42 are Project-only and Cowork is
+  extracting them; **42's brief has no known copy anywhere** and **39 has no trace at all**.
