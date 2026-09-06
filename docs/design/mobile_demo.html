@@ -8,6 +8,19 @@
   `docs/rendering-contract.md` and `docs/rendering-contract-mobile.md`. Prompt 22 restored
   `.mcard`'s four-column grid against this file. Read it before changing card, chip or grid CSS.
 
+  ONE THING IT DEPICTS IS SUPERSEDED (prompt 55 stage 1, rule 23). This page shows the mobile grid
+  (`.mgwrap`) ABOVE the card sections, on one scroll - which is 05 section 11's phone page order,
+  ruled 2026-09-03. THE APP NO LONGER DOES THAT. Joe, 2026-09-06: "I only want list cards on list
+  view and only grids on grid view", so LIST renders cards and no grid, GRID renders a grid and no
+  cards, and the two never share a page. The `.listing > .mgrid-only { order: -1 }` rule that
+  produced the interleaving is gone from globals.css.
+
+  WHAT THIS FILE IS STILL THE AUTHORITY FOR IS UNCHANGED: the CARD's geometry, the chip row, and the
+  grid's own construction. Only the two-things-on-one-page ARRANGEMENT is retired. It is annotated
+  rather than restructured because `build_demo.py` is project-only (see below), so the repo copy
+  cannot be regenerated - and because rebuilding it by hand would put a hand-made page in the place
+  of a generated authority.
+
   IT IS A TEMPLATE. The `__DATA__`, `__TODAY__`, `__TEAMS__`, `__STAND__`, `__PROB__`, `__LEAGUE__`,
   `__WATCH__`, `__NETLOGOS__`, `__AVAIL__`, `__GRIDSVG__` tokens are filled by `build_demo.py`, which
   is NOT in this repo — it is still project-only, along with `app_template.html`, `build_banner.py`

@@ -12,7 +12,7 @@ review), `docs/rendering-contract.md` **v1.7**, `docs/rendering-contract-mobile.
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. **56 files, covering prompts 01-54** - four numbers (13, 23, 26, 43) carry
+edited after the fact. **57 files, covering prompts 01-55** - four numbers (13, 23, 26, 43) carry
 two files each, which is why the file count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -41,8 +41,37 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 54's stage-4 commit. Gates: **466 Python tests + 1 skipped**, **377 JS unit
-tests**, smoke **30/30**, qa-shots **14/14**, and the new **`npm run geometry`** all hard stops.
+main, HEAD is prompt 55's stage-4 commit. Gates: **466 Python tests + 1 skipped**, **377 JS unit
+tests**, smoke **30/30**, qa-shots **14/14**, **`npm run geometry`** all hard stops.
+
+**PROMPT 55 — LIST IS A LIST, GRID IS A GRID, AND FOUR NETWORK MARKS.** Four commits, from `c18eea0`:
+
+| stage | commit | what shipped |
+|---|---|---|
+| 1 | `7ccf020` | the grid leaves LIST view — one meaning for the toggle in both modes |
+| 2 | `b3afe16` | NFL Network, TBS, truTV and ACCNX join the rail |
+| 3 | `34e1544` | **working rule 31** — a search that finds nothing |
+| 4 | *(this commit)* | register §23, the locked reference annotated, the prompt filed |
+
+**Read register §23.** Joe: *"I only want list cards on list view and only grids on grid view."*
+That **supersedes 05 §11's phone page order** — §11 put the grid inside the list on 2026-09-03, three
+days before the LIST | GRID toggle existed, so it was never a design chosen over the toggle. The day
+page is **3,208px shorter at 390** (13,201 → 9,993px), DOM 3,862 → 1,653.
+
+### THE MARKS SUITE IS 32, AND ESPN3 IS THE ONLY GAP
+
+32 of 33 access-profile networks now carry a mark, down from five missing. **ESPN3 is rejected on
+purpose**: its supplied art has a "clearpng" watermark baked over the letterforms, which the flood
+key cannot reach because it is not connected to the border. **Do not re-source it blind** — §23c.
+
+`key_neutral` was added to `build_web_marks.py` for sources that arrive with a **checkerboard baked
+in as opaque pixels** (PNG-aggregator output). `key_plate` cannot key those: it samples an edge
+median, and a two-tone checkerboard puts the median between the tones. `key_neutral` tests a
+predicate and floods from the border, which is what preserves the NFL shield's interior white stars.
+
+The ink-area target stayed frozen at `NET_TARGET = 11646.499633789062` (prompt 52 stage 7), so the
+manifest diff is **4 added, 0 changed** and every existing PNG is byte-identical. All four land on
+600px²; the rail spread is unchanged at **1.16×**.
 Tree clean apart from always-untracked `assets/` (and `web/qa/`, which prompt 46 added to
 `.gitignore`).
 
@@ -404,8 +433,14 @@ before touching any count line.
 - **A pipeline logic gap behind those rows:** `schedule_refresh` failed three times on 2026-09-02 with
   `FileNotFoundError: artifacts/validation/mlb_2026_teams.json`; something wrote `completed_at` on all
   twelve without setting `result_status='final'`.
-- **TBS has no mark and it is a LIVE gap** — 2 loaded `game_broadcasts` rows, no art in
-  `assets/network-logos/`. Sourcing it is Cowork's job.
+- ~~**TBS has no mark and it is a LIVE gap** — 2 loaded `game_broadcasts` rows, no art in
+  `assets/network-logos/`. Sourcing it is Cowork's job.~~ **CLOSED by prompt 55 stage 2** (`b3afe16`),
+  along with NFL Network, truTV and ACCNX.
+- **ESPN3 IS THE ONLY ACCESS-PROFILE NETWORK WITHOUT A MARK** — 32 of 33 are covered. Its supplied
+  art carries a **"clearpng" watermark baked over the letterforms**, which `key_neutral`'s flood
+  cannot reach: the watermark touches no border and where it crosses the red it is not neutral.
+  **Do not re-source it blind** — the rejection and the reason are register §23c. The typographic
+  fallback is better than bad art.
 - **`unverified` is load-bearing semantics** — now documented in `data/authority_rules.json` `_about`
   and `adapters/README.md`.
 - **The privacy gate before the Cavs season (late October):** production is a public URL. Confirm no

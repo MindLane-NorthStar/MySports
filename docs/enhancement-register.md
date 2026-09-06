@@ -1209,3 +1209,149 @@ now `scrollHeight > clientHeight`, which asks the actual question.
 **The tests are pinned at the CALL SITE**, not to pixel numbers — rule 19's lesson applied to
 rendering, and the only shape that does not rot as the season runs. They pin what the week branch
 *hands* the component; `geometry.mjs` proves the runtime.
+
+---
+
+## 23. LIST IS A LIST, GRID IS A GRID — 2026-09-06, prompt 55
+
+### 23a. Joe's ruling, and what it supersedes
+
+> "I only want list cards on list view and only grids on grid view."
+
+**This supersedes 05 §11's phone page order, and the reason is chronology.** §11 put the grid
+*inside* the Today list — between the favourites section and the bands, ordered in CSS — and it was
+ruled **2026-09-03**. The LIST | GRID toggle did not exist until **prompt 50 on 2026-09-06**. So the
+grid-in-the-list was never a design chosen over the toggle; it was the only way to reach a grid when
+there was nothing to ask for one with. §11's original text stands as the record.
+
+It also settles what prompt 54 left disagreeing: day mode's LIST showed a grid and week mode's did
+not (§22c flagged it as Joe's call). The toggle now means one thing in both modes.
+
+**Measured at 390 and 1440:**
+
+| | before | after |
+|---|---|---|
+| DAY · LIST @390 | 64 cards, phone grid, PC grid — 13,201px | 64 cards, **no grid** — **9,993px** |
+| DAY · LIST @1440 | 64 cards, PC grid — 10,210px | 64 cards, **no grid** — 9,897px |
+| DAY · GRID | 0 cards, grid | unchanged |
+| WEEK · LIST / GRID | — | unchanged |
+
+**The day page is 3,208px shorter at 390** and its DOM drops 3,862 → 1,653 nodes.
+
+**The archived PC grid left LIST view too**, and this went beyond the brief's "what to build".
+Prompt 53 stage 3 had deliberately kept it at the foot of a desktop list. But a PC grid under a
+desktop list is still a grid on list view, and the ruling is unambiguous. **Nothing is lost:** it is
+exactly what desktop GRID VIEW promotes to the top of the page, one click away — reachable in one
+place instead of two.
+
+**FirstBand is untouched.** It is a band of cards, not a grid; it still renders in DAY · LIST and is
+still suppressed in GRID.
+
+**The CSS interleaving is retired.** `.listing > .mgrid-only { order: -1 }` existed only to lift the
+grid above the bands on a phone; with the grid never sharing a page with the bands it had nothing
+left to order. `.yourteams`'s order rule is **kept and reported**: prompt 51 stage 4a retired the
+page-level section, so that class now only reaches a SportBand carrying a `sectionLabel` — the flat
+arrangement, one child, nothing to order against. Very likely vestigial too, but removing it is a
+separate tidy-up nobody asked for.
+
+**`docs/design/mobile_demo.html` is annotated, not restructured** (rule 23). It depicts the grid
+above the card sections on one scroll — the arrangement this ruling retires. It is annotated because
+`build_demo.py` is project-only so the repo copy cannot be regenerated, and because hand-rebuilding
+it would put a hand-made page where a generated authority belongs. **What it is still the authority
+for is unchanged:** the card's geometry, the chip row, and the grid's own construction.
+
+**qa-shots was re-based, not weakened:** its M2/M4/M6/M11 block loaded a bare day URL because the
+grid used to live in the list; it now loads `&view=grid`. Every assertion is unchanged.
+
+### 23b. Four network marks, and the checkerboard
+
+`nfl-network`, `tbs`, `trutv`, `accnx` — supplied by Joe, 2026-09-06. The suite goes **28 → 32**, and
+**ESPN3 is now the only access-profile network without a mark**: 32 of 33 covered, down from five
+missing.
+
+**THE CHECKERBOARD IS THE FINDING.** `nfl-network` and `accnx` came from a PNG-aggregator that
+**flattens transparency onto a checkerboard and ships it as opaque pixels** — they look transparent
+in a thumbnail and are not. Both measure 0% clear; the tones are 255/204 and 254/237. `key_plate`
+samples an **edge median**, and a two-tone checkerboard defeats it: the median lands between the
+tones and matches neither.
+
+**`key_neutral`** was added to `build_web_marks.py`. It tests a **predicate** — `|R−G| < 18` and
+`|G−B| < 18` and `mean(RGB) > 170` — and floods 4-connected from all four edges. **Flooding is what
+makes it safe:** the NFL shield's interior white stars satisfy that predicate exactly as the
+background does, and a global colour test would have eaten them; a flood never reaches them because
+they touch no edge. Same reason `key_plate` and IndyCar flood. Keyed **78.1%** and **91.4%**.
+
+**Four ink judgments, each measured on `--spot-2 #1b1b1b`:**
+
+| slug | treatment | why |
+|---|---|---|
+| `nfl-network` | `dark_ready(key_neutral)` | navy wordmark **1.45 → 4.20:1** |
+| `accnx` | `floor_l(key_neutral, .45)` | blue **2.03 → 4.75:1** |
+| `tbs` | `key_plate` | the ABC case |
+| `trutv` | `floor_l(key_plate, .45)` | the one honest compromise |
+
+**The NHL/ABC ruling does NOT transfer to `nfl-network`, and the numbers are why.** ABC and
+`nfl-today` are legal because a dark **body** carries **light** ink: `nfl-today`'s navy measures
+**1.17:1** and is invisible, but its white text is **17.22:1** and that is what reads. Here the navy
+**is** the word — raw, "NETWORK" disappears and what survives is the NFL league shield, a different
+mark.
+
+**`dark_ready` is a no-op on `accnx`**, measured: the grey swoosh and ESPN wordmark sit at 7.28:1 and
+pull the mark's mean up, so the chain leaves the blue at 2.03:1 — below the 3.0 floor, for the
+brand's own name. `floor_l` is what the app already uses for this (`fs1`: *"FS1's red stays red — it
+just stops disappearing"*).
+
+**`tbs` is the ABC case almost exactly:** a black plate carrying white letters, where the black is
+the logo's own parallelogram and not a background. `dark_ready` was tested and **inverts it into a
+white plate with grey letters** — the backing card v1.3e forbids, and the failure ABC's own note
+describes.
+
+**`trutv` is the compromise, and it is measured rather than eyeballed.** Both inks start black and
+pull against each other, and there is no row gap for `whiten_below_gap` to find because the lockup is
+horizontal:
+
+| treatment | "tru" on charcoal | "TV" on green |
+|---|---|---|
+| RAW | 1.22 ✗ | 14.00 |
+| `whiten_dark .35` | 15.80 | 1.38 ✗ — whitens the TV too |
+| `dark_ready` | 4.30 | 2.67 ✗ |
+| **`floor_l .45`** | **3.58** | **3.21** |
+| `floor_l .55` | 5.12 | 1.11 ✗ |
+
+0.45 is the only value keeping both above the 3.0 floor. No plate is greyed — the background is keyed
+transparent — so this is not prompt 53's `floor_l` trap.
+
+**THE NORMALIZATION HAZARD WAS ALREADY CLOSED.** Prompt 52 stage 7 froze
+`NET_TARGET = 11646.499633789062` for exactly this, so no pin was needed. **The manifest diff is the
+proof: 4 added, 0 changed, 0 removed**, every existing PNG byte-identical.
+
+**The rail fit:** all four land on **600px² exactly** and the spread is unchanged at **1.16×**, with
+`espn2` still the only mark off target. Their published aspects are 2.625 / 1.852 / 2.594 / 4.211 —
+these are the **trimmed** dimensions, not the source canvases.
+
+**Wiring.** All four labels were already in `access_profile.json`; NFL Network, TBS and truTV were
+already in `row_order.json`. **ACCNX was the only one missing a row**, added to `cfb.streaming`
+before SEC Network+ — same kind of service (the database types both `streaming`), and ACC-before-SEC
+mirrors the order `cfb.conference` already uses.
+
+**Verified rendering:** `nfl-network` on 2026-10-04 and `tbs` on 2026-09-08 both draw at 599px².
+**`truTV` and `ACCNX` do not appear on their loaded days, and that is correct** — they are simulcast
+feeds, and those games are eligible via `tnt` and `acc-network`, so they sit on those rows. The marks
+are ready for when they are the eligible feed.
+
+### 23c. ESPN3 REJECTED — recorded so it is not re-sourced blind
+
+The art supplied for ESPN3 carries a **"clearpng" watermark baked over the letterforms**. The flood
+key clears its checkerboard but **cannot reach the watermark**: it is not connected to the border,
+and where it crosses the red it is not neutral. **ESPN3 stays without a mark until clean art exists**
+— the typographic fallback is better than bad art.
+
+### 23d. Working rule 31
+
+Added, and **distinct from rule 30**: rule 30 is about a claim that was true when written and went
+stale, and its remedy is "check the thing itself". Rule 31 is about a claim where the file was
+correct, the thing **was** checked, and the query was asked in the wrong vocabulary — `nfl-network`
+the slug against `NFL Network` the label. Rule 30's remedy does not catch it.
+
+Four instances, three in one week, including one **caught mid-stage in this very run**: a slugify
+that mapped `Paramount+` to `paramount` reported three unmarked networks when the answer was one.

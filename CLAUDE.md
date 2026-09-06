@@ -19,7 +19,7 @@ one is stale — say so.
 | why a decision was made, and whether it is already settled | `docs/enhancement-register.md` |
 | what a card, block or grid is supposed to look like | `docs/rendering-contract.md` + `docs/rendering-contract-mobile.md` (the Mobile Grid Addendum) |
 | the locked visual reference the app must match | `docs/design/mobile_demo.html` |
-| what a past run was actually asked to do | `docs/prompts/` — 56 files covering 01–54, verbatim; 39 and 42 are the only gaps |
+| what a past run was actually asked to do | `docs/prompts/` — 57 files covering 01–55, verbatim; 39 and 42 are the only gaps |
 | deploy, environment, what is publishable | `docs/deployment-contract.md` |
 
 **Do not re-raise a settled decision** without first checking the register and `handoff-status.md`.
