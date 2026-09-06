@@ -336,13 +336,18 @@ reads YOUR TEAMS → grid → sport bands, with favourites hoisted into a page-l
 that section with the **MY TEAMS scope**: `?scope=mine` shows favourites only, chronological across
 every sport in DAY mode and per day group in WEEK mode.
 
-> **NOT YET FULLY BUILT, and recorded as such rather than as done.** Prompt 50 built the *scope* —
-> `?scope=mine` filters correctly in both modes. It did **not** retire the page-level YOUR TEAMS
-> section under ALL GAMES, and it did not add D6's band-level favourite mark in its place. So today
-> both mechanisms exist: the toggle filters, and the section still renders under ALL GAMES. **No
-> stage of prompt 50 was scoped to remove it** — the brief recorded the retirement in this section
-> while assigning the work to no stage. Until a build prompt closes it, §11's section stands and R4
-> is half-implemented.
+> **BUILT — prompt 51 stage 4a (`a2eb11c`).** Prompt 50 built the *scope* only, and left the
+> page-level section rendering under ALL GAMES, so both mechanisms were on screen at once; no stage
+> of prompt 50 was scoped to remove it. Prompt 51 retired the section and restored **D6's in-band
+> float** in its place: favourites rise to the top of their own sport band under a hairline and a
+> faint uppercase micro-label, **at band level, with the card untouched** — which is the one part of
+> D6 that survived §11 unchanged and is what keeps the locked card contract closed.
+>
+> Verified on three days: the page-level section renders **0** times, and the band marks and their
+> hairlines render 3 / 2 / 1 on 2026-09-05, -09-06 and -09-07.
+>
+> The other half — the five team-less sports joining the scope — landed in the same commit; see
+> `docs/enhancement-register.md` §18d.
 
 **§10's count-line vocabulary is superseded.** `6 airing · 48 TBD · 5 unavailable` — Joe's own
 wording from prompt 26 — becomes one line at the **foot of the page**:

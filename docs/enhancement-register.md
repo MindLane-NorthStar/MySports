@@ -379,25 +379,51 @@ text on gold is not the problem §14 solved.
 selection emphasis Joe's rendering asks for; making the tiles gold-filled would re-break the five
 marks §14 was written to protect.
 
-### 18b. The 44 px tap-target minimum is AMENDED for one control
+### 18b. The 44 px tap-target minimum is AMENDED — one entry, two control families
 
-**The ALL SPORTS bar is 24 px tall — 45 % shorter than the 44 px it was**, and that breaks the
-minimum tap target prompt 25 established and prompt 34 restored after WebKit collapsed the tiles on
-Joe's phone.
+Prompt 25 established a 44 px minimum and prompt 34 restored it after WebKit collapsed the tiles on
+Joe's phone. **Joe has since excepted two control families, and they are recorded together here
+rather than as separate notes that would rot apart.**
 
-**Joe ruled it. The reasoning, on the record:** that rule protects **small** targets. At 390 px the
-bar is a 366 × 24 px full-width control — about **8,800 px²** — against a 44 × 44 tile's **1,936 px²**.
-It carries **over four times the tappable area** of a control the rule considers compliant. The type
-came down 16 px → 14 px so it still sits comfortably inside a shorter plate; the width is unchanged
-and still flush with the tile row.
+| control | height | ruled in | width at 390 | target area | vs a 44 × 44 tile |
+|---|---|---|---|---|---|
+| **ALL SPORTS bar** | **24 px** (was 44) | prompt 50 stage 2c | 366 px | ~8,800 px² | **4.5 ×** |
+| **the three toggle rows** | **31 px** (was 44) | prompt 51 stage 1 | ~185 px two-up, ~90 px four-up | ~5,700 / ~2,800 px² | **2.9 × / 1.4 ×** |
 
-**Two things not to do.** Do not restore the height. Do not add invisible padding or an `::after` to
-fake 44 px of hit area — that returns **zero** vertical space and defeats the entire instruction,
-which was to reclaim height.
+**Joe's reasoning, on the record: the rule protects SMALL targets, and a wide short control is not
+small.** Every excepted control carries more tappable area than a 44 × 44 square the rule considers
+compliant — the tightest case, a four-up toggle segment, still carries 1.4 ×.
 
-**The amendment is for this one control.** The eight tiles, all six toggles and both picker arrows
-keep 44 px, and so does the count line's reveal — that one gates access to every hidden game, which
-is why prompt 25 called it the most important of the three.
+**31 px was chosen over 60 %'s 26 px specifically so the toggle rows stay visibly taller than the
+ALL SPORTS bar.** Joe asked for "about 60% of the vertical size that they are currently"; 60 % of 44
+is 26.4, which lands 2 px from the bar's 24 and would have made the two read as one size — the one
+thing he said they must not be. Shown that arithmetic he ruled 70 %. **The 7 px separation is the
+point of the ruling, not a by-product of it.**
+
+**Two things not to do.** Do not restore either height. Do not add invisible padding or an `::after`
+to fake 44 px of hit area — that returns **zero** vertical space and defeats the entire instruction,
+which in both cases was to reclaim height.
+
+**WHAT IS NOT EXCEPTED, and keeps 44 px:**
+
+- the eight **league tiles** (`.spbtn`) — 36 px on desktop, as before;
+- the picker's **‹ and › arrows**;
+- the count line's **reveal toggle**, which gates access to every hidden game and which prompt 25
+  called the most important of the three;
+- `.chip` and every other control not named in the table above.
+
+### 18b-ii. The control stack's vertical rhythm is ONE gap
+
+**Prompt 51 stage 2.** Joe's instruction was relative — whatever the `DAY | WEEK` → four-toggle
+distance measures, that distance everywhere. **Measured: 8 px**, and it is now a single `gap: 8px` on
+`.hubctl` with every child's vertical margin zeroed, rather than four margin pairs that could drift.
+`.shell`'s `padding-top` carries the banner→stack gap and `.hubctl`'s `padding-bottom` the
+stack→content gap; padding rather than margin below, because `main` is a block container and a
+margin there would collapse with the next sibling's.
+
+Five of the six gaps in the stack are now 8 px. **One is not: `ALL SPORTS` → tiles stays 6 px**,
+because it is `.sportbar`'s own internal gap and it is what makes the bar and the tiles read as one
+control rather than two — §16's intent. **Left alone deliberately and pending Joe's look at it.**
 
 ### 18c. MY TEAMS runs on a file, and an in-app team picker is a NAMED FUTURE FEATURE
 
@@ -418,9 +444,23 @@ home and away club — so `isFavorite()` can never match one, and following the 
 of it. Filtering them out of MY TEAMS would mean the scope silently drops every program the app
 loads, which is 307 of them.
 
-> **NOT YET BUILT.** `splitFavorites()` leaves every program in `rest` by construction, because
-> `favoriteIds()` matches team ids and a program has none — so today `scope=mine` shows **no
-> programs at all**. This entry records the ruling; the build is owed.
+> **BUILT — prompt 51 stage 4b.** `isMine()` in `web/lib/favorites.js` adds the sport rule beside
+> the team rule, and `TEAMLESS_SPORTS` names the five. The sport values were measured against the
+> live database rather than assumed: nascar 98, aew 35, wwe 36, indycar 18, ufc 9 — **196 rows that
+> the scope had been hiding**.
+>
+> **`aew` is its own sport value** and is deliberately absent from `config.js`'s `SPORTS` and
+> `SPORT_FILTERS` (§13), so the list is written out rather than derived from either.
+>
+> **STUDIO SHOWS ARE EXCLUDED BY CONSTRUCTION, not by a special case.** They carry the sport they
+> bookend — `nfl` (80) or `cfb` (31) — never a sport of their own, so the sport rule cannot reach
+> them. That is also why excluding them is right: a GameDay instance is a pregame show attached to a
+> sport that *does* have teams, not a thing to follow in its own right.
+>
+> **`isMine()` and `isFavorite()` stay separate on purpose.** `isFavorite` asks whether a row carries
+> one of the thirteen clubs and still drives the band-level YOUR TEAMS marker, because that marker
+> means "this is one of your teams" and a race has no team to be one of. `isMine` asks whether a row
+> belongs in the scope.
 
 ### 18e. History's cross-date search is HELD, not deleted
 
@@ -438,3 +478,17 @@ read it is worse than dropping one visibly.
 
 R5 is unchanged: `GRID VIEW` above 699 px keeps the archived PC render for one sport and an honest
 line for ALL. Sticky axes, the NOW marker and any live desktop grid remain a separate project.
+
+### 18g. MY TEAMS is closed (prompt 51 stage 4)
+
+The two items prompt 50 documented and left unbuilt are both done:
+
+- **The page-level YOUR TEAMS section is retired** and D6's in-band float is back — favourites rise
+  to the top of their own sport band under a hairline and a faint uppercase micro-label, at BAND
+  level, with the card untouched. Both mechanisms were on screen at once until this stage.
+- **The five team-less sports are in scope**, per §18d above.
+
+**Still a named future feature, unchanged:** an in-app team picker. MY TEAMS runs on the thirteen ids
+in `data/favorites.json`, resolved once by exact match within sport and frozen. Letting a user choose
+their own teams needs storage and identity this app does not have — every piece of state is in the
+URL precisely so there is no per-user store — so scoping it is a project, not a stage.

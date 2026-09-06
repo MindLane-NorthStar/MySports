@@ -7,7 +7,7 @@ Read first for any session picking up MySports. Companions: **`docs/enhancement-
 in the repo — check there before re-raising any decision), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
 amendment, §9 NETWORK TBD, §11 mobile page order, §12 the DATE/WEEK headers, §13 the 2026-09-05
 review), `docs/rendering-contract.md` **v1.7**, `docs/rendering-contract-mobile.md` (Addendum
-v1.8, Addendum v1.2 + M19-M21), **`docs/design/program-card-design-v1.md`** — the program card's design of record,
+v1.9, Addendum v1.2 + M19-M22), **`docs/design/program-card-design-v1.md`** — the program card's design of record,
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves - **51 of them as of prompt 50 stage 0**, verbatim and never
@@ -31,9 +31,23 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 50's stage-6 commit. Gates: **465 Python tests + 1 skipped**, **345 JS unit
+main, HEAD is prompt 51's stage-5 commit. Gates: **465 Python tests + 1 skipped**, **353 JS unit
 tests**, smoke **30/30**, qa-shots **14/14**. Tree clean apart from always-untracked `assets/` (and
 `web/qa/`, which prompt 46 added to `.gitignore`).
+
+**Prompt 51 finished the hub against Joe's device review.** Five commits:
+
+| stage | commit | what shipped |
+|---|---|---|
+| 1 | `610ca87` | the toggle rows 44px -> 31px |
+| 2 | `897fff2` | one 8px gap governs the whole control stack |
+| 3 | `33cbb51` | the banner absorbs 6px more of the inset, 14 in total |
+| 4 | `a2eb11c` | the YOUR TEAMS section retires; the five team-less sports join MY TEAMS |
+| 5 | *(this commit)* | this file, register §18 consolidated, 05 §14, addendum v1.9 |
+
+**THE STACK ORDER IS CLOSED.** The design sheets showed the picker above the tiles, Joe's typed
+instruction put it below them, the build followed his words, and he has ruled the built order correct.
+Do not revisit it.
 
 **THE APP IS ONE PAGE.** Prompt 50 built the Schedule Hub. Six commits:
 
@@ -116,15 +130,16 @@ cloud workspace. **Never reapply a bare browser UA.**
 
 ## The hub's open items (prompt 50)
 
-- **R4 IS HALF BUILT.** `?scope=mine` filters correctly in both modes, but the **page-level YOUR
-  TEAMS section still renders under ALL GAMES**, and D6's band-level favourite mark was not added in
-  its place. Both mechanisms are on screen at once. **No stage of prompt 50 was scoped to remove the
-  section** — the brief recorded the retirement in 05 §14 while assigning the work to no stage. This
-  is the largest thing the hub still owes.
-- **`scope=mine` SHOWS NO PROGRAMS.** `favoriteIds()` matches team ids and a race, a fight card and a
-  wrestling show have none, so `splitFavorites()` leaves every program in `rest` by construction.
-  Register §18d rules that NASCAR, IndyCar, UFC, WWE and AEW are permanently part of MY TEAMS; the
-  build is owed.
+- ~~**R4 IS HALF BUILT.**~~ **CLOSED** by prompt 51 stage 4a (`a2eb11c`): the page-level section is
+  retired and D6's in-band float is back at band level, card untouched.
+- ~~**`scope=mine` SHOWS NO PROGRAMS.**~~ **CLOSED** by prompt 51 stage 4b: `isMine()` adds the sport
+  rule and the five team-less sports are in scope — 196 rows the scope had been hiding.
+- **ONE GAP IN THE CONTROL STACK IS NOT 8px, PENDING JOE.** Five of the six are; `ALL SPORTS` → tiles
+  stays 6px because it is `.sportbar`'s own internal gap and it is what makes the bar and the tiles
+  read as one control (§16). Joe sees it at his step 3 and it is his call.
+- **The AEW band renders its title lowercase, "aew".** `Listing` does `SPORT_LABEL[s] || s` and
+  `config.js` has no `SPORT_LABEL` entry for aew, so it falls back to the raw enum value. It predates
+  prompt 51 but MY TEAMS makes it far more visible. A one-line fix, deliberately not taken unasked.
 - **The `· N TBD` segment on the count line is Cowork's call**, flagged for Joe's veto — his
   renderings show one segment. Without it the line undercounts what is on screen by a factor of six
   on 2026-11-14.

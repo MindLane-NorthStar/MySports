@@ -1,9 +1,13 @@
-# Mobile Grid Addendum — v1.8 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04 · per-team cap surface and art, candidate D, 2026-09-04)
+# Mobile Grid Addendum — v1.9 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04 · per-team cap surface and art, candidate D, 2026-09-04)
 
 > **v1.7 (2026-09-05).** M19 and M20 below add the program block and the now marker. Nothing M1–M18 says changes.
 >
 > **v1.8 (2026-09-06, prompt 50).** **M21** below removes the grid's own header. Nothing M1–M20 says
 > changes — the geometry this addendum freezes was re-measured before and after and is identical.
+>
+> **v1.9 (2026-09-06, prompt 51).** **M22** below records the banner's safe-area treatment, which
+> supersedes prompt 44's absorb-nothing ruling. Nothing M1–M21 says changes and the grid canvas is
+> not touched — the tripwire was re-measured across all five stages and is identical.
 
 > **Numbering note (v1.5).** v1.4 added the fitted name run and the flat endcap in one commit and
 > numbered **both M17**. The endcap is now **M18**; the name run keeps M17. M13's superseded-gradient
@@ -158,3 +162,35 @@ right at zoom 0.6, 1.0 and 2.5.
 
 **Numbering checked before this rule was added**, because v1.4 once shipped two rules both called
 M17: M1 through M20 each appear exactly once in this document, so M21 is genuinely free.
+
+**M22. The banner absorbs 14 px of the safe-area inset (2026-09-06, prompt 51 stage 3).** This is a
+mobile presentation rule because it exists only where a safe-area inset does, which is the installed
+app and nowhere else.
+
+```
+.banner            padding-top: max(0px, calc(env(safe-area-inset-top, 0px) - 14px))
+standalone         padding-top: max(0px, calc(env(safe-area-inset-top, 0px) + 4px - 14px))
+```
+
+**THIS SUPERSEDES PROMPT 44's RULING** (`a68af01`) that the wrapper absorbs *nothing* of the inset.
+That ruling protected banner v2's own headroom — the gap Joe set in the 2026-09-04 phone iteration —
+and his device observations of 2026-09-06 override it: prompt 50 absorbed 8 px, prompt 51 a further
+6. The artwork is still not edited; the 11 stays in the drawing.
+
+**NET ABSORPTION IS 10 px, not 14**, because the standalone rule adds 4 back — and 10 CSS px is
+exactly banner v2's headroom, which is **11 STAGE px** rendering as 10.0 CSS px at 390 (the SVG
+scales 390 / 428 = 0.9112). The two cancel, so **the wordmark's first ink lands exactly on the
+inset's lower edge with zero pixels inside the status-bar band**:
+
+| inset | padding | first ink y | relative to the band's lower edge |
+|---|---|---|---|
+| none (browser) | 0 px | 10.0 @390, 11.0 @430 | n/a — nothing moves where `env()` is 0 |
+| 47 px | 37 px | 47.0 | **0.0** |
+| 59 px | 49 px | 59.0 | **0.0** |
+
+Measured by **scanning rendered pixels** in the wordmark's own x-range, not by reading element boxes:
+a `<text>` element's bounding rect is its EM box, which reports the "first ink" ten pixels too high.
+
+**`max(0px, …)` is load-bearing** — a browser with no safe area reports 0, and 0 − 14 is negative
+padding. **A third 6 px would be the one that bites:** at −20 px the ink would sit 6 px inside the
+band. The left, right and bottom insets are untouched.
