@@ -121,11 +121,18 @@ async function ArchivedGrid({ sport, day }) {
  * an overlay that actually produced rows claims a live time. Silence would be worse than either -
  * a page that shows a score with no provenance invites the reader to assume it is current.
  */
-function DataAsOf({ day, today, overlay }) {
+function DataAsOf({ day, today, overlay, week = false }) {
   const live = overlay?.fetchedAt && overlay.sports?.length;
   const joined = Object.values(overlay?.stats || {}).reduce((n, s) => n + (s.joined || 0), 0);
   let tail;
-  if (day !== today) {
+  if (week) {
+    // WEEK MODE HAS NO OVERLAY, AND DELIBERATELY SO (prompt 53 stage 4b). `overlayForDay` is a
+    // per-day fetch and a week is up to ten days, so running it here would be up to ten live calls
+    // on one render. The line still has to appear: a week containing today renders today's games
+    // with database scores, and silence in front of a score invites the reader to assume it is
+    // current - which is the argument this component's own docstring makes.
+    tail = 'no live check — a week view does not check live scores, so today’s are the database’s';
+  } else if (day !== today) {
     tail = 'no live check — this is not today';
   } else if (!overlay?.sports?.length) {
     tail = 'no live check needed — nothing on this day is still to be played';
@@ -188,11 +195,26 @@ function byDay(rows, days) {
   return map;
 }
 
-/** What a week with no rows says. A chip can legitimately select a sport that has nothing loaded. */
+/**
+ * What a week with no rows says. A chip can legitimately select a sport that has nothing loaded.
+ *
+ * IT SHARES `SPORT_EMPTY` WITH DAY MODE (prompt 53 stage 4a). This used to return the bare
+ * "No UFC games loaded for this week." - which is exactly the dead end register §13 rules out, and
+ * which day mode had already been given bespoke copy to avoid. Same tile, same absent data, two
+ * different answers depending on which toggle the reader happened to be on.
+ *
+ * ONLY THE EXPLANATORY HALF IS SHARED. The framing stays week mode's own - "loaded for this week"
+ * rather than "on this viewing day" - because the two prisms really are asking different questions.
+ * The SPORT_EMPTY strings are written to follow a sentence that has already named the sport, so
+ * they compose the same way after either framing.
+ */
 function emptyFor(sport) {
-  return sport
+  const head = sport
     ? `No ${SPORT_LABEL[sport] || sport} games loaded for this week.`
     : 'No games loaded for this week.';
+  const why = (sport && SPORT_EMPTY[sport])
+    || 'The database currently holds loaded weeks only — try a CFB or NFL week.';
+  return `${head} ${why}`;
 }
 
 export default async function HubPage({ searchParams }) {
@@ -289,6 +311,7 @@ export default async function HubPage({ searchParams }) {
             )}
             <PageCount summary={summary} hidden={hidden} standingsRows={standingsRows}
                        rankingsRows={rankingsRows} />
+            <DataAsOf week />
           </>
         ) : null}
       </main>
