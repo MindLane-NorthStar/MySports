@@ -218,40 +218,33 @@ h3 {
    components/Filters.js and the select in components/WeekSelect.js. Still visible, still exactly one
    name. `.pickrow` is the row that replaced it. */
 
-/* THE CONTROL BLOCK IS ONE THING (prompt 46 unit 1B, Joe's 2026-09-05 review items 2-4 and 8,
-   amended by prompt 50 stage 3).
+/* THE CONTROL BLOCK IS ONE THING (prompt 46 unit 1B, amended by prompt 50 stage 3 and again by
+   prompt 51 stage 2).
 
-   1B carried TWO equations here. One of them is gone: margin-top was 18px so it would match
-   `.shell`'s padding-top and give the DATE / WEEK header row equal air above and below. Stage 2d
-   retired that header row, so there is no longer a row to balance and the 18 was only making the
-   largest gap in the stack. It is 6px now.
+   1B carried two equations on this rule and BOTH are now gone. margin-top was 18px so it would match
+   `.shell`'s padding-top and balance the DATE / WEEK header row; prompt 50 stage 2d retired that row.
+   margin-bottom was 6px so the bar, the tiles and whatever followed read as one block. Prompt 51
+   replaced both with a single `gap` on `.hubctl`, which is what "one block" means once the whole
+   stack shares one rhythm - so this rule keeps no vertical margin at all.
 
-   The one that survives is margin-bottom: 6px, the same 6px `.sportbar` puts BETWEEN the bar and
-   the tiles, so the bar, the tiles and whatever follows read as one block rather than three. In the
-   restacked order what follows is the picker, which is still part of that block - so the rhythm now
-   runs the whole way down it.
-
-   Deliberately on the tile row's WRAPPER and not on the section below: what comes next changes with
-   the mode and the view, and a margin on the wrapper is inherited by whichever one is first. */
+   THE COMMENT THIS REPLACED WAS ALREADY STALE, and it is worth naming because it would have misled
+   the next reader: it said `.controls` "is shared with /weeks, /history and WeekSelect". It is not.
+   Prompt 50 turned /weeks and /history into redirects and WeekSelect renders `.picker`, not
+   `.controls`. There is exactly ONE consumer - web/app/page.js:412 - so this rule could be changed
+   globally without scoping it to the hub. */
 .controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  /* 18px -> 6px (prompt 50 stage 3). THE EQUATION THIS NUMBER SERVED NO LONGER EXISTS: prompt 46
-     unit 1B set it to 18 so it would MATCH `.shell`'s padding-top and give the DATE / WEEK header
-     row the same air above and below. Stage 2d retired that header row, so 18px was no longer
-     balancing anything - it was just the largest gap in the stack, 26px rendered once `.segrow`'s
-     own 8px bottom margin is added, against 8px between the two toggle rows. At 6px the whole
-     control block reads on one rhythm. The comment block above this rule is prompt 46's and
-     describes a layout that is gone; it is rewritten rather than left to mislead. */
-  margin: 6px 0 6px;
+  /* No vertical margin: `.hubctl`'s gap sets the space above and below this block (stage 2). */
+  margin: 0;
 }
 
-/* Today's controls stack: the sport block, then the day row. Its OWN class, not a change to
-   .controls - that is shared with /weeks, /history and WeekSelect, where the children are meant
-   to sit side by side. Turning the shared rule into a column would have stacked WeekSelect's
-   label above its <select>. */
+/* The sport block stacks: the ALL SPORTS bar, then the tiles, then §9's series row. Its OWN class
+   rather than a change to `.controls`, which was written to lay children out side by side.
+   The reason that mattered is now historical - prompt 50 left `.controls` with a single consumer -
+   but the split is kept because the two intents are still different. */
 .controls-stack {
   flex-direction: column;
   align-items: stretch;
@@ -2125,7 +2118,10 @@ input:focus-visible {
  * prompt 45 wrapped the heading in .pagehead and both pages got 40px of air against History's 18,
  * which is the uneven spacing Joe reported. Prompt 50 replaced .pagehead with .hubctl, so it moved
  * again. If a wrapper is ever added around the control stack, this rule needs it. */
-.shell { padding-top: 18px; }
+/* 18px -> 8px (prompt 51 stage 2). This IS the banner-to-DAY|WEEK gap: `.shell` sits directly under
+   the banner and `main > .hubctl:first-child` zeroes any top margin, so its padding-top is the whole
+   distance. Set to the same 8px `.hubctl` uses between its own rows. */
+.shell { padding-top: 8px; }
 main > h1:first-child,
 /* .hubctl is the control stack that replaced .pagehead as main's first child (prompt 50). */
 main > .hubctl:first-child { margin-top: 0; }
@@ -2535,7 +2531,19 @@ main > .hubctl:first-child { margin-top: 0; }
  * renderings in docs/ux-reference/ show it above - that difference is deliberate and is recorded in
  * the run report, because the sentence only reads in this order.
  */
-.hubctl { display: flex; flex-direction: column; }
+/* ONE GAP GOVERNS THE WHOLE STACK (prompt 51 stage 2). Joe's instruction was relative - whatever the
+   DAY|WEEK -> four-toggle distance measures, that same distance everywhere - and it measured 8px.
+   It is a `gap` on the flex column rather than four margin pairs, so there is ONE number and nothing
+   left to drift out of step; every child's vertical margin is zeroed below.
+   `padding-bottom`, not `margin-bottom`, for the gap under the picker: `main` is a block container,
+   so a margin there would COLLAPSE with the next sibling's and take the larger of the two - which is
+   13px on the empty-state page. Padding never collapses, so the gap is 8 in every case. */
+.hubctl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 8px;
+}
 
 /* ---- the three segmented toggles
  * GOLD FILL when active, with dark text on it. That is what docs/ux-reference/schedule-hub-concept.png
@@ -2548,7 +2556,8 @@ main > .hubctl:first-child { margin-top: 0; }
  * So: text toggles gold-filled; the eight tiles keep §14 unchanged. Register §17 records the split
  * so nobody harmonises one to the other.
  */
-.segrow { display: flex; gap: 8px; align-items: stretch; margin: 0 0 8px; }
+/* The 8px bottom margin moved to .hubctl's `gap` (stage 2); horizontal gap between the pair stays. */
+.segrow { display: flex; gap: 8px; align-items: stretch; }
 .segrow-mode > .seg { flex: 1 1 auto; }
 .segrow-pair > .seg { flex: 1 1 0; min-width: 0; }
 
@@ -2607,13 +2616,10 @@ main > .hubctl:first-child { margin-top: 0; }
   display: flex;
   align-items: stretch;
   gap: 8px;
-  /* THE SPACE ABOVE AND BELOW THE PICKER (prompt 50 stage 3), and both are measured gaps rather
-     than these literals: `.controls` contributes its own 6px bottom margin above, so the rendered
-     gap above the picker is 6 + 2 = 8px, down from 14px after the restack and from 22px in the
-     header row this replaced. Below the picker the 6px IS the gap - the picker is the last thing in
-     the control stack - which is already stage 3's target, reached by the restack rather than by a
-     number changed here. */
-  margin: 2px 0 6px;
+  /* NO VERTICAL MARGIN since prompt 51 stage 2 - .hubctl's `gap` sets the space above this row and
+     its `padding-bottom` sets the space below it, so both are the one number. Prompt 50's 2px/6px
+     pair is what that replaced. */
+  margin: 0;
 }
 
 /* The picker takes the room the arrows leave and is allowed to shrink - the longest week label is
