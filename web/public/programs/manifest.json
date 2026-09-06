@@ -67,13 +67,46 @@
   },
   {
     "slug": "fox-nfl-sunday",
-    "hf": 1.092,
-    "recipe": "key_white \u2014 flat black plate flooded out; white FOX + yellow NFL band + white SUNDAY. RETIRED LOCKUP, not the current Fox branding",
-    "source": "commons.wikimedia.org File:FOX NFL Sunday.png, 388x395 PNG, fetched 2026-09-06",
-    "w": 126,
+    "hf": 1.15,
+    "recipe": "RAW \u2014 current-era shield; black body recedes on charcoal and the mark reads by white FOX + yellow NFL band + white SUNDAY (NHL/ABC ruling). floor_l tested and rejected: it greys the plate and washes the yellow",
+    "source": "supplied by Joe, 2026-09-06",
+    "w": 84,
     "h": 128,
-    "ink_area": 9844,
+    "ink_area": 6221,
     "target": 11739,
-    "lum": 117.0
+    "lum": 121.3
+  },
+  {
+    "slug": "fox-nfl-kickoff",
+    "hf": 1.15,
+    "recipe": "RAW \u2014 same shield family and same reasoning as fox-nfl-sunday. PORTRAIT, aspect 0.692",
+    "source": "supplied by Joe, 2026-09-06",
+    "w": 88,
+    "h": 128,
+    "ink_area": 6508,
+    "target": 11739,
+    "lum": 120.6
+  },
+  {
+    "slug": "netflix-gameday",
+    "hf": 1.15,
+    "recipe": "alpha_harden \u2014 the soft near-black halo (avg RGB 7,6,6) reads as a smudge at card size; hardening it leaves NETFLIX red, GAMEDAY silver and the NFL shield clean",
+    "source": "supplied by Joe, 2026-09-06",
+    "w": 175,
+    "h": 128,
+    "ink_area": 5845,
+    "target": 11739,
+    "lum": 193.2
+  },
+  {
+    "slug": "tnf-pregame",
+    "hf": 1.15,
+    "recipe": "RAW \u2014 blue shield, white type, already dark-ready. NOTE: this is the TNF GAME shield, not a pregame-show mark",
+    "source": "supplied by Joe, 2026-09-06",
+    "w": 116,
+    "h": 128,
+    "ink_area": 6902,
+    "target": 11739,
+    "lum": 109.1
   }
 ]

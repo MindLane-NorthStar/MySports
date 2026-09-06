@@ -84,17 +84,23 @@ test('every brand the design of record fixes carries its exact constant', () => 
 });
 
 test('a brand with no art in the tree has a null mark, so the endcap goes typographic', () => {
-  // RE-BASED TWICE, and that is why it no longer names a brand. Stage 6 moved it off `gameday`
-  // (whose art existed all along and was simply unwired) onto `foxnflsunday`, and stage 7 then
-  // sourced art for that one too. Hardcoding a slug here just schedules the next failure, so the
-  // case now PICKS a brand that still has none - and asserts there is one to pick.
-  const bare = Object.entries(brandsDoc.brands).filter(([, v]) => !v.mark && !v.mark_dark);
-  assert.ok(bare.length, 'if every brand has art this test is retired, not edited to pass');
-  for (const [key] of bare) {
-    const fb = brandFor(key);
-    assert.equal(fb.mark, null, key);
-    assert.equal(fb.mark_dark, null, key);
-    assert.ok(fb.short_title, `${key} has a short title to set instead`);
+  // RE-BASED THREE TIMES, and it has now stopped chasing a moving target. Prompt 52 stage 6 moved
+  // it off `gameday` (whose art existed all along and was simply unwired) onto `foxnflsunday`;
+  // stage 7 sourced art for that one; prompt 53 stage 7 wired the last four, so ALL EIGHTEEN brands
+  // have art and there is no longer a real brand with none.
+  //
+  // THE FALLBACK IS NOT DEAD CODE. It is reached by an UNKNOWN brand_key - a show loaded before its
+  // art is sourced, which is the normal order of events and was true of every brand in the file at
+  // some point. That is the case worth pinning, and unlike a named slug it cannot go stale.
+  const unknown = brandFor('some-show-loaded-before-its-art');
+  assert.equal(unknown.mark, null);
+  assert.equal(unknown.mark_dark, null);
+  assert.equal(unknown.color, brandsDoc._neutral, 'and it takes the neutral, never a guessed colour');
+  assert.equal(unknown.provisional, true);
+
+  // Every REAL brand keeps a short title, because that is what the endcap draws when it falls back.
+  for (const [key, v] of Object.entries(brandsDoc.brands)) {
+    assert.ok(v.short_title, `${key} has a short title for the endcap to fall back to`);
   }
   const nascar = brandFor('nascar');
   assert.equal(nascar.mark_dark, '/leagues/nascar_dark.png');

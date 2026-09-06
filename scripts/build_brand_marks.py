@@ -48,6 +48,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from adapters.common import find_repo_root  # noqa: E402
 from build_web_marks import (  # noqa: E402
     ALPHA_VISIBLE,
+    alpha_harden,
     HF_MAX,
     HF_MIN,
     dark_ready,
@@ -313,14 +314,59 @@ PROGRAMS: list[tuple[str, str, Any, str, str]] = [
      "RAW — dark shield reads by silver rim + white type (NHL/ABC ruling)",
      "en.wikipedia.org File:Monday Night Countdown logo.svg, vector, fetched 2026-09-06"),
 
-    # Flat BLACK plate, keyed the same way the white one is - key_white samples the BORDER rather
-    # than assuming a colour, so it handles either. What survives is the white FOX, the yellow NFL
-    # band and the white SUNDAY, which is a better charcoal rendering than the plated original.
-    # RETIRED LOCKUP: this is the classic mark, not Fox's current branding. Shipped and flagged.
-    ("fox-nfl-sunday", "png", key_white,
-     "key_white — flat black plate flooded out; white FOX + yellow NFL band + white SUNDAY. "
-     "RETIRED LOCKUP, not the current Fox branding",
-     "commons.wikimedia.org File:FOX NFL Sunday.png, 388x395 PNG, fetched 2026-09-06"),
+    # ---- replaced and added 2026-09-06, prompt 53 stage 7 -----------------------------------
+    #
+    # ALL FOUR ARE RAW OR NEARLY SO, AND THAT IS A FINDING RATHER THAN A SHORTCUT. Prompt 53's brief
+    # expected the two FOX shields to need `whiten_below_gap`, the treatment that rescues black type
+    # on football-night-in-america and sunday-nfl-countdown. IT IS A NO-OP HERE: that function finds
+    # a band of fully transparent ROWS separating a badge from a wordmark beneath it, and these
+    # shields are one solid stack with no gap, so it returns the image unchanged.
+    #
+    # `floor_l` was the obvious second try - it is what Big Noon uses for exactly this - and it is
+    # WRONG here, measured at the real endcap size (21px on the card's 34px tile). Lifting the black
+    # shield body produces precisely the grey backing plate contract v1.3e forbids, and it drags the
+    # yellow NFL band down with it: at 0.40 the yellow is already muted and at 0.55 the whole mark
+    # goes pale grey-blue and stops being FOX. Raw is crisper and keeps the brand's own colours.
+    #
+    # What the raw mark actually does on charcoal is the NHL/ABC ruling working as intended: the
+    # black body recedes and the mark reads by its WHITE TYPE and its YELLOW BAND. That is the same
+    # reason college-gameday and monday-night-countdown ship raw.
+
+    # REPLACES the retired lockup prompt 52 shipped (a 388x395 Wikimedia file, keyed off a flat black
+    # plate). This is Joe's own art: 1280x720, current-era, transparent, and the black here is the
+    # SHIELD ITSELF rather than a background rectangle - which is why key_white would be wrong now.
+    ("fox-nfl-sunday", "png", None,
+     "RAW — current-era shield; black body recedes on charcoal and the mark reads by white FOX "
+     "+ yellow NFL band + white SUNDAY (NHL/ABC ruling). floor_l tested and rejected: it greys the "
+     "plate and washes the yellow",
+     "supplied by Joe, 2026-09-06"),
+
+    # THE FIRST PORTRAIT PROGRAM MARK - aspect 0.692, where every other program mark is landscape or
+    # square. Stage 8's logo-priority fit reads the aspect from the manifest, so this needs no special
+    # case, but it is the one that will demand the most width per unit of height.
+    ("fox-nfl-kickoff", "png", None,
+     "RAW — same shield family and same reasoning as fox-nfl-sunday. PORTRAIT, aspect 0.692",
+     "supplied by Joe, 2026-09-06"),
+
+    # Soft dark halo around the type, which vanishes on charcoal but reads as a smudge at card size.
+    # alpha_harden deletes the low-alpha fringe and makes the body solid; compared side by side at
+    # 128px on --spot-2 the hardened version is visibly crisper, which is the test the brief asked for.
+    ("netflix-gameday", "png", alpha_harden,
+     "alpha_harden — the soft near-black halo (avg RGB 7,6,6) reads as a smudge at card size; "
+     "hardening it leaves NETFLIX red, GAMEDAY silver and the NFL shield clean",
+     "supplied by Joe, 2026-09-06"),
+
+    # Blue shield with white type - already a dark-context mark, and lifting it would flatten the
+    # gradient that separates the prime panel from the body.
+    #
+    # THE ART IS THE THURSDAY NIGHT FOOTBALL GAME SHIELD, not a pregame-show lockup: it reads
+    # "THURSDAY NIGHT FOOTBALL" with the NFL and prime marks. Amazon's pregame show is branded "TNF
+    # Tonight". Wired as supplied and REPORTED rather than renamed on a guess - `tnfpregame` has zero
+    # loaded rows, so there is no database title to check it against either.
+    ("tnf-pregame", "png", None,
+     "RAW — blue shield, white type, already dark-ready. NOTE: this is the TNF GAME shield, not "
+     "a pregame-show mark",
+     "supplied by Joe, 2026-09-06"),
 ]
 
 

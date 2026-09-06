@@ -198,18 +198,32 @@ def test_gameday_draws_its_mark_and_home_depot_orange(rendered):
     assert "data:image/png;base64," in withp, "and the mark is embedded"
 
 
-def test_a_brand_with_no_art_still_draws_a_typographic_mark(rendered):
-    """The fallback itself, moved onto a brand that genuinely has none.
+def test_the_typographic_fallback_survives_every_brand_having_art(rendered):
+    """RE-BASED at prompt 53 stage 7, and the escape hatch it carried is why.
 
-    Deleting the coverage when GameDay gained art would have retired the assertion that the fallback
-    works at all - and eight NFL studio shows still depend on it.
+    Prompt 52's version asserted `bare`, a brand with no art, was non-empty - with the note "if every
+    brand has art, this test has nothing left to protect - retire it then". Stage 7 wired the last
+    four, so ALL EIGHTEEN brands now have art and that assertion fired exactly as designed.
+
+    THE FALLBACK IS NOT DEAD CODE, so the coverage is re-based rather than deleted. It is reached by
+    an UNKNOWN brand_key - a show loaded before its art is sourced, which is the normal order of
+    events and has happened for every brand in the file at some point. `brandFor()` answers an
+    unknown key with the neutral and null marks, and the renderer must draw a typographic mark from
+    the program's own title rather than a blank tile.
     """
     _base, withp = rendered
     import json as _json
     brands = _json.load(open("data/brands.json", encoding="utf-8"))["brands"]
-    bare = [k for k, v in brands.items() if not v.get("mark_dark") and not v.get("mark")]
-    assert bare, "if every brand has art, this test has nothing left to protect - retire it then"
-    assert all(brands[k].get("short_title") for k in bare),         "a brand with no art MUST carry a short title, or the endcap has nothing to draw"
+
+    # Every brand that ships art must record where it came from - a mark with no provenance does not
+    # ship. This is the invariant that replaced "some brand has no art".
+    for key, v in brands.items():
+        if v.get("mark_dark", "").startswith("/programs/"):
+            assert v.get("mark_source"), f"{key} ships art with no recorded source"
+
+    # And every brand keeps a short title, because that is what the fallback DRAWS when it is reached.
+    for key, v in brands.items():
+        assert v.get("short_title"), f"{key} has no short title for the endcap to fall back to"
 
 
 def test_the_open_ended_race_fades_and_the_fixed_end_show_does_not(rendered):

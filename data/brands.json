@@ -64,22 +64,22 @@
     "foxnflkickoff": {
       "title": "FOX NFL Kickoff",
       "short_title": "FOX KICKOFF",
-      "color": "#4A505A",
-      "color_source": "provisional neutral (globals.css --line-grid)",
+      "color": "#FEC00E",
+      "color_source": "derived from web/public/programs/fox-nfl-kickoff.png - dominant saturated hue bucket (30-45deg), 17.8% of opaque pixels, median chroma. The yellow NFL band. Within 1/255 of foxnflsunday's #FEC00F, which is correct: they are the same brand family and the same yellow.",
       "mark": null,
-      "mark_dark": null,
-      "provisional": true,
-      "note": "no mark in the tree; FOX's cached wordmark is monochrome"
+      "mark_dark": "/programs/fox-nfl-kickoff.png",
+      "note": "Colour derived 2026-09-06 when the art landed. The previous note - \"no mark in the tree; FOX's cached wordmark is monochrome\" - described a different asset and was false by the time it was read (working rule 30).",
+      "mark_source": "supplied by Joe, 2026-09-06. Built through scripts/build_brand_marks.py; the treatment, the recipe note and the provenance are in that script's PROGRAMS table."
     },
     "foxnflsunday": {
       "title": "FOX NFL Sunday",
       "short_title": "FOX NFL SUNDAY",
-      "color": "#FFC500",
-      "color_source": "derived from web/public/programs/fox-nfl-sunday.png - dominant saturated hue bucket (45-60deg), 16.1% of opaque pixels, median chroma. The yellow NFL band of the lockup.",
+      "color": "#FEC00F",
+      "color_source": "derived from web/public/programs/fox-nfl-sunday.png - dominant saturated hue bucket (30-45deg), 18.1% of opaque pixels, median chroma. The yellow NFL band. RE-DERIVED at prompt 53 stage 7 because the ART CHANGED: prompt 52 shipped a retired 388x395 lockup keyed off a flat black plate and derived #FFC500 from it; this is Joe's own 1280x720 current-era shield.",
       "mark": null,
       "mark_dark": "/programs/fox-nfl-sunday.png",
-      "note": "Colour derived 2026-09-06 when the art landed. The previous note - \"no mark in the tree; FOX's cached wordmark is monochrome\" - described a different asset and is superseded.",
-      "mark_source": "prompt 52 stage 7 - sourced from the public internet under Joe's one-run lift of the \"sourcing art is Cowork's job\" rule (prompts 25, 34, 38). Built through scripts/build_brand_marks.py; provenance is in that script's PROGRAMS table."
+      "note": "Art replaced 2026-09-06 (prompt 53 stage 7). The previous mark was a RETIRED lockup, shipped and flagged as such by prompt 52; this is the current-era shield.",
+      "mark_source": "supplied by Joe, 2026-09-06. Built through scripts/build_brand_marks.py; the treatment, the recipe note and the provenance are in that script's PROGRAMS table."
     },
     "nfltoday": {
       "title": "The NFL Today",
@@ -125,22 +125,22 @@
     "tnfpregame": {
       "title": "TNF Pregame",
       "short_title": "TNF PREGAME",
-      "color": "#4A505A",
-      "color_source": "provisional neutral (globals.css --line-grid)",
+      "color": "#055BD1",
+      "color_source": "derived from web/public/programs/tnf-pregame.png - dominant saturated hue bucket (210-225deg), 40.7% of opaque pixels, median chroma. Prime Video blue.",
       "mark": null,
-      "mark_dark": null,
-      "provisional": true,
-      "note": "no mark in the tree"
+      "mark_dark": "/programs/tnf-pregame.png",
+      "note": "TITLE LEFT ALONE AND REPORTED RATHER THAN GUESSED. The art is the THURSDAY NIGHT FOOTBALL game shield - NFL and prime marks over \"Thursday Night Football\" - not a pregame-show lockup; Amazon's pregame show is branded \"TNF Tonight\". This brand has ZERO loaded rows, so there is no database title to check against either. Joe's call.",
+      "mark_source": "supplied by Joe, 2026-09-06. Built through scripts/build_brand_marks.py; the treatment, the recipe note and the provenance are in that script's PROGRAMS table."
     },
     "netflixpregame": {
-      "title": "Netflix NFL Pregame",
-      "short_title": "NETFLIX PREGAME",
-      "color": "#4A505A",
-      "color_source": "provisional neutral (globals.css --line-grid)",
+      "title": "Netflix Gameday",
+      "short_title": "NETFLIX GAMEDAY",
+      "color": "#E60914",
+      "color_source": "derived from web/public/programs/netflix-gameday.png - dominant saturated hue bucket (345-360deg), 15.4% of opaque pixels, median chroma. Netflix red; the derivation lands within 1/255 of Netflix's published #E50914, which is a check on the method.",
       "mark": null,
-      "mark_dark": null,
-      "provisional": true,
-      "note": "no mark in the tree"
+      "mark_dark": "/programs/netflix-gameday.png",
+      "note": "RENAMED 2026-09-06: the title was \"Netflix NFL Pregame\" and the art reads NETFLIX GAMEDAY, which is the show's name. There are ZERO loaded rows for this brand, so there was no database title to check it against - the art is the only evidence and it is unambiguous.",
+      "mark_source": "supplied by Joe, 2026-09-06. Built through scripts/build_brand_marks.py; the treatment, the recipe note and the provenance are in that script's PROGRAMS table."
     },
     "nascarraceday": {
       "title": "NASCAR RaceDay",
