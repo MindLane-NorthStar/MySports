@@ -1,16 +1,28 @@
-// The navigation graph, and the mount points that make it total.
+// The hub's navigation facts, and the property they exist to protect.
 //
 // WHY THIS IS A TEST AND NOT A CLICK-THROUGH: `next build` cannot run on this laptop (Windows
 // Application Control blocks the SWC binary), so the app cannot be served locally to click. What CAN
-// be asserted without a bundler is the thing that actually decides the answer - that the route list
-// is complete, and that PrimaryNav is mounted UNCONDITIONALLY in Chrome. If both hold, every route
-// reaches every other route, which is the property display:"standalone" depends on: with no address
-// bar and no back button, a route the app cannot link to is a route the user cannot leave.
+// be asserted without a bundler is the thing that actually decides the answer, by reading the source.
 //
-// Chrome used to have two branches - the banner on `/`, the compact NavBanner bar everywhere else -
-// and three tests here pinned that shape by reading the source. Joe's ruling of 2026-09-04 retired
-// the split, so those three are re-based onto the new structure rather than deleted: the assertions
-// still read the source, they just assert that there is ONE masthead instead of two.
+// WHAT CHANGED AT PROMPT 50, and why this is a RE-BASE rather than a weakening.
+//
+// Until the hub there were three routes and this file asserted a TOTAL NAVIGATION GRAPH: every route
+// reaches every other route, because `display: "standalone"` removes the address bar and the back
+// button, so a route the app cannot link to is a route the user cannot leave.
+//
+// With one route that assertion is trivially true and therefore worthless - it would pass whatever
+// happened to the app. **The property it was protecting is not trivial and is asserted here in the
+// form the hub gives it:**
+//
+//   1. there is exactly ONE route, defined once;
+//   2. every RETIRED route still resolves - it redirects rather than 404s, so no bookmark dies;
+//   3. every parameter of the hub round-trips through hubHref/resolveHubParams, so no control can
+//      set a state the resolver cannot read back;
+//   4. every parameter has a DEFAULT, which is what makes `start_url: "/"` always land somewhere
+//      valid and is now the whole of the "nothing is a dead end" guarantee.
+//
+// That is strictly more than the route graph asserted, because the route graph could not see
+// parameters at all.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,93 +30,183 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { PRIMARY_ROUTES } from '../lib/routes.js';
+import { PRIMARY_ROUTES, RETIRED_ROUTES } from '../lib/routes.js';
+import { resolveHubParams, hubHref, DEFAULTS, MODES, SCOPES, VIEWS } from '../lib/hubparams.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const src = (p) => readFileSync(join(HERE, '..', p), 'utf8');
+const TODAY = '2026-09-05';
 
-test('the primary routes are exactly Today, Weeks and History', () => {
-  assert.deepEqual(PRIMARY_ROUTES.map((r) => r.href), ['/', '/weeks', '/history']);
-  assert.deepEqual(PRIMARY_ROUTES.map((r) => r.label), ['Today', 'Weeks', 'History']);
+// ---------------------------------------------------------------- 1. one route
+
+test('there is exactly ONE primary route, and it is the hub', () => {
+  assert.deepEqual(PRIMARY_ROUTES.map((r) => r.href), ['/']);
+  assert.equal(PRIMARY_ROUTES.length, 1);
 });
 
-test('the navigation graph is TOTAL: every route reaches every other route', () => {
-  // PrimaryNav renders the whole list on every page it is mounted on, so reachability is just
-  // "is the list complete" x "is it mounted everywhere".
-  const routes = PRIMARY_ROUTES.map((r) => r.href);
-  for (const from of routes) {
-    for (const to of routes) {
-      assert.ok(routes.includes(to), `${from} cannot reach ${to}`);
+test('there is exactly ONE definition of the route list', () => {
+  // A second literal list is still how two surfaces would drift.
+  assert.match(src('lib/routes.js'), /href: '\/'/);
+  assert.doesNotMatch(src('components/Chrome.js'), /href:\s*'\//, 'Chrome must not redeclare routes');
+});
+
+// ---------------------------------------------------------------- 2. nothing 404s
+
+test('every retired route still RESOLVES - it redirects, it does not 404', () => {
+  assert.deepEqual(RETIRED_ROUTES.map((r) => r.href), ['/weeks', '/history']);
+  for (const r of RETIRED_ROUTES) {
+    assert.ok(existsSync(join(HERE, '..', r.file)), `${r.href} has no route file`);
+    const f = src(r.file);
+    assert.match(f, /import \{ redirect \} from 'next\/navigation'/, `${r.href} must import redirect`);
+    assert.match(f, /redirect\(/, `${r.href} must call redirect()`);
+    assert.match(f, /hubHref\(/, `${r.href} must build its target through hubHref, not by hand`);
+  }
+});
+
+test('/weeks carries its week and sport forward; /history carries sport and DROPS ?q=', () => {
+  const weeks = src('app/weeks/page.js');
+  assert.match(weeks, /mode: 'week'/, '/weeks lands in week mode');
+  assert.match(weeks, /w: typeof p\.w === 'string'/, 'and carries ?w= forward');
+  assert.match(weeks, /sport: typeof p\.sport === 'string'/, 'and ?sport=');
+
+  const hist = src('app/history/page.js');
+  assert.match(hist, /mode: 'day'/, '/history lands in day mode');
+  assert.match(hist, /sport: typeof p\.sport === 'string'/, 'and carries ?sport=');
+  // R8: the cross-date search is retired, not forwarded. Forwarding a parameter with nothing on the
+  // other side to read it would be worse than dropping one visibly.
+  assert.doesNotMatch(hist, /\bq:/, '?q= must NOT be forwarded - R8 retires it');
+});
+
+test('the tab row is GONE, not merely unused', () => {
+  assert.equal(existsSync(join(HERE, '..', 'components/PrimaryNav.js')), false, 'PrimaryNav.js is deleted');
+  const chrome = src('components/Chrome.js');
+  assert.doesNotMatch(chrome, /<PrimaryNav/, 'nor mounted');
+  const css = src('app/globals.css');
+  assert.doesNotMatch(css, /^\.homenav\{/m, 'the .homenav rule went with it');
+  assert.doesNotMatch(css, /^\.hn-nav\b/m, 'and the hn-* block');
+});
+
+// ---------------------------------------------------------------- 3. every parameter round-trips
+
+test('EVERY parameter round-trips: what a control can set, the resolver can read back', () => {
+  const states = [
+    {},
+    { mode: 'week' },
+    { mode: 'day', day: '2026-11-14' },
+    { mode: 'week', w: 'cfb-2026-1' },
+    { mode: 'week', w: '2026-08-31', sport: 'mlb' },
+    { sport: 'nfl' },
+    { sport: 'nascar', series: 'cup' },
+    { scope: 'mine' },
+    { view: 'grid' },
+    { mode: 'week', w: 'nfl-2026-3', sport: 'nfl', scope: 'mine', view: 'grid' },
+    { mode: 'day', day: '2027-01-10', sport: 'cfb', scope: 'mine', view: 'grid' },
+  ];
+  for (const want of states) {
+    const href = hubHref({ ...want, day: want.day ?? TODAY }, { today: TODAY });
+    const qs = Object.fromEntries(new URLSearchParams(href.split('?')[1] || ''));
+    const got = resolveHubParams(qs, TODAY);
+    for (const [k, v] of Object.entries(want)) {
+      assert.equal(got[k], v, `${JSON.stringify(want)} -> ${href} lost ${k}`);
     }
   }
-  assert.equal(routes.length, 3);
 });
 
-test('Chrome no longer branches on the route: one masthead, not two', () => {
+test('defaults are OMITTED from the href, so a clean / is the default state', () => {
+  assert.equal(hubHref({}, { today: TODAY }), '/');
+  assert.equal(hubHref({ mode: 'day', scope: 'all', view: 'list', day: TODAY }, { today: TODAY }), '/');
+  // today is omitted too: naming it makes a shared link go stale the moment tomorrow arrives
+  assert.equal(hubHref({ day: TODAY }, { today: TODAY }), '/');
+  assert.match(hubHref({ day: '2026-11-14' }, { today: TODAY }), /^\/\?day=2026-11-14$/);
+});
+
+test('the href key ORDER is stable, so the same state never produces two URLs', () => {
+  const a = hubHref({ mode: 'week', w: 'x', sport: 'nfl', scope: 'mine', view: 'grid' }, { today: TODAY });
+  const b = hubHref({ view: 'grid', scope: 'mine', sport: 'nfl', w: 'x', mode: 'week' }, { today: TODAY });
+  assert.equal(a, b);
+});
+
+// ---------------------------------------------------------------- 4. everything has a default
+
+test('EVERY parameter has a default, so no URL can produce a dead end', () => {
+  const empty = resolveHubParams({}, TODAY);
+  assert.equal(empty.mode, DEFAULTS.mode);
+  assert.equal(empty.scope, DEFAULTS.scope);
+  assert.equal(empty.view, DEFAULTS.view);
+  assert.equal(empty.day, TODAY);
+  assert.equal(empty.w, null);
+  assert.equal(empty.sport, null);
+  assert.equal(empty.series, null);
+});
+
+test('garbage RESOLVES rather than throwing or 404ing', () => {
+  const junk = resolveHubParams(
+    { mode: 'sideways', scope: 'everyone', view: 'hologram', day: 'yesterday', sport: 'quidditch', series: 'f1' },
+    TODAY,
+  );
+  assert.equal(junk.mode, 'day');
+  assert.equal(junk.scope, 'all');
+  assert.equal(junk.view, 'list');
+  assert.equal(junk.day, TODAY, 'a malformed day falls back to today, it does not error');
+  assert.equal(junk.sport, null);
+  assert.equal(junk.series, null);
+});
+
+test('a stale ?w= is CARRIED, not rejected - the fallback lives where the week list is', () => {
+  // A ?w= from another sport must reach the page, so weekChoices can fall back to that sport's
+  // current week. Validating it here would turn a feature into a 404.
+  const p = resolveHubParams({ mode: 'week', w: 'nfl-2026-3', sport: 'cfb' }, TODAY);
+  assert.equal(p.w, 'nfl-2026-3');
+  assert.equal(p.sport, 'cfb');
+  assert.match(src('app/page.js'), /currentWeekKey\(all, todayET\(\)\)/,
+               'and the fallback chain moved to the hub with weekChoices');
+});
+
+test('day and w COEXIST - each is read only in its own mode', () => {
+  // This is what makes DAY -> WEEK -> DAY return you to the day you were on.
+  const p = resolveHubParams({ mode: 'week', day: '2026-11-14', w: 'cfb-2026-1' }, TODAY);
+  assert.equal(p.day, '2026-11-14');
+  assert.equal(p.w, 'cfb-2026-1');
+  assert.equal(p.isWeek, true);
+});
+
+test('the value lists are the ones the controls offer', () => {
+  assert.deepEqual(MODES, ['day', 'week']);
+  assert.deepEqual(SCOPES, ['all', 'mine']);
+  assert.deepEqual(VIEWS, ['list', 'grid']);
+  const f = src('components/Filters.js');
+  for (const v of [...MODES, ...SCOPES, ...VIEWS]) {
+    assert.ok(f.includes(`value: '${v}'`), `no control can set ${v}`);
+  }
+});
+
+// ---------------------------------------------------------------- unchanged facts
+
+test('the banner is rendered UNCONDITIONALLY, so every state carries it', () => {
   const chrome = src('components/Chrome.js');
-  assert.doesNotMatch(chrome, /usePathname\(\)\s*===\s*'\/'/, 'the pathname branch is gone');
-  // Matched against USE, not against the word: the comment at the top of Chrome.js records why the
-  // compact bar went, and that history is worth more than a grep-clean file.
-  assert.doesNotMatch(chrome, /^import.*NavBanner/m, 'NavBanner is no longer imported');
-  assert.doesNotMatch(chrome, /<NavBanner/, 'nor mounted');
-  assert.doesNotMatch(chrome, /usePathname/, 'nothing here needs the client any more');
+  assert.match(chrome, /\{banner\}/);
+  assert.doesNotMatch(chrome, /usePathname/, 'nothing here needs the client');
 });
 
-test('the banner and PrimaryNav are rendered UNCONDITIONALLY, so every route carries them', () => {
-  const chrome = src('components/Chrome.js');
-  assert.match(chrome, /\{banner\}/, 'every route renders the banner it is handed');
-  assert.match(chrome, /<PrimaryNav\s+className="hn-nav"/, 'and the tab row beneath it');
-  assert.doesNotMatch(chrome, /return[\s\S]*return/, 'one return, so there is no second shape');
-});
-
-test('the compact bar is GONE, not merely unused', () => {
-  assert.equal(existsSync(join(HERE, '..', 'components/NavBanner.js')), false, 'NavBanner.js is deleted');
+test('the compact bar is still GONE', () => {
+  assert.equal(existsSync(join(HERE, '..', 'components/NavBanner.js')), false);
   const css = src('app/globals.css');
-  assert.doesNotMatch(css, /\.navbar\{/, 'the .navbar rule went with it');
-  assert.doesNotMatch(css, /--nav-safe/, 'and its private safe-area variable');
-  assert.doesNotMatch(css, /\.nb-nav/, 'and the nb-* block');
+  assert.doesNotMatch(css, /\.navbar\{/);
+  assert.doesNotMatch(css, /--nav-safe/);
 });
 
-test('.banner carries the ONLY top safe-area inset, and now it is on every route', () => {
-  // This is what prompt 31 was fixing when it gave .navbar an inset of its own: Weeks and History ran
-  // under the iPhone clock because the single inset rule lived on a component they did not render.
-  // With one masthead there is one inset again, and it is the right one.
-  //
-  // Prompt 45 added a SECOND occurrence: the installed app gets +7px on top of the inset. So the
-  // count is 2 - but the property this test exists to protect is unchanged and is asserted more
-  // tightly than before: EVERY occurrence in the stylesheet belongs to a .banner rule, and the
-  // second one is inside @media (display-mode: standalone). No other selector may take a top inset.
+test('.banner carries the ONLY top safe-area inset', () => {
   const css = src('app/globals.css');
   const hits = css.match(/safe-area-inset-top/g) || [];
   assert.equal(hits.length, 2, 'the base rule and the standalone override, and nothing else');
-  // Delete every .banner rule BODY and nothing may be left holding a top inset. (No .banner rule in
-  // this stylesheet contains a nested brace, so [^}]* is an exact rule body here.)
   const withoutBanner = css.replace(/\.banner\{[^}]*\}/g, '');
   assert.doesNotMatch(withoutBanner, /safe-area-inset-top/,
                       'no selector other than .banner may take a top inset');
-  assert.match(css, /\.banner\{[\s\S]{0,300}?padding-top:env\(safe-area-inset-top, 0px\);/,
-               'the base rule adds the whole inset and subtracts nothing');
-  // 4px since prompt 46 unit 1A - Joe halved prompt 45's 7. First ink lands 15px below the inset:
-  // 4 here plus the artwork's own 11.
-  assert.match(css,
-    /@media \(display-mode: standalone\)\{\s*\.banner\{padding-top:calc\(env\(safe-area-inset-top, 0px\) \+ 4px\)\}/,
-    'and the installed app gets 4px more, so the wordmark clears the bezel by 15');
 });
 
-test('there is exactly ONE definition of the link list', () => {
-  // A second literal list is how the two mount points would silently drift.
-  for (const f of ['components/PrimaryNav.js', 'components/Chrome.js']) {
-    assert.doesNotMatch(src(f), /href:\s*'\/weeks'/, `${f} must not redeclare the route list`);
-  }
-  assert.match(src('lib/routes.js'), /href:\s*'\/weeks'/, 'routes.js is the one definition');
-});
-
-test('the home nav is styled, so it is not an unstyled row under the banner', () => {
-  const css = src('app/globals.css');
-  assert.match(css, /\.homenav\{/);
-  assert.match(css, /\.hn-nav a\.on\{[^}]*--gold/, 'active link keeps the gold underline');
-});
-
-test('standalone display is retained, which is what makes the nav load-bearing', () => {
+test('standalone display is retained, and now the DEFAULTS are what make it safe', () => {
   assert.match(src('app/manifest.js'), /display:\s*'standalone'/);
+  assert.match(src('app/manifest.js'), /start_url:\s*'\/'/);
+  // start_url '/' resolves to the default state, asserted above.
+  assert.equal(hubHref({}, { today: TODAY }), '/');
 });

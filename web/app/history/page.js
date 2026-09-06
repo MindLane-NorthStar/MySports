@@ -1,104 +1,32 @@
-// HISTORY - games that have actually been played, newest first, with the final score.
+// `/history` is retired as a route. It redirects into the Schedule Hub at today, in day mode.
 //
-// Each card is a whole-card link to games.boxscore_url, opened in a new tab. The raw URL is never
-// displayed: pipeline/load.py computes it once, at the first load that sees result_status 'final',
-// and the completed event card is the click target. A final game with no boxscore_url (possible for
-// a sport with no template) simply renders as a non-link card rather than a dead one.
+// HISTORY IS RETIRED AS NAVIGATION, NOT AS FUNCTIONALITY (R1). Everything the page rendered is still
+// rendered: a past `day` shows that day's completed games, with their scores and their box-score
+// links, through the same card reading the same rows. Nothing about finals changed - only the route
+// that reached them.
+//
+// ONE THING DID NOT SURVIVE, and it is named here rather than silently dropped: the cross-date `?q=`
+// text search over every completed game. Joe's ruling R8 retires it from the hub's controls and
+// HOLDS it as a future MY TEAMS sub-feature - a lookup inside the favourites scope rather than a
+// search of the whole database. It is recorded in docs/enhancement-register.md section 17. So `?q=`
+// is deliberately NOT forwarded: there is nothing on the other side to receive it, and carrying a
+// parameter that silently does nothing is worse than dropping one visibly.
+//
+// `?sport=` IS carried, because the hub has the same filter and it still means the same thing.
+//
+// It lands on TODAY rather than on the most recent day with finals: "today" is a fact this route can
+// state without a database read, where "the last day that had games" is a query, and a redirect that
+// reads the database to decide where to send you is a page, not a redirect.
 
-import Listing from '../../components/Listing.js';
-import { SearchBox, SportFilter } from '../../components/Filters.js';
-import { finalGames, finalPrograms, matchesSearch, standingsForGames, rankingsForGames } from '../../lib/queries.js';
-import { toRows } from '../../lib/programs.js';
-import { SPORT_LABEL, resolveSportParam } from '../../lib/config.js';
-import { RestError } from '../../lib/rest.js';
+import { redirect } from 'next/navigation';
+import { hubHref } from '../../lib/hubparams.js';
 
 export const dynamic = 'force-dynamic';
 
-/** The search test for a program row: its title, its series and the networks carrying it. */
-function matchesProgram(row, q) {
-  const needle = String(q || '').trim().toLowerCase();
-  if (!needle) return true;
-  const hay = [
-    row.title, row.subtitle, row.series, row.location_text, row.brand_key,
-    ...(row.broadcasts || []).map((b) => b?.network?.canonical_name || b?.label || b?.service_id),
-  ].filter(Boolean).join(' ').toLowerCase();
-  return hay.includes(needle);
-}
-
-export default async function HistoryPage({ searchParams }) {
-  const params = await searchParams;
-  const sport = resolveSportParam(params?.sport);
-  const q = (params?.q || '').slice(0, 80);
-
-  let games = [];
-  let rows = [];
-  let standingsRows = [];
-  let rankingsRows = [];
-  let error = null;
-  try {
-    // v1.7: History carries programs too - a race that has run is history exactly as a game that
-    // has been played is. A game is "final" because a provider said so; a program is because the
-    // clock says so, which is the honest test for something nobody reports a result for.
-    const now = new Date();
-    const [g, p] = await Promise.all([
-      finalGames({ sport }), finalPrograms({ sport, before: now.toISOString() }),
-    ]);
-    games = g;
-    // Newest first, across both kinds, on the one field both have.
-    rows = [...g, ...toRows(p, now)].sort(
-      (a, b) => String(b.canonical_kickoff_at_utc || '').localeCompare(String(a.canonical_kickoff_at_utc || ''))
-    );
-    // Asked about the GAMES only: a program has no club to look up.
-    [standingsRows, rankingsRows] = await Promise.all([
-      standingsForGames(games), rankingsForGames(games),
-    ]);
-  } catch (e) {
-    error = e instanceof RestError ? `${e.status} — ${e.body}` : String(e);
-  }
-
-  // The locked card is a three-line card, so the page renders the newest PAGE_SIZE of the matches
-  // rather than every completed game at once. The count line always states the full total.
-  const PAGE_SIZE = 60;
-  // matchesSearch() reads team names and network names off a GAME. A program has neither shape, so
-  // it is matched on what it does have - its title, its brand and its own broadcast labels - rather
-  // than being silently dropped from every search, which is what passing it to matchesSearch would
-  // do (a row with no home/away matches nothing).
-  const matched = rows.filter((r) => (r.program_id != null ? matchesProgram(r, q) : matchesSearch(r, q)));
-  const shown = matched.slice(0, PAGE_SIZE);
-
-  return (
-    <main>
-      <h1>History</h1>
-      <p className="sub">
-        Completed games, newest first. Tapping a card opens its detail panel, and a final game's box
-        score is a link inside it.
-      </p>
-
-      <div className="controls">
-        <SearchBox q={q} placeholder="Team or network…" />
-        <SportFilter sport={sport} />
-      </div>
-
-      {error ? <p className="error">Could not read the database: {error}</p> : null}
-
-      {!error ? (
-        <p className="sub">
-          {shown.length === matched.length ? shown.length : `${shown.length} of ${matched.length}`} of{' '}
-          {rows.length} completed {rows.length === 1 ? 'entry' : 'entries'}
-          {q ? ` matching “${q}”` : ''}
-          {sport ? ` · ${SPORT_LABEL[sport] || sport}` : ''}
-        </p>
-      ) : null}
-
-      {!error && matched.length === 0 ? (
-        <p className="empty">
-          {rows.length === 0
-            ? 'No completed games in the database yet — scores arrive with the loader once a day has been played.'
-            : 'Nothing matches that search.'}
-        </p>
-      ) : null}
-
-      <Listing games={shown} standingsRows={standingsRows} rankingsRows={rankingsRows} showDay />
-    </main>
-  );
+export default async function HistoryRedirect({ searchParams }) {
+  const p = (await searchParams) || {};
+  redirect(hubHref({
+    mode: 'day',
+    sport: typeof p.sport === 'string' ? p.sport : null,
+  }));
 }

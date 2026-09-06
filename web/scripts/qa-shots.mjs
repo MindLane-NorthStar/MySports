@@ -25,11 +25,17 @@ const VIEWS = [
   { name: 'today-nhl', path: '/?day=2026-10-01&sport=nhl' },
   { name: 'today-nba', path: '/?day=2026-10-28&sport=nba' },
   { name: 'today-all', path: '/?day=2026-09-03' },
-  // C2: ?view= is gone - the SPORT chooses the week concept now. No chip is the calendar week over
-  // every sport; nfl is a season-week sport, so its own chip is what puts the page in season weeks.
-  { name: 'weeks-calendar', path: '/weeks' },
-  { name: 'weeks-season', path: '/weeks?sport=nfl' },
-  { name: 'history', path: '/history' },
+  // PROMPT 50: one route. These were `/weeks`, `/weeks?sport=nfl` and `/history`; all three still
+  // resolve (they redirect), but the shots are taken at the hub URLs they redirect TO, so a failure
+  // points at the page rather than at a redirect hop.
+  //
+  // The SPORT still chooses the week concept - no chip is the calendar week over every sport, and
+  // nfl is a season-week sport, so its own chip is what puts the page in season weeks.
+  { name: 'weeks-calendar', path: '/?mode=week' },
+  { name: 'weeks-season', path: '/?mode=week&sport=nfl' },
+  // HISTORY IS RETIRED AS NAVIGATION, NOT AS FUNCTIONALITY (R1): a past day is how finals are
+  // reached now, so that is what this shot proves.
+  { name: 'history', path: '/?day=2026-08-31&sport=mlb' },
 ];
 
 const DEVICES = [
@@ -219,7 +225,10 @@ for (const dev of DEVICES) {
 {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
-  await page.goto(`${base}/history`, { waitUntil: 'networkidle' });
+  // R1: History is retired as a ROUTE, so the finals it existed to show are reached by picking a
+  // past day on the hub. 2026-08-31 is the MLB slate the smoke test pins as 12 finals, every one
+  // carrying a box-score URL - so if this fails, the functionality was lost, not just the route.
+  await page.goto(`${base}/?day=2026-08-31&sport=mlb`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(400);
   const card = page.locator('.mcard').first();
   if (await card.count()) {

@@ -19,12 +19,16 @@ const src = (p) => readFileSync(join(HERE, '..', p), 'utf8');
 // finds prose. Assertions about what a component renders run against code with the comments removed.
 const code = (p) => src(p).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-test('Today: the heading is the word DATE and it labels the date input', () => {
+test('DAY mode: the heading is the word DATE and it labels the date input', () => {
+  // PROMPT 50: the three pages became one, so this now reads the hub. The heading is chosen by
+  // `mode` rather than by which route you are on, which is the same fact expressed once.
   const page = src('app/page.js');
-  assert.match(page, /<h1><label htmlFor="viewing-day">DATE<\/label><\/h1>/,
-               'the h1 renders the literal DATE, not a formatted date');
+  assert.match(page, /htmlFor=\{P\.isWeek \? 'week-select' : 'viewing-day'\}/,
+               'the label points at whichever picker the mode renders');
+  assert.match(page, /\{P\.isWeek \? 'WEEK' : 'DATE'\}/,
+               'and it renders the literal word, not a formatted date');
   assert.doesNotMatch(page, /<h1>\{longDay\(day\)\}<\/h1>/, 'the old formatted heading is gone');
-  assert.match(page, /className="pagehead"[\s\S]{0,200}?<DatePicker day=\{day\} \/>/,
+  assert.match(page, /className="pagehead"[\s\S]{0,400}?<DatePicker day=\{P\.day\} \/>/,
                'and the picker sits in the same row as the heading');
 });
 
@@ -36,12 +40,11 @@ test('Today: DatePicker owns the input and no second label', () => {
   assert.doesNotMatch(fn, /aria-label/, 'an aria-label would OVERRIDE the visible heading label');
 });
 
-test('Weeks: the heading is the word WEEK and it labels the week select', () => {
-  const page = src('app/weeks/page.js');
-  assert.match(page, /<h1><label htmlFor="week-select">WEEK<\/label><\/h1>/);
+test('WEEK mode: the week select sits in the same header row', () => {
+  const page = src('app/page.js');
+  assert.match(page, /className="pagehead"[\s\S]{0,600}?<WeekSelect /,
+               'the week picker sits in the same row as the heading');
   assert.doesNotMatch(page, /<h1>Weeks<\/h1>/, 'the old heading is gone');
-  assert.match(page, /className="pagehead"[\s\S]{0,300}?<WeekSelect /,
-               'and the picker sits in the same row as the heading');
 });
 
 test('Weeks: WeekSelect owns the select and no second label', () => {
@@ -50,16 +53,20 @@ test('Weeks: WeekSelect owns the select and no second label', () => {
   assert.doesNotMatch(w, /<label/, 'prompt 25 4b\'s one real label is the heading now, not a duplicate');
 });
 
-test('Weeks: ONE derivation of which week is selected', () => {
+test('ONE derivation of which week is selected', () => {
   // The heading renders the picker and the block below renders that week's games. Two copies of the
   // fallback chain would be free to drift, and the page would offer a week it was not showing.
-  const page = src('app/weeks/page.js');
+  // It moved to the hub with the rest of the week model.
+  const page = src('app/page.js');
   assert.equal((page.match(/currentWeekKey\(/g) || []).length, 1,
                'weekChoices() is the only place the pick is derived');
   assert.match(page, /function weekChoices\(/);
-  for (const caller of ['seasonMode: false', 'seasonMode: true', 'seasonMode })']) {
-    assert.ok(page.includes(caller), `weekChoices is called with ${caller}`);
-  }
+  // The hub has ONE call site where the three routes had three - the derivation cannot drift from
+  // itself. Asserted as a count, so adding a second one fails here rather than in front of Joe.
+  // Calls only - the `function weekChoices({` definition matches the same shape, so it is excluded
+  // explicitly rather than by an off-by-one the next reader would have to rediscover.
+  assert.equal((page.match(/(?<!function )weekChoices\(\{/g) || []).length, 1,
+               'exactly one call site, so the picker and the block below cannot disagree');
 });
 
 test('the broadcast count and the Day row are gone from Today', () => {
@@ -71,9 +78,13 @@ test('the broadcast count and the Day row are gone from Today', () => {
   assert.doesNotMatch(css, /^\.daycount \{/m);
 });
 
-test('History\'s heading is deliberately untouched', () => {
-  // Joe: "we will address it later." If this fails, History was changed without a ruling.
-  assert.match(src('app/history/page.js'), /<h1>History<\/h1>/);
+test('History is retired as a ROUTE but not as functionality', () => {
+  // Prompt 50 / R1. Its heading question is moot - there is no History page to head - but the thing
+  // the page existed for must still be reachable, so the route redirects rather than 404ing and a
+  // past `day` still renders that day's finals through the same card.
+  const hist = src('app/history/page.js');
+  assert.match(hist, /redirect\(/, 'the route still resolves');
+  assert.doesNotMatch(hist, /<h1>History<\/h1>/, 'and no longer renders a page of its own');
 });
 
 test('the header row is styled, and the week trigger is allowed to shrink', () => {
@@ -103,7 +114,7 @@ test('both pickers keep a real native control under a drawn face', () => {
 });
 
 test('the WEEK face is built from PARTS, never by splitting the joined label', () => {
-  const page = src('app/weeks/page.js');
+  const page = src('app/page.js');
   assert.match(page, /const parts = \(w\) =>/, 'one builder for both forms');
   assert.match(page, /const join = \(p\) =>/, 'and the option text is assembled FROM the parts');
   assert.doesNotMatch(page, /\.split\(['"`]\s*·/, 'never parse the separator back out');

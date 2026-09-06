@@ -1,26 +1,47 @@
-// TODAY - one viewing day, filtered by sport, with the day's archived grid above the listing when
-// generated_grids has one for that (sport, day).
+// THE SCHEDULE HUB - one route, one page, and every piece of its state in the query string.
+//
+// This was three routes until prompt 50: `/` Today, `/weeks` Weeks, `/history` History, with a tab
+// row to move between them. Joe's ruling R1 (docs/hub/restructure-triage-2026-09-05.md section 6a)
+// retired that model. There is now one page whose "prism" is chosen by six parameters, resolved in
+// web/lib/hubparams.js and nowhere else:
+//
+//   mode   day | week      the time prism
+//   day    ISO date        read only when mode=day
+//   w      week key        read only when mode=week
+//   sport  one of eight    absent = ALL SPORTS
+//   series NASCAR series   the register section 9 sub-filter
+//   scope  all | mine      ALL GAMES | MY TEAMS
+//   view   list | grid     LIST VIEW | GRID VIEW
+//
+// HISTORY IS RETIRED AS NAVIGATION, NOT AS FUNCTIONALITY. A past `day` renders that day's completed
+// games with their scores and their box-score links exactly as the History page did, because it is
+// the same card reading the same rows. What did NOT survive is the cross-date `?q=` search (R8),
+// which is held as a future MY TEAMS sub-feature and recorded in the enhancement register.
 //
 // viewing_day, not game_date: the pipeline buckets by the 03:00 ET cutover, so a game that tips at
 // 10:40pm ET and ends after midnight still belongs to the night you sat down to watch it.
-//
-// v0.2: the listing is the locked matchup card, and selecting a single sport also renders the mobile
-// grid built from this day's feed (docs/rendering-contract-mobile.md). The archived SVG stays on the
-// page as the PC/archival artefact - the two are different renderings of the same day on purpose.
 
 import { Suspense } from 'react';
 import Listing from '../components/Listing.js';
-import { DatePicker, SeriesFilter, SportFilter } from '../components/Filters.js';
-import { gamesForDay, programsForDay, newestGridFor, gridIndex, standingsForGames, rankingsForGames } from '../lib/queries.js';
+import { DatePicker, SeriesFilter, SportFilter, ModeToggle, ScopeViewToggles } from '../components/Filters.js';
+import WeekSelect from '../components/WeekSelect.js';
+import {
+  gamesForDay, programsForDay, newestGridFor, gridIndex, standingsForGames, rankingsForGames,
+  weekIndexRows, gamesForRange, gamesForSeasonWeek, programsForRange,
+} from '../lib/queries.js';
 import { toRows } from '../lib/programs.js';
 import { viewingMinutes } from '../lib/gridmodel.js';
-import { longDay, todayET, etTime } from '../lib/format.js';
+import { longDay, todayET, etTime, shortDay, daySpanWeekdays } from '../lib/format.js';
 import FirstBand from '../components/FirstBand.js';
 import { bandState } from '../lib/bandstate.js';
 import policies from '../lib/policies.js';
-import { SPORT_LABEL, gridAssetUrl, resolveSeriesParam, resolveSportParam } from '../lib/config.js';
+import { SPORT_LABEL, gridAssetUrl } from '../lib/config.js';
 import { RestError } from '../lib/rest.js';
 import { overlayForDay, applyOverlay } from '../lib/livescores.js';
+import { resolveHubParams } from '../lib/hubparams.js';
+import { calendarWeeksFrom, seasonWeeksFrom, daySpan, currentWeekKey, usesSeasonWeeks } from '../lib/weeks.js';
+import { favoriteIds, splitFavorites } from '../lib/favorites.js';
+import favoritesDoc from '../../data/favorites.json';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +76,9 @@ const SPORT_EMPTY = {
   ufc: 'It is not loaded yet — the numbered events and Fight Nights are coming.',
   wwe: 'It is not loaded yet — Raw, SmackDown and the premium live events are coming.',
 };
+
+// SPORT_LABEL is the display name ("College Football"); the week label wants the short sport tag.
+const SPORT_TAG = { cfb: 'CFB', nfl: 'NFL', nba: 'NBA', nhl: 'NHL', mlb: 'MLB' };
 
 async function ArchivedGrid({ sport, day }) {
   // Only offered when exactly one sport is selected: a grid is per (sport, day) by construction.
@@ -112,15 +136,150 @@ function DataAsOf({ day, today, overlay }) {
   return <p className="footnote asof">Schedule, networks and finals from the database · {tail}.</p>;
 }
 
-export default async function TodayPage({ searchParams }) {
-  const params = await searchParams;
-  const day = /^\d{4}-\d{2}-\d{2}$/.test(params?.day || '') ? params.day : todayET();
-  const sport = resolveSportParam(params?.sport);
-  const series = resolveSeriesParam(params?.series);
+/**
+ * ONE definition of the week list, which one is picked, and how each is labelled.
+ *
+ * Moved here verbatim from the retired `/weeks` route. Two callers need the same answer - the picker
+ * in the controls and the block of days below it - and two copies of
+ * `all.find(pick) || currentWeekKey || all[0]` would be free to drift, so the picker could offer a
+ * week the block was not showing.
+ *
+ * THE STALE `?w=` FALLBACK IS THIS CHAIN and it is deliberate: a `?w=` left over from a different
+ * sport simply does not match, and the page falls back to that sport's current week - which is where
+ * you want to land anyway, so the stale key is a feature rather than a case to guard.
+ */
+function weekChoices({ index, pick, sport, seasonMode }) {
+  const all = seasonMode
+    ? seasonWeeksFrom(index)
+        .filter((w) => !sport || w.sport === sport)
+        .map((w) => ({ ...w, key: `${w.sport}-${w.season}-${w.week}` }))
+    : calendarWeeksFrom(index).map((w) => ({ ...w, key: w.start }));
+  if (!all.length) return { all, selected: null, options: [] };
+  const selected =
+    all.find((w) => w.key === pick) ||
+    all.find((w) => w.key === currentWeekKey(all, todayET())) ||
+    all[0];
+  // C1: no ISO week number, in the picker or in the heading. PARTS, AND THE JOINED FORM BUILT FROM
+  // THEM - the <option> text has to be one string, but the styled trigger needs the halves
+  // separately so the sport-week can be gold and the range grey (prompt 46 unit 1C).
+  const parts = (w) =>
+    seasonMode
+      ? { prefix: `${SPORT_TAG[w.sport] || w.sport.toUpperCase()} Week ${w.week}`,
+          range: daySpanWeekdays(w.start, w.end) }
+      : { range: daySpanWeekdays(w.start, w.end) };
+  const join = (p) => (p.prefix ? `${p.prefix} · ${p.range}` : p.range);
+  const options = all.map((w) => {
+    const p = parts(w);
+    return {
+      key: w.key,
+      ...(seasonMode ? { group: SPORT_LABEL[w.sport] || w.sport.toUpperCase() } : {}),
+      parts: p,
+      label: join(p),
+    };
+  });
+  return { all, selected, options, selectedParts: parts(selected) };
+}
 
+function byDay(rows, days) {
+  const map = Object.fromEntries(days.map((d) => [d, []]));
+  for (const g of rows) if (map[g.viewing_day]) map[g.viewing_day].push(g);
+  return map;
+}
+
+/** What a week with no rows says. A chip can legitimately select a sport that has nothing loaded. */
+function emptyFor(sport) {
+  return sport
+    ? `No ${SPORT_LABEL[sport] || sport} games loaded for this week.`
+    : 'No games loaded for this week.';
+}
+
+export default async function HubPage({ searchParams }) {
+  const raw = await searchParams;
+  const today = todayET();
+  const P = resolveHubParams(raw, today);
+
+  // ------------------------------------------------------------------ WEEK MODE
+  if (P.isWeek) {
+    const seasonMode = Boolean(P.sport) && usesSeasonWeeks(P.sport);
+    let index = [];
+    let error = null;
+    try {
+      index = await weekIndexRows();
+    } catch (e) {
+      error = e instanceof RestError ? `${e.status} — ${e.body}` : String(e);
+    }
+    const choices = weekChoices({ index, pick: P.w, sport: P.sport, seasonMode });
+    const wk = choices.selected;
+
+    let rows = [];
+    let standingsRows = [];
+    let rankingsRows = [];
+    let days = [];
+    if (!error && wk) {
+      try {
+        // v1.7: programs are a SECOND read, not a join - they have no `games` row at all, so one
+        // query cannot return both, and a programs failure can never take the game slate down.
+        const games = seasonMode
+          ? await gamesForSeasonWeek(wk.sport, wk.season, wk.week)
+          : await gamesForRange(wk.start, wk.end, P.sport);
+        const progs = seasonMode
+          ? await programsForRange(wk.start, wk.end)
+          : await programsForRange(wk.start, wk.end, P.sport);
+        const now = new Date();
+        rows = [...games, ...toRows(progs, now)];
+        // Asked ONLY about the games: a program has no club to look up.
+        [standingsRows, rankingsRows] = await Promise.all([
+          standingsForGames(games), rankingsForGames(games),
+        ]);
+        days = seasonMode ? daySpan(wk.start, wk.end) : wk.days;
+      } catch (e) {
+        error = e instanceof RestError ? `${e.status} — ${e.body}` : String(e);
+      }
+    }
+
+    // R4: MY TEAMS is a SCOPE. Favourites only, filtered inside the day grouping so the calendar
+    // survives - 05 section 11's scope note is explicit that hoisting a favourite out of its day
+    // destroys the thing a week view exists to show.
+    const favIds = favoriteIds(favoritesDoc);
+    const scoped = P.isMine ? splitFavorites(rows, favIds).favorites : rows;
+    const grouped = byDay(scoped, days);
+
+    return (
+      <main>
+        <Controls P={P} choices={choices} />
+        {error ? <p className="error">Could not read the database: {error}</p> : null}
+        {!error && !wk ? (
+          <p className="empty">
+            {seasonMode ? 'No NFL or college football weeks loaded.' : 'No games loaded.'}
+          </p>
+        ) : null}
+        {!error && wk && scoped.length === 0 ? (
+          <p className="empty">
+            {P.isMine ? 'None of your teams play this week.' : emptyFor(P.sport)}
+          </p>
+        ) : null}
+        {!error && wk && scoped.length ? (
+          <>
+            {days.map((d) =>
+              grouped[d]?.length ? (
+                <div key={d} className="weekday">
+                  {/* C3: the day heading renders THROUGH Listing -> SportBand, so it shares the
+                      header row exactly as a sport band does. */}
+                  <Listing games={grouped[d]} standingsRows={standingsRows} rankingsRows={rankingsRows}
+                           day={d} heading={shortDay(d)} headingClass="weekday-head" />
+                </div>
+              ) : null
+            )}
+          </>
+        ) : null}
+      </main>
+    );
+  }
+
+  // ------------------------------------------------------------------ DAY MODE
+  const day = P.day;
   let games = [];
   let programs = [];
-  let grids = [];
   let standingsRows = [];
   let rankingsRows = [];
   let error = null;
@@ -128,8 +287,8 @@ export default async function TodayPage({ searchParams }) {
     // v1.7: programs are a SECOND read, not a join. They live in `programs` and have no `games` row
     // at all, so one query cannot return both - and keeping them separate means a programs failure
     // can never take the game slate down with it.
-    [games, programs, grids] = await Promise.all([
-      gamesForDay(day, sport), programsForDay(day, sport, series), gridIndex(),
+    [games, programs] = await Promise.all([
+      gamesForDay(day, P.sport), programsForDay(day, P.sport, P.series),
     ]);
     // One round trip each, in parallel. rankingsForGames returns [] with no CFB game on the page,
     // and an empty id list short-circuits before any request is made.
@@ -141,9 +300,7 @@ export default async function TodayPage({ searchParams }) {
   }
 
   // E1/E4: the live overlay, merged AFTER the database read so the database stays authoritative for
-  // everything the overlay does not carry. overlayForDay never throws and never rejects - a provider
-  // failure returns an empty overlay and these lines simply pass the database rows through.
-  const today = todayET();
+  // everything the overlay does not carry. overlayForDay never throws and never rejects.
   const overlay = await overlayForDay(day, games, { today });
   games = applyOverlay(games, overlay.map);
 
@@ -152,74 +309,108 @@ export default async function TodayPage({ searchParams }) {
   // the server, so neither reaches the client as a clock - which is what keeps a time-aware line out
   // of the hydration path entirely (the trap prompt 42 fell into twice).
   const now = new Date();
-  // v1.7: a program is normalised into the row shape every shared module already reads, so
-  // offservice.js, bandstate.js and the count lines need no branch. `result_status` is derived from
-  // `now` here for the same reason - a program has no observed result to read.
   const programRows = toRows(programs, now);
-  const rows = [...games, ...programRows];
+  const allRows = [...games, ...programRows];
   // The marker is drawn on TODAY only. An archived day is immutable and a past day has no "now".
   const nowMinute = day === today ? viewingMinutes(now.toISOString()) : null;
+
+  // R4: MY TEAMS is a scope - favourites only, chronological across every sport. `allRows` arrives
+  // ordered by kickoff and splitFavorites keeps input order, so "chronological" is free.
+  const favIds = favoriteIds(favoritesDoc);
+  const rows = P.isMine ? splitFavorites(allRows, favIds).favorites : allRows;
 
   // D1. Computed ONCE, here, from the request time - the page is force-dynamic, so this is the
   // clock the reader is actually looking at. It reaches the band as data; nothing recomputes it on
   // the client, which is what keeps a time-aware block out of the hydration path entirely.
-  // D1's first band takes the SAME rows the page shows, programs included - Cowork's call, flagged
-  // in the register: a race that airs today belongs in Tonight beside the games it competes with.
   const band = bandState(rows, now, policies, { dayLabel: longDay(day) });
 
   return (
     <main>
-      {/* Joe's ruling from the installed app, 2026-09-04: the heading is the word DATE and the
-          picker sits on the heading's own line, to its right. The heading IS the control's label -
-          <label htmlFor> inside an <h1> is valid phrasing content - so the visible name prompt 25
-          insisted on is still there, still real, and now only said once. */}
-      <div className="pagehead">
-        <h1><label htmlFor="viewing-day">DATE</label></h1>
-        <DatePicker day={day} />
-      </div>
-
-      {/* The sport block: the ALL bar, then the tiles. The day row that used to sit under it is
-          gone with its count - the bands below already read `6 airing . 48 TBD . 5 unavailable`,
-          and Joe ruled the broadcast count eliminated. */}
-      <div className="controls controls-stack">
-        <SportFilter sport={sport} />
-        {/* Register section 9's series sub-filter. A SECOND row under the tiles - the tile row's
-            geometry is untouched, which section 16 froze deliberately. */}
-        <SeriesFilter sport={sport} series={series} />
-      </div>
+      <Controls P={P} choices={null} />
 
       {error ? <p className="error">Could not read the database: {error}</p> : null}
 
       {!error && rows.length === 0 ? (
         <p className="empty">
-          Nothing on this viewing day{sport ? ` for ${SPORT_LABEL[sport] || sport}` : ''}.{' '}
-          {(sport && SPORT_EMPTY[sport]) ||
-            'The database currently holds loaded days only — try 2026-09-03 or 2026-09-04 (MLB), ' +
-              '2026-09-05 (CFB), 2026-09-13 (NFL), 2026-10-01 (NHL) or 2026-10-28 (NBA).'}
+          {P.isMine ? (
+            'None of your teams play on this viewing day.'
+          ) : (
+            <>
+              Nothing on this viewing day{P.sport ? ` for ${SPORT_LABEL[P.sport] || P.sport}` : ''}.{' '}
+              {(P.sport && SPORT_EMPTY[P.sport]) ||
+                'The database currently holds loaded days only — try 2026-09-03 or 2026-09-04 (MLB), ' +
+                  '2026-09-05 (CFB), 2026-09-13 (NFL), 2026-10-01 (NHL) or 2026-10-28 (NBA).'}
+            </>
+          )}
         </p>
       ) : null}
 
       {/* D1 above, the day below. .today-split only becomes two columns at 1592px (D5); under that
-          it is a plain block, so the band sits ABOVE the grid and never after it. */}
+          it is a plain block, so the band sits ABOVE the grid and never after it.
+          The D1 band is a LIST-view thing: in GRID VIEW there is no list beneath it for "See all
+          today" to jump to, so it does not render. */}
       <div className="today-split">
-        {!error && rows.length ? (
+        {!error && rows.length && !P.isGrid ? (
           <FirstBand band={band} standingsRows={standingsRows} rankingsRows={rankingsRows}
-                     day={day} sport={sport} />
+                     day={day} sport={P.sport} />
         ) : null}
 
         <div id="all-today">
           <Listing games={rows} standingsRows={standingsRows} rankingsRows={rankingsRows}
-                   day={day} sport={sport} grid bands nowMinute={nowMinute} />
+                   day={day} sport={P.sport} grid bands={!P.isGrid} gridOnly={P.isGrid}
+                   nowMinute={nowMinute} />
         </div>
       </div>
 
       {!error && rows.length ? <DataAsOf day={day} today={today} overlay={overlay} /> : null}
 
-      {sport && !error && games.length ? (
+      {P.sport && !error && games.length ? (
         <Suspense fallback={null}>
-          <ArchivedGrid sport={sport} day={day} />
+          <ArchivedGrid sport={P.sport} day={day} />
         </Suspense>
       ) : null}
     </main>
+  );
+}
+
+/**
+ * THE CONTROL STACK, and its order is the whole point (prompt 50 stage 2a).
+ *
+ * The page reads downward as a sentence: I am looking at the DAY view, ALL GAMES, LIST VIEW, ALL
+ * SPORTS (or one league), and here is the day I picked. That is why the picker sits BELOW the tiles
+ * rather than above them, which is where it was on all three of the retired routes.
+ *
+ * The DATE / WEEK heading that used to sit beside the picker is gone: the DAY | WEEK toggle at the
+ * top of this stack is now the label, and repeating it is noise. That supersedes prompt 45's
+ * heading ruling, and it takes the pickers' accessible names with it - which is why each picker
+ * carries `aria-labelledby` pointing at the active mode segment (see Filters.js).
+ */
+function Controls({ P, choices }) {
+  return (
+    <>
+      {/* STAGE 1 keeps the arrangement the three retired routes had - heading and picker on one
+          row, then the sport block - and only makes it serve the new parameter model. The RESTACK
+          (toggles first, picker below the tiles, the heading retired) is stage 2's job, so that
+          this commit can be judged on routing alone. */}
+      <ModeToggle mode={P.mode} />
+      <ScopeViewToggles scope={P.scope} view={P.view} />
+      <div className="pagehead">
+        <h1>
+          <label htmlFor={P.isWeek ? 'week-select' : 'viewing-day'}>{P.isWeek ? 'WEEK' : 'DATE'}</label>
+        </h1>
+        {P.isWeek
+          ? (choices?.selected ? (
+              <WeekSelect sport={P.sport} selected={choices.selected.key} options={choices.options}
+                          selectedParts={choices.selectedParts} />
+            ) : null)
+          : <DatePicker day={P.day} />}
+      </div>
+      <div className="controls controls-stack">
+        <SportFilter sport={P.sport} />
+        {/* Register section 9's series sub-filter. A SECOND row under the tiles - the tile row's
+            geometry is untouched, which section 16 froze deliberately. */}
+        <SeriesFilter sport={P.sport} series={P.series} />
+      </div>
+    </>
   );
 }

@@ -21,6 +21,99 @@ function useSetParam() {
   };
 }
 
+/**
+ * THE THREE HUB TOGGLES - DAY | WEEK, ALL GAMES | MY TEAMS, LIST VIEW | GRID VIEW.
+ *
+ * SEMANTICS: `role="radiogroup"` with `role="radio"` and `aria-checked`, not `aria-pressed` buttons.
+ * The audit's section H3 laid out the choice; this is its recommendation, and the reason is meaning
+ * rather than syntax. Each of these is EXACTLY ONE OF TWO, and `aria-pressed` describes N
+ * independent toggles that happen to sit next to each other - a reader hearing "All games, pressed /
+ * My teams, not pressed" has to infer the exclusivity, where "All games, radio button, 1 of 2,
+ * checked" is told it.
+ *
+ * THE EIGHT LEAGUE TILES DELIBERATELY KEEP `aria-pressed` (SportFilter, below). ALL SPORTS plus
+ * eight tiles is a filter that can be CLEARED, not a one-of-N choice, so the two patterns are
+ * different on purpose. Register section 17 records that split so nobody harmonises one to the other.
+ *
+ * Arrow keys move between segments, which is what a radiogroup promises; the group is one tab stop.
+ */
+function Segmented({ label, name, value, options, onPick }) {
+  const idx = Math.max(0, options.findIndex((o) => o.value === value));
+  const onKey = (e) => {
+    const back = e.key === 'ArrowLeft' || e.key === 'ArrowUp';
+    const fwd = e.key === 'ArrowRight' || e.key === 'ArrowDown';
+    if (!back && !fwd) return;
+    e.preventDefault();
+    const next = options[(idx + (fwd ? 1 : options.length - 1)) % options.length];
+    onPick(next.value);
+  };
+  return (
+    <div className="seg" role="radiogroup" aria-label={label}>
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            data-active={on}
+            // One tab stop for the group: only the checked segment is reachable by Tab, and the
+            // arrow keys move within. That is the roving-tabindex a radiogroup is expected to have.
+            tabIndex={on ? 0 : -1}
+            onKeyDown={onKey}
+            onClick={() => onPick(o.value)}
+            id={`${name}-${o.value}`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** DAY | WEEK. The time prism, and since prompt 50 it is also the pickers' visible label. */
+export function ModeToggle({ mode }) {
+  const setParam = useSetParam();
+  return (
+    <div className="segrow segrow-mode">
+      <Segmented
+        label="Time range"
+        name="mode"
+        value={mode}
+        options={[{ value: 'day', label: 'Day' }, { value: 'week', label: 'Week' }]}
+        // `day` and `w` are both left in the URL: each is read only in its own mode, so switching
+        // back returns you to the day you were on rather than resetting to today.
+        onPick={(v) => setParam('mode', v === 'day' ? null : v)}
+      />
+    </div>
+  );
+}
+
+/** ALL GAMES | MY TEAMS and LIST VIEW | GRID VIEW, on ONE row (spec section 9). */
+export function ScopeViewToggles({ scope, view }) {
+  const setParam = useSetParam();
+  return (
+    <div className="segrow segrow-pair">
+      <Segmented
+        label="Scope"
+        name="scope"
+        value={scope}
+        options={[{ value: 'all', label: 'All games' }, { value: 'mine', label: 'My teams' }]}
+        onPick={(v) => setParam('scope', v === 'all' ? null : v)}
+      />
+      <Segmented
+        label="Presentation"
+        name="view"
+        value={view}
+        options={[{ value: 'list', label: 'List view' }, { value: 'grid', label: 'Grid view' }]}
+        onPick={(v) => setParam('view', v === 'list' ? null : v)}
+      />
+    </div>
+  );
+}
+
 export function DatePicker({ day }) {
   const setParam = useSetParam();
   return (
