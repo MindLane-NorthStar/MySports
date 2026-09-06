@@ -16,6 +16,8 @@
 
 import brandsDoc from '../../data/brands.json' with { type: 'json' };
 import durationDefaults from '../../data/duration_defaults.json' with { type: 'json' };
+import programMarks from '../public/programs/manifest.json' with { type: 'json' };
+import leagueMarks from '../public/leagues/leagues-manifest.json' with { type: 'json' };
 
 const BRANDS = brandsDoc.brands || {};
 
@@ -94,6 +96,37 @@ export const ENDCAP_GRADIENT = `linear-gradient(180deg, ${ENDCAP_TOP}, ${ENDCAP_
  * An unknown brand is not an error and must not blank a card: it renders the programme's own title
  * as its typographic mark on the neutral, which is exactly what a brand awaiting art looks like.
  */
+/**
+ * THE ASPECT RATIO OF A BRAND'S PUBLISHED MARK, or null when it has none.
+ *
+ * Added for the grid's LOGO-PRIORITY rule (prompt 53 stage 8, Joe's ruling): the block has to decide
+ * BEFORE it renders whether the mark can be drawn clearly and still leave legible room for a title,
+ * and that decision needs the mark's shape.
+ *
+ * READ FROM THE MANIFESTS, NEVER MEASURED AT RUNTIME. Measuring an <img> after load would make the
+ * layout depend on a network round trip - the block would render one way and reflow the moment the
+ * PNG arrived, which is a layout shift on every program on the grid. Both manifests are built by
+ * scripts/build_brand_marks.py and carry the PUBLISHED pixel dimensions, so the answer is the same
+ * on the server and the client and needs no fetch.
+ *
+ * TWO MANIFESTS BECAUSE THERE ARE TWO KINDS OF BRAND MARK. A studio show points at
+ * `/programs/<slug>.png`; a race, a fight card or a wrestling show points at `/leagues/<slug>_dark.png`
+ * and shares the league's mark. The league manifest's own `aspect` field is measured on the RAW file,
+ * and these brands render the _dark variant, so `dark_w`/`dark_h` are used instead - they agree to
+ * three decimals today, and using the file that is actually drawn means they cannot drift apart.
+ */
+const PROGRAM_AR = new Map(programMarks.map((m) => [`/programs/${m.slug}.png`, m.w / m.h]));
+const LEAGUE_AR = new Map(
+  leagueMarks.map((m) => [`/leagues/${m.slug}_dark.png`, (m.dark_w || 0) / (m.dark_h || 1)]),
+);
+
+export function markAspect(brand) {
+  const src = brand?.mark_dark;
+  if (!src) return null;
+  const ar = PROGRAM_AR.get(src) ?? LEAGUE_AR.get(src) ?? null;
+  return Number.isFinite(ar) && ar > 0 ? ar : null;
+}
+
 export function brandFor(key) {
   const b = BRANDS[key];
   if (b) return { key, ...b };

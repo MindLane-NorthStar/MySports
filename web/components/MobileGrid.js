@@ -58,7 +58,8 @@ import { railLabel } from '../lib/raillabel.js';
 // grid's note would then disagree about the same games on the same screen.
 import { isNetworkTbd } from '../lib/offservice.js';
 import {
-  brandFor, crewNames, eligibilityMissing, fitCrew, isOpenEnded, isProgram, programMinutes,
+  brandFor, crewNames, eligibilityMissing, fitCrew, isOpenEnded, isProgram, markAspect,
+  programMinutes,
   seamGradient, subtitleFor, titleFor, tintToWhite, washGradient, CREW_INK, ENDCAP_GRADIENT,
 } from '../lib/programs.js';
 import { programBroadcast } from './ProgramCard.js';
@@ -717,23 +718,70 @@ function ProgramBlock({ item, scale, top, blockH, trayH, onOpen, measure }) {
   const program = item.game;
   const x = scale.toX(item.start);
   const w = Math.max(46, scale.toX(item.end) - x - 4);
-  // THE ENDCAP GIVES WAY BEFORE THE STAGE DOES, the same relationship the game block has (w / 3 at
-  // line 563). A first pass fixed the cap at the block height, and a 30-minute post-race show came
-  // out 24px wide with a 59px endcap - the stage measured ZERO and the title had nowhere to render.
-  // The floor of 46 on the width is the game block's own; the cap is a third of it, so a short show
-  // shows a narrow mark and its title rather than a mark and nothing.
-  const cap = Math.max(16, Math.min(blockH, w / 3));
   const brand = brandFor(program.brand_key);
   const openEnded = isOpenEnded(program);
   const subtitle = subtitleFor(program);
   const missing = eligibilityMissing(program);
+  const titleText = titleFor(program);
+  const titleFontAt = (px) => `700 ${px}px 'Barlow Condensed', 'Arial Narrow', sans-serif`;
+
+  // ---------------------------------------------------------------- THE LOGO COMES FIRST
+  //
+  // JOE'S RULING, 2026-09-06, AND IT INVERTS WHAT WAS HERE:
+  //
+  //   "I want the pregame/postgame program logos to appear clearly no matter what. Priority should
+  //    be given to the LOGO to render clearly - even if it prevents text from rendering... if it
+  //    fills the entire space that is fine - only if there's enough room to render the logo clearly
+  //    on the left in the logo tile, then open up the text portion of the card to the right, only
+  //    then should logo AND text both render."
+  //
+  // WHAT WAS HERE. cap = max(16, min(blockH, w / 3)) gave the mark A THIRD of the block, and the
+  // title took the largest of [26, 22, 18, 15, 13, 11] x SCALE that fitted - FALLING THROUGH TO THE
+  // SMALLEST when none did. So the logo was squeezed to a third and the text ALWAYS rendered, at
+  // 11 x SCALE (8.8px) if that was what it took. Exactly backwards.
+  //
+  // THE RULE NOW. The mark takes the width it needs to draw at its clear height, and the title
+  // renders only if what is LEFT still fits it at a legible size. Text that has to shrink past
+  // legibility is not information; Joe would rather have the mark.
+  //
+  // THE FLOOR IS 18 x SCALE (14.4px) - the fourth rung of the ladder above rather than a new
+  // number, because the three rungs below it were always the "it only just fits" sizes.
+  //
+  // ZOOM IS CORRECT BY CONSTRUCTION. capNeeded derives from blockH, which pinch-zoom does not
+  // change, while w grows with it - so the logo stays at its clear size and every extra pixel goes
+  // to the text. That is what makes Joe's "as the grid card is expanded, the text can render" true
+  // without a second rule.
+  //
+  // A BRAND WITH NO ART KEEPS TODAY'S TREATMENT EXACTLY - the old w/3 cap and the full ladder - so
+  // the typographic mark still gets its third and the title still renders. Logo priority applies
+  // where there IS a logo; the gap stays visible rather than disguised.
+  //
+  // SCOPE IS EVERY PROGRAM TYPE, not just studio shows. Long blocks keep both anyway because they
+  // have the room, so in practice this changes only the short ones.
+  const aspect = markAspect(brand);
+  const MARK_H = 0.62;   // .pblock .pcap img max-height
+  const MARK_W = 0.78;   // .pblock .pcap img max-width
+  const TEXT_FLOOR = 18 * SCALE;
+  // The endcap width at which the mark reaches its clear height inside those insets.
+  const capNeeded = aspect ? (blockH * MARK_H * aspect) / MARK_W : 0;
+  const titleFitsBeside = aspect
+    ? measure(titleText, titleFontAt(TEXT_FLOOR)) <= Math.max(0, w - capNeeded - 10)
+    : true;
+  const logoOnly = Boolean(aspect) && !titleFitsBeside;
+
+  const cap = logoOnly
+    ? w
+    : aspect
+      ? Math.max(16, Math.min(w, capNeeded))
+      // No art: the original rule, untouched. The floor of 46 on the width is the game block's own;
+      // the cap is a third of it, so a short show shows a narrow mark and its title rather than a
+      // mark and nothing.
+      : Math.max(16, Math.min(blockH, w / 3));
 
   // The title's own fit ladder, the game card's steps applied to one line instead of two: the
   // largest size at which the WHOLE title fits the span between the endcap and the right edge.
   const span = Math.max(0, w - cap - 10);
   const steps = [26, 22, 18, 15, 13, 11].map((px) => px * SCALE);
-  const titleText = titleFor(program);
-  const titleFontAt = (px) => `700 ${px}px 'Barlow Condensed', 'Arial Narrow', sans-serif`;
   const titleSize =
     steps.find((px) => measure(titleText, titleFontAt(px)) <= span) ?? steps[steps.length - 1];
 
@@ -759,8 +807,11 @@ function ProgramBlock({ item, scale, top, blockH, trayH, onOpen, measure }) {
       onClick={() => onOpen?.(program)}
       title={titleText}
     >
-      <div className="mblock-body" style={{ height: blockH }}>
+      <div className="mblock-body" style={{ height: blockH }} data-logo-only={logoOnly ? 'true' : 'false'}>
         <div className="pcap" style={{ width: cap, background: ENDCAP_GRADIENT }}>
+          {/* LOGO ONLY KEEPS THE WASH - it is what tells four red-branded shows apart - and it
+              moves inside the endcap because there is no stage left to hold it. */}
+          {logoOnly ? <span className="pwash" style={{ backgroundImage: wash }} /> : null}
           {brand.mark_dark ? (
             <img src={brand.mark_dark} alt="" loading="lazy" />
           ) : (
@@ -769,8 +820,11 @@ function ProgramBlock({ item, scale, top, blockH, trayH, onOpen, measure }) {
             // as an open item for the marks pipeline.
             <span className="pcap-type">{brand.short_title || titleText.slice(0, 10)}</span>
           )}
-          <span className="pcap-bar" style={{ background: brand.color }} />
+          {/* The 3px brand bar marks the endcap's edge AGAINST THE STAGE. In LOGO ONLY there is no
+              such edge - the endcap is the whole block - so it goes and the wash carries the brand. */}
+          {logoOnly ? null : <span className="pcap-bar" style={{ background: brand.color }} />}
         </div>
+        {logoOnly ? null : (
         <div className="pstage">
           {/* The wash is its own layer so the open-ended fade can mask it without touching the
               text above, and so the acceptance pass can sample one element for symmetry. */}
@@ -782,7 +836,10 @@ function ProgramBlock({ item, scale, top, blockH, trayH, onOpen, measure }) {
             ) : null}
           </span>
         </div>
+        )}
       </div>
+      {/* THE SEAM AND THE TRAY STAY IN BOTH LAYOUTS. The tray carries the start time and the venue,
+          and a reader needs those whether or not the title rendered. */}
       <div className="mseam pseam" style={{ background: seamGradient(brand.color) }} />
       <div className="mtray" style={{ height: trayH - 2 }}>
         <span className="mtray-left">{leftText}</span>

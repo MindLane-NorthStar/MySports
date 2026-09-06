@@ -2362,6 +2362,34 @@ main > .hubctl:first-child { margin-top: 0; }
   object-fit: contain;
 }
 
+/* ---- LOGO ONLY (prompt 53 stage 8, Joe's ruling) --------------------------------------------
+ *
+ * When the block is too narrow to draw the mark clearly AND leave a legible title beside it, the
+ * mark takes the whole body and the title is dropped. Joe: "if it fills the entire space that is
+ * fine". The decision is made in JS (MobileGrid ProgramBlock) because it needs the mark's ASPECT,
+ * which comes from the published manifest; this rule only styles the outcome.
+ *
+ * The box opens up to 86% x 80% rather than staying at 78% x 62%, because nothing is competing for
+ * the room any more - that IS the "fills the entire space" Joe asked for. It stays inside the
+ * block's rounded corners rather than bleeding to the edge.
+ *
+ * `position: relative` so the wash, which moves in here from the retired stage, has something to
+ * size against; `z-index` so the mark sits above it. */
+.pblock .mblock-body[data-logo-only='true'] .pcap {
+  position: relative;
+  flex: 1 1 auto;
+}
+.pblock .mblock-body[data-logo-only='true'] .pcap img {
+  position: relative;
+  z-index: 1;
+  max-width: 86%;
+  max-height: 80%;
+}
+.pblock .mblock-body[data-logo-only='true'] .pcap .pcap-type {
+  position: relative;
+  z-index: 1;
+}
+
 /* A brand with no art in the tree. NOT a fabricated logo and not a blank tile - the brand's short
    title, set in the display face on the same charcoal, which reads as a mark and reads as a mark
    that is missing. The run's report lists every one of these for the marks pipeline. */
