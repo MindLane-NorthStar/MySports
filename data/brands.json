@@ -8,7 +8,8 @@
       "color": "#F96302",
       "color_source": "docs/design/program-card-design-v1.md - Home Depot orange, Joe's ruling; replaces the mark-derived red",
       "mark": null,
-      "mark_dark": null
+      "mark_dark": "/programs/college-gameday.png",
+      "mark_source": "web/public/programs/college-gameday.png, built through scripts/build_brand_marks.py (hf 1.150, recipe 'RAW - sponsor block removed, shield rebuilt; dark body reads by rim + white text'). The art was published 2026-09-02 and nothing referenced it until prompt 52 stage 6 - a wiring bug, not a sourcing problem. `mark` stays null: program brands publish ONE file, already processed for a dark context, where league brands publish a raw/_dark pair; and only `mark_dark` is ever read (ProgramCard.js:73, MobileGrid.js:764). Wiring the mark does NOT re-derive the colour - #F96302 is Joe's explicit Home Depot ruling. For the record, re-deriving from this mark by the documented rule gives #D11222, which is exactly 'the mark-derived red' the ruling replaced."
     },
     "ufc": {
       "title": "UFC",
@@ -53,12 +54,12 @@
     "bignoon": {
       "title": "Big Noon Kickoff",
       "short_title": "BIG NOON",
-      "color": "#4A505A",
-      "color_source": "provisional neutral (globals.css --line-grid)",
+      "color": "#33B1FF",
+      "color_source": "derived from web/public/programs/big-noon-kickoff.png - dominant saturated hue bucket (195-210deg), 56.6% of opaque pixels, median chroma. The same rule that derived indycar, with one difference worth stating: indycar was derived from a RAW league mark, and the only published Big Noon art is the DARK-CONTEXT build, whose recipe is 'floor_l 0.55 (FOX blue lifted)'. So the HUE is FOX's; the lightness is the recipe's, which is what this colour is used on - a bar and a seam on charcoal.",
       "mark": null,
-      "mark_dark": null,
-      "provisional": true,
-      "note": "no mark in the tree; FOX's cached wordmark is monochrome, so no colour to derive"
+      "mark_dark": "/programs/big-noon-kickoff.png",
+      "note": "PROVISIONAL CLEARED 2026-09-06 (prompt 52 stage 6). The old note read 'no mark in the tree; FOX's cached wordmark is monochrome, so no colour to derive' - and that was FALSE by then: the mark was in the tree, and it is 70.9% saturated pixels. The note described FOX's cached WORDMARK, a different asset from this show's lockup.",
+      "mark_source": "web/public/programs/big-noon-kickoff.png, built through scripts/build_brand_marks.py (hf 1.079). Published 2026-09-02 and referenced by nothing until prompt 52 stage 6."
     },
     "foxnflkickoff": {
       "title": "FOX NFL Kickoff",

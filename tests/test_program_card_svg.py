@@ -179,10 +179,37 @@ def test_the_race_draws_its_brand_bar_its_wash_and_its_mirrored_seam(rendered):
     assert re.search(r'id="seamprog1"', withp)
 
 
-def test_gameday_draws_a_typographic_mark_and_home_depot_orange(rendered):
+def test_gameday_draws_its_mark_and_home_depot_orange(rendered):
+    """RE-BASED at prompt 52 stage 6, and the rename is the point.
+
+    This asserted GameDay drew a TYPOGRAPHIC mark "no art in the tree, so the title". The art was in
+    the tree the whole time - web/public/programs/college-gameday.png, built through the pipeline on
+    2026-09-02 - and nothing under web/ referenced the folder. Wiring `mark_dark` in data/brands.json
+    reaches this renderer too, because _mark_uri() resolves `web/public` + the path and embeds it as
+    a data URI. So GameDay now draws its MARK here as well, and that is the fix landing, not a
+    regression.
+
+    THE COLOUR DOES NOT MOVE. #F96302 is Joe's explicit Home Depot ruling and wiring a mark does not
+    re-derive it.
+    """
     _base, withp = rendered
     assert 'fill="#F96302"' in withp
-    assert ">GAMEDAY<" in withp                                    # no art in the tree, so the title
+    assert ">GAMEDAY<" not in withp, "the art is wired now, so the typographic fallback is not used"
+    assert "data:image/png;base64," in withp, "and the mark is embedded"
+
+
+def test_a_brand_with_no_art_still_draws_a_typographic_mark(rendered):
+    """The fallback itself, moved onto a brand that genuinely has none.
+
+    Deleting the coverage when GameDay gained art would have retired the assertion that the fallback
+    works at all - and eight NFL studio shows still depend on it.
+    """
+    _base, withp = rendered
+    import json as _json
+    brands = _json.load(open("data/brands.json", encoding="utf-8"))["brands"]
+    bare = [k for k, v in brands.items() if not v.get("mark_dark") and not v.get("mark")]
+    assert bare, "if every brand has art, this test has nothing left to protect - retire it then"
+    assert all(brands[k].get("short_title") for k in bare),         "a brand with no art MUST carry a short title, or the endcap has nothing to draw"
 
 
 def test_the_open_ended_race_fades_and_the_fixed_end_show_does_not(rendered):

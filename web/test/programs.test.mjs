@@ -84,12 +84,41 @@ test('every brand the design of record fixes carries its exact constant', () => 
 });
 
 test('a brand with no art in the tree has a null mark, so the endcap goes typographic', () => {
-  const gd = brandFor('gameday');
-  assert.equal(gd.mark, null);
-  assert.equal(gd.mark_dark, null);
-  assert.ok(gd.short_title, 'and it has a short title to set instead');
+  // RE-BASED at prompt 52 stage 6, not weakened. This used `gameday`, which had no art - but the art
+  // existed all along at web/public/programs/college-gameday.png and nothing referenced the folder.
+  // The FALLBACK still has to work, so the case moves onto a brand that genuinely still has none.
+  const fb = brandFor('foxnflsunday');
+  assert.equal(fb.mark, null);
+  assert.equal(fb.mark_dark, null);
+  assert.ok(fb.short_title, 'and it has a short title to set instead');
   const nascar = brandFor('nascar');
   assert.equal(nascar.mark_dark, '/leagues/nascar_dark.png');
+});
+
+test('the two studio marks that were built and never wired up now render', () => {
+  // web/public/programs/ held both PNGs and a manifest with real ink-area factors since 2026-09-02,
+  // and `git grep` found NOTHING under web/ referencing the folder. Two of the four shows Joe named
+  // as "missing logos" were a wiring bug, not a sourcing problem.
+  assert.equal(brandFor('gameday').mark_dark, '/programs/college-gameday.png');
+  assert.equal(brandFor('bignoon').mark_dark, '/programs/big-noon-kickoff.png');
+  // ONLY mark_dark is read - ProgramCard.js:73 and MobileGrid.js:764. Program brands publish one
+  // file, already processed for a dark context, so `mark` is deliberately not populated.
+  assert.equal(brandFor('gameday').mark, null);
+  assert.equal(brandFor('bignoon').mark, null);
+  // Wiring the mark does NOT re-derive the colour: Home Depot orange is Joe's explicit ruling.
+  assert.equal(brandFor('gameday').color, '#F96302');
+});
+
+test('bignoon is no longer provisional - the mark exists, so a colour could be derived', () => {
+  const bn = brandFor('bignoon');
+  assert.equal(bn.provisional, undefined, 'the flag is cleared, not set to false');
+  assert.equal(bn.color, '#33B1FF');
+  assert.match(bn.color_source, /derived from web\/public\/programs\/big-noon-kickoff\.png/);
+  // The old note - "no mark in the tree; FOX's cached wordmark is monochrome, so no colour to
+  // derive" - became FALSE the moment the art landed. It is not deleted (it is part of the record)
+  // and it is not left standing as if true: the note now QUOTES it and says why it was wrong.
+  assert.match(bn.note, /PROVISIONAL CLEARED/);
+  assert.match(bn.note, /was FALSE/, 'the correction is explicit, not implied by deletion');
 });
 
 test('an unknown brand key is a neutral card, never a blank or a throw', () => {
