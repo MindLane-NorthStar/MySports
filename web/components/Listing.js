@@ -73,7 +73,8 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
   // THE CARD IS UNTOUCHED, which is the one thing that survived D6 unchanged: the marker lives at
   // band level and never on the card, so the locked card contract stays closed.
   //
-  // Bands render in SPORTS order (cfb, nfl, nba, nhl, mlb), not in kickoff order - the order is the
+  // Bands render in SPORTS order - `config.js` SPORTS, which is nfl, cfb, mlb, nba, nhl, nascar,
+  // indycar, ufc, wwe - not in kickoff order. The order is the
   // product's, so a quiet sport does not jump the page because it happened to start first. They are
   // built from ALL the games now rather than from a `rest` remainder, because nothing is hoisted out
   // of them any more.

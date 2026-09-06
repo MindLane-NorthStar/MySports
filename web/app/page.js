@@ -224,9 +224,19 @@ export default async function HubPage({ searchParams }) {
         const games = seasonMode
           ? await gamesForSeasonWeek(wk.sport, wk.season, wk.week)
           : await gamesForRange(wk.start, wk.end, P.sport);
-        const progs = seasonMode
-          ? await programsForRange(wk.start, wk.end)
-          : await programsForRange(wk.start, wk.end, P.sport);
+        // BOTH BRANCHES PASS THE SPORT. The season branch used to drop it, and it is the branch
+        // that CANNOT be sportless: `seasonMode` is `Boolean(P.sport) && usesSeasonWeeks(P.sport)`
+        // (above), so it is true only when a sport is selected - the branch that knows the sport was
+        // the one discarding it. WEEK · CFB rendered CFB games beside EVERY sport's programs.
+        // Measured on the 2026-08-29 CFB week: 14 programs, of which 10 were aew/indycar/nascar/
+        // ufc/wwe; on the 2026-09-09 NFL week, 14 of which 9 were unrelated.
+        //
+        // THIS LOSES NOTHING WANTED. A studio show carries the sport it bookends - `nfl` or `cfb`,
+        // never a sport of its own (favorites.js, "MEASURED, not assumed") - so filtering by sport
+        // keeps every show that belongs on the week and drops only the other sports.
+        // Not a ternary any more: both branches were the same call once the season branch stopped
+        // dropping the sport, and a two-armed ternary with identical arms invites the bug back.
+        const progs = await programsForRange(wk.start, wk.end, P.sport);
         const now = new Date();
         rows = [...games, ...toRows(progs, now)];
         // Asked ONLY about the games: a program has no club to look up.
