@@ -47,7 +47,7 @@ import { useTextMeasurer } from '../lib/useTextMeasurer.js';
 // sportMarkUrl and SPORT_LABEL went with the grid's header (prompt 50 stage 5a): the tile row
 // above the grid is what states the sport now.
 import { teamLogoUrl, teamLogoDarkUrl } from '../lib/config.js';
-import { markStyle, hasMark } from '../lib/marks.js';
+import { markStyle, hasMark, railMark } from '../lib/marks.js';
 // longDay went with the header too - the picker directly above the grid carries the date.
 import { etTime } from '../lib/format.js';
 import { cardName, cardBroadcast } from './MatchupCard.js';
@@ -379,9 +379,18 @@ export default function MobileGrid({ games, sport, day, standings, onOpen, nowMi
             <div className="mgrid-row" key={row.id} id={`mrow-${row.id}`}>
               <div className="mrail-cell">
                 <div className="mrail-mark">
-                  {hasMark(row.id) ? (
-                    <img src={markStyle(row.id, 42).src} alt={row.name} loading="lazy" />
-                  ) : null}
+                  {/* EQUAL INK AREA, not equal height (prompt 52 stage 5, Joe's 60/600 ruling).
+                      This called `markStyle(row.id, 42).src` and used ONLY `.src` - the <img>
+                      carried no height at all, so `hf` never reached the rail and CSS fit every
+                      mark into the box on its own. That is why a 30px-tall NBC roundel read
+                      smaller than a 25.8px FOX wordmark: same column, 71% less ink.
+                      `railMark` returns a real width AND height; the CSS clamps stay as a
+                      backstop but no longer bind, which stage 5 verified for all 28. */}
+                  {hasMark(row.id) ? (() => {
+                    const m = railMark(row.id);
+                    return <img src={m.src} width={m.width} height={m.height}
+                                alt={row.name} loading="lazy" />;
+                  })() : null}
                 </div>
                 {/* a network WITH a mark needs no name under it; one without gets a derived
                     abbreviation of at most two short lines - never a mid-word ellipsis */}

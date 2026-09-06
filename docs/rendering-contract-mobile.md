@@ -1,9 +1,16 @@
-# Mobile Grid Addendum — v1.9 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04 · per-team cap surface and art, candidate D, 2026-09-04)
+# Mobile Grid Addendum — v2.0 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04 · per-team cap surface and art, candidate D, 2026-09-04)
 
 > **v1.7 (2026-09-05).** M19 and M20 below add the program block and the now marker. Nothing M1–M18 says changes.
 >
 > **v1.8 (2026-09-06, prompt 50).** **M21** below removes the grid's own header. Nothing M1–M20 says
 > changes — the geometry this addendum freezes was re-measured before and after and is identical.
+>
+> **v2.0 (2026-09-06, prompt 52).** **M4 IS AMENDED** — the rail is 60pt, not 69, and the mark is
+> fitted by equal INK AREA rather than fit-boxed by height. **M5's gold moves** with the token to
+> `#C6AF7A`. This is the same treatment prompt 30 gave M4 when it found the addendum prescribing a
+> broken mechanism: the section said what the rail SHOULD do while the code did something else.
+> The grid canvas moves by exactly 9px in `scrollWidth` and in nothing else — block counts and
+> block widths are unchanged, and that separation is the whole point of the re-baseline.
 >
 > **v1.9 (2026-09-06, prompt 51).** **M22** below records the banner's safe-area treatment, which
 > supersedes prompt 44's absorb-nothing ruling. Nothing M1–M21 says changes and the grid canvas is
@@ -23,9 +30,53 @@
 
 **M3. Gap collapse — hard cut.** A stretch ≥60 min with no game airing (start → start + sport's estimated duration) is cut: thin dashed seam labeled with the skipped range ("no games 5:15 – 6:40"); axis resumes at the next window. Continuous days render uncut.
 
-**M4. Network rail — fixed, narrowed inside.** Rail 69pt (86 design px at 80%). Tile height unchanged; the mark shrinks inside, fit-boxed; the 10px call-letters band unchanged. Accepted: fine print on detail badges (SEC Network, FS1, ACCN, B1G) is soft-but-identifiable. The rail is permanently fixed left on the grid screen — panning moves only the schedule — and stays pinned at every pinch-zoom level. **v1.2 corrects HOW.** This previously read "(scaling with zoom)", which described the implementation that broke the rule: the canvas carried `transform: scale(zoom)`, and a transformed element becomes the containing block for its descendants, so the sticky rail resolved against the scaled canvas instead of the scrollport and slid across the screen under pinch. Joe found it on the installed app; Chromium reproduced it at +124.6px right of the scroller at zoom 2.5 and -272.8px left at 0.6. **Zoom is now a layout width** - it multiplies the scale model's `pxPerMin`, so the canvas is genuinely wider rather than painted larger, and the rail holds the scrollport natively. **The rail therefore no longer scales with zoom: it stays 69pt at every level** while the schedule stretches beside it. Nothing between the rail and `.mgrid-scroll` may carry a transform.
+**M4. Network rail — fixed, narrowed inside.** Rail 69pt (86 design px at 80%). Tile height unchanged; the mark shrinks inside, fit-boxed; the 10px call-letters band unchanged. Accepted: fine print on detail badges (SEC Network, FS1, ACCN, B1G) is soft-but-identifiable. The rail is permanently fixed left on the grid screen — panning moves only the schedule — and stays pinned at every pinch-zoom level. **v1.2 corrects HOW.** This previously read "(scaling with zoom)", which described the implementation that broke the rule: the canvas carried `transform: scale(zoom)`, and a transformed element becomes the containing block for its descendants, so the sticky rail resolved against the scaled canvas instead of the scrollport and slid across the screen under pinch. Joe found it on the installed app; Chromium reproduced it at +124.6px right of the scroller at zoom 2.5 and -272.8px left at 0.6. **Zoom is now a layout width** - it multiplies the scale model's `pxPerMin`, so the canvas is genuinely wider rather than painted larger, and the rail holds the scrollport natively. **The rail therefore no longer scales with zoom: it stays a fixed width at every level** while the schedule stretches beside it. Nothing between the rail and `.mgrid-scroll` may carry a transform.
 
-**M5. Axis labels — hour-only shorthand, Style B, MOBILE ONLY.** Labels only on the hour: Noon, 1pm … 11pm, Midnight, 1am. Style B: Barlow Condensed 700 ~17px design, gold #F0C850, UPPERCASE (NOON · 1PM), letter-spacing 1.2. Gridlines and block placement keep :15 granularity; exact kickoffs stay in card trays. PC/archival keeps v1.2 block-start/end labels.
+> **v2.0 AMENDMENT (2026-09-06, prompt 52 stage 5). THE RAIL IS 60pt AND THE MARK IS FITTED BY INK AREA.**
+>
+> **What this section got wrong.** "The mark shrinks inside, fit-boxed" described the CSS
+> (`.mrail-mark img { max-width:100%; max-height:100%; object-fit:contain }`) and stopped there — so
+> it read as if the rail sized marks the way the rest of the app does, through `hf`, the frozen
+> ink-area normalization factor. **It did not.** `MobileGrid`'s rail cell called
+> `markStyle(row.id, 42).src` and used ONLY `.src`; the `<img>` carried no height attribute at all.
+> Measured live, every rail mark reported `height` = null and drew at whatever the CSS fit box
+> allowed. **`hf` played no part in the rail, for any of the twenty-eight marks.**
+>
+> **The symptom.** Joe: "NBC renders much smaller than FOX." NBC was at the rail's MAXIMUM height —
+> 30px, tied for the tallest thing in the column — while FOX drew at 61 × 25.8. The eye weighs ink
+> AREA, not height, and FOX carried 71% more of it. Across the suite the ink-area spread was
+> **3.00×**, from HBO Max at 590px² to Apple TV at 1,772px².
+>
+> **The trade, and why both of Joe's asks could not be met.** Holding every mark at NBC's ~900px²
+> needs a 75px content box — a rail of **83pt, fourteen pixels WIDER** — because the widest wordmark
+> sets the ceiling for everyone. Narrowing the rail forces the uniform size down. Shown the measured
+> trade table, **Joe ruled 60pt / 600px²** on 2026-09-06.
+>
+> **The rule now.** `web/lib/marks.js` `railMark()`:
+> `H = min( sqrt(600/a), 52/a, 30 )`, where `a` is the aspect from the manifest's new `w`/`h` fields
+> and 52 is the content box (`--rail-w` 60 − 2px border-right − 6px padding). Twenty-six of
+> twenty-eight land exactly on 600px²; spread falls **3.00× → 1.40×**. The CSS clamps stay as a
+> backstop and **no longer bind** — verified, every drawn width ≤ 52px.
+>
+> **The two that cannot reach it** are the two widest lockups: **ESPN2** (aspect 5.23 → 9.9px) and
+> **HBO Max** (aspect 6.30 → 8.2px). Both were already the two smallest marks in the column, so
+> nothing new becomes the worst offender. The `52/a` term stops binding at aspect **4.51**, so
+> compact art at or below that brings all 28 onto one weight **with no code change** — the fit
+> recomputes from the manifest, which is why it is data-driven.
+>
+> **The manifest is now `[{slug, hf, w, h}]`.** Every `hf` is byte-identical to before; `w`/`h` are
+> the published pixel dimensions, and `h` is `PUBLISH_H` = 128 for all 28.
+>
+> **Tripwire, re-baselined ON PURPOSE.** `.mgrid-canvas` is
+> `calc(var(--rail-w) + {scale.width}px)`, so narrowing the rail moves `scrollWidth` by exactly 9px:
+> CFB `2026-09-05` **1282 → 1273**, MLB `2026-09-03` **577 → 568**. **Block counts (64, 3) and block
+> widths ({240, 223, 205, 136}, {228}) are unchanged** — those are the parts that would signal a
+> real regression, and if either ever moves it is a regression, not this re-baseline.
+>
+> **The gain:** the visible schedule at a 390px viewport goes 295px → 304px, **+9px / +3.1%**
+> (measured against the scroller's 364px client width, not the 390px viewport).
+
+**M5. Axis labels — hour-only shorthand, Style B, MOBILE ONLY.** Labels only on the hour: Noon, 1pm … 11pm, Midnight, 1am. Style B: Barlow Condensed 700 ~17px design, gold **#C6AF7A** (was #F0C850; prompt 52 stage 3 moved `--gold` to the metallic family, handoff §4 — the labels read the token and moved with it), UPPERCASE (NOON · 1PM), letter-spacing 1.2. Gridlines and block placement keep :15 granularity; exact kickoffs stay in card trays. PC/archival keeps v1.2 block-start/end labels.
 
 **M6. Pinch-to-zoom.** Enabled, clamped to [0.6, 2.5]; rail pinned per M4. Zoom stretches the TIME axis through layout rather than magnifying the painted canvas, so block widths and axis ticks grow while the rail, the lane heights and the type stay put. Two consequences, both accepted: the dashed cut seam (M3) is a fixed marker and does not stretch, and `scrollWidth` now tracks the canvas at every level - which also closed the ~418px of dead scroll past the end at zoom 0.6 that prompt 25 measured.
 
@@ -159,6 +210,12 @@ pill, the cut-seam pills and `.mgrid-note`. Those are notes about what the grid 
 64 blocks / {240, 223, 205, 136} / scrollWidth 1282 and MLB `2026-09-03` 3 / {228} / 577, identical
 before and after, with the rail still pinned at the scroller edge (delta 0.0 px) after panning fully
 right at zoom 0.6, 1.0 and 2.5.
+
+> **Those two scrollWidths are M21's own record and are left as measured.** Prompt 52 stage 5
+> later narrowed the rail 69 → 60pt and re-baselined them to **1273** and **568** (see the
+> v2.0 amendment under M4). A past measurement is not edited to look right in hindsight; what
+> it says is what was true when M21 shipped, and the block counts and widths it pins are
+> unchanged to this day.
 
 **Numbering checked before this rule was added**, because v1.4 once shipped two rules both called
 M17: M1 through M20 each appear exactly once in this document, so M21 is genuinely free.

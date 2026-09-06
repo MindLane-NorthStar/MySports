@@ -122,7 +122,20 @@
 
   /* mobile grid (M1/M4): presentation scale and the fixed rail */
   --m-scale: 0.8;
-  --rail-w: 69px;
+  /* 69px -> 60px (prompt 52 stage 5, Joe's ruling of 2026-09-06). NINE PIXELS BACK TO THE SCHEDULE:
+     the visible schedule at a 390px viewport goes 321px -> 330px, +2.8%.
+
+     THE CONTENT BOX IS 52px AND web/lib/marks.js RAIL_BOX_W MUST AGREE WITH IT:
+         --rail-w                        60px
+         .mrail-cell border-right        -2px
+         .mrail-cell padding 4px 3px     -6px
+     If you change this number, change RAIL_BOX_W too - the fit function cannot read it from here.
+
+     THIS DELIBERATELY MOVES THE FROZEN-GEOMETRY TRIPWIRE. MobileGrid sets the canvas width to
+     calc(var(--rail-w) + {scale.width}px), so scrollWidth drops by exactly 9px: CFB 2026-09-05
+     1282 -> 1273, MLB 2026-09-03 577 -> 568. BLOCK COUNTS AND BLOCK WIDTHS DO NOT MOVE, and if
+     they ever do, that is a real regression rather than this re-baseline. */
+  --rail-w: 60px;
 }
 
 * {

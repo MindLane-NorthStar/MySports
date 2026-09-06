@@ -353,8 +353,21 @@ def load_source(slug: str, kind: str, rasters: dict[str, Path]) -> Image.Image |
 
 
 # ----------------------------------------------------------------------------- build
-def build(only: list[str] | None = None) -> list[dict[str, Any]]:
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+def build(only: list[str] | None = None, out_dir: Path | None = None) -> list[dict[str, Any]]:
+    """Process every mark and publish it, writing the manifest as [{slug, hf, w, h}].
+
+    `out_dir` exists so a caller can build to a TEMPORARY directory and diff the result against
+    the published suite without touching it. That is the only safe way to check for drift between
+    assets/network-logos and web/public/marks, because this script has no --check mode.
+
+    DO NOT USE --only FOR A PUBLISHED WRITE. `todo` is filtered by `only`, `areas` is built from
+    the subset, `target` is the MEDIAN OF THAT SUBSET, and `manifest` below contains only those
+    slugs - so `--only espn2` does not update one entry, it replaces manifest.json with a one-line
+    file whose normalization target is a single mark. Prompt 52 stage 5 recorded this as a footgun
+    and main() now refuses the combination.
+    """
+    out_dir = out_dir or OUT_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
     todo = [s for s in slugs() if not only or s in only]
     raster_dir = Path(tempfile.mkdtemp(prefix="mysports-marks-"))
     jobs, rasters = [], {}
@@ -390,9 +403,17 @@ def build(only: list[str] | None = None) -> list[dict[str, Any]]:
         if hf is None:
             raw = (target / areas[slug]) ** 0.5 if areas[slug] else 1.0
             hf = round(min(HF_MAX, max(HF_MIN, raw)), 3)
-        resize_h(im, PUBLISH_H).save(OUT_DIR / f"{slug}.png", "PNG", optimize=True)
-        manifest.append({"slug": slug, "hf": float(hf)})
-    (OUT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        pub = resize_h(im, PUBLISH_H)
+        pub.save(out_dir / f"{slug}.png", "PNG", optimize=True)
+        # w and h are the PUBLISHED pixel dimensions, carried so a consumer can fit a mark by
+        # ink AREA rather than by height alone (web/lib/marks.js railMark). h is PUBLISH_H by
+        # construction; it is written out anyway so nothing downstream has to assume it.
+        manifest.append({"slug": slug, "hf": float(hf), "w": int(pub.width), "h": int(pub.height)})
+    # newline= is working rule 29: text mode with no newline= translates every \n to the
+    # platform separator, so this line emitted CRLF on Windows and LF on the runner - one
+    # script, two byte streams, for a TRACKED file.
+    (out_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n")
     return manifest
 
 
@@ -436,7 +457,11 @@ def team_dark_variants(force: bool = False) -> dict[str, int]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--only", nargs="+", help="build a subset of slugs")
+    ap.add_argument("--only", nargs="+",
+                    help="build a subset of slugs. NEVER for a published write: it TRUNCATES "
+                         "manifest.json to the subset and takes the ink-area median over it")
+    ap.add_argument("--out-dir", help="write here instead of web/public/marks - use a temp dir "
+                                      "to check for drift without publishing")
     ap.add_argument("--list", action="store_true", help="print the recipe per slug and exit")
     ap.add_argument("--team-logos", action="store_true",
                     help="also build assets/logos/{id}_dark.png for charcoal-floating contexts")
@@ -451,11 +476,16 @@ def main(argv: list[str] | None = None) -> int:
             kind, _ = RECIPES.get(s, ("png", dark_ready))
             print(f"  {s:20s} {kind:4s} {'recipe' if s in RECIPES else 'dark_ready'}")
         return 0
-    manifest = build(args.only)
-    print(f"marks: {len(manifest)} -> {OUT_DIR.relative_to(ROOT).as_posix()}/")
-    print("  slug                     hf")
+    out_dir = Path(args.out_dir) if args.out_dir else OUT_DIR
+    if args.only and out_dir == OUT_DIR:
+        print("refusing: --only truncates the published manifest to that subset and takes the "
+              "ink-area median over it. Pass --out-dir to build a subset somewhere safe.")
+        return 2
+    manifest = build(args.only, out_dir)
+    print(f"marks: {len(manifest)} -> {out_dir}")
+    print("  slug                     hf      w    h")
     for m in manifest:
-        print(f"  {m['slug']:24s} {m['hf']:.3f}")
+        print(f"  {m['slug']:24s} {m['hf']:.3f} {m['w']:5d} {m['h']:4d}")
     return 0
 
 
