@@ -2563,13 +2563,28 @@ main > .hubctl:first-child { margin-top: 0; }
 .seg button {
   flex: 1 1 0;
   min-width: 0;
-  height: 44px;              /* prompt 25's target, and these are NOT the stage-2c exception */
+  /* 44px -> 31px (prompt 51 stage 1). Joe asked for "much shorter. Not as short as the ALL SPORTS
+     button - but probably about 60% of the vertical size that they are currently." 60% is 26.4px,
+     which lands 2px from the ALL SPORTS bar's 24px - effectively the same height as the one thing he
+     said these must NOT match. Shown that arithmetic, he ruled 70%: 44 x 0.70 = 30.8, built as 31.
+     THE 7px SEPARATION FROM THE 24px BAR IS THE POINT of the ruling - they have to read as two
+     sizes, not one. This is a deliberate exception to the 44px minimum, consolidated with the bar's
+     into docs/enhancement-register.md §18b; the tiles, the picker arrows and the reveal toggle all
+     keep 44. */
+  height: 31px;
   border: 0;
   background: transparent;
   color: var(--dim);
   font-family: var(--display);
   font-weight: 700;
-  font-size: 14px;           /* measured to fit at 360: the pair needs 289.5px of 320px available */
+  /* 14px KEPT, against the brief's instruction to scale it down, because the render says it does not
+     need to: measured in the 31px box, the ink run is 17px tall leaving 7px of clearance above and
+     below, and the tightest label horizontally ("All games" at 360) has 5.3px of slack. Nothing is
+     crowded and nothing clips. Height changed; WIDTH DID NOT, so stage 1 cannot have made the
+     horizontal fit worse than prompt 50 measured it. Shrinking the type here would also pull it
+     level with the 24px bar's own 14px, which has only 3.5px of clearance - the type is part of what
+     separates the two rows. */
+  font-size: 14px;
   letter-spacing: .04em;
   text-transform: uppercase;
   white-space: nowrap;
