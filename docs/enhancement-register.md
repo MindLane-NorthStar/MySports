@@ -1056,3 +1056,156 @@ standings.** CFB's is stable and unchanged at 64 / {240, 223, 205, 136} / 1273.
 
 Recorded rather than silently adopted: whether to re-baseline it, or to pin the tripwire to something
 that does not move with the season, is Joe's call.
+
+---
+
+## 22. THE WEEK GRID — 2026-09-06, prompt 54
+
+### 22a. Joe's model, and why a week grid is N grids
+
+> "Choosing 'Week 1 NFL' displays all cards for that week's NFL games — cards from Wednesday,
+> Thursday and Sunday — and TV grid from Wednesday, Thursday and Sunday."
+
+**A TV grid's x-axis is one viewing day's minutes.** Seven days cannot share one horizontal ruler —
+a single axis spanning a week would either compress a day to nothing or run to tens of thousands of
+pixels. So a week grid is **N grids, stacked, one per day that has games**, each under its own day
+heading. That is exactly what Joe described, and it is the only shape the existing scale model
+permits.
+
+**It depends on prompt 53 stage 3.** GRID VIEW had to mean "the grid is the primary object" before a
+week could have one; otherwise this would have been a second answer to a question §21a already
+settled.
+
+### 22b. The build was small, because `Listing` was already right
+
+`Listing` renders a grid for whatever day it is handed — `showGrid = Boolean(grid && games.length)` —
+and the week branch was already calling it **once per day**. It simply passed none of the grid props.
+So the change is `grid={P.isGrid}`, `gridOnly={P.isGrid}` and `nowMinute` per day. `sport` was
+already there: prompt 53 stage 5 added it for the bands.
+
+**The now marker is computed on the server**, from the request time, exactly as day mode does it — no
+clock reaches the client, so nothing enters the hydration path (the trap prompt 42 fell into twice).
+At most one day in a week can be now; every other day is archived and has no "now" to mark. Verified
+both directions: the week containing today renders exactly one marker, the week before it renders
+none.
+
+**Two defects were introduced and caught while building it**, both worth recording because both were
+invisible until measured:
+
+1. **The day headings vanished.** `gridOnly` returns null for the whole bands/flat branch, and that
+   branch is where the caller's heading renders — so a first pass produced a column of four
+   unlabelled grids. `gridOnly` was meant to suppress the CARDS, never the label above them.
+2. **Week + LIST gained a grid.** Passing `grid` unconditionally turned the phone grid on in LIST
+   too. `grid={P.isGrid}` scopes it.
+
+### 22c. Day + LIST and week + LIST now disagree — FLAGGED, not fixed
+
+**Day mode's LIST view shows the phone grid at 390** (05 §11's page order puts it between the section
+and the bands). Week + LIST does not. The brief's acceptance required week + LIST to be untouched, so
+that is what shipped — but the two modes now answer the same question differently, and **Joe's own
+sentence above asks for "all cards … AND TV grid"**. His ruling, not a bug to fix unasked.
+
+### 22d. The desktop week, and one line instead of seven
+
+The mobile grid stays phone-only — the Mobile Grid Addendum's deviations are phone-only and M5 says
+"PC keeps v1.2 labels" — so the desktop week follows §21a's rule **per day**: each day that has an
+archived PC render shows it under that day's heading, with the list suppressed. It never falls back
+to the phone grid at desktop width.
+
+**The lookup is hoisted to the week**, and that is the whole of the design. `ArchivedGrid` resolves
+its own row and renders an honest one-liner when a day has none — right for ONE day, where the note
+*is* the answer. **Seven of those stacked is noise.** So the week resolves all its days up front,
+renders the figures it has, and names the misses in a single line. Same queries either way.
+
+`ArchivedGrid` was split rather than duplicated: `ArchivedGridFigure` takes an already-resolved row.
+**The ALL SPORTS sentence is now one component** (`DesktopGridPerLeague`) called from both modes —
+two copies of a sentence are two things free to drift.
+
+### 22e. The scaling question, settled by measurement
+
+Ruled 2026-09-06 after the comparison: **the sport tiles are the scaling control.** Week mode is not
+the expensive axis; ALL SPORTS is, and it is already that expensive in day mode.
+
+Measured at 390 on the heaviest loaded ALL SPORTS week, `2026-11-09`:
+
+| | grids / cards | page height | DOM |
+|---|---|---|---|
+| week, LIST | 173 cards | 27,252px | 4,239 |
+| **week, GRID** | **7 grids** | **12,443px** | **2,937** |
+| day `2026-09-05`, LIST | 70 cards | 14,542px | 4,265 |
+| day `2026-09-05`, GRID | 70 blocks | 4,092px | 2,499 |
+
+**The grid stack is less than half the height of the same week's list**, and about 3× a single ALL
+SPORTS day's grid — far inside the ~35,000px that would have been worth flagging. The scaling worry
+was founded for the LIST, not the grid.
+
+**No day sub-picker inside the week**, and that is deliberate. If a seven-day stack ever does prove
+unusable, the answer is **per-day lazy rendering**, which applies to the list identically — one job,
+not a week-grid special case.
+
+**A far-future week shows fewer blocks than cards** — 52 against 173 on `2026-11-09` — because the
+grid can only place a game whose network is known, and November is past the announcement horizon
+(05 §9). Each day says so itself: "8 games not on the grid · network TBD". Existing behaviour.
+
+### 22f. THE GEOMETRY CHECK, RESHAPED — the important part of this run
+
+**Prompt 53 found the tripwire firing on data** (§21j). This run fixed the tripwire rather than
+adding seven more of them.
+
+`MobileGrid` measures `widest` from the rendered team line — `${at}${rank} ${name} ${record}` — and
+`pxPerMin = pxPerMinute(widest / SCALE, scaleSport) * SCALE`. **Every block width and `scrollWidth`
+derive from that one number**, so the pixel figures are a function of the schedule (stable), the
+**records** (drift all season) and the **CFB poll ranks** (drift every Sunday). The CFB baseline is
+the *more* volatile of the two and has held only because early-season records are two characters.
+
+**Re-baselining resets a clock. A tripwire that fires on the standings gets ignored, and an ignored
+tripwire catches nothing.**
+
+**HARD STOP — code-derived:** block count per network row; lane count per row; number of network
+rows; painted width == laid-out width at zoom 0.6 / 1.0 / 2.5; rail delta 0.0px at every zoom after
+panning fully right; no block below the 46px floor; no team name wrapped or truncated.
+
+**REPORTED — data-derived:** block widths and `scrollWidth`, recorded **with `widest` and the ratio**.
+`.mgrid-canvas` now carries `data-widest`, `data-pxpermin` and `data-day`, so the next run answers
+the question in one step instead of the stash-and-remeasure prompt 53 needed:
+
+> **`widest` moved and `scrollWidth / widest` held → the standings.
+> The RATIO moved → CODE, and that is the stop.**
+
+**The derived check that earned its place stays a hard stop:** when `--rail-w` changes by N,
+`scrollWidth` must change by exactly N. That is what proved prompt 52's rail narrowing did what it
+intended, and it holds at any absolute value.
+
+Lives at `web/scripts/geometry.mjs` — `npm run geometry` — **in `scripts/` rather than `qa/tools/`
+because `web/qa/` is gitignored**, and a check meant to replace the tripwire discipline cannot live
+somewhere untracked.
+
+### 22g. The week's own check is stronger than any baseline
+
+**A grid inside a week must produce geometry identical to the same day rendered in day mode** — same
+component, same data, same everything. **That comparison is completely immune to data drift, because
+both sides see the same standings on the same run.** It is the week grid's primary guard: if the two
+differ, the week path is handing `MobileGrid` different input, and that is the bug.
+
+Four cases, two weeks, including a day whose slate spans nine networks and more than one sport. Every
+field exact:
+
+| day | in week | blocks | rows | widths | scrollWidth | `widest` |
+|---|---|---|---|---|---|---|
+| `2026-09-05` cfb | `2026-08-31` | 64 | 15 | {240, 223, 205, 136} | 1273 | 98.760 |
+| `2026-09-03` mlb | `2026-08-31` | 3 | 2 | {226} | 564 | 84.648 |
+| `2026-09-13` nfl | `2026-09-07` | 17 | 3 | {264, 98, 73} | 1044 | 122.724 |
+| `2026-09-03` ALL | `2026-08-31` | 14 | 9 | {265, 245, 226} | 846 | 84.648 |
+
+**MLB is re-baselined** to {226} / 564 with its `widest` recorded, and the note says plainly that the
+figure is expected to drift.
+
+**One self-inflicted false positive, found and fixed.** A first version tested wrapping as
+`height > lineHeight × 1.4` and flagged two CFB names. They are not wrapped: `.mname` is a
+**fixed-height 29.1px box** whose line-height moves with the fitted font size, so the ratio varies
+while the height does not — "UT RIO GRANDE VALLEY" measured 1.52× and sits on one line. The check is
+now `scrollHeight > clientHeight`, which asks the actual question.
+
+**The tests are pinned at the CALL SITE**, not to pixel numbers — rule 19's lesson applied to
+rendering, and the only shape that does not rot as the season runs. They pin what the week branch
+*hands* the component; `geometry.mjs` proves the runtime.

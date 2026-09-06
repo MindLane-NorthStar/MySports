@@ -19,7 +19,7 @@ one is stale — say so.
 | why a decision was made, and whether it is already settled | `docs/enhancement-register.md` |
 | what a card, block or grid is supposed to look like | `docs/rendering-contract.md` + `docs/rendering-contract-mobile.md` (the Mobile Grid Addendum) |
 | the locked visual reference the app must match | `docs/design/mobile_demo.html` |
-| what a past run was actually asked to do | `docs/prompts/` — 55 files covering 01–53, verbatim; 39 and 42 are the only gaps |
+| what a past run was actually asked to do | `docs/prompts/` — 56 files covering 01–54, verbatim; 39 and 42 are the only gaps |
 | deploy, environment, what is publishable | `docs/deployment-contract.md` |
 
 **Do not re-raise a settled decision** without first checking the register and `handoff-status.md`.
@@ -111,28 +111,57 @@ never renumber, even around the retired stub.
 
 ## Gates
 
-Four, and all four are run **before** the commit, as their own commands:
+Five, and all five are run **before** the commit, as their own commands:
 
 ```
 pytest                       # from the repo root — 466 pass + 1 skipped
-npm run test:unit            # from web/ — 367
+npm run test:unit            # from web/ — 377
 npm run smoke                # from web/ — 30/30
 node scripts/qa-shots.mjs    # from web/ — 14/14
+npm run geometry             # from web/ — all hard stops (see below)
 ```
 
-Counts are the floor as of `cdfae84`; they may only go up. Report all four with every change, and
+Counts are the floor as of `4d87e88`; they may only go up. Report all five with every change, and
 never read a gate's result from the exit code of a chained command.
 
-## The phone-grid geometry tripwire
+## The phone-grid geometry check
 
-Re-baselined by prompt 52 when `--rail-w` went 69px → 60px:
+**Run it: `npm run geometry` from `web/`.** It splits the checks by what they are a function of,
+because the old shape — absolute pixel figures as a hard stop — was wrong, and prompt 53 proved it.
 
-- CFB `2026-09-05` — 64 blocks / {240, 223, 205, 136} / scrollWidth **1273**
-- MLB `2026-09-03` — 3 blocks / {228} / scrollWidth **568**
+**Why.** `MobileGrid` measures `widest` from the rendered team line, `${at}${rank} ${name} ${record}`,
+and every block width and `scrollWidth` derive from it. So the pixels are a function of the schedule
+(stable), the **records** (drift all season) and the **CFB poll ranks** (drift every Sunday). Prompt
+53 found the MLB baseline had moved with *no code change at all*. Re-baselining resets a clock; a
+tripwire that fires on the standings gets ignored, and an ignored tripwire catches nothing.
 
-**Block counts and block widths moving is a hard stop.** scrollWidth moving is only expected when
-the rail width itself changes, and then it must move by exactly that amount and be re-baselined here
-and in the Mobile Grid Addendum.
+**HARD STOP — code-derived, immune to data:**
+
+- block **count** per network row, **lane** count per row, number of network rows
+- painted width == laid-out width at zoom 0.6 / 1.0 / 2.5 (the prompt-30 transform bug)
+- rail delta **0.0px** at every zoom after panning fully right (M4)
+- no block below the 46px floor; no team name wrapped or truncated
+- **day/week equality** — a day inside a week must render geometry identical to that day in day
+  mode. Immune to drift, because both sides see the same standings on the same run.
+
+**REPORTED, not asserted — data-derived and legitimately drifting.** Block widths and `scrollWidth`,
+recorded **with `widest` and the ratio** beside them. `.mgrid-canvas` carries `data-widest`,
+`data-pxpermin` and `data-day` so this is one step:
+
+> **`widest` moved and `scrollWidth / widest` held → that is the standings.
+> The RATIO moved → that is CODE, and that is the stop.**
+
+Current figures (2026-09-06, expected to drift):
+
+| day | sport | blocks | rows | widths | `widest` | scrollWidth | ratio |
+|---|---|---|---|---|---|---|---|
+| `2026-09-05` | cfb | 64 | 15 | {240, 223, 205, 136} | 98.76 | 1273 | 12.8898 |
+| `2026-09-03` | mlb | 3 | 2 | {226} | 84.65 | 564 | 6.6629 |
+| `2026-09-13` | nfl | 17 | 3 | {264, 98, 73} | 122.72 | 1044 | 8.5069 |
+
+**The one derived check that stays a hard stop:** when `--rail-w` changes by N, `scrollWidth` must
+change by exactly N. That is what proved prompt 52's rail narrowing did what it intended, and it
+holds at any absolute value.
 
 ---
 

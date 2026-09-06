@@ -1,9 +1,17 @@
-# Mobile Grid Addendum — v2.0 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04 · per-team cap surface and art, candidate D, 2026-09-04)
+# Mobile Grid Addendum — v2.1 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04 · per-team cap surface and art, candidate D, 2026-09-04)
 
 > **v1.7 (2026-09-05).** M19 and M20 below add the program block and the now marker. Nothing M1–M18 says changes.
 >
 > **v1.8 (2026-09-06, prompt 50).** **M21** below removes the grid's own header. Nothing M1–M20 says
 > changes — the geometry this addendum freezes was re-measured before and after and is identical.
+>
+> **v2.1 (2026-09-06, prompt 54).** **M23** below adds the WEEK GRID, and **the geometry check is
+> RESHAPED**. The absolute pixel figures are no longer a hard stop: prompt 53 measured the MLB
+> baseline moving with no code change, because every block width and `scrollWidth` derive from
+> `widest` - the widest rendered team line, which carries the RECORD and the CFB POLL RANK. Both
+> drift all season. What is a hard stop, what is reported, and why, is in M23. Nothing M1-M22 says
+> about the grid's own construction changes; the week reuses the identical component, and the
+> day/week equality check proves it.
 >
 > **v2.0 (2026-09-06, prompt 52).** **M4 IS AMENDED** — the rail is 60pt, not 69, and the mark is
 > fitted by equal INK AREA rather than fit-boxed by height. **M5's gold moves** with the token to
@@ -251,3 +259,46 @@ a `<text>` element's bounding rect is its EM box, which reports the "first ink" 
 **`max(0px, …)` is load-bearing** — a browser with no safe area reports 0, and 0 − 14 is negative
 padding. **A third 6 px would be the one that bites:** at −20 px the ink would sit 6 px inside the
 band. The left, right and bottom insets are untouched.
+
+**M23. THE WEEK GRID, and the geometry check reshaped (v2.1, 2026-09-06, prompt 54).**
+
+A TV grid's x-axis is ONE VIEWING DAY'S MINUTES, so seven days cannot share one horizontal ruler.
+**A week grid is N grids, stacked, one per day that has games, each under its own day heading** -
+Joe's own model, and the only shape the M2 scale model permits. An empty day contributes nothing:
+no heading, no grid. The now marker is server-computed and lands on **exactly one day**, only when
+the week contains today.
+
+The mobile grid stays PHONE-ONLY, per M5's "PC keeps v1.2 labels". On desktop the week promotes the
+**archived PC render per day**, and reports the days that have none in ONE line for the week rather
+than one apology per day. ALL SPORTS on desktop has nothing to promote - an archived grid is per
+`(sport, day)` by construction - and says so in the same sentence day mode uses.
+
+**THE GEOMETRY CHECK IS SPLIT BY WHAT IT IS A FUNCTION OF.** `npm run geometry`
+(`web/scripts/geometry.mjs`).
+
+*HARD STOP - code-derived, immune to data:* block **count** per network row; **lane** count per row;
+number of network rows; painted width == laid-out width at zoom 0.6 / 1.0 / 2.5 (the prompt-30
+transform bug); rail delta **0.0px** at every zoom after panning fully right (M4); no block below the
+46px floor; no team name wrapped or truncated; and the **day/week equality** below.
+
+*REPORTED - data-derived:* block widths and `scrollWidth`, recorded **with `widest` and the ratio**.
+`.mgrid-canvas` carries `data-widest`, `data-pxpermin` and `data-day` so the question is answered in
+one step: **`widest` moved and `scrollWidth / widest` held -> the standings; the RATIO moved -> CODE,
+and that is the stop.**
+
+*The one derived check that stays a hard stop:* when `--rail-w` changes by N, `scrollWidth` must
+change by exactly N.
+
+**DAY / WEEK EQUALITY is the week grid's primary guard**, and it is immune to drift because both
+sides see the same standings on the same run. A day inside a week must render geometry IDENTICAL to
+that day in day mode. Verified across four cases and two weeks, including a multi-sport day:
+
+| day | in week | blocks | rows | widths | scrollWidth | `widest` |
+|---|---|---|---|---|---|---|
+| `2026-09-05` cfb | `2026-08-31` | 64 | 15 | {240, 223, 205, 136} | 1273 | 98.760 |
+| `2026-09-03` mlb | `2026-08-31` | 3 | 2 | {226} | 564 | 84.648 |
+| `2026-09-13` nfl | `2026-09-07` | 17 | 3 | {264, 98, 73} | 1044 | 122.724 |
+| `2026-09-03` ALL | `2026-08-31` | 14 | 9 | {265, 245, 226} | 846 | 84.648 |
+
+**MLB is re-baselined to {226} / 564**, and the figure is EXPECTED TO DRIFT. It is recorded so the
+ratio can be compared, not so it can be defended.

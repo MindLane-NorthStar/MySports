@@ -12,7 +12,7 @@ review), `docs/rendering-contract.md` **v1.7**, `docs/rendering-contract-mobile.
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. **55 files, covering prompts 01-53** - four numbers (13, 23, 26, 43) carry
+edited after the fact. **56 files, covering prompts 01-54** - four numbers (13, 23, 26, 43) carry
 two files each, which is why the file count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -41,9 +41,59 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 53's stage-9 commit. Gates: **466 Python tests + 1 skipped**, **367 JS unit
-tests**, smoke **30/30**, qa-shots **14/14**. Tree clean apart from always-untracked `assets/` (and
-`web/qa/`, which prompt 46 added to `.gitignore`).
+main, HEAD is prompt 54's stage-4 commit. Gates: **466 Python tests + 1 skipped**, **377 JS unit
+tests**, smoke **30/30**, qa-shots **14/14**, and the new **`npm run geometry`** all hard stops.
+Tree clean apart from always-untracked `assets/` (and `web/qa/`, which prompt 46 added to
+`.gitignore`).
+
+**PROMPT 54 — THE WEEK GRID.** Four commits, from `ea9dd1f`:
+
+| stage | commit | what shipped |
+|---|---|---|
+| 1 | `c110c6e` | a week renders a grid for each of its days |
+| 2 | `af91ffb` | the desktop week shows archived grids, or says why it cannot |
+| 3 | `4d87e88` | the week baseline, and the day/week geometry equality |
+| 4 | *(this commit)* | register §22, addendum v2.1 + M23, CLAUDE.md, the prompt filed |
+
+**Read register §22 and addendum M23.** Joe's model: a TV grid's x-axis is ONE viewing day's
+minutes, so a week grid is N grids stacked, one per day that has games, each under its own heading.
+
+### THE SCALING QUESTION IS SETTLED, AND IT LANDED THE OTHER WAY
+
+Heaviest loaded ALL SPORTS week, `2026-11-09`, at 390:
+
+| | grids / cards | page height | DOM |
+|---|---|---|---|
+| week, LIST | 173 cards | 27,252px | 4,239 |
+| **week, GRID** | **7 grids** | **12,443px** | **2,937** |
+| day `2026-09-05`, GRID | 70 blocks | 4,092px | 2,499 |
+
+The grid stack is **less than half the height of the same week's list**. **The sport tiles are the
+scaling control**, not the mode. No day sub-picker; if a stack ever does prove unusable the lever is
+per-day lazy rendering, which applies to the list identically.
+
+### THE GEOMETRY CHECK REPLACED THE TRIPWIRE — read this before hunting a regression
+
+**`npm run geometry`** from `web/`. The absolute pixel figures are NO LONGER a hard stop, because
+prompt 53 measured the MLB baseline moving with no code change at all: every block width and
+`scrollWidth` derive from `widest`, the widest rendered team line, which carries the RECORD and the
+CFB POLL RANK. Both drift all season.
+
+**Hard stop:** block count per network row, lane count per row, network-row count, painted ==
+laid-out width at zoom 0.6/1.0/2.5, rail delta 0.0px at every zoom, the 46px block floor, no wrapped
+or truncated team name, and **day/week equality**.
+
+**Reported:** widths and `scrollWidth`, with `widest` and the ratio beside them.
+`.mgrid-canvas` carries `data-widest`, `data-pxpermin`, `data-day`.
+
+> **`widest` moved and `scrollWidth / widest` held → the standings.
+> The RATIO moved → CODE, and that is the stop.**
+
+Current (2026-09-06, expected to drift): CFB `2026-09-05` 64/15 {240,223,205,136} widest 98.76
+sw 1273 ratio 12.8898 · MLB `2026-09-03` 3/2 {226} widest 84.65 sw 564 ratio 6.6629 · NFL
+`2026-09-13` 17/3 {264,98,73} widest 122.72 sw 1044 ratio 8.5069. **MLB is re-baselined from
+{228}/568.** The `--rail-w` derived check stays a hard stop: change it by N, `scrollWidth` moves by
+exactly N.
 
 **PROMPT 53 — the hub's display architecture corrected, and the studio logos.** Nine commits, from
 `61469b6`:
