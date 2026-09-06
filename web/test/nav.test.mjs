@@ -86,6 +86,54 @@ test('the tab row is GONE, not merely unused', () => {
   assert.doesNotMatch(css, /^\.hn-nav\b/m, 'and the hn-* block');
 });
 
+// -------------------------------------------- 2b. the NASCAR series sub-filter is GONE, not hidden
+
+/**
+ * PROMPT 52 STAGE 1. Joe: "Remove the Cup / O'Reilly / Truck buttons ... Simply allow all NASCAR
+ * races to appear when they should instead of having them filtered by series."
+ *
+ * This SUPERSEDES enhancement-register §9 (individual sport chips WITH a NASCAR series sub-filter)
+ * and §16 (that sub-filter placed as a second row beneath the tiles). Both were deliberate; both
+ * are reversed.
+ *
+ * `programs.series` STAYS IN THE DATABASE and is deliberately not asserted here - migration 0015
+ * keys a race session on `(sport, coalesce(series, ''), start_at, title)` and prompt 48 measured
+ * what happens without it. This was a PRESENTATION change only.
+ */
+test('the series sub-filter is deleted, not rendered-but-hidden', () => {
+  const filters = src('components/Filters.js');
+  assert.doesNotMatch(filters, /SeriesFilter/, 'the component is gone');
+  assert.doesNotMatch(filters, /NASCAR_SERIES|SERIES_LABEL|showsNascar/, 'and its imports');
+
+  const page = src('app/page.js');
+  assert.doesNotMatch(page, /SeriesFilter/, 'and the call site');
+
+  const cfg = src('lib/config.js');
+  assert.doesNotMatch(cfg, /export const NASCAR_SERIES|export const SERIES_LABEL/);
+  assert.doesNotMatch(cfg, /export function (resolveSeriesParam|showsNascar)/);
+
+  // The FILTERING, not merely the control: a series token must not narrow any query.
+  const q = src('lib/queries.js');
+  assert.doesNotMatch(q, /seriesFilter/, 'no query narrows by series');
+  assert.doesNotMatch(q, /series\.eq\./, 'and no PostgREST predicate spells one');
+  // The COLUMN is still selected - that is the data layer and it is untouched.
+  assert.match(q, /^\s+'series',$/m, "programs.series is still SELECTED, just never filtered on");
+
+  const css = src('app/globals.css');
+  assert.doesNotMatch(css, /\.seriesrow/, 'the second row CSS went with it');
+  assert.doesNotMatch(css, /\.serbtn/);
+});
+
+test('a stale ?series=cup link renders, ignored rather than erroring', () => {
+  // Old bookmarks and anything Joe has shared must not 404 or 400.
+  const p = resolveHubParams({ day: '2026-09-06', sport: 'racing', series: 'cup' }, TODAY);
+  assert.equal(p.day, '2026-09-06');
+  assert.equal(p.sport, 'racing', 'the sport still selects');
+  assert.equal(p.series, undefined, 'the series token is simply not in the contract');
+  // and it never comes back out of a generated href
+  assert.doesNotMatch(hubHref({ ...p }, { today: TODAY }), /series/);
+});
+
 // ---------------------------------------------------------------- 3. every parameter round-trips
 
 test('EVERY parameter round-trips: what a control can set, the resolver can read back', () => {
@@ -96,7 +144,11 @@ test('EVERY parameter round-trips: what a control can set, the resolver can read
     { mode: 'week', w: 'cfb-2026-1' },
     { mode: 'week', w: '2026-08-31', sport: 'mlb' },
     { sport: 'nfl' },
-    { sport: 'nascar', series: 'cup' },
+    // Was `{ sport: 'nascar', series: 'cup' }`. Prompt 52 stage 1 retired the series sub-filter;
+    // the coverage this case actually carried - a hand-typed bare enum sport round-tripping - is
+    // kept, re-based onto sport alone.
+    { sport: 'nascar' },
+    { sport: 'racing' },
     { scope: 'mine' },
     { view: 'grid' },
     { mode: 'week', w: 'nfl-2026-3', sport: 'nfl', scope: 'mine', view: 'grid' },
@@ -136,7 +188,7 @@ test('EVERY parameter has a default, so no URL can produce a dead end', () => {
   assert.equal(empty.day, TODAY);
   assert.equal(empty.w, null);
   assert.equal(empty.sport, null);
-  assert.equal(empty.series, null);
+  assert.equal(empty.series, undefined, 'the series parameter is RETIRED (prompt 52 stage 1)');
 });
 
 test('garbage RESOLVES rather than throwing or 404ing', () => {
@@ -149,7 +201,9 @@ test('garbage RESOLVES rather than throwing or 404ing', () => {
   assert.equal(junk.view, 'list');
   assert.equal(junk.day, TODAY, 'a malformed day falls back to today, it does not error');
   assert.equal(junk.sport, null);
-  assert.equal(junk.series, null);
+  // A STALE `?series=cup` IS IGNORED, NOT AN ERROR. Old bookmarks and anything Joe has shared
+  // must keep rendering; the parameter is simply not in the contract any more.
+  assert.equal(junk.series, undefined);
 });
 
 test('a stale ?w= is CARRIED, not rejected - the fallback lives where the week list is', () => {

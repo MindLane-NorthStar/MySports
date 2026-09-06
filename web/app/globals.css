@@ -241,10 +241,11 @@ h3 {
   margin: 0;
 }
 
-/* The sport block stacks: the ALL SPORTS bar, then the tiles, then §9's series row. Its OWN class
-   rather than a change to `.controls`, which was written to lay children out side by side.
-   The reason that mattered is now historical - prompt 50 left `.controls` with a single consumer -
-   but the split is kept because the two intents are still different. */
+/* The sport block stacks: the ALL SPORTS bar, then the tiles. §9's series row used to be a third
+   member and was retired by prompt 52 stage 1. Its OWN class rather than a change to `.controls`,
+   which was written to lay children out side by side. The reason that mattered is now historical -
+   prompt 50 left `.controls` with a single consumer - but the split is kept because the two
+   intents are still different. */
 .controls-stack {
   flex-direction: column;
   align-items: stretch;
@@ -2507,42 +2508,6 @@ main > .hubctl:first-child { margin-top: 0; }
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
-}
-
-/* ---- the NASCAR series sub-filter (register section 9) ------------------ */
-
-/* A SECOND ROW under the tiles, never a ninth tile. Section 16 froze the tile row's geometry - the
-   eight tiles flex to fill it exactly, which is what stopped it scrolling - so the series controls
-   sit beneath it and change nothing above. They are TEXT, not marks: NASCAR publishes a series logo
-   for each, but at this size three wordmarks of wildly different widths read as noise where three
-   short words read as a choice. */
-.seriesrow {
-  display: flex;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.serbtn {
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 6px 4px;
-  border-radius: 7px;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--dim);
-  font-family: var(--body);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-}
-
-/* Register section 14: the ACTIVE control is a charcoal plate with a gold border, never a gold
-   fill - the same single-context rule the sport tiles follow, so the two rows agree. */
-.serbtn[data-active='true'] {
-  color: var(--gold);
-  border-color: var(--gold);
-  box-shadow: inset 0 0 0 1px rgba(240, 200, 80, 0.35);
 }
 
 /* ---- THE HUB'S CONTROL STACK (prompt 50 stage 2) ---------------------------------------------

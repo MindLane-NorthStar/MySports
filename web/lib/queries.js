@@ -257,6 +257,9 @@ const PROGRAM_SELECT = [
   'open_ended',
   'location_text',
   'on_site',
+  // SELECTED, never filtered on. Prompt 52 stage 1 retired the series SUB-FILTER; the COLUMN
+  // stays in the database (0015's race-session key is `(sport, coalesce(series,''), start_at,
+  // title)` and the coalesce is load-bearing for IndyCar) and stays in this projection.
   'series',
   'headliners',
   'hosts_crew',
@@ -314,39 +317,26 @@ function programSportFilter(sport) {
   return list.length === 1 ? `&sport=eq.${list[0]}` : `&sport=in.(${list.join(',')})`;
 }
 
-/**
- * The NASCAR series sub-filter (register section 9).
- *
- * IT MUST NOT REMOVE ANYTHING THAT IS NOT NASCAR. `series` is null on every IndyCar race, every
- * fight card and every wrestling show, so a bare `series=eq.cup` would empty the Racing page of
- * IndyCar and an all-sports page of everything else. `or=(sport.neq.nascar,series.eq.cup)` keeps
- * every non-NASCAR row and narrows only the NASCAR ones, which is what a SUB-filter means.
- */
-function seriesFilter(series) {
-  if (!series) return '';
-  return `&or=(sport.neq.nascar,series.eq.${series})`;
-}
-
 /** Every non-game program on one viewing day, optionally one sport (or the `racing` token). */
-export async function programsForDay(day, sport, series) {
+export async function programsForDay(day, sport) {
   const b = viewingDayBounds(day);
   if (!b) return [];
   return rest(
     `programs?select=${PROGRAM_SELECT}&program_type=neq.game`
     + `&start_at=gte.${b.start}&start_at=lt.${b.end}${programSportFilter(sport)}`
-    + `${seriesFilter(series)}&${PROGRAM_ORDER}`
+    + `&${PROGRAM_ORDER}`
   );
 }
 
 /** Every non-game program in an inclusive viewing-day range. Paginated: a week can be large. */
-export async function programsForRange(start, end, sport, series) {
+export async function programsForRange(start, end, sport) {
   const a = viewingDayBounds(start);
   const z = viewingDayBounds(end);
   if (!a || !z) return [];
   return restAll(
     `programs?select=${PROGRAM_SELECT}&program_type=neq.game`
     + `&start_at=gte.${a.start}&start_at=lt.${z.end}${programSportFilter(sport)}`
-    + `${seriesFilter(series)}&${PROGRAM_ORDER}`
+    + `&${PROGRAM_ORDER}`
   );
 }
 

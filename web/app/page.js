@@ -9,7 +9,8 @@
 //   day    ISO date        read only when mode=day
 //   w      week key        read only when mode=week
 //   sport  one of eight    absent = ALL SPORTS
-//   series NASCAR series   the register section 9 sub-filter
+//   (the NASCAR `series` sub-filter is RETIRED - prompt 52 stage 1. All NASCAR series render
+//    together. `programs.series` remains in the DATABASE and is untouched.)
 //   scope  all | mine      ALL GAMES | MY TEAMS
 //   view   list | grid     LIST VIEW | GRID VIEW
 //
@@ -23,7 +24,7 @@
 
 import { Suspense } from 'react';
 import Listing from '../components/Listing.js';
-import { SeriesFilter, SportFilter, ModeToggle, ScopeViewToggles, DayPicker, WeekPicker } from '../components/Filters.js';
+import { SportFilter, ModeToggle, ScopeViewToggles, DayPicker, WeekPicker } from '../components/Filters.js';
 import {
   gamesForDay, programsForDay, newestGridFor, gridIndex, standingsForGames, rankingsForGames,
   weekIndexRows, gamesForRange, gamesForSeasonWeek, programsForRange,
@@ -296,7 +297,7 @@ export default async function HubPage({ searchParams }) {
     // at all, so one query cannot return both - and keeping them separate means a programs failure
     // can never take the game slate down with it.
     [games, programs] = await Promise.all([
-      gamesForDay(day, P.sport), programsForDay(day, P.sport, P.series),
+      gamesForDay(day, P.sport), programsForDay(day, P.sport),
     ]);
     // One round trip each, in parallel. rankingsForGames returns [] with no CFB game on the page,
     // and an empty id list short-circuits before any request is made.
@@ -414,9 +415,6 @@ function Controls({ P, choices }) {
               the bar's height (stage 2c); register §16 froze the tile row's geometry. */}
       <div className="controls controls-stack">
         <SportFilter sport={P.sport} />
-        {/* Register §9's series sub-filter. A SECOND row under the tiles - the tile row's geometry
-            is untouched, which §16 froze deliberately. */}
-        <SeriesFilter sport={P.sport} series={P.series} />
       </div>
       {/* 5. The picker, with its prev/next arrows. */}
       <div className="pickrow">

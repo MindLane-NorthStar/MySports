@@ -19,7 +19,7 @@
 // one token. It also lets `day` and `w` COEXIST harmlessly, each read only in its own mode, so
 // switching DAY -> WEEK -> DAY returns you to the day you were on instead of resetting to today.
 
-import { resolveSportParam, resolveSeriesParam } from './config.js';
+import { resolveSportParam } from './config.js';
 
 export const MODES = ['day', 'week'];
 export const SCOPES = ['all', 'mine'];
@@ -65,7 +65,6 @@ export function resolveHubParams(params, today) {
     day,
     w,
     sport: resolveSportParam(p.sport),
-    series: resolveSeriesParam(p.series),
     scope,
     view,
     // convenience predicates, so no caller re-derives them and gets one backwards
@@ -94,8 +93,10 @@ export function hubHref(state = {}, { today = null } = {}) {
   // shared link go stale the moment tomorrow arrives.
   if (state.day && state.day !== today) put('day', state.day);
   put('w', state.w);
+  // `series` WAS here (register §9's NASCAR sub-filter). Prompt 52 stage 1 retired it: all NASCAR
+  // series render together now. A stale `?series=cup` is simply DROPPED - resolveHubParams never
+  // reads it, so it is neither an error nor a filter, and old bookmarks keep working.
   put('sport', state.sport);
-  put('series', state.series);
   if (state.scope && state.scope !== DEFAULTS.scope) put('scope', state.scope);
   if (state.view && state.view !== DEFAULTS.view) put('view', state.view);
 
