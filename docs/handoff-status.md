@@ -3,16 +3,20 @@
 **This file lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at
 `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§17, all
-in the repo — check there before re-raising any decision), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§20, all
+in the repo — check there before re-raising any decision; §19 the metallic gold, §20 the rail and
+the end of the NASCAR series sub-filter), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
 amendment, §9 NETWORK TBD, §11 mobile page order, §12 the DATE/WEEK headers, §13 the 2026-09-05
 review), `docs/rendering-contract.md` **v1.7**, `docs/rendering-contract-mobile.md` (Addendum
-v1.9, Addendum v1.2 + M19-M22), **`docs/design/program-card-design-v1.md`** — the program card's design of record,
+**v2.0** — M4 amended for the 60px rail and the ink-area fit, M5's gold moved; Addendum v1.2 + M19-M22), **`docs/design/program-card-design-v1.md`** — the program card's design of record,
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
-holds the Claude Code briefs themselves - **51 of them as of prompt 50 stage 0**, verbatim and never
-edited after the fact. The archive is complete but for **39, which exists nowhere at all**, and
-**42, whose brief is gone though its handoff survives** at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`;
+holds the Claude Code briefs themselves, verbatim and never
+edited after the fact. **THE ARCHIVE HAS SLIPPED: 50 and 51 were never filed**, found by prompt 52
+stage 8 — the newest file before it was `49-nascar-times-race-key.md`. Prompt 52 is filed at
+`52-metallic-gold-rail-nascar-studio-marks.md`; 50 and 51 could not be reconstructed and no
+placeholder was written for either. The archive is otherwise complete but for **39, which exists
+nowhere at all**, and **42, whose brief is gone though its handoff survives** at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`;
 neither was reconstructed and no placeholder was written for either. Prompts are the as-run record of
 why a commit exists; THIS file is what is current.
 
@@ -31,9 +35,75 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 51's stage-5 commit. Gates: **465 Python tests + 1 skipped**, **353 JS unit
+main, HEAD is prompt 52's stage-8 commit. Gates: **466 Python tests + 1 skipped**, **367 JS unit
 tests**, smoke **30/30**, qa-shots **14/14**. Tree clean apart from always-untracked `assets/` (and
 `web/qa/`, which prompt 46 added to `.gitignore`).
+
+**PROMPT 52 — the metallic gold, the rail, NASCAR unfiltered, the studio art.** Nine commits:
+
+| stage | commit | what shipped |
+|---|---|---|
+| 0 | `c730f2a` | the metallic-gold handoff and its rendering, filed in `docs/ux-reference/` |
+| 1 | `846bff7` | the NASCAR series sub-filter retired — register §9 and §16 superseded |
+| 2 | *(no commit)* | row spacing VERIFIED, nothing to build — see below |
+| 3 | `68ee198` | the metallic gold family replaces the yellow; tokens and every surface reading them |
+| 4 | `5e5eb1f` | the banner wordmark and the segmented controls join the metallic family |
+| 5 | `671fa51` | one ink weight for every network mark; the rail 69 → 60px |
+| 6 | `131b5a3` | Big Noon and GameDay render the marks that were already built for them |
+| 7a | `47df7da` | five studio-show marks sourced and processed |
+| 7b | `4fcccf6` | a compact lockup closes HBO Max onto the target weight |
+| 8 | *(this commit)* | register §19 and §20, addendum v2.0, this file, the prompt filed |
+
+**Read `docs/enhancement-register.md` §19 and §20** before touching the gold, the rail, the marks
+pipeline or the NASCAR filter — every decision this run made and every call left open to Joe is
+recorded there with its measurement.
+
+### THE NEW GOLD TOKENS — read from `web/app/globals.css`, never retyped (rule 16)
+
+```
+--gold: #C6AF7A   --gold-dim: #8C7650   --gold-hi: #E0D1A5   --gold-mid: #B39A69
+--gold-glow: rgba(198,175,122,0.22)     --gold-line: rgba(198,175,122,0.55)
+```
+
+Source: `docs/ux-reference/visual-refinement-handoff-2026-09-06.md` §4. **`data/brands.json`'s AEW
+`#F0C850` is a BRAND CONSTANT, not a use of the old token** — it survives on purpose (§19b).
+
+### THE RAIL CONSTANTS
+
+`--rail-w: 60px` (`globals.css`) and, in `web/lib/marks.js`, `RAIL_TARGET_AREA = 600`,
+`RAIL_BOX_W = 52`, `RAIL_MAX_H = 30`. **`RAIL_BOX_W` must be changed by hand whenever `--rail-w` is**
+— it is `--rail-w` minus a 2px border-right and 6px of padding, and JS cannot read it from the
+stylesheet. 27 of 28 marks land on 600px²; ESPN2 is the one that cannot.
+
+### THE PHONE-GRID TRIPWIRE — RE-BASELINED BY STAGE 5
+
+**CFB `2026-09-05` = 64 blocks / {240, 223, 205, 136} / scrollWidth 1273;
+MLB `2026-09-03` = 3 / {228} / 568.** (Was 1282 and 577.) Only scrollWidth moved, by exactly the
+9px the rail lost. **Block counts and block widths did not change and must not** — if either moves,
+that is a real regression, not this re-baseline.
+
+### STAGE 2's MEASUREMENTS — the control stack, verified not rebuilt
+
+All six gaps, at 360 / 390 / 430 / 1440, measured after stage 1 removed the series row:
+
+| gap | 360 | 390 | 430 | 1440 |
+|---|---|---|---|---|
+| banner → DAY\|WEEK | 8 | 8 | 8 | 8 |
+| DAY\|WEEK → ALL GAMES\|MY TEAMS | 8 | 8 | 8 | 8 |
+| ALL GAMES\|MY TEAMS → ALL SPORTS | 8 | 8 | 8 | 8 |
+| **ALL SPORTS → league tiles** | **6** | **6** | **6** | **6** |
+| league tiles → picker | 8 | 8 | 8 | 8 |
+| picker → content | 8 | 8 | 8 | 8 |
+
+The 6px is Joe's named exception — `.sportbar`'s own internal gap, what makes the bar and the tiles
+read as one control (§16). **Nothing needed building; prompt 51 stage 2 had already done it.**
+
+**Row heights, for the rhythm conversation this run did NOT open:** DAY|WEEK **33px**, ALL
+GAMES|MY TEAMS **33px**, ALL SPORTS **24px**, league tiles **44px** (36px at 1440), picker **44px**.
+Note the toggle ROW is 33px, not the 31px usually quoted — 31px is `.seg button`'s height and `.seg`
+adds a 1px border top and bottom. The eye measures ink to ink, so uniform 8px gaps between boxes of
+24, 33 and 44 can still read as an uneven rhythm. **That is a row-height question and it needs Joe's
+ruling before anything moves.** Gaps were not adjusted to compensate.
 
 **Prompt 51 finished the hub against Joe's device review.** Five commits:
 
@@ -134,9 +204,13 @@ cloud workspace. **Never reapply a bare browser UA.**
   retired and D6's in-band float is back at band level, card untouched.
 - ~~**`scope=mine` SHOWS NO PROGRAMS.**~~ **CLOSED** by prompt 51 stage 4b: `isMine()` adds the sport
   rule and the five team-less sports are in scope — 196 rows the scope had been hiding.
-- **ONE GAP IN THE CONTROL STACK IS NOT 8px, PENDING JOE.** Five of the six are; `ALL SPORTS` → tiles
-  stays 6px because it is `.sportbar`'s own internal gap and it is what makes the bar and the tiles
-  read as one control (§16). Joe sees it at his step 3 and it is his call.
+- ~~**ONE GAP IN THE CONTROL STACK IS NOT 8px, PENDING JOE.**~~ **CLOSED** by prompt 52 stage 2:
+  Joe confirmed `ALL SPORTS` → tiles stays 6px as the named exception. All six gaps re-measured at
+  360/390/430/1440 and reported above; nothing needed building.
+- **THE CONTROL STACK'S RHYTHM MAY STILL READ UNEVEN, AND IT IS A ROW-HEIGHT QUESTION.** The gaps
+  are uniform but the rows are 33 / 33 / 24 / 44 / 44px, and the eye measures ink to ink. Prompt 52
+  stage 2 deliberately did NOT adjust gaps to compensate for a height problem. **Needs Joe's ruling
+  before anything moves.**
 - **The AEW band renders its title lowercase, "aew".** `Listing` does `SPORT_LABEL[s] || s` and
   `config.js` has no `SPORT_LABEL` entry for aew, so it falls back to the raw enum value. It predates
   prompt 51 but MY TEAMS makes it far more visible. A one-line fix, deliberately not taken unasked.
@@ -163,6 +237,36 @@ cloud workspace. **Never reapply a bare browser UA.**
 - **D1's first band can say "Nothing loaded for this viewing day yet" above a full slate** — seen on
   NFL 2026-09-13 and MLB 2026-09-03, where the band's window finds nothing while the sport bands
   below render every game. Pre-dates the hub; unchanged by it.
+
+## Opened by prompt 52
+
+- **FOUR CALLS OPEN TO JOE'S VETO**, all recorded in register §19 with their measurements:
+  the **banner wordmark recoloured** (§19c — the app's signature element); **LIVE kept GREEN**
+  (§19e — `--alert` already means "you cannot watch this", so a red LIVE would collide with it);
+  **the card gradient kept** against the rendering's flat `#2A2A2A` (§19f — prompt 25 measured the
+  contrast ramp against both ends of it); and **the gold sites that carry information rather than
+  selection** (§19i — FINAL, the grid's hour axis, the day-column times, the market-pending labels).
+- **ESPN2 IS THE ONE MARK THAT CANNOT REACH THE RAIL'S 600px² TARGET** (9.9px tall). Its brand IS a
+  wide wordmark and no compact lockup exists; the `52/a` term binds above aspect 4.51. If a stacked
+  ESPN2 ever appears, dropping it in closes the last mark **with no code change**.
+- **THREE STUDIO SHOWS STILL HAVE NO ART:** `foxnflkickoff` (the only findable art is the generic
+  Fox Sports wordmark — the NETWORK, not the show), `tnfpregame` and `netflixpregame` (no distinct
+  branding, and zero loaded rows). Their typographic fallback renders and is tested.
+- **`fox-nfl-sunday` IS A RETIRED LOCKUP**, shipped and flagged per the sourcing rules. If Joe wants
+  the current Fox branding it is a one-file swap plus a rebuild.
+- **`fnia` HAS ART BUT KEEPS ITS PROVISIONAL COLOUR.** After the dark-context lift only 1.3% of its
+  pixels are saturated, and they are the NBC peacock — multicolour by design. There is no single hue
+  to derive and picking one arm of a peacock would be an invented fact.
+- **PRE-EXISTING DRIFT IN THE PROGRAM MARKS, found not caused.** The published program PNGs already
+  disagreed with their own manifest: `big-noon` ink area re-measures at 10609 against the recorded
+  10085 (5.2%), `college-gameday` 7975 against 7947. Any rebuild was always going to move those.
+- **`--gold-dim` IS BELOW AA FOR TEXT ON TWO GROUNDS** — 3.49:1 on `--panel`, 2.79:1 on
+  `--panel-top`. Pre-existing (it was 3.37 and 2.70) and improved by the new value, not caused by it.
+  Its three sites are small metadata labels.
+- **`--hairline` HAS ZERO CONSUMERS.** A dead token, found during the §9 border audit. Left in place;
+  removing it is a tidy-up nobody asked for.
+- **PROMPTS 50 AND 51 WERE NEVER FILED** in `docs/prompts/`. Found at stage 8. They could not be
+  reconstructed from here and no placeholder was written.
 
 ## THE HEADLINE OPEN ITEM — the announcement horizon
 

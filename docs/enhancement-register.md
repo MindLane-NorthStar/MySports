@@ -86,6 +86,8 @@ PLEs are on ESPN Unlimited **except Saturday Night's Main Event and Sunday Night
 
 ## 9. Decisions — 2026-09-02 (Joe, follow-up)
 
+> **⚠ SUPERSEDED IN PART, 2026-09-06 (prompt 52 stage 1) — see §20.** Q1's NASCAR **Cup / O'Reilly / Truck sub-filter is RETIRED.** All NASCAR races now render together, selected by sport alone. The rest of Q1 stands: `programs` is still an invisible DB supertype, chips are still driven by `sport`, and `programs.series` is still in the database and load-bearing. The original text below is left as written — a superseded decision is part of the record.
+
 - **Q1 — no NASCAR exception.** The concern was the chip menu, not the data model. `programs` is an invisible DB supertype; chips are driven by `sport`. NASCAR is `sport = nascar` with its own chip and a Cup / O'Reilly / Truck sub-filter. Every new sport gets its own chip. **⚠ AMENDED 2026-09-03 — AEW is now the one exception; see §13.** **Studio shows never get a chip** — they render on the parent sport's grid as bookends. Joe chose **individual chips**, not grouped "Racing"/"Wrestling".
 - **Q8 — option (a).** Program card mocked in the prototype artifact first, then implemented as rendering-contract v1.7. **Approved 2026-09-03; spec at `claude/program-card-design-v1.md`.**
 - **Q9.** UFC moneylines and NASCAR race odds appear as their books list them, under the existing `show_odds` toggle.
@@ -233,6 +235,8 @@ border traces the full outline of a square where a pill rounded it away.
 ---
 
 ## 16. RACING — 2026-09-03. One chip over two sports, and the ALL bar takes its own row.
+
+> **⚠ SUPERSEDED IN PART, 2026-09-06 (prompt 52 stage 1) — see §20.** The **second row beneath the tiles is gone**, along with the series sub-filter it carried. What this section got RIGHT is untouched and is the shape prompt 52 followed: a presentation change, no schema change, `nascar` and `indycar` still separate enum values. The original text stands.
 
 **This amends §9's Q1 and §13's chip roster.** §9 recorded Joe choosing individual chips per sport and
 explicitly rejecting grouped "Racing" and "Wrestling" chips. Joe reversed that for racing only, and the
@@ -492,3 +496,346 @@ The two items prompt 50 documented and left unbuilt are both done:
 in `data/favorites.json`, resolved once by exact match within sport and frozen. Letting a user choose
 their own teams needs storage and identity this app does not have — every piece of state is in the
 URL precisely so there is no per-user store — so scoping it is a project, not a stage.
+
+---
+
+## 19. THE METALLIC GOLD — 2026-09-06, prompt 52 stages 3 and 4
+
+**Design of record:** `docs/ux-reference/visual-refinement-handoff-2026-09-06.md`, filed in the repo
+by stage 0 along with its rendering `visual-refinement-metallic-gold.png`. **The rendering is a
+DIRECTION reference, not a specification** — §18 of the handoff says so explicitly, and it is the
+section this work was most likely to violate.
+
+### 19a. The six token values, and where they came from
+
+```
+--gold:      #C6AF7A    was #f0c850   handoff §4 "primary metallic gold"
+--gold-dim:  #8C7650    was #8a7530   handoff §4 "deep gold"
+--gold-hi:   #E0D1A5    new           handoff §4 "highlight gold"
+--gold-mid:  #B39A69    new           handoff §4 "mid gold"
+--gold-glow: rgba(198, 175, 122, 0.22)   new   handoff §4 "soft gold glow"
+--gold-line: rgba(198, 175, 122, 0.55)   new   handoff §4 "gold border / fine accent"
+```
+
+These are **the one authorized exception to working rule 16** — colour tokens are read from
+`globals.css`, never retyped from a mockup — and the exception was authorized exactly once, for this
+transcription. Everything downstream reads the tokens. `globals.css` has 23 `var(--gold)` and 3
+`var(--gold-dim)` references and **not one call site was edited**; only the eight
+`rgba(240,200,80,α)` literals moved, each to `rgba(198,175,122,α)` at its own alpha.
+
+**One inconsistency inside the handoff itself, resolved and recorded:** §4 gives the gold border as
+`rgba(198,175,122,0.55)` while §9 suggests `0.40` for the selected edge. **§4's 0.55 is the token**,
+because the eight border and glow literals it replaces already ran at 0.25–0.60 and 0.55 keeps them
+where prompts 25 and 34 tuned them.
+
+**Contrast, re-measured against the tokens as read from the file** (rule 13 — the local ground, never
+a corner sample). All seven of the brief's figures reproduced exactly: **9.02:1** on `--spot-3`,
+8.05 on `--spot-2`, 7.35 on `--spot-1`, 5.24 on `--spot-0`, 7.09 on `--panel`, 5.69 on `--panel-top`,
+7.55 on `--panel-bottom`. Dark text on the gold plate is **9.02:1**, down from `#f0c850`'s 12.03 and
+far above AA. `--gold-dim` improves to 4.43:1 on `--spot-3` from 4.29.
+
+**A pre-existing shortfall, improved but not fixed:** `--gold-dim` is 3.49:1 on `--panel` and 2.79:1
+on `--panel-top` — below AA for text. It was 3.37 and 2.70 before, so the new value is a small
+improvement rather than a regression, and it shipped on that basis. Its three sites
+(`.mgrid-cut-label`, `.offsvc-pending`, `.pending-row::after`) are small metadata labels.
+
+### 19b. A HEX IS NOT ALWAYS A TOKEN — the AEW carve-out
+
+**`data/brands.json` AEW is `#F0C850`, byte-identical to the OLD `--gold`, and it is NOT a use of
+that token.** It is a brand constant, recorded in `docs/design/program-card-design-v1.md` as "the
+non-red proof against the all-red cluster", and it paints AEW's card wash, seam and endcap bar.
+**A find-and-replace on that hex silently repaints a brand.** AEW keeps `#F0C850`; its
+`color_source` now says why. The same constant is asserted three times in
+`web/test/programs.test.mjs`, and those assertions correctly still pass.
+
+**The trap was named in advance by the prompt and therefore never sprang.** No working rule was
+manufactured for it — see §20e.
+
+### 19c. The banner wordmark was never on the token — THE FINDING OF STAGE 4
+
+`BannerMobileV2.jsx` and `BannerDesktopV2.jsx` paint "MYSPORTS TV" with a four-stop **SVG gradient**,
+and the same stops live in `banner-mobile-v2.json` / `banner-desktop-v2.json`. **A token change
+reaches none of it.** Left alone, the app would have migrated to metallic gold everywhere *except the
+largest, most prominent gold on every screen*. Handoff §4 names SVG fills explicitly in its audit list.
+
+```
+#FBE59A -> #E0D1A5  highlight     #E4B646 -> #B39A69  mid
+#F2CD62 -> #C6AF7A  primary       #D2A038 -> #8C7650  deep
+#F3CC5A -> #C6AF7A  primary  — READ FIRST: it is the wordmark's own blurred glow copy,
+                               drawn behind the gradient text at opacity .55, not a separate element.
+```
+
+**NOT the wordmark and therefore NOT touched:** the `rgb(255,170,60)` glow ellipses and the
+`rgb(255,150,40)` TV halo. Those are handoff **§7's charcoal-spotlight background**, which §7 says to
+retain and keep recognizable. They are warm on purpose.
+
+**Geometry is untouched and was measured, not asserted** — artboard, type size, letter-spacing, the
+6px safe-area absorption, every coordinate. The control stack at 360/390/430/1440 and the banner
+artwork's box at those widths crossed with insets 0/47/59 both diff EMPTY before and after. The
+component edit is additionally guarded in code: reversing the five stops reproduces the original file
+byte for byte.
+
+**This recolours the app's signature element and is open to Joe's veto.** Reverting is one commit.
+
+### 19d. Segmented controls, and the dimension rule
+
+Handoff §6's restrained gradient `#D8C595 → #C6AF7A → #B39A69` with a 1px inset top highlight,
+applied as **`background-image` and `box-shadow: inset` precisely because neither participates in
+layout**. §6 says preserve current dimensions; the 31px button inside its 33px box and the 8px gaps
+were set by prompt 51 against Joe's explicit instruction. Dark text on the LIGHTEST stop `#D8C595` is
+**11.34:1** against `--spot-3` — the contrast case §6 creates, clear of AA.
+
+**Sport tiles (handoff §14) were NOT changed.** `.spbtn[data-active]` already renders a charcoal
+plate with a gold border and a gold label, which IS §14's ask, and it migrated for free.
+**§14's inversion stays** — prompt 25 measured five of ten league marks failing on a gold plate, and
+that finding holds against the new gold. No gold fill was re-introduced and no halo was added: the
+quiet active state is a deliberate cost (§14) and adding unrequested weight to it is scope creep.
+
+### 19e. LIVE STAYS GREEN — Cowork's call, open to Joe's veto
+
+Handoff §11 asks for a red LIVE dot and label under the rule *red = event state, gold = user action*.
+**This app does not work that way and was not changed to.** `--live` is `#7fd1a3`, a green. `--alert`
+is `#e8918d`, a soft red, and **it already means "unavailable / out of market"** on the
+broadcast-access line and marks errors. Making LIVE red would collide with the colour that currently
+means *you cannot watch this* — the opposite meaning.
+
+`--live` and `--alert` are untouched. **§11's actual intent — that LIVE must not be gold, and that
+gold must mean action rather than state — is satisfied as built.** If Joe wants red, it is a
+`--live` / `--alert` recolour done together, and that is a separate prompt.
+
+### 19f. The card gradient stays `#31363d → #1e2126` — Cowork's call, open to veto
+
+The rendering flattens the card surface to `#2A2A2A`. **Prompt 25 measured `--dim` and `--faint`
+against BOTH ends of that gradient** to land the current three-step contrast ramp, and the `--dim`
+comment records exactly how little headroom is left ("the third step dies"). Flattening the gradient
+invalidates those measurements. Handoff §8 itself says "do not force these exact values if they
+conflict with the existing design system. Audit first."
+
+### 19g. Borders: audited, and NOT changed
+
+§9 asks the normal card edge to move toward `rgba(255,255,255,0.07)`. **The app has no white-alpha
+border at all** — its edges are `--line` and `--line-soft`, and `--hairline` turns out to have **zero
+consumers**. Measured, `rgba(255,255,255,0.07)` composites to ~1.23:1 on the card grounds while
+`--line` already runs 1.43–1.52:1: a 0.014–0.019 luminance delta on a sub-1.5:1 hairline, which is
+not "demonstrably heavier". Moving `--line` would drag every border in the app against prompt 25 and
+34's tuning, and `--line-grid` exists specifically so the grid can be firmer without that. **No
+border was recoloured.** The two gold edges already at exactly 0.55 now read `var(--gold-line)` —
+zero pixel change.
+
+`.mtray-pill[data-kind='rivalry']`'s `#3a3218` plate was audited too: recomputed in the new family's
+hue and saturation at its own lightness it is `#393019`, under 2/255 per channel. Invisible at 16%
+lightness. Kept.
+
+### 19h. `prefers-reduced-motion` — the omission in handoff §16
+
+§16 authorizes restrained motion at 120–220ms and **says nothing about reduced motion. That is not
+optional.** The app carried no transition and no animation at all before this, so everything added —
+a 160ms selected-state transition, a brightness press on segments, a 0.97 scale press on tiles, a
+desktop-only hover brighten — lives inside `@media (prefers-reduced-motion: no-preference)`. The
+guard is a WRAPPER rather than a `reduce` block that undoes things, because there is then nothing to
+undo. Only non-reflowing properties are touched, so no row height or gap can move.
+
+### 19i. Where gold carries INFORMATION rather than selection — REPORTED, NOT CHANGED
+
+Handoff §5: white = primary sports information, gray = secondary metadata, **gold = selection, action
+and emphasis**. Audited against the 23 `var(--gold)` sites; these carry state or information rather
+than selection, and **Joe decides each one individually**:
+
+| site | what it paints | reading |
+|---|---|---|
+| `.pill[data-tone='final']`, `.mslot-state[data-tone='final']` | the word FINAL | event STATE, not selection — the same category §11 assigns to red |
+| `.maxis-label` | the grid's hour axis (NOON, 1PM…) | information; also contract M5, amended this run |
+| `.daycol li .t` | a time in the day column | information |
+| `.mtray-pill[data-kind='rivalry']` | a rivalry badge | arguably emphasis, arguably information |
+| `.mgrid-cut-label`, `.offsvc-pending`, `.pending-row::after` | cut / market-pending labels (`--gold-dim`) | state |
+
+**Two sites are settled and did not move:** the **gold kickoff time** (`.mtime`) stays gold, Joe
+ruled on it directly; and `.mname .mrank` / `.mname .mat` take the BAND'S ink rather than a token,
+because gold is invisible on a gold team band (the C4 rule). Unaffected by the new value.
+
+### 19j. Explicitly out of scope
+
+**The gold migration is WEB APP ONLY.** `scripts/render_day.py` and `docs/rendering-contract.md` use
+`#F0C850` for the archived desktop renderer's marquee plate, rivalry pill and mock subtitle. **That is
+a separate colour system with its own contract, tuned for a light printed ground.** Re-tuning it is
+its own job. `docs/design/banner/banner-and-navbar.css` is archival and was reported, not changed.
+`docs/prompts/*`, `docs/feature-study/*` and past measurements were not edited — a filed prompt is
+never rewritten to look right in hindsight.
+
+### 19k. What was HELD
+
+- **Watch Live** (handoff §10 and Priority 5) — not built. It needs a launch destination and a card
+  affordance, which is a feature rather than a colour pass.
+- **Sticky-header styling** (§15) — rides phase 4 with the desktop live grid, per R5.
+- **The on-card My Team gold treatment** (§12) — **ruled out.** My Team stays at BAND level; prompt
+  51 stage 4a retired the page-level section precisely so there is one mechanism, not two.
+- **Translucency / glass** (§17, Priority 8) — not applied. §17 itself says "use sparingly", and
+  nothing in the current chrome was measured as needing it.
+
+---
+
+## 20. THE NETWORK RAIL, AND THE END OF THE SERIES SUB-FILTER — 2026-09-06, prompt 52
+
+Both reversals in one section because **both overturn earlier entries in this register.**
+
+### 20a. The series sub-filter is retired — §9 AND §16 ARE SUPERSEDED
+
+> Joe: "Remove the Cup / O'Reilly / Truck buttons that render on some screens to sort NASCAR races.
+> Simply allow all NASCAR races to appear when they should instead of having them filtered by series."
+
+**§9** recorded Joe choosing individual sport chips **with** a NASCAR series sub-filter, explicitly in
+preference to grouped chips. **§16** then placed that sub-filter as a **second row beneath the tiles**,
+specifically so the tile row's frozen geometry would not have to move. Both were deliberate. Both are
+now superseded, and forward pointers were added at §9 and §16 so a future reader arriving at the old
+sections is not misled. **Neither original text was rewritten.**
+
+**Out:** `SeriesFilter` and its call site, `seriesFilter()` in `queries.js`, the `series` URL
+parameter, `NASCAR_SERIES` / `SERIES_LABEL` / `resolveSeriesParam` / `showsNascar`, and the
+`.seriesrow` / `.serbtn` CSS.
+
+**`programs.series` STAYS IN THE DATABASE.** No migration, no DML, no schema change. Migration 0015
+keys a race session on `(sport, coalesce(series, ''), start_at, title)`; **the `coalesce` exists
+because NASCAR carries a series and IndyCar does not**, and prompt 48 measured that without it two
+loads of the same 18 IndyCar races produced 36 rows. Dropping or ignoring the column would reopen a
+duplication bug that has already been fixed once. The column is still SELECTed in `PROGRAM_SELECT`,
+just never filtered on. A read before and after confirms **98 rows with a non-null series, unchanged**.
+This is the same shape §16 used: a presentation change with no schema change.
+
+**A stale `?series=cup` link renders, ignored rather than erroring** — verified at
+`/?day=2026-02-21&sport=racing&series=cup`, HTTP 200, both races present. Old bookmarks keep working.
+
+**Verified on real multi-series days.** Only **4 of 93** loaded race viewing-days carry more than one
+series — the 03:00 ET cutover puts a Friday-night Truck race and a Saturday O'Reilly race on
+different viewing days, which is why grouping by the UTC date misleads. On `2026-02-21` (Truck "Fr8
+Racing 208" + O'Reilly "Bennett Transportation & Logistics 250") and `2026-05-23`, both series render
+in LIST and GRID, under the Racing tile and under ALL SPORTS.
+
+**The tile row is unchanged:** 8 tiles, 6px internal gap, 44px tall at 360/390/430. Removing the
+second row shifted nothing above it.
+
+**Tests were re-based, not weakened:** the round-trip case moved from `{sport:'nascar',series:'cup'}`
+onto the sport token alone, and two new tests pin the deletion and the stale-link behaviour.
+
+### 20b. The rail — the diagnosis, which is not what the symptom looks like
+
+> Joe: "NBC renders much smaller than FOX."
+
+**NBC was at the rail's MAXIMUM height** — 30px, tied for the tallest thing in the column — while FOX
+drew at 61 × 25.8. **The eye weighs ink AREA, not height**, and FOX carried 71% more of it.
+
+**The mechanism was not the one the brief described.** The brief attributed it to `max-width: 100%`
+overriding `hf` for eleven of twenty-eight marks. The truth is stronger: **`hf` never reached the rail
+at all, for any mark.** `MobileGrid`'s rail cell called `markStyle(row.id, 42).src` and used **only
+`.src`** — the `<img>` carried no height attribute — so
+`.mrail-mark img { max-width:100%; max-height:100%; object-fit:contain }` fit every mark into a 61 × 30
+box on its own. Measured live in Chromium: every rail mark reported `height` = null.
+
+Across the suite the ink-area spread was **3.00×**, HBO Max 590px² to Apple TV 1,772px².
+
+### 20c. The trade, and why Joe's two asks could not both be met
+
+Holding every mark at NBC's ~900px² needs a 75px content box — **a rail of 83px, fourteen pixels
+WIDER**, because the widest wordmark sets the ceiling for everyone. Narrowing the rail forces the
+uniform size down. Shown the measured trade table, **Joe ruled 60px / 600px² on 2026-09-06.**
+
+| | rail | content box | uniform target | spread | visible schedule at 390 |
+|---|---|---|---|---|---|
+| before | 69px | 61px | none — CSS fit box | 3.00× | 295px |
+| **Joe's ruling** | **60px** | **52px** | **600px²** | **1.40×** | **304px (+9px, +3.1%)** |
+| "uniform at NBC's size" | 83px | 75px | 900px² | 1.00× | 281px (−14px) |
+
+`web/lib/marks.js` `railMark()`: `H = min( sqrt(600/a), 52/a, 30 )`, with `a` from the manifest's new
+`w`/`h` fields. The manifest went from `[{slug, hf}]` to `[{slug, hf, w, h}]` **without re-running the
+build** — every `hf` byte-identical, no slug added or dropped. `markStyle()` is unchanged: its other
+two callers are the sport band and `GameDetail`, different surfaces, and Joe scoped this to the GRID.
+
+**The two that could not reach the target** were ESPN2 (aspect 5.23 → 9.9px) and HBO Max (6.30 →
+8.2px), both already the smallest marks in the column. **Stage 7 closed HBO Max** with the 2025
+stacked lockup (aspect 2.14), bringing it to 600px² **with no code change** — the fit recomputes from
+the manifest, which is the point of making it data-driven. **27 of 28 now on target, spread 1.16×.**
+**ESPN2 is not closed and there is no compact art to close it with:** its brand IS a wide wordmark,
+and the only lockup available carries the same 5.28 aspect. The `52/a` term stops binding at aspect
+**4.51** (52²/600), not the 4.3 the brief cited.
+
+### 20d. The tripwire moved by exactly 9px, on purpose
+
+`.mgrid-canvas` is `calc(var(--rail-w) + {scale.width}px)`, so narrowing the rail moves `scrollWidth`
+and nothing else:
+
+| | before | after |
+|---|---|---|
+| CFB `2026-09-05` | 64 blocks / {240, 223, 205, 136} / **1282** | 64 / {240, 223, 205, 136} / **1273** |
+| MLB `2026-09-03` | 3 blocks / {228} / **577** | 3 / {228} / **568** |
+
+**Block counts and block widths are unchanged.** Those are the parts that would signal a real
+regression; if either ever moves it is a regression, not this re-baseline. Mobile Grid Addendum
+**v1.9 → v2.0** amends **M4** with the diagnosis, the ruling and the new baselines, and **M5**'s gold
+follows §19's token. M21's own recorded 1282/577 is **left as measured**, with the supersession noted
+beside it — a past measurement is not edited to look right in hindsight.
+
+### 20e. Two footguns in the marks pipeline, closed
+
+- **`build_web_marks.py --only` does not update one entry.** It filters `todo`, builds `areas` from
+  the subset, takes the ink-area **median over that subset**, and writes a manifest containing only
+  those slugs — so `--only espn2` replaces `manifest.json` with a one-line file. `main()` now refuses
+  `--only` without `--out-dir`.
+- **The ink-area target is now FROZEN at `NET_TARGET = 11646.499633789062`.** It used to be
+  `statistics.median` over whatever had just been processed, so replacing ONE mark's art silently
+  renormalized all 28 — and dragged `build_brand_marks.target()` with it, because that function
+  recovers this number from the frozen manifest to size PROGRAM marks against the networks. Measured:
+  the HBO Max swap would have moved the median 11646 → 10731, −7.9%. `--recompute-target` re-derives
+  it deliberately and says in its help that doing so renormalizes the suite. The value itself was
+  recovered empirically: rebuilding to a temp directory with the ORIGINAL sources returned the
+  manifest and all 28 PNGs byte-identical.
+- Both scripts' manifest writers now pass `newline="\n"` — they were live **working rule 29**
+  violations on tracked files.
+
+**No new working rule was written for the AEW hex.** The candidate was *"a colour that appears in a
+token and in a brand constant is not the same colour twice"* — but the trap never sprang, because
+prompt 52 named it in advance and the code was written around it from the start. §19b records it as a
+hazard rather than a rule, and manufacturing a rule from a trap that was avoided would misrepresent
+the run. **If a rule 30 is ever written from this run, the stronger candidate is the frozen-target
+one above:** a normalization median computed fresh on every build means any single art change
+silently resizes the whole suite.
+
+### 20f. Two studio marks were a WIRING bug, not a sourcing problem
+
+`web/public/programs/` had held `big-noon-kickoff.png` and `college-gameday.png` plus a manifest with
+real ink-area factors since 2026-09-02, and **`git grep` found nothing under `web/` referencing the
+folder.** Two of the four shows Joe named as "missing logos" only ever needed `mark_dark` set.
+**Only `mark_dark` is read** (`ProgramCard.js:73`, `MobileGrid.js:764`); `mark` is read by nothing but
+tests, so it stays null — program brands publish one file, already dark-processed, where league brands
+publish a raw/`_dark` pair. Wiring reaches `scripts/render_day.py` too, which shares
+`data/brands.json` and now embeds the art as a data URI.
+
+`gameday` keeps `#F96302` (Joe's Home Depot ruling); re-deriving from the mark gives `#D11222`, which
+is exactly "the mark-derived red" that ruling replaced — a check on the method, not a reason to move.
+`bignoon` is **no longer provisional**: its note claimed "no mark in the tree; FOX's cached wordmark
+is monochrome, so no colour to derive" and that was **false** — the mark was in the tree and is 70.9%
+saturated pixels. Colour derived as `#33B1FF` by the rule that derived `indycar`, with one difference
+recorded in the file: `indycar` came from a RAW league mark, while the only Big Noon art is the
+DARK-CONTEXT build whose recipe lifts the FOX blue. The hue is FOX's; the lightness is the recipe's.
+
+### 20g. Art sourcing — the standing instruction Joe lifted, FOR ONE RUN ONLY
+
+Prompts 25, 34 and 38 all carry *"if the source art is not in `assets/`, stop and report — sourcing
+art is Cowork's job, not this prompt's."* **Joe lifted that for prompt 52 stage 7 only**, so the logos
+could land unattended. **It is not a general change; the next prompt inherits the old rule unless it
+says otherwise.**
+
+**Five of eight** art-less studio shows landed: `nfltoday`, `fnia`, `nflcountdown`, `mnfcountdown`,
+`foxnflsunday`. **Three did not:** `foxnflkickoff` (the only findable art is the generic Fox Sports
+wordmark, which is the NETWORK, not the show), `tnfpregame` and `netflixpregame` (no distinct
+branding, and zero loaded rows). All went through `scripts/build_brand_marks.py` — never a hand-edited
+PNG, never a hand-edited manifest — and **provenance is mandatory and recorded per row**, in the
+script's `PROGRAMS` table and in the published manifest's new `source` field.
+
+`fox-nfl-sunday` is a **retired lockup**, shipped and flagged per the sourcing rules. `fnia` has art
+but **keeps its provisional colour**: after the dark lift only 1.3% of pixels are saturated, and they
+are the NBC peacock, which is multicolour by design. That breaks the old invariant *"every provisional
+brand is one with no mark"* for a real reason, and the test was re-based onto what still holds — a
+provisional brand carries the neutral.
+
+**A pre-existing drift found while checking, not caused here:** the published program PNGs already
+disagreed with their own manifest — `big-noon` ink area re-measures at 10609 against the recorded
+10085 (5.2%), `college-gameday` 7975 against 7947. Any rebuild was always going to move those numbers.
