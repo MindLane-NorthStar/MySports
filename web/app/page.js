@@ -541,8 +541,18 @@ export default async function HubPage({ searchParams }) {
         ) : null}
 
         <div id="all-today">
+          {/* JOE, 2026-09-06: "I only want list cards on list view and only grids on grid view."
+              `grid={P.isGrid}` rather than a bare `grid`.
+
+              THIS SUPERSEDES 05 SECTION 11's PAGE ORDER on this point, and the reason is chronology:
+              §11 put the grid INSIDE the Today list on 2026-09-03, when that was the ONLY way to
+              reach a grid - the LIST | GRID toggle did not exist until prompt 50 on 2026-09-06. The
+              grid-in-the-list is a pre-toggle artefact, not a design anyone chose over the toggle.
+
+              It also settles the disagreement prompt 54 left behind: day mode's LIST showed a grid
+              and week mode's did not. The toggle now means one thing in both modes. */}
           <Listing games={rows} standingsRows={standingsRows} rankingsRows={rankingsRows}
-                   day={day} sport={P.sport} grid bands={!P.isGrid} gridOnly={P.isGrid}
+                   day={day} sport={P.sport} grid={P.isGrid} bands={!P.isGrid} gridOnly={P.isGrid}
                    nowMinute={nowMinute} floatFavorites={!P.isMine} />
         </div>
       </div>
@@ -554,14 +564,18 @@ export default async function HubPage({ searchParams }) {
 
       {!error && rows.length ? <DataAsOf day={day} today={today} overlay={overlay} /> : null}
 
-      {/* LIST VIEW keeps the archived grid where it has always been - at the FOOT, after the list.
-          In GRID VIEW it is promoted to the top instead (above); rendering it in both places would
-          put two copies on a desktop grid page. */}
-      {!P.isGrid && P.sport && !error && games.length ? (
-        <Suspense fallback={null}>
-          <ArchivedGrid sport={P.sport} day={day} />
-        </Suspense>
-      ) : null}
+      {/* THE ARCHIVED GRID HAS LEFT LIST VIEW TOO (prompt 55 stage 1).
+       *
+       * Prompt 53 stage 3 deliberately kept it at the FOOT of the list, where it had always been,
+       * and promoted it to the top in GRID VIEW. Joe's ruling retires that: "I only want list cards
+       * on list view and only grids on grid view." A PC grid under a desktop list is still a grid on
+       * list view, and this stage's acceptance says LIST is zero grids AT BOTH WIDTHS.
+       *
+       * NOTHING IS LOST. The archived grid is exactly what desktop GRID VIEW promotes to the top of
+       * the page, one click away - which is the design prompt 53 built and the reason the toggle
+       * exists at all. It is now reachable in one place instead of two.
+       *
+       * The block above renders it for GRID VIEW; there is no longer a second call site. */}
     </main>
   );
 }

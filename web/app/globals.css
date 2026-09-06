@@ -2016,18 +2016,28 @@ input:focus-visible {
   .deskgrid-only { display: none; }
 }
 
-/* 05 SECTION 11, THE PAGE ORDER. DOM order is YOUR TEAMS -> bands -> grid, which is what desktop
- * reads. On a phone the grid moves between the section and the bands, with CSS `order` rather than
- * a second DOM tree or a JS width state - every breakpoint in this app is CSS-gated at 699px
- * precisely so there is no server/client hydration mismatch.
+/* 05 SECTION 11's PAGE ORDER, and what is left of it.
  *
- * Negative orders rather than positive ones: the bands are a .map() of unknown length and would all
- * need numbering otherwise. Leaving them at the default 0 and pulling two known elements in front
- * of them is the same result with two rules. */
+ * §11 put the grid BETWEEN the favourites section and the bands on a phone, ordered in CSS rather
+ * than with a second DOM tree or a JS width state. THAT INTERLEAVING IS GONE (prompt 55 stage 1,
+ * Joe: "I only want list cards on list view and only grids on grid view"): the grid never shares a
+ * page with the bands any more, so `.listing > .mgrid-only { order: -1 }` had nothing left to order
+ * and was removed rather than left as a rule that reads as if it still does something.
+ *
+ * §11 IS SUPERSEDED ON THIS POINT ONLY, and the reason is chronology - it was ruled 2026-09-03, when
+ * putting the grid inside the list was the only way to reach a grid at all. The LIST | GRID toggle
+ * did not exist until prompt 50 on 2026-09-06.
+ *
+ * `.yourteams`'s order is KEPT and is now also very likely vestigial: prompt 51 stage 4a retired the
+ * page-level YOUR TEAMS section, so the class only reaches a SportBand carrying a `sectionLabel`,
+ * which is the FLAT arrangement - one child, nothing to order against. Left in place because
+ * removing it is a separate tidy-up nobody asked for, and reported instead.
+ *
+ * `.listing`'s flex is kept for the same reason: its children stack identically as blocks, so
+ * changing it is a change with no benefit and a small risk. */
 .listing { display: flex; flex-direction: column; }
 @media (max-width: 699px) {
   .listing > .yourteams { order: -2; }
-  .listing > .mgrid-only { order: -1; }
 }
 
 /* The PC grid is drawn at 2862px for a 1398px-plus page. Crushing it into a ~950px column was a 3x

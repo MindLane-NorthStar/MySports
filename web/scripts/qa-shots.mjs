@@ -83,7 +83,12 @@ for (const dev of DEVICES) {
     hasTouch: true,
   });
   const page = await ctx.newPage();
-  await page.goto(`${base}/?day=2026-09-03&sport=mlb`, { waitUntil: 'networkidle' });
+  // THE GRID LIVES IN GRID VIEW NOW (prompt 55 stage 1, Joe: "I only want list cards on list view
+  // and only grids on grid view"). This block used to load a bare day URL because 05 section 11 put
+  // the grid INSIDE the list - a pre-toggle arrangement, ruled 2026-09-03, three days before the
+  // LIST | GRID toggle existed. The M2/M4/M6/M11 assertions below are about the GRID and are
+  // unchanged; only the URL that reaches one moved.
+  await page.goto(`${base}/?day=2026-09-03&sport=mlb&view=grid`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(500);
 
   const hasGrid = await page.locator('.mgrid').count();
