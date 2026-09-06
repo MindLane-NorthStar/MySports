@@ -13,7 +13,8 @@
 import Listing from './Listing.js';
 import { BAND_TITLE } from '../lib/bandstate.js';
 
-export default function FirstBand({ band, standingsRows, rankingsRows, day, sport }) {
+export default function FirstBand({ band, standingsRows, rankingsRows, day, sport,
+                                    floatFavorites = true }) {
   if (!band) return null;
 
   return (
@@ -35,12 +36,16 @@ export default function FirstBand({ band, standingsRows, rankingsRows, day, spor
           holds.
         </p>
       ) : (
+        /* `floatFavorites` is forwarded so MY TEAMS can switch the in-band float off here too.
+           Item 9 falls out of the same change: a favourite hoisted into this band must not be
+           labelled "Your teams" HERE and again in its own sport band below. */
         <Listing
           games={band.rows}
           standingsRows={standingsRows}
           rankingsRows={rankingsRows}
           day={day}
           sport={sport}
+          floatFavorites={floatFavorites}
           headingClass="favlabel"
         />
       )}

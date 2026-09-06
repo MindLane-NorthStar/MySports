@@ -25,9 +25,28 @@ function anyInFlight(games) {
   });
 }
 
+/**
+ * `floatFavorites` - WHY MY TEAMS TURNS IT OFF (prompt 53 stage 6).
+ *
+ * The float tests `isFavorite` (does this row carry one of Joe's thirteen clubs?) while the SCOPE
+ * tests `isMine` (does this row belong in MY TEAMS at all?). They are deliberately different
+ * questions - a race has no team to be one of - and under `scope=mine` that difference surfaces as
+ * a tautology:
+ *
+ *   an NFL or CFB band contains ONLY favourites, so EVERY row floats under a "Your teams" label
+ *   with a trailing hairline separating a list from nothing;
+ *   a NASCAR band is in scope via TEAMLESS_SPORTS but fails `isFavorite`, so nothing floats and no
+ *   label renders at all.
+ *
+ * Measured on 2026-09-05 under MY TEAMS: College Football (4 rows) and MLB (1) both fully labelled,
+ * NASCAR, UFC and AEW unlabelled - one page, some bands entirely labelled and others entirely not,
+ * for a reason invisible to the reader. Under MY TEAMS the PAGE is the label, so the band-level one
+ * is noise. Under ALL GAMES it is exactly the marker it was built to be and is unchanged.
+ */
 export default function Listing({ games, standingsRows, rankingsRows, day, sport, generatedAt,
                                   showDay = false, grid = false, bands = false, heading = null,
-                                  headingClass = 'favlabel', nowMinute = null, gridOnly = false }) {
+                                  headingClass = 'favlabel', nowMinute = null, gridOnly = false,
+                                  floatFavorites = true }) {
   const [open, setOpen] = useState(null);
 
   /**
@@ -132,12 +151,15 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
               and the count line is page-level now, so the reason it had to live inside the band is
               gone. Day mode passes no heading and is unaffected. */}
           {heading ? <p className={headingClass}>{heading}</p> : null}
-          {/* No page-level section. `floatFavorites` is left at its DEFAULT of true, which is D6's
-              in-band float - the hairline and the YOUR TEAMS micro-label inside each sport band.
-              Prompt 50 passed false here because the page-level section was doing that job. */}
+          {/* D6's in-band float - the hairline and the YOUR TEAMS micro-label inside each sport
+              band. Prompt 50 passed false here because a page-level section was doing that job;
+              that section was retired in prompt 51 stage 4a, so this is the only mechanism now.
+              `floatFavorites` comes from the caller because MY TEAMS has to switch it off - see
+              the note on the prop. */}
           {grouped.map(([s, rows]) => (
             <SportBand key={s} sport={s} label={SPORT_LABEL[s] || s} games={rows}
-                       standings={standings} rankings={rankings} showDay={showDay} onOpen={setOpen} />
+                       standings={standings} rankings={rankings} showDay={showDay} onOpen={setOpen}
+                       floatFavorites={floatFavorites} />
           ))}
         </>
       ) : (
@@ -155,7 +177,8 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
         // this component, which is why the count could only sit below it.
         <SportBand sport={sport} label={null} games={games} standings={standings}
                    rankings={rankings} showDay={showDay} onOpen={setOpen} showHeader={false}
-                   sectionLabel={heading} headingClass={headingClass} />
+                   sectionLabel={heading} headingClass={headingClass}
+                   floatFavorites={floatFavorites} />
       )}
 
       {/* THE MOBILE GRID IS MOBILE-ONLY. It used to render at every width, so a desktop MLB day whose

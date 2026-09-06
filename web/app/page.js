@@ -313,7 +313,7 @@ export default async function HubPage({ searchParams }) {
                       With a sport selected the flat shape is retained exactly as before. */}
                   <Listing games={grouped[d]} standingsRows={standingsRows} rankingsRows={rankingsRows}
                            day={d} heading={shortDay(d)} headingClass="weekday-head"
-                           bands={!P.sport} sport={P.sport} />
+                           bands={!P.sport} sport={P.sport} floatFavorites={!P.isMine} />
                 </div>
               ) : null
             )}
@@ -438,13 +438,13 @@ export default async function HubPage({ searchParams }) {
       <div className="today-split">
         {!error && rows.length && !P.isGrid ? (
           <FirstBand band={band} standingsRows={standingsRows} rankingsRows={rankingsRows}
-                     day={day} sport={P.sport} />
+                     day={day} sport={P.sport} floatFavorites={!P.isMine} />
         ) : null}
 
         <div id="all-today">
           <Listing games={rows} standingsRows={standingsRows} rankingsRows={rankingsRows}
                    day={day} sport={P.sport} grid bands={!P.isGrid} gridOnly={P.isGrid}
-                   nowMinute={nowMinute} />
+                   nowMinute={nowMinute} floatFavorites={!P.isMine} />
         </div>
       </div>
 
