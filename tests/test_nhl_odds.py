@@ -35,21 +35,23 @@ from adapters.common import et_date
 from adapters.nhl import NHL_TO_ESPN, NHL_TO_ESPN_SCOREBOARD, build_fixture, espn_abbrev
 
 ROOT = Path(__file__).resolve().parents[1]
-RAW = ROOT / "artifacts" / "validation" / "nhl_2026_2026-10-01_raw.json"
-TEAMS = ROOT / "artifacts" / "validation" / "nhl_2026_teams.json"
+# tests/fixtures/, NOT artifacts/ - artifacts/ is gitignored, and tests/test_scores.py records what
+# that cost last time: a clean checkout skipped the mappers and still reported OK. This file is
+# already committed and already used by test_scores.py; it is the same 2026-10-01 window, 47 games.
+RAW = ROOT / "tests" / "fixtures" / "nhl_schedule_raw.json"
 
 
 def _raw() -> dict:
+    if not RAW.exists():
+        raise FileNotFoundError(f"tracked fixture missing: {RAW}")
     return json.loads(RAW.read_text(encoding="utf-8"))
 
 
-def _teams() -> list[dict]:
-    return json.loads(TEAMS.read_text(encoding="utf-8"))
-
-
 def _build(espn_odds=None):
+    # teams=[] on purpose: build_fixture falls back through `by_id.get(tid, {})` for every field it
+    # takes from the directory, so the odds join is exercised without a 68KB team file.
     return build_fixture(_raw(), ROOT, season=2026, anchor_date="2026-10-01",
-                         teams=_teams(), espn_odds=espn_odds)
+                         teams=[], espn_odds=espn_odds)
 
 
 class TwoMapsForTwoEndpoints(unittest.TestCase):
