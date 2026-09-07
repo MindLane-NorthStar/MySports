@@ -1,0 +1,93 @@
+-- 0017 — one row per (game, book), so a refreshed line UPDATES instead of accumulating.
+--
+-- ============================================================================================
+-- PREPARED, NOT APPLIED. Prompt 57 stage 4 wrote this file and deliberately did not run it.
+-- Working rule 14's hard stop is "no direct Postgres connection, no writer credential, no DML",
+-- and this needs Joe's explicit approval before it is applied. Rule 27 applies when it is:
+-- check `gh run list --workflow schedule_refresh.yml -L 1` first, and never run two at once.
+-- ============================================================================================
+--
+-- WHY THIS EXISTS. `0003_games.sql:146` declares `unique (game_id, provider, fetched_at)`, and
+-- `pipeline/load.py:259-261` upserts against exactly that target with an EMPTY update list.
+-- `pipeline/db.py:149` compiles an empty update list to `ON CONFLICT ... DO NOTHING`. Meanwhile
+-- every adapter stamps a fresh `fetchedAt` on every run - `adapters/espn.py:127` calls
+-- `now_et_iso()`, and the CFB and NHL blocks added by prompt 57 do the same.
+--
+-- So the conflict target can never match: the third column is different every time. The upsert
+-- has never once updated a row. It has only ever INSERTED, one row per priced game per refresh,
+-- growing daily since the workflow went daily on 2026-09-03.
+--
+-- MEASURED 2026-09-07, over PostgREST anon reads (rule 14 permits those, and rule 19's paginating
+-- restAll was used so the 1000-row cap could not silently truncate the count):
+--
+--     total game_odds rows                 471
+--     distinct game_id                     379
+--     worst single game                    nfl-401872658, 5 rows
+--     distinct (game_id, provider) pairs   392
+--     pairs carrying MORE than one row      32
+--     surplus rows                          79
+--     providers present                    DraftKings, FanDuel, BetMGM
+--
+-- THE EXISTING DUPLICATES VIOLATE THE NEW CONSTRAINT, so this file cannot simply be applied: 32
+-- pairs carry 79 surplus rows between them. The dedupe is below, COMMENTED OUT, because rule 6 is
+-- additive-over-destructive and deleting 79 rows is Joe's call and not a ride-along. Read it,
+-- decide, uncomment, then apply.
+--
+-- WHAT DOES NOT CHANGE IN THIS FILE. `pipeline/load.py` still names the OLD conflict target and
+-- must keep doing so until this is applied - shipping `(game_id, provider)` against a database
+-- with no such unique index fails every loader run with "there is no unique or exclusion
+-- constraint matching the ON CONFLICT specification". The loader change is a follow-up, after
+-- this lands, and prompt 57 stage 4 was explicit that it is out of scope.
+--
+-- AND THIS IS NOT URGENT. Prompt 57 stage 1 put `order=fetched_at.desc&limit=1` on the odds embed,
+-- so the card already reads the newest line no matter how many rows sit behind it. This is table
+-- hygiene, not a user-visible defect.
+
+begin;
+
+-- ---------------------------------------------------------------------------------------------
+-- STEP 1 (DESTRUCTIVE - REVIEW BEFORE UNCOMMENTING). Keep the newest row per (game_id, provider)
+-- and delete the rest. 79 rows on the 2026-09-07 measurement; re-count before running, because the
+-- daily refresh adds more every morning until this lands.
+--
+-- `id` breaks ties: it is `generated always as identity`, so the highest id is the most recently
+-- inserted row even when two share a `fetched_at` to the second - which the measured data does
+-- contain (nfl-401872658 carries 2026-09-01T03:58:14+00:00 and 2026-09-01T03:58:14.403644+00:00).
+--
+-- SELECT IT FIRST (rule 6 - SELECT and paste before you write):
+--
+--     select game_id, provider, count(*) as rows, min(fetched_at), max(fetched_at)
+--       from mysports.game_odds
+--      group by game_id, provider
+--     having count(*) > 1
+--      order by rows desc;
+--
+-- delete from mysports.game_odds o
+--  where exists (
+--        select 1 from mysports.game_odds n
+--         where n.game_id = o.game_id
+--           and n.provider = o.provider
+--           and (n.fetched_at, n.id) > (o.fetched_at, o.id)
+--  );
+
+-- ---------------------------------------------------------------------------------------------
+-- STEP 2. The new uniqueness. Additive: the old three-column constraint is KEPT, not dropped -
+-- it is implied by this one (anything unique on two columns is unique on those two plus a third),
+-- so it costs an index and removes nothing. Dropping it is a separate decision on a separate day.
+--
+-- This will fail with "could not create unique index" until step 1 has run.
+
+alter table mysports.game_odds
+  add constraint game_odds_game_provider_key unique (game_id, provider);
+
+-- ---------------------------------------------------------------------------------------------
+-- STEP 3, FOR THE FOLLOW-UP AND NOT FOR THIS FILE. Once the constraint exists,
+-- `pipeline/load.py`'s upsert becomes:
+--
+--     conflict target : "game_id, provider"
+--     update list     : ["spread", "total", "home_moneyline", "away_moneyline", "fetched_at"]
+--
+-- and `game_odds` stops growing. `spread_open` and `total_open` exist in 0003 and no loader has
+-- ever written them; they are left alone here.
+
+commit;
