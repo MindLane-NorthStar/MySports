@@ -40,7 +40,7 @@ const SLATE = {
 for (const c of FIXTURES.cases) {
   test(`fixture: ${c.name}`, () => {
     const games = c.sports.flatMap((s) => SLATE[s](c.day));
-    const r = bandState(games, new Date(c.now), POLICY, { dayLabel: 'Saturday, September 5' });
+    const r = bandState(games, new Date(c.now), POLICY);
     assert.equal(r.state, c.expect, `${c.name}: expected ${c.expect}, got ${r.state}`);
     assert.ok(BAND_STATES.includes(r.state));
     if (c.empty) {
@@ -51,16 +51,40 @@ for (const c of FIXTURES.cases) {
 }
 
 // --------------------------------------------------------------------------- the header
-test('the header states the viewing day AND the clock it used', () => {
-  const r = bandState(SLATE.cfb('2026-09-05'), new Date('2026-09-06T01:14:00Z'), POLICY,
-                      { dayLabel: 'Friday, September 4' });
-  assert.match(r.heading, /^Friday, September 4 · \d{1,2}:\d{2} (AM|PM) ET$/, r.heading);
+// R9, prompt 56. It read `${dayLabel} · ${clock} ET`; the picker two rows above the band already
+// shows that date, in those words, since prompt 50 retired the DATE heading this line replaced.
+test('R9: the header states the CLOCK IT USED, and nothing else', () => {
+  const r = bandState(SLATE.cfb('2026-09-05'), new Date('2026-09-06T01:14:00Z'), POLICY);
+  assert.equal(r.heading, 'as of 9:14 PM');
+  assert.doesNotMatch(r.heading, / ET$/,
+    'prompt 31 took ET off every clock in the app; the footnote carries it once');
+  assert.doesNotMatch(r.heading, /September|Friday|2026/, 'and the day is not repeated here');
 });
 
-test('the day is still named when there are no games (E10)', () => {
-  const r = bandState([], new Date('2027-01-10T20:00:00Z'), POLICY, { dayLabel: 'Sunday, January 10' });
+test('R9: the clock is still stated when there are no games (E10)', () => {
+  const r = bandState([], new Date('2027-01-10T20:00:00Z'), POLICY);
   assert.equal(r.empty, true);
-  assert.match(r.heading, /^Sunday, January 10 · /);
+  assert.equal(r.heading, 'as of 3:00 PM');
+});
+
+test('R9: R11 was CONSIDERED AND DECLINED - the subtext carries no fraction', () => {
+  // Joe weighed "2 of 14 today" beside the clock on 2026-09-06 and said no. Recorded as a test so
+  // it is not re-proposed as an improvement.
+  const r = bandState(SLATE.cfb('2026-09-05'), new Date('2026-09-06T01:14:00Z'), POLICY);
+  assert.doesNotMatch(r.heading, /of/);
+  assert.doesNotMatch(r.heading, /\d+\s*(of|\/)\s*\d+/);
+});
+
+test('the three band titles share ONE voice (prompt 56, Joe 2026-09-06)', () => {
+  // He asked for one and then ruled all three should match rather than leaving two connectors
+  // doing one job. The STATES are unchanged - these are names, not behaviour.
+  assert.equal(BAND_TITLE.tonight, 'Tonight');
+  assert.equal(BAND_TITLE.live, 'Live & Upcoming');
+  assert.equal(BAND_TITLE.finals, 'Finals & Tomorrow');
+  assert.deepEqual(BAND_STATES, ['tonight', 'live', 'finals'], 'three states, as 05 §D1b specced');
+  for (const s of BAND_STATES) {
+    assert.doesNotMatch(BAND_TITLE[s], /·|\//, 'no connector but the one they now share');
+  }
 });
 
 test('clockLabel is ET, not the runner\'s zone', () => {
@@ -78,7 +102,7 @@ test('ON NOW puts in-progress games first, then the next kickoffs', () => {
     game('cfb', day, 19, 30),
     game('cfb', day, 17, 0),
   ];
-  const r = bandState(games, new Date('2026-09-05T20:00:00Z'), POLICY, { dayLabel: 'x' });  // 16:00 ET
+  const r = bandState(games, new Date('2026-09-05T20:00:00Z'), POLICY);  // 16:00 ET
   assert.equal(r.state, 'live');
   assert.equal(r.rows[0].result_status, 'in_progress', 'what is on comes first');
   const rest = r.rows.slice(1).map((g) => g.id);
@@ -91,7 +115,7 @@ test('FINALS shows today\'s finals and then tomorrow\'s first games', () => {
   const games = [game('mlb', day, 19, 10, { result_status: 'final' })];
   const tomorrow = [game('mlb', '2026-09-04', 13, 10)];
   // 02:00 ET the next morning - past the last block, nothing live
-  const r = bandState(games, new Date('2026-09-04T06:00:00Z'), POLICY, { dayLabel: 'x', tomorrow });
+  const r = bandState(games, new Date('2026-09-04T06:00:00Z'), POLICY, { tomorrow });
   assert.equal(r.state, 'finals');
   assert.equal(r.rows.length, 2);
   assert.equal(r.rows[0].result_status, 'final');
@@ -100,14 +124,14 @@ test('FINALS shows today\'s finals and then tomorrow\'s first games', () => {
 test('a live game holds the band open past the window\'s close', () => {
   const day = '2026-09-03';
   const games = [game('mlb', day, 19, 10, { result_status: 'in_progress' })];
-  const r = bandState(games, new Date('2026-09-04T06:00:00Z'), POLICY, { dayLabel: 'x' });
+  const r = bandState(games, new Date('2026-09-04T06:00:00Z'), POLICY);
   assert.equal(r.state, 'live', 'a game still being played is not a "final"');
 });
 
 test('TONIGHT drops games that started before the window opened', () => {
   const day = '2026-09-05';
   const games = [game('cfb', day, 9), game('cfb', day, 15, 30)];
-  const r = bandState(games, new Date('2026-09-05T13:00:00Z'), POLICY, { dayLabel: 'x' }); // 09:00 ET
+  const r = bandState(games, new Date('2026-09-05T13:00:00Z'), POLICY); // 09:00 ET
   assert.equal(r.state, 'tonight');
   assert.deepEqual(r.rows.map((g) => g.id), ['cfb-1530']);
 });
@@ -115,8 +139,7 @@ test('TONIGHT drops games that started before the window opened', () => {
 test('a TBD kickoff sorts last and is never dropped for having no time', () => {
   const day = '2026-09-05';
   const tbd = { id: 'cfb-tbd', sport: 'cfb', canonical_kickoff_at_utc: null };
-  const r = bandState([game('cfb', day, 19, 30), tbd], new Date('2026-09-05T13:00:00Z'), POLICY,
-                      { dayLabel: 'x' });
+  const r = bandState([game('cfb', day, 19, 30), tbd], new Date('2026-09-05T13:00:00Z'), POLICY);
   assert.deepEqual(r.rows.map((g) => g.id), ['cfb-1930', 'cfb-tbd']);
 });
 
@@ -125,8 +148,8 @@ test('bandState is pure: same inputs, same answer, nothing mutated', () => {
   const games = SLATE.cfb('2026-09-05');
   const snapshot = JSON.stringify(games);
   const now = new Date('2026-09-05T17:30:00Z');
-  const a = bandState(games, now, POLICY, { dayLabel: 'x' });
-  const b = bandState(games, now, POLICY, { dayLabel: 'x' });
+  const a = bandState(games, now, POLICY);
+  const b = bandState(games, now, POLICY);
   assert.deepEqual(a.state, b.state);
   assert.deepEqual(a.rows.map((g) => g.id), b.rows.map((g) => g.id));
   assert.equal(JSON.stringify(games), snapshot, 'the input was mutated');
@@ -159,7 +182,7 @@ test('a slate that ends AT or AFTER 03:00 has not already finished', () => {
   };
   // asked at 6 PM ET on the day itself - inside the window, hours before the card
   const at6pm = new Date('2026-09-19T22:00:00Z');
-  const band = bandState([card], at6pm, policy, { dayLabel: 'Saturday' });
+  const band = bandState([card], at6pm, policy);
   assert.notEqual(band.state, 'finals', 'the evening has not finished');
   assert.equal(band.empty, false);
   assert.deepEqual(band.rows.map((r) => r.id), ['program-1']);
@@ -173,7 +196,7 @@ test('and the wrap does not stop an ordinary day from finishing', () => {
     id: 'g1', sport: 'cfb', result_status: 'final',
     canonical_kickoff_at_utc: '2026-09-19T17:00:00Z',        // 1:00 PM ET, closing at 4:30 PM
   };
-  const band = bandState([game], new Date('2026-09-19T22:00:00Z'), policy, { dayLabel: 'Saturday' });
+  const band = bandState([game], new Date('2026-09-19T22:00:00Z'), policy);
   assert.equal(band.state, 'finals', 'a 4:30 PM close is past by 6 PM');
   assert.deepEqual(band.rows.map((r) => r.id), ['g1']);
 });

@@ -71,20 +71,37 @@ const isFinal = (g) => FINAL_STATES.has(String(g?.result_status || '').toLowerCa
 /**
  * The band's state, its header text and the games it shows.
  *
+ * R9, prompt 56: THE HEADING IS THE CLOCK ALONE - `as of 7:12 PM`.
+ *
+ * It read `${dayLabel} · ${clock} ET` - "Friday, September 4, 2026 · 7:12 PM ET" - and prompt 46
+ * recorded Joe reconfirming that, because at the time the page heading read the bare word DATE and
+ * this band was the only place the viewing day was spelled out. THAT IS NO LONGER TRUE: prompt 50
+ * retired the DATE heading and the picker two rows above now shows the date in exactly those words,
+ * so the band was repeating what the reader had just read. Joe approved dropping the day half on
+ * 2026-09-06 and keeping the clock, which is the part a band that changes with the time must state.
+ *
+ * NO " ET" EITHER. Prompt 31 took that suffix off every clock in the app and the footnote in
+ * layout.js carries it once; this string was the one place it survived, and reintroducing it here
+ * would put the duplicate back.
+ *
+ * `dayLabel` IS GONE WITH IT. It fed nothing else, and a parameter callers keep passing that
+ * nothing reads is the exact shape of the `sectionLabel` fault R4 cleaned up in the same run.
+ *
  * @param {Array}  games     today's games, already the rows the page renders
  * @param {Date}   now       the request time - ALWAYS passed, never read from the clock here
  * @param {object} policy    render_policies (web/lib/policies.js), for prime_window_start
- * @param {object} opts      { dayLabel, tomorrow, timeZone }
+ * @param {object} opts      { tomorrow, timeZone }
  * @returns {{state, heading, rows, empty}}
  */
-export function bandState(games, now, policy, { dayLabel = null, tomorrow = [], timeZone = 'America/New_York' } = {}) {
+export function bandState(games, now, policy, { tomorrow = [], timeZone = 'America/New_York' } = {}) {
   const rows = Array.isArray(games) ? games : [];
   const win = primeWindow(rows, { policy, timeZone });
   const mins = nowMinutes(now, timeZone);
   const clock = clockLabel(now, timeZone);
-  const heading = dayLabel && clock ? `${dayLabel} · ${clock} ET` : dayLabel || null;
+  const heading = clock ? `as of ${clock}` : null;
 
-  // E10: a day with no games says so, and names the day. It does not pretend to be Tonight.
+  // E10: a day with no games says so. It does not pretend to be Tonight. (It named the day too
+  // until R9; the picker two rows above says which day this is.)
   if (rows.length === 0) {
     return { state: 'tonight', heading, rows: [], empty: true };
   }
@@ -155,9 +172,23 @@ function upcoming(rows, timeZone) {
   return byKickoff((Array.isArray(rows) ? rows : []).filter((g) => !isFinal(g)), timeZone);
 }
 
-/** The label the band's own heading uses for each state. */
+/**
+ * The label the band's own heading uses for each state.
+ *
+ * ALL THREE WERE RENAMED AS A SET, prompt 56, Joe's ruling of 2026-09-06. He asked for one and then
+ * ruled that all three should match rather than leaving two different connectors doing one job:
+ *
+ *   tonight  Tonight            -> Tonight            (unchanged - it never had a connector)
+ *   live     On now · Next up   -> Live & Upcoming
+ *   finals   Finals · Tomorrow  -> Finals & Tomorrow
+ *
+ * THIS SUPERSEDES 05 §D1b's wording, which named the states `On now / Next up` and `Finals ·
+ * Tomorrow`. The three STATES are unchanged and are still exactly the three D1b specced - only what
+ * they are called. The feature study and the prompt archive still quote the old names, correctly:
+ * they record what was decided when, and the register carries the supersession.
+ */
 export const BAND_TITLE = {
   tonight: 'Tonight',
-  live: 'On now · Next up',
-  finals: 'Finals · Tomorrow',
+  live: 'Live & Upcoming',
+  finals: 'Finals & Tomorrow',
 };

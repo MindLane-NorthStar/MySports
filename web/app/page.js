@@ -482,7 +482,9 @@ export default async function HubPage({ searchParams }) {
   // D1. Computed ONCE, here, from the request time - the page is force-dynamic, so this is the
   // clock the reader is actually looking at. It reaches the band as data; nothing recomputes it on
   // the client, which is what keeps a time-aware block out of the hydration path entirely.
-  const band = bandState(rows, now, policies, { dayLabel: longDay(day) });
+  // R9, prompt 56: no `dayLabel`. The band's subtext is the clock alone now - the picker two rows
+  // above already shows this date, in these words.
+  const band = bandState(rows, now, policies);
 
   // R8, prompt 56: THE EMPTY DAY POINTS AT A REAL ONE, and computes it only when it is empty.
   //
