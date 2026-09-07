@@ -252,6 +252,47 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
+// ------------------------------------------------ the collapsed header, list only (prompt 58)
+//
+// PROVED, NOT ASSERTED. The bar must be ABSENT FROM THE DOM in every grid view, not merely hidden:
+// `.mgrid-scroll` sets `touch-action: pan-x pan-y` and the grid runs a pinch handler, and a fixed
+// element that is only `opacity: 0` still takes touches in some engines. Invisible is not enough;
+// gone is the requirement.
+//
+// The exclusion is DELIBERATE AND TEMPORARY. It is not that the bar would break the grid - a header
+// mounted beside `Chrome` is a sibling of `.shell` and can never be an ancestor of `.mrail-cell`,
+// so it cannot become its containing block. It is that a fixed bar over the top 44px of a pinch
+// scroller has never been tried on a real device, and week mode stacks N of those. Ship list, prove
+// it on the phone, then extend.
+{
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+  });
+  const page = await ctx.newPage();
+  const DAY = '2026-09-05';
+  const WEEK = '2026-08-31';
+  const views = [
+    ['day / all games / GRID', `/?day=${DAY}&view=grid`, false],
+    ['day / my teams / GRID', `/?day=${DAY}&scope=mine&view=grid`, false],
+    ['week / all games / GRID', `/?mode=week&w=${WEEK}&view=grid`, false],
+    ['week / my teams / GRID', `/?mode=week&w=${WEEK}&scope=mine&view=grid`, false],
+    ['day / all games / list', `/?day=${DAY}`, true],
+    ['day / my teams / list', `/?day=${DAY}&scope=mine`, true],
+    ['week / all games / list', `/?mode=week&w=${WEEK}`, true],
+    ['week / my teams / list', `/?mode=week&w=${WEEK}&scope=mine`, true],
+  ];
+  for (const [name, path, shouldExist] of views) {
+    await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
+    // scrolled well past the sentinel, which is where the bar would be showing if it existed
+    await page.evaluate(() => window.scrollTo(0, 900));
+    await page.waitForTimeout(450);
+    const n = await page.locator('.chdr').count();
+    record(`collapsed bar ${shouldExist ? 'present in' : 'ABSENT from'} ${name}`,
+           shouldExist ? n === 1 : n === 0, `${n} in the DOM`);
+  }
+  await ctx.close();
+}
+
 await browser.close();
 writeFileSync(join(outDir, 'assertions.json'), JSON.stringify(results, null, 2) + '\n', 'utf8');
 const failed = results.filter((r) => !r.pass).length;
