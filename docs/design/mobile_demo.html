@@ -37,17 +37,31 @@
   naming the league at all. This file showed the right answer first; nothing here needed to change.
 
   THE APP HAS A COLLAPSING PAGE HEADER AND THIS FILE DOES NOT, AND THAT IS NOT DRIFT (prompt 58,
-  rule 23). From prompt 58 the app shows a fixed 44px bar - wordmark plus the four current choices -
-  once the expanded banner has scrolled away, in LIST view only. Nothing here needs to change, and
-  the reason is the scope this file has always declared: it is the authority for the CARD's
-  geometry, the chip row and the grid's own construction, and a page header is none of those.
+  rule 23; REWRITTEN in prompt 60, because what it described has been replaced). The app's header is
+  now a 44px NAVBAR that takes the banner's place: the wordmark, three VERTICAL toggles showing both
+  of their states with the live one in gold, and a live tile carrying either ALL SPORTS or the
+  chosen league's mark over a caret. It arrives when the reader scrolls past the header OR taps the
+  television on the banner, it REMOVES the banner and the control stack rather than merely covering
+  them, and it stays until the reader taps MYSPORTS TV. Scroll only ever collapses; it never expands.
 
-  IT ALSO COULD NOT SHOW ONE. This page models no scroll behaviour at all - each phone frame is a
-  fixed-height mock. `.abar` below is this demo's own static wordmark-and-day bar inside each frame,
-  and `.mswitch` is the demo's navigation between mockups; neither is the app's chrome. A collapsing
-  header is a behaviour over time, which is exactly what a static mock cannot depict.
+  NOTHING HERE NEEDS TO CHANGE, and the reason is the scope this file has always declared: it is the
+  authority for the CARD's geometry, the chip row and the grid's own construction, and a page header
+  is none of those.
 
-  The header's own rulings and measurements are register section 26.
+  IT ALSO COULD NOT SHOW ONE, and prompt 60 makes that stronger rather than weaker. This page models
+  no scroll behaviour at all - each phone frame is a fixed-height mock. `.abar` below is this demo's
+  own static wordmark-and-day bar inside each frame, and `.mswitch` is the demo's navigation between
+  mockups; neither is the app's chrome. A header with FIVE transitions between two states is a
+  behaviour over time, which is exactly what a static mock cannot depict.
+
+  AND THIS FILE HAS NO `MY TEAMS` AT ALL, WHICH IS ALSO NOT DRIFT (prompt 60, rule 23). It renders
+  one ALL GAMES arrangement, with a `.secthead` per day and league. The app has a scope toggle, and
+  under MY TEAMS it now renders ONE chronological list across every sport with no sport headings and
+  no first band - the opposite of what the sections below depict. Read the difference as a scope this
+  file does not model, not as the app drifting from it: the CARDS inside that list are still exactly
+  the cards below, which is the thing this file is the authority for.
+
+  The header's own rulings and measurements are register sections 26 and 28.
 
   IT IS A TEMPLATE. The `__DATA__`, `__TODAY__`, `__TEAMS__`, `__STAND__`, `__PROB__`, `__LEAGUE__`,
   `__WATCH__`, `__NETLOGOS__`, `__AVAIL__`, `__GRIDSVG__` tokens are filled by `build_demo.py`, which

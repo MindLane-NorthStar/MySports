@@ -2261,3 +2261,277 @@ Three, all small and all line-drift from edits made in prompts 57 and 58:
 `:130` and `ProgramCard`'s head at `:66-89` were all correct. The brief's own status table said
 prompt 58's header was "pushed at stage 1"; it was pushed at the end of the prompt-58 run, which is
 why stage 1 here had nothing to do but confirm.
+---
+
+## 28. THE NAVBAR JOE DESIGNED, AND MY TEAMS SAID ONCE — 2026-09-07, prompt 60
+
+### 28a. The header collapses one way, and expands only on request
+
+**Joe, 2026-09-07, across four exchanges:**
+
+> *"I'd like the banner to collapse as you scroll up OR by a purposeful tap on the tv ON the banner.
+> Then the navbar that replaces it — which shows MySports TV and the Day / All Games / List / All
+> Sports text buttons… The navbar would take the place of the banner once a user scrolls past the
+> banner, and [it] would remain permanently in place from that point forward until the user taps
+> 'MySports TV' in which case the full banner and expanded toggles would appear atop the app."*
+
+| trigger | result |
+|---|---|
+| first paint | expanded — the full banner and the whole control stack |
+| scrolling past the header | **collapses** |
+| tapping the TV on the banner | **collapses** |
+| tapping `MYSPORTS TV` in the navbar | **expands**, and returns the reader to the top |
+| scrolling back to the top while collapsed | **stays collapsed** |
+
+**WHY SCROLL MAY NOT EXPAND — this is the part that looks arbitrary later and is not.** Prompt 58
+shipped a two-way binding: the sentinel's callback was
+`setCollapsed(!entry.isIntersecting)`, so scroll owned the state in both directions and there was no
+manual control at all. The moment a TAP can also set the state, two inputs are writing one boolean —
+and the reader's first collapse by tap would be undone by their next scroll to the top, which is
+exactly the fight prompt 58's brief predicted and avoided by having no manual control.
+
+**One direction each removes the conflict entirely.** Scroll collapses; the wordmark expands. Neither
+can contradict the other because neither can perform the other's move. `collapseHeader` is idempotent
+and there is deliberately no scroll path that calls `expandHeader` — the unit gate asserts the
+observer's callback contains no `expandHeader` at all, scoped to the callback rather than to the file
+(a first attempt hunted for `else` and let
+`if (!entry.isIntersecting) collapseHeader(); else expandHeader();` straight through; the regex was
+checked against that string rather than trusted).
+
+**THE STATE IS A MODULE, NOT REACT STATE, AND THAT IS FORCED.** Three surfaces share the boolean and
+one of them — the page's own control stack in `app/page.js` — is a **server component** that can hold
+no client state. A context could serve the bar and the TV button and never reach `.hubctl`. So the
+layout change travels as **one attribute on `<html>`**, `data-hdr="collapsed"`, and CSS does the
+hiding. Prompt 58's hydration story is unchanged: `headerCollapsedOnServer()` is a constant `false`,
+the server writes no attribute, and a reload starts expanded.
+
+**THE SENTINEL MOVED, AND THE MOVE IS WHY THE COLLAPSE DOES NOT JUMP.** It sat in `app/layout.js`
+immediately after the banner, which was right when collapsing only ADDED a fixed bar. Collapsing now
+REMOVES the banner and the stack from the flow — about 300px — so the trigger has to fire when the
+whole collapsible region has gone. It is rendered by `Controls` in `app/page.js`, **after `.hubctl`
+and deliberately outside it**: hidden by the collapse, it would have no box left to measure. It lives
+in `Controls` rather than in either return because there are two of them, and a sentinel in one only
+would give week mode a header that could never collapse.
+
+`collapseHeader` measures the sentinel, writes the attribute, measures again and scrolls by the
+difference. **Measured at 0.00px of movement**, sampled per animation frame across the threshold
+crossing so the deliberate scroll and the collapse could be told apart — anything coarser measures
+both at once and proves nothing.
+
+**THE TV IS A REAL CONTROL.** A `<button>`, in the tab order, with a gold focus ring, `aria-label`
+"Collapse the banner", and a target measuring **51.0 × 53.6 CSS px at 390** and **47.0 × 49.5 at
+360** — no 44px exception spent. It is an **overlay at the artwork's own percentage coordinates**,
+never an edit to `BannerMobileV2.jsx`: that file is generated, and prompt 57 wrote
+`build_banner_mobile.py --check` precisely so the committed JSX and the JSON can be proved identical.
+A `<button>` wrapped around the `<image>` would break that check on the next regeneration.
+
+**The affordance is the one debatable choice and is called out as such.** On a phone there is no
+hover and no cursor, so a control whose only cue is `:hover` has no cue at all — and an illustration
+that silently became tappable is worse than no control. It carries a **persistent 1px ring of the
+gold token at 26% opacity**, strengthening to 60% on hover and 85% on press, painted on a
+pseudo-element so the colour comes from `--gold` at an opacity rather than a retyped rgb (rule 16).
+It is trivially removable if Joe reads it as a box around the television.
+
+### 28b. Three vertical slider toggles, and 44px rather than 88
+
+> *"Could these three choices be rendered as VERTICAL slider toggles? Day over Week, All Games over
+> My Teams, List View over Grid View. All would render in the navbar with the selected button in
+> gold."*
+
+**The order is FIXED, not live-on-top.** "Day over Week" is an arrangement, not a sort: a control
+whose two words swap places on every tap is one the eye has to re-read each time. The gold moves; the
+words do not.
+
+**ONE TAP TARGET PER CONTROL.** With exactly two states, tapping the control and tapping the inactive
+label are the same action, so a second 44px target would double the bar's permanent cost to buy a
+duplicate of the tap it already has.
+
+**44px, AND JOE CHOSE IT OVER 88.** He asked whether doubling the bar would let the tagline return
+under the wordmark. It fits vertically and it still could not go there: *"Every game. Every channel.
+One place."* is **wider than MYSPORTS TV**, so a left column sized to the tagline would push the four
+controls into less room than they have now. Two lines fit 44px comfortably — 12px type at 1.05
+leading is 12.6px a line, 26.2px for the pair, leaving 8.9px of air.
+
+**THE LABEL LENGTH WAS MEASURED, AND JOE'S WORDING LOST ON EVIDENCE.** Real font metrics, four
+viewports, each column sized to the wider of its two labels:
+
+| viewport | wordmark | `LIST VIEW`/`GRID VIEW` | `LIST`/`GRID` |
+|---|---|---|---|
+| 360 | 106.27 | 233.44 run / 221.73 room — **overflows by 11.71** | 221.58 / 221.73 — **+0.16** |
+| 375 | 106.27 | 233.44 / 236.73 — +3.30 | 221.58 / 236.73 — +15.16 |
+| 390 | 129.88 | 233.44 / 228.13 — **overflows by 5.31** | 221.58 / 228.13 — **+6.55** |
+| 430 | 129.88 | 233.44 / 268.13 — +34.69 | 221.58 / 268.13 — +46.55 |
+
+The long pair fails at 360 **and at 390, which is Joe's own device**, and fits only at 375 and 430 —
+it fails at both ends of the range that matters. Shipped short.
+
+**And the noun is less needed here than it was.** Prompt 58 dropped it from a run of four single
+words on the argument that "view" was the one droppable word. As a **pair** the case is stronger:
+LIST over GRID is self-evidently a choice of presentation, because those two words contrast in that
+one dimension and no other.
+
+**THE ACCESSIBLE NAMES ARE PROMPT 58'S, UNCHANGED, AND THE REASON IS THE OPPOSITE OF OBVIOUS.**
+
+- `Time range: Day. Switch to Week` / `Time range: Week. Switch to Day`
+- `Scope: All games. Switch to My teams` / `Scope: My teams. Switch to All games`
+- `Presentation: List view. Switch to Grid view` (the only state this bar can be in — it does not
+  render in grid view)
+
+Showing both words did not make the name redundant; it made it **carry more**. `aria-label` REPLACES
+the visible text rather than adding to it, and both words are `aria-hidden`, so this sentence is the
+only thing a screen reader receives — while the gold, which is what tells a sighted reader which half
+is live, is not available to it at all. A name that stopped naming the live half would announce the
+pair and never the answer. It is still one control, so it is still neither a radiogroup (§17's
+expanded pattern) nor `aria-pressed` (§17's tile pattern).
+
+**NO THIRD EXCEPTION TO THE 44px RULE, and the brief's suspicion of one was wrong.** It read prompt
+58's note that "the four words are 148.7px" as a TARGET measurement and inferred the horizontal
+minimum was not being applied. 148.7px is the **ink**. The measured targets at 360 are
+**44 / 58.13 / 44 / 63.45**, `min-width: 44px` applied, run 221.58px. **§18b still holds exactly
+two** exceptions: the 31px segmented toggles and the 24px ALL SPORTS bar.
+
+### 28c. The live tile
+
+> *"a tiny arrow gets embedded under 'All Sports' indicating that a tap will open a submenu, at that
+> submenu is the league tiles. In the event the user selects a tile — that tile then takes the place
+> of 'All Sports' in the navbar."*
+
+Not a toggle — ALL plus eight leagues is nine states, and cycling them would take eight presses to
+get from NFL back to NHL. A disclosure, with `aria-expanded`, `aria-controls`, and a row that is
+**absent from the DOM when closed** rather than hidden (prompt 58's ruling, for focus order). It
+reuses `SportFilter` with the two props prompt 58 added; picking `ALL SPORTS` in that row puts the
+words back, which is the only way back and is asserted in the gate. The caret makes every column a
+two-line stack, which is the other half of why it is there — without it the row would read as uneven.
+
+**THE MARK CAP IS THE GUARD, AT 56px AND NOT 58.** This is the one column that changes shape, so it
+is the one that can break the row. Measured from the art's intrinsic dimensions at a 20px mark
+height: **ufc 57.5**, mlb 38.0, wwe 22.0, racing 20.0, nhl 17.6, nfl 14.6, cfp 13.8, nba 8.8 — and
+**NASCAR 119.9**, reachable by a hand-typed `?sport=nascar`, which `CHIP_MARK` answers. At 58 the
+widest tile came to 64.0px against ALL SPORTS's 63.45 and ran 0.4px over its box at 360. At 56 the
+ceiling is 62px, **under the words it replaces**, so choosing a league can only ever make the row
+narrower and the widest state the bar can ever be in is the one it renders by default. The cost is
+UFC alone: 57.5px of art becomes 56, a 2.6% reduction.
+
+**One mark table, not two.** `chipMarkUrl` is exported from `Filters.js` — the bar shows the same
+tile the row does. It is deliberately **not** `config.js`'s `sportMarkUrl`, whose `SPORT_MARK` is five
+leagues and returns null for racing, ufc and wwe: three of the eight.
+
+`.chdr-choice` is retired in the same commit, with no user left in the repo, and the `SPORT_SHORT`
+note it carried is corrected rather than left standing.
+
+### 28d. MY TEAMS — R4 finally implemented in the render layer
+
+**This is not a new ruling.** `page.js` has stated it since prompt 51: *"R4: MY TEAMS is a scope —
+favourites only, chronological across every sport."* The data layer honoured the intent and the
+render layer discarded it three lines later.
+
+**Joe, 2026-09-07:** *"On the MY TEAMS page, My Teams render twice — once in what appears to be
+chronological order (although WWE Raw is currently appearing ahead of the Guardians game that airs 7
+hours earlier) and a second time divided by sport. This seems unnecessary and repetitive."*
+
+**THREE MECHANISMS, AND WHAT HE CALLED A SORT FAULT WAS NOT ONE.**
+
+1. **The duplication.** `FirstBand` and `#all-today` rendered the same handful of rows. Under ALL
+   GAMES the band answers *what is on right now* on a day of eighty; under MY TEAMS the day holds
+   five, the band's time-window subset is nearly the whole list, and its "See all today" escape
+   points at a list identical to itself.
+
+2. **THE APPARENT SORT FAULT IS THAT DUPLICATION, MEASURED.** On 2026-09-07 the band is TONIGHT,
+   which shows the evening from the prime window onward — 8:00 PM MONDAY NIGHT RAW — while the
+   1:35 PM Guardians game falls *before* the window and appears only in the list below. **Two
+   correctly-ordered sections, stacked, putting a later row above an earlier one.** `byKickoff` in
+   `bandstate.js` is correct and always was. Removing the duplicate removes the inversion.
+
+3. **The banding, which is a second and independent cause.** `bands={!P.isGrid}` is true under MY
+   TEAMS, and `globals.css` records that bands render in SPORTS order, not kickoff order. Measured on
+   2026-09-06 under MY TEAMS: **College Football 7:30 PM printed above MLB 1:40 PM with no first band
+   on the page at all.**
+
+4. **A THIRD, REAL ORDERING DEFECT, INVISIBLE UNTIL (3) WAS FIXED.**
+   `allRows = [...games, ...programRows]` is a **concatenation of two separately-ordered reads** —
+   `queries.js` orders games by `canonical_kickoff_at_utc.asc` and programs by `start_at.asc`, each
+   within itself. So R4's own comment — *"`allRows` arrives ordered by kickoff and splitMine keeps
+   input order, so 'chronological across every sport' is free"* — was **false, twice**. On 2026-09-06
+   the flat order would have been 1:40 PM, 7:30 PM, 2:30 PM, 5:00 PM, 8:00 PM. It survived because
+   the bands regrouped before it reached the screen; `chronological()` ships in the same commit as
+   the change that exposes it, and lives in `favorites.js` beside the claim it corrects.
+
+**A FOURTH, WHICH JOE DID NOT REPORT.** On 2026-09-06 the first band under MY TEAMS rendered
+*"Nothing loaded for this viewing day yet — the rest of the page shows what the database holds"*
+above five loaded rows: `live` and `notStarted` were both empty in the LIVE branch, so the band
+declared the day empty on a page that was not. It goes with the band.
+
+**BOTH MODES, PER RULE 32.** Week mode's `bands={!P.sport}` is also true under MY TEAMS + ALL SPORTS
+and had the same fault; it is now `{!P.sport && !P.isMine}`, and its `rows` — also a concatenation —
+also goes through `chronological`.
+
+**ALL GAMES IS UNTOUCHED, AND IT IS PROVEN RATHER THAN ASSERTED.** Eight ALL GAMES views were
+snapshotted as rendered DOM before and after the change and are **byte-identical once the first
+band's own clock (`as of 1:43 PM`) is normalised**.
+
+**AND THAT PROOF EARNED ITS KEEP IMMEDIATELY.** A blanket `aria-label` fallback had been written into
+`SportBand` for the newly-nameless flat section; the snapshot caught it changing ALL GAMES on
+2026-09-13, because **the first band renders through the same flat path with `sport={P.sport}`**,
+which is null under ALL SPORTS. Chromium's accessibility tree was then read rather than recalled
+(rule 34): **an unnamed `<section>` is exposed as `generic`; a named one as `region`.** So the
+nameless section inside `.fband` is not a broken landmark — it is not a landmark at all, which is
+correct for a plain container, and naming it would have nested a redundant region inside one already
+named by its `<h2>`. The fallback came out. The name is supplied by the **caller**, which is the only
+place that knows the scope: **"My teams"**. Under MY TEAMS that section IS the page's list, and a
+named region is the useful thing to have.
+
+The rest of the flat path was checked for the same assumption rather than only the aria-label:
+`sportMarkUrl(sport)` and the `<h2>` are both inside `showHeader`, false on every flat render;
+`offServiceSummary`, `splitFavorites` and `rowClass` are per-row and sport-agnostic; and the card
+choice is made per row by `isProgram`, never by the band's sport. **The aria-label was the only one.**
+
+### 28e. Rule 23 — what the locked reference does and does not implement
+
+`docs/design/mobile_demo.html` was read, not assumed. It implements **neither** thing this prompt
+changed:
+
+- **The page header.** Prompt 58 already recorded why, and the reason holds and is stronger here:
+  the file models **no scroll behaviour at all** — each phone frame is a fixed-height mock — and a
+  collapsing header is a behaviour over time, which a static mock cannot depict. That note is
+  **updated in the same commit**, because it described prompt 58's bar as "the four current choices"
+  and the banner as merely "scrolled away", and both are now wrong.
+- **MY TEAMS.** The file has no scope toggle, no favourites and no `MY TEAMS` at all — it renders one
+  ALL GAMES arrangement with a `.secthead` per day and league. A paragraph was added saying so,
+  because a reader comparing its sport-headed sections against the app's single unheaded MY TEAMS
+  list could otherwise file the difference as drift.
+
+### 28f. No new working rule
+
+Rules stop at **34**. Nothing here earns a 35th, and three near-misses are each already covered:
+
+- the `<section>`/`region` mapping was checked against the platform rather than recalled — **rule 34
+  working exactly as written**, and its first use on something other than CSS;
+- the brief's "the horizontal 44px minimum probably is not applied" was an INK figure read as a
+  TARGET figure — **rule 22's shape**, resolved by measuring the component rather than trusting a
+  note about it;
+- the false R4 comment is **rule 33** (a note asserting something exists — here, an ordering — that
+  does not), and it is corrected in the same commit as the work it misled.
+
+Two of this run's own instruments were wrong and were caught by disbelieving them, which is the same
+habit prompt 59 recorded: a width probe that rewrote only LONG→SHORT and so measured the same DOM
+twice once the short pair shipped, printing two identical rows as though they were a comparison; and
+a source test that sliced from `.chdr-toggle` to the FIRST `</button>` in the file, which is the
+wordmark's — a backwards slice that failed loudly rather than passing vacuously.
+
+### 28g. Citations in prompt 60 that were wrong
+
+**One, and it is the only substantive one.** The brief's stage 2 said the collapsed bar's "measured
+four-control run came to 142.5px — less than four 44px targets. So the horizontal minimum probably is
+not applied", and asked whether that was a third exception to record. **It is not.** The targets
+measure 44 / 58.13 / 44 / 63.45 at 360 with `min-width: 44px` applied and the run is **221.58px**;
+prompt 58's 148.7px is the ink of the four words. No third exception exists and none was recorded.
+
+**And one diagnosis, which the brief itself flagged as undiagnosed.** It suggested the ordering fault
+would be found in `toRows` — "if a program carries a null or differently-shaped kickoff key it will
+not interleave correctly". `toRow` copies `start_at` onto `canonical_kickoff_at_utc` for every
+program, so programs sort correctly and always did. The fault is one line further out, in the
+concatenation at `page.js:471`.
+
+Everything else checked out: `page.js:583`/`:598`/`:599` for `FirstBand`, `Listing` and `bands`;
+`:475-479` for R4's comment; `Listing:47` for the `bands` default, `:194-226` for the two
+arrangements and `:224` for the flat branch's props; `SportBand:98` for the `aria-label`.

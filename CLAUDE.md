@@ -16,10 +16,10 @@ one is stale — say so.
 | you need | read |
 |---|---|
 | current repo state, gates, open items, the full working rules | `docs/handoff-status.md` |
-| why a decision was made, and whether it is already settled | `docs/enhancement-register.md` |
+| why a decision was made, and whether it is already settled | `docs/enhancement-register.md` (§1–§28) |
 | what a card, block or grid is supposed to look like | `docs/rendering-contract.md` + `docs/rendering-contract-mobile.md` (the Mobile Grid Addendum) |
 | the locked visual reference the app must match | `docs/design/mobile_demo.html` |
-| what a past run was actually asked to do | `docs/prompts/` — 61 files covering 01–59, verbatim; 39 and 42 are the only gaps |
+| what a past run was actually asked to do | `docs/prompts/` — 62 files covering 01–60, verbatim; 39 and 42 are the only gaps |
 | deploy, environment, what is publishable | `docs/deployment-contract.md` |
 
 **Do not re-raise a settled decision** without first checking the register and `handoff-status.md`.
@@ -149,13 +149,13 @@ Five, and all five are run **before** the commit, as their own commands:
 
 ```
 pytest                       # from the repo root — 494 pass + 1 skipped
-npm run test:unit            # from web/ — 431
+npm run test:unit            # from web/ — 445
 npm run smoke                # from web/ — 30/30
-node scripts/qa-shots.mjs    # from web/ — 25/25
+node scripts/qa-shots.mjs    # from web/ — 67/67
 npm run geometry             # from web/ — all hard stops (see below)
 ```
 
-Counts are the floor as of `fa042c0`; they may only go up. Report all five with every change, and
+Counts are the floor as of `9d7530f`; they may only go up. Report all five with every change, and
 never read a gate's result from the exit code of a chained command.
 
 ## The phone-grid geometry check

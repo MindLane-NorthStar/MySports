@@ -3,7 +3,7 @@
 **This file lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at
 `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§27, all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§28, all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -16,7 +16,7 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. **61 files, covering prompts 01-59** - four numbers (13, 23, 26, 43) carry
+edited after the fact. **62 files, covering prompts 01-60** - four numbers (13, 23, 26, 43) carry
 two files each, which is why the file count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -45,21 +45,104 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 59's stage-6 commit. Gates: **494 Python tests + 1 skipped**, **431 JS unit
-tests**, smoke **30/30**, qa-shots **25/25**, **`npm run geometry`** all hard stops.
+main, HEAD is prompt 60's stage-5 commit. Gates: **494 Python tests + 1 skipped**, **445 JS unit
+tests**, smoke **30/30**, qa-shots **67/67**, **`npm run geometry`** all hard stops.
 
-> ### DEVICE-CONFIRMED THROUGH PROMPT 57. THREE THINGS ARE WAITING ON THE PHONE.
+> ### DEVICE-CONFIRMED THROUGH PROMPT 57. FOUR THINGS ARE WAITING ON THE PHONE.
 >
 > Joe checked prompts 52–57 on 2026-09-07, including prompt 52's four veto calls as **accepted**.
-> Since then, three surfaces have shipped that only a device can judge:
+> Since then four surfaces have shipped that only a device can judge, in the order they should be
+> looked at:
 >
-> 1. **Prompt 58's collapsing header** — whether 44px at the top edge feels right under a thumb
->    while scrolling.
-> 2. **The favourites bracket** (§27a) — whether the group now reads as separate without a heading,
->    and whether the inset looks deliberate rather than like a mistake.
-> 3. **The program panels** (§27b) — tap a NASCAR race, a UFC card and a studio show and check the
->    head reads as that programme rather than as a fixture.
+> 1. **The navbar and the one-way collapse** (§28a–c) — scroll down and watch the banner go; scroll
+>    back to the top and check that it STAYS gone; tap the television to collapse it deliberately;
+>    tap MYSPORTS TV to bring it back. Then judge the quiet gold ring around the TV, which is the
+>    one thing in this run chosen without a measurement to settle it.
+> 2. **MY TEAMS** (§28d) — one chronological list, said once, no sport headings.
+> 3. **The favourites bracket** (§27a) — whether the group reads as separate without a heading.
+> 4. **The program panels** (§27b) — tap a NASCAR race, a UFC card and a studio show.
+>
+> **Prompt 58's collapsed bar is no longer on this list because prompt 60 replaced it.** Judge the
+> navbar, not the bar.
 
+**PROMPT 60 — THE NAVBAR JOE DESIGNED, AND MY TEAMS SAID ONCE.** Five commits, from `c59f1d5`:
+
+| stage | commit | what shipped |
+|---|---|---|
+| 1 | `892b5f0` | the header collapses one way and expands only on request |
+| 2 | `03f0ba1` | the collapsed toggles show both states |
+| 3 | `bb2527b` | the live tile opens the league row |
+| 4 | `9d7530f` | my teams is one chronological list |
+| 5 | *(this commit)* | register §28, the prompt filed |
+
+**Read register §28.**
+
+### THE HEADER IS A ONE-WAY MACHINE, AND THE ASYMMETRY IS THE DESIGN
+
+Scroll only ever COLLAPSES. Expansion is a tap on the wordmark, and it is the only manual thing.
+Prompt 58's `setCollapsed(!entry.isIntersecting)` was two-way, so the moment a tap could also set the
+state two inputs would be writing one boolean — and a deliberate collapse would be undone by the next
+scroll to the top. One direction each removes the conflict rather than managing it.
+
+The state is a **module** (`lib/headerstate.js`) writing **one attribute on `<html>`**, because three
+surfaces share the boolean and one of them is a server component that can hold no client state. The
+sentinel moved out of `layout.js` into `Controls`, after `.hubctl` and outside it, and the collapse
+compensates the scroll: **measured at 0.00px of movement** under the reader, sampled per frame.
+
+The TV is a real `<button>` — 51.0 × 53.6 at 390 — drawn as an **overlay at the artwork's percentage
+coordinates**, so `build_banner_mobile.py --check` still holds.
+
+### THE LABELS ARE SHORT, ON MEASURED EVIDENCE
+
+`LIST VIEW` / `GRID VIEW` needs 233.44px of run against 221.73px of room at 360 and 228.13px at
+**390, Joe's own device**. It fits only at 375 and 430. `LIST` / `GRID` is 221.58px and fits
+everywhere. Joe wanted the full words and said he would take the short ones on evidence; this is the
+evidence.
+
+**No third exception to the 44px rule.** The brief suspected one; the targets measure
+44 / 58.13 / 44 / 63.45 at 360 with `min-width` applied. **§18b still holds exactly two.**
+
+### MY TEAMS IS R4, FINALLY IMPLEMENTED IN THE RENDER LAYER
+
+Not a new ruling — `page.js` has said "chronological across every sport" since prompt 51. Three
+mechanisms broke it and **what Joe read as a sort fault was not one**: the first band is TONIGHT, so
+it showed 8:00 PM RAW while the 1:35 PM Guardians game fell before the prime window and appeared only
+below. Two correctly-ordered sections, stacked.
+
+The third mechanism is real and was invisible: `allRows = [...games, ...programRows]` is a
+concatenation of two separately-ordered reads, so R4's own comment was false. **ALL GAMES is
+untouched and proven so** — eight views snapshotted before and after, byte-identical once the band's
+clock is normalised.
+
+### OPEN — AN NFL BAND STILL LISTS ITS PREGAME SHOW AFTER THE GAME
+
+Found while fixing MY TEAMS and deliberately **not** fixed, because it changes ALL GAMES. `allRows`
+is unsorted for every scope; under ALL GAMES the sport bands regroup it, so within one band a
+program can still follow a game it precedes. Sorting `allRows` outright would reorder ALL GAMES
+without being asked. It is a small, real question for a later prompt.
+
+### OPEN — MIGRATION 0017, WITH ITS EVIDENCE ATTACHED
+
+Unchanged from prompt 59 and still unapplied. Joe owes two decisions; the second has data recorded
+**in the migration file itself** — of the 79 surplus rows, **31 are identical re-fetches and 48 are
+real line movement**, one game's favourite changing sides across three fetches. A dedupe keeps the
+current line and loses only history that nothing reads today, which makes it a product question.
+
+### OPEN — THE STREAMING TAP TEST IS STILL OWED
+
+`docs/research/universal-links-aasa-2026-09-07.md` holds what 23 services publicly claim.
+**`www.espn.com` claims `/*/game/_/gameId/*`** and the database already holds those ids — but there
+is **no general `/watch` claim**, so the declared route opens the app on the game rather than on a
+stream. Next: which patterns MySports can populate, then a tap on the phone.
+
+### OPEN — GRID VIEW STILL HAS NO NAVBAR
+
+Unchanged and still deliberate: `.mgrid-scroll` sets `touch-action: pan-x pan-y` and runs a pinch
+handler, and a fixed bar over the top 44px of that scroller has never been tried on a device. The
+collapse is disabled there too now, rather than merely hidden — a grid view that collapsed would hide
+the banner with nothing rendered in its place.
+
+Tree clean apart from always-untracked `assets/` (and `web/qa/` and `artifacts/`, both gitignored).
 **PROMPT 59 — THE FAVOURITES BRACKET, THE PROGRAM PANEL, AND TWO HARVESTS.** Five commits, from
 `c6a423b`:
 
