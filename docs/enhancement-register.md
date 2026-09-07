@@ -1662,3 +1662,235 @@ the next reader sees it was noticed rather than missed.
 | `Listing.js` / `FirstBand.js` `headingClass` default | `'favlabel'`, and both pass no `heading`, so neither renders one |
 
 `.band-headrow > .favlabel` was removed by §24a and did not come back.
+---
+
+## 25. THE ODDS PIPELINE, THE THIRD GREY, AND THE BANNER GENERATOR — 2026-09-07, prompt 57
+
+### 25a. The odds pipeline had FOUR defects, and only two of them were the one Joe reported
+
+Joe reported odds failing to render on the right of CFB cards. That was true, and three more sat
+beside it — two affecting sports where odds *did* appear.
+
+| # | defect | fixed here | commit |
+|---|---|---|---|
+| A4 | the embed is unordered and unlimited; every consumer reads `[0]` | **yes** | `538ebcb` |
+| A2 | NHL hardcoded `"odds": None` | **yes** | `c73f928` |
+| A1 | CFB emits no odds — `fetch_lines()` was never wired in | **yes** | `e73ff21` |
+| A3 | the upsert can never match, so rows accumulate | **migration prepared, NOT applied** | `a60c6cf` |
+
+**A4 — and the brief's account of it was wrong in a way worth recording.** `queries.js` embedded
+`odds:game_odds(...)` with no `order` and no `limit`, and PostgREST guarantees nothing about the
+order of an embedded resource. The brief concluded the card had therefore been showing "the oldest
+line ever fetched", frozen since the refresh went daily. **Measured 2026-09-07 it was coming back
+NEWEST-first for all seven multi-row games sampled** — `nfl-401872658` (5 rows) and six MLB games.
+The cards were right by luck. That is not a reason to leave it: nothing promises that ordering, and
+an unordered read that happens to be correct flips silently and raises no error when it does.
+
+`ODDS_NEWEST = '&odds.order=fetched_at.desc&odds.limit=1'` is appended at **all five** `GAME_SELECT`
+call sites. The params are top-level and keyed to the embed alias; inside the select parens PostgREST
+reads them as a column and answers 400. **Three consumers, not two** — `MatchupCard.js:136`,
+`GameDetail.js:40` and **`MobileGrid.js:597`**, which the brief's first draft missed. That is working
+rule 32's exact shape, and `test/odds.test.mjs` pins the call site rather than a row count (rule 19),
+because a count test passes against a database that simply has no duplicates yet.
+
+**A2 — the NHL join, and the trap one endpoint deep.** ESPN's NHL scoreboard carries the same
+DraftKings block `espn.py:_odds()` already parses for the NFL and NBA, and `LEAGUE_PATH` already maps
+`nhl`, so this was a join and not a parser. The join is **`(ET date, away abbrev, home abbrev)`** and
+deliberately not ids — `nba.py:226` documents in this codebase that ESPN's event ids are not the
+league's and that joining on them "would leave every NBA card without a live score and raise no error
+at all."
+
+> **THE BRIEF WOULD HAVE SHIPPED A SILENT BUG HERE.** It said to translate through the existing
+> `NHL_TO_ESPN`, which has five entries and "covers all five and nothing else". Measured against both
+> live APIs, 32 clubs each: **the SCOREBOARD diverges on exactly FOUR** — LAK, NJD, TBL, SJS. ESPN's
+> scoreboard spells Utah `UTA`, exactly as the NHL does; only its **TEAMS** endpoint says `UTAH`.
+> `NHL_TO_ESPN` is right for the teams join `build_teams()` does and wrong for this one, and applying
+> it would have turned `UTA` into `UTAH`, matched no event, and dropped every Utah game with no
+> error — the same failure the brief was quoting `nba.py` to prevent, arriving through a different
+> door. `NHL_TO_ESPN_SCOREBOARD` is separate, and a test fails if the two are ever tidied into one.
+
+The map records **every** event, priced or not, because a priced-only map cannot tell "the book has
+not posted yet" from "the join broke". A missing key is the alarm; a `None` value is ordinary.
+Measured at fixture level on the recorded 2026-10-01 window, **no loader run**: 47 games, **47
+joined**, 22 priced, 25 not priced yet, **0 unjoined**. Books post NHL lines as the game approaches —
+2026-10-15 and 2026-11-10 both returned none.
+
+**A1 — the fetcher nobody connected.** `cfbd.py:55` defined `fetch_lines()` and `git grep` found its
+own definition and nothing else. No `odds` key meant `load.py:258` was never true, no `game_odds`
+row, `favourite()` null, `format.js:271` unreachable — **the empty slot Joe reported**.
+
+CFBD answers 401 unauthenticated and no `/lines` sample existed, so week 1 2026 was fetched live with
+the repo's key (never printed) and the mapping written from the observed payload. **The sign needs no
+flip**: CFBD's `spread` is already negative-when-home-is-favoured, verified two independent ways —
+92/0 against `formattedSpread`, 82/0 against the moneylines — and `0003_games.sql:139` turns out to
+have documented exactly that all along.
+
+**Two data findings the brief did not have.** CFBD returns the same book under **two spellings**:
+`"Draft Kings"` with a space appears 170 times on week 1 and **every one carries a null spread and
+null moneylines**, and on 12 entries it is the only provider — so `_odds` prefers a book that HAS a
+spread before it consults the named order, or those 12 pick an empty book and a real Bovada line
+beside them is discarded. And **two Bovada lines contradict themselves** (401864432, a near-pick'em;
+401856780, carrying an `awayMoneyline` of -100000, a placeholder not a price). DraftKings is
+preferred and never disagrees, which is why the test asserts on the *chosen* book.
+
+**THE PROVIDER PREFERENCE IS DraftKings, THEN Bovada, THEN THE FIRST** — named, never iteration
+order, mirroring `mlb.py:165`. DraftKings is first because it is what ESPN returns for the NFL, NBA
+and NHL, so one book is now the app's default across all five sports. Week 1: 99 FBS games, 99
+priced, 0 without a spread, all DraftKings. Joined on the CFBD game id, safe **here and only here** —
+`/games` and `/lines` mint the same id, 171 of 171.
+
+**A3 — prepared, not applied.** `0003_games.sql:146` declares `unique (game_id, provider,
+fetched_at)`; `load.py:259-261` upserts against it with an empty update list; `db.py:149` compiles
+that to `DO NOTHING`; and every adapter stamps a fresh `fetchedAt`. The target can never match, so
+the upsert has **never once updated a row**. Measured over paginated anon reads: **471 rows, 379
+distinct games, worst single game 5, 392 distinct (game_id, provider) pairs, 32 of them carrying 79
+surplus rows.** The existing data violates the new constraint, so the dedupe ships commented out with
+its SELECT-first query (rule 6). `load.py` is **untouched** and must stay so until the migration is
+applied — the new target against a database with no such index fails every loader run.
+
+**IT IS NOT URGENT, and A4 is why.** With `order=fetched_at.desc&limit=1` the card already reads the
+newest line however many rows sit behind it. A3 is table hygiene.
+
+### 25b. CFB AND NHL ODDS DO NOT APPEAR UNTIL THE NEXT SCHEDULED REFRESH
+
+Stages 2 and 3 changed **adapters** and were proved at the **fixture** level. No loader ran and no
+database write happened. The rows arrive with the next `schedule_refresh` at 11:00 UTC. **An empty
+odds slot on a CFB card the same evening is expected, not a failed stage.**
+
+### 25c. `--panel-top` darkened, and the criterion that could not be met
+
+`#31363d -> #23262b`, Joe's ruling of 2026-09-07. The `--faint` comment had handed him the choice:
+true AA for the card's first line needed `--faint` at `#989fa8`, which is 4.55:1 against `--dim`'s
+own 4.62:1 — the two collapse and the third grey step dies. He picked the gradient's top end.
+
+Solved, not chosen by eye: the minimum darkening along the token's own hue and saturation at which
+`--faint` reaches 4.5:1, measured against the **local background** (rule 13) with every token read
+from `globals.css` (rule 16).
+
+| | top of gradient | | bottom | |
+|---|---|---|---|---|
+| | **before** | **after** | before | after |
+| `--ink` | 10.86 | **13.54** | 14.40 | 14.40 |
+| `--dim` | 4.62 | **5.76** | 6.13 | 6.13 |
+| `--faint` | 3.63 | **4.53** | 4.82 | 4.82 |
+
+All three now clear AA on the card's top surface; `--faint` did not before. **The arithmetic landed
+exactly on `--panel` (#23262b) on its own** — not a typo; the tokens stay separate so the gradient's
+top can move again without dragging every flat panel with it. The gradient is now much subtler:
+21.57% → 15.29% HSL lightness at the top against a 12.5% bottom.
+
+**ONE CRITERION IN THE BRIEF CANNOT BE MET BY THIS CHANGE AT ALL.** It asked to keep `--dim` "at
+least 1.3:1 distinct from `--faint`" while solving. That ratio is a property of two **foreground**
+tokens and no background change can alter it: it is **1.272:1 before and after**. It is already under
+1.3, and separating those two greys is a different change — on `--dim` or `--faint` — and still Joe's
+call.
+
+**Blast radius, read rather than assumed:** 10 consumers, all the identical gradient, so one number
+covers them all — `select`, `.chip`, `.mcard`, `.daycol`, `.gridpanel`, `.mtbd-card`, `.spbtn`,
+`.picker`, `.seg`, `.pk-arrow`. The active-toggle gold plate (`globals.css:2836`) uses literal
+`#D8C595` with `--gold`/`--gold-mid` and no `--panel-top`, confirmed by reading the rule.
+
+### 25d. The banner generator — a documented tool that did not exist
+
+`Banner.js:5-7` has said since prompt 42 that coordinates are "never hand-edited here" and that the
+component "is regenerated from" the JSON. **The generator was not in the repository or anywhere
+reachable.** The repo held a generated file whose generator nobody had, and a comment forbidding the
+only edit anyone could actually make.
+
+`scripts/build_banner_mobile.py` closes it, and was **proved before anything moved**: built from the
+unmodified JSON it reproduced the committed component **byte-for-byte below the header comment** —
+same viewBox, 24 images, rect, two ellipses, gradient stops and ids, filter primitives, three text
+baselines. Two details made byte identity possible: the glow transform is reproduced with `decimal`
+(0.73913043478260869565 is twenty digits; float division gives sixteen), and numbers are emitted with
+`str()` on the parsed value so `36.0` stays `"36.0"` and `84` stays `"84"`.
+
+**THE BRIEF'S PREMISE WAS WRONG, AND IT INHERITED THAT FROM MY OWN EARLIER READ.** It said the JSON
+"cannot express the change even if a generator existed" because there is no `viewBox` key. There is
+no key by that **name**, but **`stage: {w, h}` is exactly that fact** and always was. No `viewBox`
+key was added — a second copy of a fact is a second thing to get wrong. Only two things were
+genuinely prose-only: `headroom_paint.rect` and `filters.svg`, both added through a parser with an
+assertion that no other key changed (rule 17). The ground rect's height is **derived** as
+`overhang + stage.h`, which is why model F moved it without being told to.
+
+### 25e. Model F
+
+Approved 2026-09-07 after two earlier arrangements were rejected. viewBox `0 0 428 155 -> 0 0 428
+135`; **measured 141.2px → 123.0px at a 390 viewport**, the predicted 18.2px, all 24 images present.
+
+A uniform −7 (the artwork ran y=11..141 with 11 units of margin above and 14 below; both become 4) ·
+MLB 11→14, floating 10 above the NFL and NHL tops · NASCAR 129→119, base 131, ten below the NBA and
+WWE bases · the TV cutout to 70%, 79.9×84 → 55.93×58.8 at x 306.04 on the same centre axis 334.05,
+y 43.1 on the array's midpoint 72.5 — it is illustration, not a logo, so it is the one thing allowed
+to scale · NFL 24, NHL 25, CFP 60, UFC 66.5, NBA 93, WWE 96 · the 15 network marks up a further 6.5,
+closing the gap under the tagline from 12.5 to 6 · wordmark baseline 36.88→29.88, tagline 53→46 ·
+the two glows take the same −7 so they stay over the artwork they light.
+
+**32 values changed and every one is a position**, asserted through a parser: no key added or
+removed, no logo resized, no mark moved horizontally, all 23 marks plus the TV present.
+**G was considered and rejected**: it centred the array inside 127 units for free, at 115.7px, but
+landed MLB at y=5 hard against the ceiling, which is precisely what Joe had already turned down. F's
+whole 7.3px cost against that alternative is the NASCAR drop, and that was deliberate.
+
+*Arithmetic note:* the brief's own rule (−7 then −6.5) gives 55.75 for fox/espn/cbs and 107.75 for
+netflix/peacock; its explicit list says 55.7 and 107.7. The explicit list was used, since that is
+what Joe approved in the rendered models. The difference is 0.05 units — 0.045px at 390.
+
+**Rule 23:** `docs/design/mobile_demo.html` does **not** implement this banner — read, not assumed.
+Its own header is a plain `.abar` text bar and its single "banner" mention is about the frozen
+mark-sizing manifest. No change was required there. The desktop banner is untouched and out of scope.
+
+### 25f. One sheen, and why it is the wordmark and nothing else
+
+Joe, 2026-09-07: *"one time sheen is fine with me."* A `<rect>` inside an SVG `<mask>` cut to the
+wordmark's own letterforms, translated by CSS — **what travels is a fill, never a layout box**.
+Measured with motion on and off, `.banner`, `.hubctl`, `.pickrow`, `.seg`, the tiles and the first
+card are byte-identical rectangles in both.
+
+**It cannot reach any gold that carries state.** Gold means *selected* or *this is the day you are
+on* in five places — the active toggle fill, the active tile border, `.scopeline`, `.weekday-head`
+and `.pk-arrow:focus-visible` — and a sheen on those turns a signal into decoration. Measured on a MY
+TEAMS CFB page, every one computes `animation-name: none`, and **exactly one element in the document
+is animated**.
+
+**§16 is not claimed to cover it.** Its 120–220ms is for STATE transitions, where speed is feedback.
+This is an identity gesture nobody asked for, so it is slower (1500ms) and late (400ms, after the
+marks paint): at §16's speed it reads as a glitch on load, which is worse than no sheen. One
+iteration — a banner that shimmers every few seconds is the gloss handoff §6 forbids.
+
+### 25g. Four strings, one of which was a comment
+
+`'Starter TBA'` leaves the **card** — it rendered on every MLB card twice whether or not anything was
+known, which is the blank row the card's own rule forbids, wearing a label. Measured: an MLB card
+with no starters announced is **132.3px instead of 168.3px**, and one with both is unchanged.
+`GameDetail` keeps its own; the panel is where that sentence is the answer.
+
+`'Assignment not entered'` → **`'Not yet confirmed'`** — the build describing its own database state,
+the same class as R5's developer footnote.
+
+**The dead search chain was FIVE sites, not three.** `SearchBox`, `matchesSearch` and `networkName`
+had zero callers outside each other; **`primaryBroadcast`** was a fourth, exported but reachable only
+through `networkName`; and `MatchupCard.js`'s comment describing `'No linear telecast'` as a live
+concern was the fifth, corrected in the same commit (rule 30's second half). Deleting the chain is
+what retires that string — prompt 24 flagged it as a false certainty, and it was one wiring change
+from a card.
+
+### 25h. Working rule 33
+
+Added, and it is **rule 30's mirror rather than rule 30**. See `docs/handoff-status.md`.
+
+### 25i. Citations in prompt 57 that were wrong
+
+The brief said its first draft had five errors and to assume this one had some too. It did — three,
+and the first two would have shipped defects:
+
+1. **`NHL_TO_ESPN` has five entries and the scoreboard diverges on four.** Reusing it would have
+   dropped every Utah game silently. §25a.
+2. **The banner JSON "cannot express" the stage height.** `stage: {w, h}` is the viewBox. §25d.
+3. **A4's severity.** The card was showing the newest line, not the oldest. §25a.
+
+Two smaller ones: `nba.py`'s note is at **:226**, not :225, and it says "every **NBA** card", which
+the brief quoted as "NHL"; and the mark arithmetic in §25e is 0.05 off its own stated rule.
+
+**And one the brief got right that I had got wrong**: `_safe` does exist at `nhl.py:266`. My earlier
+search missed it because a `head -30` truncated the output — which is working rule 31 pointing at the
+pipeline rather than the query.

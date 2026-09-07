@@ -3,8 +3,8 @@
 **This file lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at
 `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§24, all
-in the repo — check there before re-raising any decision; §22 the week grid, §23 list-is-a-list,
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§25, all
+in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
 amendment, §9 NETWORK TBD, §11 mobile page order, §12 the DATE/WEEK headers, §13 the 2026-09-05
@@ -16,7 +16,7 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. **58 files, covering prompts 01-56** - four numbers (13, 23, 26, 43) carry
+edited after the fact. **59 files, covering prompts 01-57** - four numbers (13, 23, 26, 43) carry
 two files each, which is why the file count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -45,8 +45,72 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 56's stage-9 commit. Gates: **466 Python tests + 1 skipped**, **398 JS unit
+main, HEAD is prompt 57's stage-9 commit. Gates: **494 Python tests + 1 skipped**, **401 JS unit
 tests**, smoke **30/30**, qa-shots **14/14**, **`npm run geometry`** all hard stops.
+
+> ### CFB AND NHL ODDS DO NOT APPEAR UNTIL THE NEXT SCHEDULED REFRESH
+>
+> Prompt 57 stages 2 and 3 changed **adapters** and proved them at the **fixture** level. No loader
+> ran and nothing was written to the database. The rows arrive with the next `schedule_refresh` at
+> 11:00 UTC. **An empty odds slot on a CFB or NHL card the same evening is expected, not a failed
+> stage.** Check the fixture counts in register §25a before suspecting the code.
+
+**PROMPT 57 — THE ODDS PIPELINE, THE THIRD GREY, AND THE BANNER GENERATOR.** Ten commits, from
+`07afc52`:
+
+| stage | commit | what shipped |
+|---|---|---|
+| 0 | `4cddb07` | one phone size for the favourites marker (the pending `.favlabel` work) |
+| 1 | `538ebcb` | the card reads the newest line, not the first |
+| 2 | `c73f928` | NHL odds from the ESPN scoreboard, joined on date and abbreviation |
+| 3 | `e73ff21` | CFB — the lines fetcher wired into the fixture builder |
+| 4 | `a60c6cf` | the `game_odds` uniqueness migration, **unapplied** |
+| 5 | `ff512b1` | darken the card gradient so the third grey survives |
+| 6a | `f274fcc` | a real generator for the mobile banner |
+| 6b | `d24e8e0` | model F |
+| 7 | `1810960` | a single sheen across the wordmark |
+| 8 | `9520310` | retire three dead strings and the search chain that carried one |
+| 9 | *(this commit)* | register §25, **working rule 33**, the prompt filed |
+
+**Read register §25.** Four odds defects, three fixed; the third grey; and a documented tool that
+did not exist.
+
+### THE ODDS PIPELINE — WHAT IS FIXED AND WHAT IS WAITING ON JOE
+
+- **The card reads the newest line.** `odds:game_odds(...)` had no `order` and no `limit`, and
+  PostgREST guarantees nothing about an embedded resource's order. `ODDS_NEWEST` is appended at all
+  **five** `GAME_SELECT` call sites, and there are **three** consumers, not two — `MobileGrid.js:597`
+  is the one that gets forgotten.
+- **NHL and CFB now emit odds at all.** NHL joins ESPN's scoreboard on `(ET date, away abbrev, home
+  abbrev)` — never ids. CFB's `fetch_lines()` had been written and never called.
+- **`game_odds` accumulates and the fix is a migration awaiting approval.** See the open items.
+
+### THE ABBREVIATION MAP IS TWO MAPS, AND CONFLATING THEM DROPS UTAH
+
+`NHL_TO_ESPN` is right for ESPN's **teams** endpoint (`UTA -> UTAH`) and wrong for its
+**scoreboard**, which spells Utah `UTA` exactly as the NHL does. The scoreboard diverges on **four**
+clubs, not five — LAK, NJD, TBL, SJS. `NHL_TO_ESPN_SCOREBOARD` is separate and
+`tests/test_nhl_odds.py` fails if the two are ever tidied into one.
+
+### THE VERTICAL SCALE AND THE COLOUR TOKENS
+
+The 8/16/24 scale from prompt 56 §24d is unchanged. `--panel-top` is now **`#23262b`**, darkened on
+Joe's ruling so `--faint` reaches AA (4.53:1, from 3.63) on the top of the card gradient. It
+coincides exactly with `--panel` and that is arithmetic, not a typo. **`--dim` vs `--faint` is
+1.272:1 and no background change can alter it** — separating those two greys is still open and still
+Joe's call.
+
+### THE BANNER IS GENERATED FOR REAL NOW
+
+`scripts/build_banner_mobile.py` reads `web/lib/banner-mobile-v2.json` and writes
+`web/components/BannerMobileV2.jsx`; `--check` exits 1 on drift and `tests/test_banner_generator.py`
+gates it. **Edit the JSON and regenerate — never the JSX.** That instruction has been in `Banner.js`
+since prompt 42 and was unfollowable until now, which is what working rule 33 is about. The mobile
+banner is **model F**: viewBox `0 0 428 135`, rendering 123.0px at 390, down from 141.2. The
+**desktop** banner is untouched and still has no generator.
+
+Tree clean apart from always-untracked `assets/` (and `web/qa/`, which prompt 46 added to
+`.gitignore`).
 
 **PROMPT 56 — TEN APPROVED REVISIONS, AND THE VERTICAL RHYTHM.** Nine commits, from `017d73e`:
 
@@ -453,6 +517,26 @@ cloud workspace. **Never reapply a bare browser UA.**
   NFL 2026-09-13 and MLB 2026-09-03, where the band's window finds nothing while the sport bands
   below render every game. Pre-dates the hub; unchanged by it.
 
+## Opened by prompt 57 — TWO, AND THEY MUST LAND IN THIS ORDER
+
+- **THE `game_odds` UNIQUENESS MIGRATION AWAITS JOE.**
+  `db/migrations/0017_game_odds_one_row_per_book.sql` is written and **not applied**. Rule 14's hard
+  stop is no connection, no writer credential, no DML, so applying it is Joe's call; rule 27's
+  schedule check (`gh run list --workflow schedule_refresh.yml -L 1`) applies when it happens.
+  **The existing rows violate it** — measured 2026-09-07: 471 rows, 392 distinct (game_id, provider)
+  pairs, **32 pairs carrying 79 surplus rows**. The dedupe is in the file, commented out, with its
+  SELECT-first query beside it. Two decisions are Joe's: approve the constraint, and say whether the
+  79 duplicates are deleted or left.
+
+- **THE LOADER CHANGE MUST NOT SHIP BEFORE IT.** Once the constraint exists,
+  `pipeline/load.py:259-261` becomes conflict target `"game_id, provider"` with update list
+  `["spread", "total", "home_moneyline", "away_moneyline", "fetched_at"]`. **Shipping that first
+  fails every loader run** with "there is no unique or exclusion constraint matching the ON CONFLICT
+  specification". `load.py` was deliberately left untouched by prompt 57 for exactly this reason.
+
+  **Neither is urgent.** Prompt 57 stage 1 put `order=fetched_at.desc&limit=1` on the odds embed, so
+  the card already shows the newest line however many rows sit behind it. This is table hygiene.
+
 ## Opened by prompt 52
 
 - **FOUR CALLS OPEN TO JOE'S VETO**, all recorded in register §19 with their measurements:
@@ -713,6 +797,44 @@ before touching any count line.
     one component rendering the same thing twice, or two components rendering the same thing
     differently — findable in one `git grep` of the class or the prop, and each one shipped and sat
     in the app for at least a prompt.
+
+33. **A NOTE ASSERTING THAT SOMETHING EXISTS IS NOT EVIDENCE THAT IT DOES.** Before relying on a
+    workflow a comment describes — "regenerated from", "built by", "validated against", "kept in
+    sync with" — **open the thing it names.** A file can be generated by a tool nobody has any more,
+    and the comment will not know.
+
+    **THIS IS RULE 30'S MIRROR, AND THAT IS EXACTLY WHY IT NEEDS ITS OWN NUMBER.** Rule 30 fires on
+    a note recording an ABSENCE — "missing", "not yet filed", "none exists", "TBD" — and every
+    trigger word in it is a negative. This case is the opposite shape: a note recording a PRESENCE,
+    stated with total confidence, which nothing had checked. Rule 30 as written would never fire
+    here, because nothing said anything was missing. The remedy is the same — go and look — but the
+    prompt to apply it is inverted, and a rule you never think to invoke is not a rule.
+
+    **NOR IS IT RULE 22 IN A COSTUME.** 22 says read THE COMPONENT before asserting what it does,
+    and here the component was read: `web/components/Banner.js:5-7` says plainly that the JSON files
+    "ship as DOCUMENTATION", that "nothing reads them at build time", and that "if the design moves,
+    the JSON changes and the component is regenerated from it - coordinates are never hand-edited
+    here." Reading it was not the problem. Believing its claim about a tool **somewhere else** was.
+    22 governs what a file does; 33 governs what a file says about the world outside it.
+
+    **THE INSTANCE.** Prompt 57 stage 6 went looking for that generator to apply model F.
+    `git grep` for `banner-mobile-v2` returned docs, `Banner.js`, the JSX and the JSON itself —
+    nothing under `scripts/`, `pipeline/` or `tests/` read it. The tool had never been in the repo.
+    So the instruction "edit the JSON and regenerate" was unfollowable, and had been since prompt 42
+    wrote it: the only edit anyone could actually make was the one the comment forbade. The stage
+    wrote `scripts/build_banner_mobile.py`, proved it reproduced the committed component
+    byte-for-byte from the unmodified JSON, and only then moved a coordinate.
+
+    **AND THE SAME SHAPE HAD ALREADY BEEN RECORDED TWICE WITHOUT BEING NAMED.** `build_demo.py`,
+    which `docs/design/mobile_demo.html` says regenerates it, is project-only — prompt 55 noted the
+    consequence ("the repo copy cannot be regenerated") and annotated the file by hand instead. So
+    is `app_template.html`, `build_banner.py` and `markkit.py`. **Every one of those is a live
+    instance of this rule**, and the honest reading is that this repo has a class of documented
+    tools that do not exist in it, not a one-off.
+
+    **The cheap defence is one `git grep` for the tool's own name** before believing a sentence
+    about how a file is maintained. If it is not there, either write it or write down that it is
+    missing — and the second is what prompt 55 did, correctly, when writing it was out of scope.
 
 
 ---

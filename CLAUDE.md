@@ -19,7 +19,7 @@ one is stale — say so.
 | why a decision was made, and whether it is already settled | `docs/enhancement-register.md` |
 | what a card, block or grid is supposed to look like | `docs/rendering-contract.md` + `docs/rendering-contract-mobile.md` (the Mobile Grid Addendum) |
 | the locked visual reference the app must match | `docs/design/mobile_demo.html` |
-| what a past run was actually asked to do | `docs/prompts/` — 58 files covering 01–56, verbatim; 39 and 42 are the only gaps |
+| what a past run was actually asked to do | `docs/prompts/` — 59 files covering 01–57, verbatim; 39 and 42 are the only gaps |
 | deploy, environment, what is publishable | `docs/deployment-contract.md` |
 
 **Do not re-raise a settled decision** without first checking the register and `handoff-status.md`.
@@ -122,6 +122,16 @@ never renumber, even around the retired stub.
     reading of `Listing` was correct) **and from 30 and 31** (an absence, and a query's vocabulary):
     here every file was present and correct, and simply not the only file.
 
+33. **A note asserting that something EXISTS is not evidence that it does.** Before relying on a
+    workflow a comment describes — "regenerated from", "built by", "validated against" — open the
+    thing it names. `Banner.js` said the mobile banner "is regenerated from" its JSON and that
+    coordinates are "never hand-edited"; the generator was not in the repo, so that instruction had
+    been unfollowable since prompt 42. `build_demo.py`, `app_template.html`, `build_banner.py` and
+    `markkit.py` are the same shape — this repo has a CLASS of documented tools it does not contain.
+    **Rule 30's mirror:** 30 fires on a note recording an ABSENCE and every trigger word in it is a
+    negative, so it would never fire here. **Not rule 22:** the component WAS read; believing its
+    claim about a tool somewhere else was the mistake.
+
 ---
 
 ## Gates
@@ -129,14 +139,14 @@ never renumber, even around the retired stub.
 Five, and all five are run **before** the commit, as their own commands:
 
 ```
-pytest                       # from the repo root — 466 pass + 1 skipped
-npm run test:unit            # from web/ — 398
+pytest                       # from the repo root — 494 pass + 1 skipped
+npm run test:unit            # from web/ — 401
 npm run smoke                # from web/ — 30/30
 node scripts/qa-shots.mjs    # from web/ — 14/14
 npm run geometry             # from web/ — all hard stops (see below)
 ```
 
-Counts are the floor as of `96c8c08`; they may only go up. Report all five with every change, and
+Counts are the floor as of `9520310`; they may only go up. Report all five with every change, and
 never read a gate's result from the exit code of a chained command.
 
 ## The phone-grid geometry check
