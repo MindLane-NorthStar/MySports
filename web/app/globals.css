@@ -2948,6 +2948,29 @@ main > .hubctl:first-child { margin-top: 0; }
   margin: 0 auto;
 }
 
+/* THE RUN OF FOUR, pushed to the right of the wordmark. MEASURED with the real font rather than
+   modelled: at 390 the wordmark is 129.9px and the four words are 148.7px at 12px, against 218.1px
+   of room once 24px of padding and three 6px gaps come out. 14px would also fit (173.4px) - the
+   brief's estimate said it would not, and its estimate was wrong in both directions. 12px is the
+   size Joe's brief named and it leaves 69px spare at 390 and 39px at 360. */
+.chdr-run {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.chdr-choice {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--dim);
+}
+
 /* The banner's own gold, read from the token block and never retyped (rule 16). The gradient is
    `background-clip: text`, which is how you fill type with a gradient in CSS - the SVG banner does
    the same thing with `fill="url(#bnGold)"`, and both trace to the same four stops. */

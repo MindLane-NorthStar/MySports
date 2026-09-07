@@ -6,7 +6,9 @@
 //   * EXPANDED FIRST, then collapse on scroll. Not opens-collapsed - first paint is unchanged.
 //   * the bar carries the wordmark and the four current choices, and NOTHING else
 //   * NO TAGLINE, NO TV CUTOUT, NO ARTWORK. Both were in his original sketch and both were
-//     measured out - there is 258px of room beside the wordmark and the four choices fill it.
+//     measured out. MEASURED WITH THE REAL FONT at 390: the wordmark is 129.9px and there are
+//     218.1px beside it once padding and gaps come out, of which the four choices take 148.7px.
+//     (The brief modelled 108 and 258 from an estimated 0.45em advance; both were wrong.)
 //   * DAY, ALL GAMES and LIST flip on tap; ALL SPORTS opens the tile row
 //   * SCROLL POSITION ALONE owns the state. There is no manual expand control.
 //
@@ -55,6 +57,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { resolveHubParams } from '../lib/hubparams.js';
 import { todayET } from '../lib/format.js';
+import { SPORT_SHORT } from '../lib/config.js';
 
 /** The id of the zero-height element in layout.js that decides collapsed-ness. */
 export const SENTINEL_ID = 'hdr-sentinel';
@@ -88,10 +91,39 @@ export default function CollapsedHeader() {
   // exclusion exists to avoid.
   if (P.isGrid) return null;
 
+  // THE FOUR CURRENT CHOICES, in the control stack's own order: the page reads DAY, ALL GAMES,
+  // LIST, ALL SPORTS downward when expanded, and left to right here.
+  //
+  // `LIST`, NOT `LIST VIEW`. The expanded toggle says "List view" because it sits beside "Grid
+  // view" and the noun disambiguates; alone in a run of four, the noun is the only word that could
+  // be dropped without losing the meaning, and it is 21px of a 218px budget.
+  //
+  // THE SPORT USES THE SHORT LABEL. `SPORT_LABEL.cfb` is "College Football" - measured at 93.3px
+  // against the ALL SPORTS target of 57.5px with the real font, so the display name would break
+  // this row the moment CFB was selected. `SPORT_SHORT` is that fact in one place.
+  //
+  // DELIBERATELY ABSENT, so nobody helpfully adds it: THE DATE AND WEEK PICKER. There is no room,
+  // and it is not a regression - changing the viewing day already means scrolling to the top today.
+  // Tapping DAY flips the MODE, not the date.
+  const choices = [
+    { key: 'mode', text: P.isWeek ? 'WEEK' : 'DAY' },
+    { key: 'scope', text: P.isMine ? 'MY TEAMS' : 'ALL GAMES' },
+    { key: 'view', text: 'LIST' },
+    { key: 'sport', text: P.sport ? (SPORT_SHORT[P.sport] || P.sport).toUpperCase() : 'ALL SPORTS' },
+  ];
+
   return (
     <div className="chdr" data-collapsed={collapsed || undefined} aria-hidden={!collapsed}>
       <div className="chdr-inner">
         <span className="chdr-wm">MYSPORTS TV</span>
+        {/* STAGE 2 RENDERS THESE AS TEXT. Stage 3 makes the first three buttons and stage 4 makes
+            the fourth a disclosure; splitting it proves the layout before the interaction lands on
+            top of it. */}
+        <div className="chdr-run">
+          {choices.map((c) => (
+            <span key={c.key} className="chdr-choice" data-key={c.key}>{c.text}</span>
+          ))}
+        </div>
       </div>
     </div>
   );

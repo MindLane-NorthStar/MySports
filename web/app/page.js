@@ -35,7 +35,7 @@ import { longDay, todayET, etTime, shortDay, daySpanWeekdays, loadedDayLine } fr
 import FirstBand from '../components/FirstBand.js';
 import { bandState } from '../lib/bandstate.js';
 import policies from '../lib/policies.js';
-import { SPORT_LABEL, gridAssetUrl } from '../lib/config.js';
+import { SPORT_LABEL, SPORT_SHORT, gridAssetUrl } from '../lib/config.js';
 import { RestError } from '../lib/rest.js';
 import { overlayForDay, applyOverlay } from '../lib/livescores.js';
 import { resolveHubParams } from '../lib/hubparams.js';
@@ -80,7 +80,10 @@ const SPORT_EMPTY = {
 };
 
 // SPORT_LABEL is the display name ("College Football"); the week label wants the short sport tag.
-const SPORT_TAG = { cfb: 'CFB', nfl: 'NFL', nba: 'NBA', nhl: 'NHL', mlb: 'MLB' };
+// THAT MAP MOVED TO config.js AS `SPORT_SHORT` (prompt 58): the collapsed header needs the same
+// fact, and two short-label maps is one for someone to update and one to forget. The five keys this
+// file ever reached - cfb, nfl, nba, nhl, mlb - carry byte-identical values there, so no week label
+// moves; the `|| toUpperCase()` fallback below is kept for a sport the map has not heard of.
 
 /**
  * THE ONE SENTENCE FOR "ALL SPORTS ON DESKTOP", written once and used twice.
@@ -204,7 +207,7 @@ function weekChoices({ index, pick, sport, seasonMode }) {
   // separately so the sport-week can be gold and the range grey (prompt 46 unit 1C).
   const parts = (w) =>
     seasonMode
-      ? { prefix: `${SPORT_TAG[w.sport] || w.sport.toUpperCase()} Week ${w.week}`,
+      ? { prefix: `${SPORT_SHORT[w.sport] || w.sport.toUpperCase()} Week ${w.week}`,
           range: daySpanWeekdays(w.start, w.end) }
       : { range: daySpanWeekdays(w.start, w.end) };
   const join = (p) => (p.prefix ? `${p.prefix} · ${p.range}` : p.range);

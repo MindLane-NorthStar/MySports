@@ -77,6 +77,34 @@ export function resolveSportParam(value) {
   return SPORT_FILTERS.includes(value) || SPORTS.includes(value) ? value : null;
 }
 
+/**
+ * THE SHORT LABEL, for surfaces with no room for the display name (prompt 58).
+ *
+ * `SPORT_LABEL` is the display name and one of them does not fit anywhere narrow: measured with the
+ * real font at 12px, "College Football" is 93.3px against "ALL SPORTS" at 57.5px, so a collapsed
+ * header showing the display name would break its own row the moment CFB was selected. Every other
+ * label is already short enough - IndyCar, the next widest, is 40.8px.
+ *
+ * SO ONLY `cfb` ACTUALLY DIFFERS, and the map is written out in full anyway rather than as an
+ * exception table: a caller should not have to know which sports are special.
+ *
+ * `CFB` IS THE APP'S OWN WORD for it - the register uses it, the fixtures use it, and page.js used
+ * it for season-week prefixes ("CFB Week 1") in a local constant that this replaces. One short
+ * label per sport, in one place.
+ */
+export const SPORT_SHORT = {
+  cfb: 'CFB',
+  nfl: 'NFL',
+  nba: 'NBA',
+  nhl: 'NHL',
+  mlb: 'MLB',
+  nascar: 'NASCAR',
+  indycar: 'IndyCar',
+  racing: 'Racing',
+  ufc: 'UFC',
+  wwe: 'WWE',
+};
+
 export const SPORT_LABEL = {
   cfb: 'College Football',
   nfl: 'NFL',
