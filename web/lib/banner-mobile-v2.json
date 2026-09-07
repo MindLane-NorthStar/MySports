@@ -1,349 +1,402 @@
 {
- "name": "MySports TV home banner v2 - mobile (Option B, final)",
- "date": "2026-09-04",
- "prompt": 42,
- "stage": {
-  "w": 428,
-  "h": 155,
-  "units": "CSS px on a 428-wide stage; the SVG scales to the viewport width (height = width * 155/428)"
- },
- "background": {
-  "type": "linear-gradient",
-  "direction": "top-to-bottom",
-  "stops": [
-   [
-    "0%",
-    "#272727"
-   ],
-   [
-    "45%",
-    "#232323"
-   ],
-   [
-    "100%",
-    "#1A1A1A"
-   ]
-  ]
- },
- "glow": [
-  {
-   "cx": 346,
-   "cy": 82,
-   "rx": 138,
-   "ry": 102,
-   "color": "rgb(255,170,60)",
-   "alpha_stops": [
-    [
-     "0%",
-     0.32
-    ],
-    [
-     "45.3%",
-     0.176
-    ],
-    [
-     "82%",
-     0.058
-    ],
-    [
-     "100%",
-     0.021
-    ]
-   ]
-  },
-  {
-   "cx": 334,
-   "cy": 84,
-   "rx": 66,
-   "ry": 56,
-   "color": "rgb(255,170,60)",
-   "alpha_stops": [
-    [
-     "0%",
-     0.42
-    ],
-    [
-     "45.3%",
-     0.231
-    ],
-    [
-     "82%",
-     0.076
-    ],
-    [
-     "100%",
-     0.028
-    ]
-   ]
-  }
- ],
- "title": {
-  "text": "MYSPORTS TV",
-  "x": 14,
-  "baseline_y": 36.88,
-  "font": "Barlow Condensed 700",
-  "font_size": 36,
-  "letter_spacing_px": 1.62,
-  "fill_gradient_top_to_bottom": [
-   [
-    "0%",
-    "#E0D1A5"
-   ],
-   [
-    "42%",
-    "#C6AF7A"
-   ],
-   [
-    "70%",
-    "#B39A69"
-   ],
-   [
-    "100%",
-    "#8C7650"
-   ]
-  ],
-  "glow": {
-   "fill": "#C6AF7A",
-   "blur_std_dev": 10,
-   "opacity": 0.55
-  }
- },
- "tagline": {
-  "text": "EVERY GAME. EVERY CHANNEL. ONE PLACE.",
-  "x": 16,
-  "baseline_y": 53.0,
-  "font": "Barlow Condensed 600",
-  "font_size": 10,
-  "letter_spacing_px": 1.7,
-  "fill": "#A4AAB2"
- },
- "tv": {
-  "file": "tv-cutout.png",
-  "x": 294.05,
-  "y": 36.0,
-  "w": 79.9,
-  "h": 84
- },
- "marks": [
-  {
-   "id": "nbc",
-   "file": "nbc.png",
-   "group": "network",
-   "x": 15.99,
-   "y": 65.5,
-   "w": 19.23,
-   "h": 19
-  },
-  {
-   "id": "fox",
-   "file": "fox.png",
-   "group": "network",
-   "x": 49.95,
-   "y": 69.25,
-   "w": 27.11,
-   "h": 11.5
-  },
-  {
-   "id": "espn",
-   "file": "espn.png",
-   "group": "network",
-   "x": 91.86,
-   "y": 69.25,
-   "w": 46.28,
-   "h": 11.5
-  },
-  {
-   "id": "cbs",
-   "file": "cbs.png",
-   "group": "network",
-   "x": 152.9,
-   "y": 69.25,
-   "w": 41.4,
-   "h": 11.5
-  },
-  {
-   "id": "abc-gray",
-   "file": "abc-gray.png",
-   "group": "network",
-   "x": 209.0,
-   "y": 65.5,
-   "w": 19.0,
-   "h": 19
-  },
-  {
-   "id": "paramount",
-   "file": "paramount.png",
-   "group": "network",
-   "x": 16.01,
-   "y": 95.0,
-   "w": 52.18,
-   "h": 12
-  },
-  {
-   "id": "dazn",
-   "file": "dazn.png",
-   "group": "network",
-   "x": 79.2,
-   "y": 91.5,
-   "w": 19.0,
-   "h": 19
-  },
-  {
-   "id": "prime",
-   "file": "prime.png",
-   "group": "network",
-   "x": 109.28,
-   "y": 93.5,
-   "w": 46.83,
-   "h": 15
-  },
-  {
-   "id": "appletv",
-   "file": "appletv.png",
-   "group": "network",
-   "x": 167.19,
-   "y": 94.0,
-   "w": 26.81,
-   "h": 14
-  },
-  {
-   "id": "guardstv",
-   "file": "guardstv.png",
-   "group": "network",
-   "x": 205.0,
-   "y": 89.0,
-   "w": 22.99,
-   "h": 24
-  },
-  {
-   "id": "tnt",
-   "file": "tnt.png",
-   "group": "network",
-   "x": 16.0,
-   "y": 117.5,
-   "w": 19.0,
-   "h": 19
-  },
-  {
-   "id": "netflix",
-   "file": "netflix.png",
-   "group": "network",
-   "x": 50.89,
-   "y": 121.25,
-   "w": 42.83,
-   "h": 11.5
-  },
-  {
-   "id": "peacock",
-   "file": "peacock.png",
-   "group": "network",
-   "x": 109.5,
-   "y": 121.25,
-   "w": 37.2,
-   "h": 11.5
-  },
-  {
-   "id": "usa",
-   "file": "usa.png",
-   "group": "network",
-   "x": 162.54,
-   "y": 121.0,
-   "w": 27.31,
-   "h": 12
-  },
-  {
-   "id": "tbs",
-   "file": "tbs.png",
-   "group": "network",
-   "x": 205.77,
-   "y": 121.0,
-   "w": 22.26,
-   "h": 12
-  },
-  {
-   "id": "mlb",
-   "file": "mlb.png",
-   "group": "league",
-   "x": 316.93,
-   "y": 11.0,
-   "w": 34.15,
-   "h": 18
-  },
-  {
-   "id": "nfl",
-   "file": "nfl.png",
-   "group": "league",
-   "x": 267.78,
-   "y": 31.0,
-   "w": 20.44,
-   "h": 28
-  },
-  {
-   "id": "nhl",
-   "file": "nhl.png",
-   "group": "league",
-   "x": 374.55,
-   "y": 32.0,
-   "w": 22.91,
-   "h": 26
-  },
-  {
-   "id": "cfp",
-   "file": "cfp.png",
-   "group": "league",
-   "x": 254.98,
-   "y": 67.0,
-   "w": 18.04,
-   "h": 26
-  },
-  {
-   "id": "ufc",
-   "file": "ufc.png",
-   "group": "league",
-   "x": 379.3,
-   "y": 73.5,
-   "w": 37.4,
-   "h": 13
-  },
-  {
-   "id": "nba",
-   "file": "nba.png",
-   "group": "league",
-   "x": 271.83,
-   "y": 100.0,
-   "w": 12.35,
-   "h": 28
-  },
-  {
-   "id": "wwe",
-   "file": "wwe.png",
-   "group": "league",
-   "x": 378.87,
-   "y": 103.0,
-   "w": 24.27,
-   "h": 22
-  },
-  {
-   "id": "nascar",
-   "file": "nascar.png",
-   "group": "league",
-   "x": 298.02,
-   "y": 129.0,
-   "w": 71.95,
-   "h": 12
-  }
- ],
- "filters": {
-  "mark": "white halo (dx0 dy0 sd1.2 .22) then black drop (dx0 dy2 sd1.2 .55)",
-  "tv": "black drop (dx0 dy6 sd4 .65) + warm halo (dx0 dy0 sd6 rgb(255,150,40) .28)",
-  "title_glow": "feGaussianBlur sd10 on a #C6AF7A copy at opacity .55"
- },
- "headroom_paint": {
-  "prompt": 45,
+  "name": "MySports TV home banner v2 - mobile (Option B, final)",
   "date": "2026-09-04",
-  "what": "The ground rect is drawn from y=-90 instead of y=0 and the root <svg> is overflow:visible, so the artwork paints the iOS safe-area band above the stage instead of leaving it to .banner's CSS gradient. That boundary was the seam Joe reported: 8.7/255 under the wordmark, 10.7 under the TV, 3.1 on neutral ground. Measured after: 2.0 worst.",
-  "gradients": "bnBg, bnGlow0 and bnGlow1 were objectBoundingBox (the default), so growing a shape would have stretched its gradient with it. All three are gradientUnits=userSpaceOnUse now, pinned to stage coordinates; the two radial ones carry the box aspect as a gradientTransform. Arithmetic: artifacts/qa/2026-09-05-banner-seam/gradient-convert.py.",
-  "unchanged": "Every mark, image, text and filter coordinate below is exactly as generated, and the glow ellipses are NOT extended - see BannerMobileV2.jsx for why their outer stops keep their tails. The 0-155 stage region measured 8 of 597060 pixels different by 1/255 at 428 CSS px / DPR 3, which is Chromium's gradient rasteriser, not a geometry change."
- },
- "_gold": "Metallic gold family, prompt 52 stage 4. Mapped from docs/ux-reference/visual-refinement-handoff-2026-09-06.md §4: #FBE59A->#E0D1A5 highlight, #F2CD62->#C6AF7A primary, #E4B646->#B39A69 mid, #D2A038->#8C7650 deep, and the wordmark's blurred glow copy #F3CC5A->#C6AF7A. The rgb(255,170,60) ambient ellipses and the rgb(255,150,40) TV halo are NOT the wordmark - they are §7's charcoal-spotlight background, which §7 says to retain. GEOMETRY IS UNTOUCHED: artboard, type size, letter-spacing and every coordinate are byte-identical. Colour only."
+  "prompt": 42,
+  "stage": {
+    "w": 428,
+    "h": 155,
+    "units": "CSS px on a 428-wide stage; the SVG scales to the viewport width (height = width * 155/428)"
+  },
+  "background": {
+    "type": "linear-gradient",
+    "direction": "top-to-bottom",
+    "stops": [
+      [
+        "0%",
+        "#272727"
+      ],
+      [
+        "45%",
+        "#232323"
+      ],
+      [
+        "100%",
+        "#1A1A1A"
+      ]
+    ]
+  },
+  "glow": [
+    {
+      "cx": 346,
+      "cy": 82,
+      "rx": 138,
+      "ry": 102,
+      "color": "rgb(255,170,60)",
+      "alpha_stops": [
+        [
+          "0%",
+          0.32
+        ],
+        [
+          "45.3%",
+          0.176
+        ],
+        [
+          "82%",
+          0.058
+        ],
+        [
+          "100%",
+          0.021
+        ]
+      ]
+    },
+    {
+      "cx": 334,
+      "cy": 84,
+      "rx": 66,
+      "ry": 56,
+      "color": "rgb(255,170,60)",
+      "alpha_stops": [
+        [
+          "0%",
+          0.42
+        ],
+        [
+          "45.3%",
+          0.231
+        ],
+        [
+          "82%",
+          0.076
+        ],
+        [
+          "100%",
+          0.028
+        ]
+      ]
+    }
+  ],
+  "title": {
+    "text": "MYSPORTS TV",
+    "x": 14,
+    "baseline_y": 36.88,
+    "font": "Barlow Condensed 700",
+    "font_size": 36,
+    "letter_spacing_px": 1.62,
+    "fill_gradient_top_to_bottom": [
+      [
+        "0%",
+        "#E0D1A5"
+      ],
+      [
+        "42%",
+        "#C6AF7A"
+      ],
+      [
+        "70%",
+        "#B39A69"
+      ],
+      [
+        "100%",
+        "#8C7650"
+      ]
+    ],
+    "glow": {
+      "fill": "#C6AF7A",
+      "blur_std_dev": 10,
+      "opacity": 0.55
+    }
+  },
+  "tagline": {
+    "text": "EVERY GAME. EVERY CHANNEL. ONE PLACE.",
+    "x": 16,
+    "baseline_y": 53.0,
+    "font": "Barlow Condensed 600",
+    "font_size": 10,
+    "letter_spacing_px": 1.7,
+    "fill": "#A4AAB2"
+  },
+  "tv": {
+    "file": "tv-cutout.png",
+    "x": 294.05,
+    "y": 36.0,
+    "w": 79.9,
+    "h": 84
+  },
+  "marks": [
+    {
+      "id": "nbc",
+      "file": "nbc.png",
+      "group": "network",
+      "x": 15.99,
+      "y": 65.5,
+      "w": 19.23,
+      "h": 19
+    },
+    {
+      "id": "fox",
+      "file": "fox.png",
+      "group": "network",
+      "x": 49.95,
+      "y": 69.25,
+      "w": 27.11,
+      "h": 11.5
+    },
+    {
+      "id": "espn",
+      "file": "espn.png",
+      "group": "network",
+      "x": 91.86,
+      "y": 69.25,
+      "w": 46.28,
+      "h": 11.5
+    },
+    {
+      "id": "cbs",
+      "file": "cbs.png",
+      "group": "network",
+      "x": 152.9,
+      "y": 69.25,
+      "w": 41.4,
+      "h": 11.5
+    },
+    {
+      "id": "abc-gray",
+      "file": "abc-gray.png",
+      "group": "network",
+      "x": 209.0,
+      "y": 65.5,
+      "w": 19.0,
+      "h": 19
+    },
+    {
+      "id": "paramount",
+      "file": "paramount.png",
+      "group": "network",
+      "x": 16.01,
+      "y": 95.0,
+      "w": 52.18,
+      "h": 12
+    },
+    {
+      "id": "dazn",
+      "file": "dazn.png",
+      "group": "network",
+      "x": 79.2,
+      "y": 91.5,
+      "w": 19.0,
+      "h": 19
+    },
+    {
+      "id": "prime",
+      "file": "prime.png",
+      "group": "network",
+      "x": 109.28,
+      "y": 93.5,
+      "w": 46.83,
+      "h": 15
+    },
+    {
+      "id": "appletv",
+      "file": "appletv.png",
+      "group": "network",
+      "x": 167.19,
+      "y": 94.0,
+      "w": 26.81,
+      "h": 14
+    },
+    {
+      "id": "guardstv",
+      "file": "guardstv.png",
+      "group": "network",
+      "x": 205.0,
+      "y": 89.0,
+      "w": 22.99,
+      "h": 24
+    },
+    {
+      "id": "tnt",
+      "file": "tnt.png",
+      "group": "network",
+      "x": 16.0,
+      "y": 117.5,
+      "w": 19.0,
+      "h": 19
+    },
+    {
+      "id": "netflix",
+      "file": "netflix.png",
+      "group": "network",
+      "x": 50.89,
+      "y": 121.25,
+      "w": 42.83,
+      "h": 11.5
+    },
+    {
+      "id": "peacock",
+      "file": "peacock.png",
+      "group": "network",
+      "x": 109.5,
+      "y": 121.25,
+      "w": 37.2,
+      "h": 11.5
+    },
+    {
+      "id": "usa",
+      "file": "usa.png",
+      "group": "network",
+      "x": 162.54,
+      "y": 121.0,
+      "w": 27.31,
+      "h": 12
+    },
+    {
+      "id": "tbs",
+      "file": "tbs.png",
+      "group": "network",
+      "x": 205.77,
+      "y": 121.0,
+      "w": 22.26,
+      "h": 12
+    },
+    {
+      "id": "mlb",
+      "file": "mlb.png",
+      "group": "league",
+      "x": 316.93,
+      "y": 11.0,
+      "w": 34.15,
+      "h": 18
+    },
+    {
+      "id": "nfl",
+      "file": "nfl.png",
+      "group": "league",
+      "x": 267.78,
+      "y": 31.0,
+      "w": 20.44,
+      "h": 28
+    },
+    {
+      "id": "nhl",
+      "file": "nhl.png",
+      "group": "league",
+      "x": 374.55,
+      "y": 32.0,
+      "w": 22.91,
+      "h": 26
+    },
+    {
+      "id": "cfp",
+      "file": "cfp.png",
+      "group": "league",
+      "x": 254.98,
+      "y": 67.0,
+      "w": 18.04,
+      "h": 26
+    },
+    {
+      "id": "ufc",
+      "file": "ufc.png",
+      "group": "league",
+      "x": 379.3,
+      "y": 73.5,
+      "w": 37.4,
+      "h": 13
+    },
+    {
+      "id": "nba",
+      "file": "nba.png",
+      "group": "league",
+      "x": 271.83,
+      "y": 100.0,
+      "w": 12.35,
+      "h": 28
+    },
+    {
+      "id": "wwe",
+      "file": "wwe.png",
+      "group": "league",
+      "x": 378.87,
+      "y": 103.0,
+      "w": 24.27,
+      "h": 22
+    },
+    {
+      "id": "nascar",
+      "file": "nascar.png",
+      "group": "league",
+      "x": 298.02,
+      "y": 129.0,
+      "w": 71.95,
+      "h": 12
+    }
+  ],
+  "filters": {
+    "mark": "white halo (dx0 dy0 sd1.2 .22) then black drop (dx0 dy2 sd1.2 .55)",
+    "tv": "black drop (dx0 dy6 sd4 .65) + warm halo (dx0 dy0 sd6 rgb(255,150,40) .28)",
+    "title_glow": "feGaussianBlur sd10 on a #C6AF7A copy at opacity .55",
+    "svg": {
+      "mark": {
+        "region": {
+          "x": "-30%",
+          "y": "-30%",
+          "width": "160%",
+          "height": "170%"
+        },
+        "halo": {
+          "dx": 0,
+          "dy": 0,
+          "stdDeviation": 1.2,
+          "color": "#ffffff",
+          "opacity": ".22"
+        },
+        "drop": {
+          "dx": 0,
+          "dy": 2,
+          "stdDeviation": 1.2,
+          "color": "#000000",
+          "opacity": ".55"
+        }
+      },
+      "tv": {
+        "region": {
+          "x": "-30%",
+          "y": "-30%",
+          "width": "160%",
+          "height": "170%"
+        },
+        "drop": {
+          "dx": 0,
+          "dy": 6,
+          "stdDeviation": 4,
+          "color": "#000000",
+          "opacity": ".65"
+        },
+        "halo": {
+          "dx": 0,
+          "dy": 0,
+          "stdDeviation": 6,
+          "color": "rgb(255,150,40)",
+          "opacity": ".28"
+        }
+      }
+    }
+  },
+  "headroom_paint": {
+    "prompt": 45,
+    "date": "2026-09-04",
+    "what": "The ground rect is drawn from y=-90 instead of y=0 and the root <svg> is overflow:visible, so the artwork paints the iOS safe-area band above the stage instead of leaving it to .banner's CSS gradient. That boundary was the seam Joe reported: 8.7/255 under the wordmark, 10.7 under the TV, 3.1 on neutral ground. Measured after: 2.0 worst.",
+    "gradients": "bnBg, bnGlow0 and bnGlow1 were objectBoundingBox (the default), so growing a shape would have stretched its gradient with it. All three are gradientUnits=userSpaceOnUse now, pinned to stage coordinates; the two radial ones carry the box aspect as a gradientTransform. Arithmetic: artifacts/qa/2026-09-05-banner-seam/gradient-convert.py.",
+    "unchanged": "Every mark, image, text and filter coordinate below is exactly as generated, and the glow ellipses are NOT extended - see BannerMobileV2.jsx for why their outer stops keep their tails. The 0-155 stage region measured 8 of 597060 pixels different by 1/255 at 428 CSS px / DPR 3, which is Chromium's gradient rasteriser, not a geometry change.",
+    "rect": {
+      "x": 0,
+      "y": -90,
+      "w": 428,
+      "h": 245,
+      "note": "y = -overhang, h = overhang + stage.h. The generator derives h from stage.h so the ground cannot be left behind when the stage changes height."
+    }
+  },
+  "_gold": "Metallic gold family, prompt 52 stage 4. Mapped from docs/ux-reference/visual-refinement-handoff-2026-09-06.md §4: #FBE59A->#E0D1A5 highlight, #F2CD62->#C6AF7A primary, #E4B646->#B39A69 mid, #D2A038->#8C7650 deep, and the wordmark's blurred glow copy #F3CC5A->#C6AF7A. The rgb(255,170,60) ambient ellipses and the rgb(255,150,40) TV halo are NOT the wordmark - they are §7's charcoal-spotlight background, which §7 says to retain. GEOMETRY IS UNTOUCHED: artboard, type size, letter-spacing and every coordinate are byte-identical. Colour only."
 }

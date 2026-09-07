@@ -1,14 +1,13 @@
-// MySports TV — home banner v2, PHONE breakpoint. Generated 2026-09-04 from banner-mobile-v2.json (Prompt 42).
-// Stage 428x155, scales to the container width. Assets live in web/public/banner/ (copied from the handoff package).
-// Do not hand-edit coordinates; regenerate from the JSON if the design changes.
+// MySports TV — home banner v2, PHONE breakpoint. GENERATED from banner-mobile-v2.json by
+// scripts/build_banner_mobile.py. Do not hand-edit: edit the JSON and regenerate.
+// Stage 428x155, scales to the container width. Assets live in web/public/banner/.
 //
 // PROMPT 45 - THE ARTWORK PAINTS THE SAFE-AREA BAND. Installed on iOS the web view runs under the
 // status bar and .banner pads itself by env(safe-area-inset-top). That band used to be .banner's
 // flat CSS gradient while the stage below it started with its own ground AND its two warm glows -
 // a step of 8.7/255 under the wordmark and 10.7/255 under the TV, which is the seam Joe reported on
-// 2026-09-04. The fix is overflow:visible plus a ground rect that starts at y=-90, so the stage's
-// own paint fills the band and there is no boundary to see. The 0-155 region is untouched: the
-// marks, the type and every coordinate are exactly as generated.
+// 2026-09-04. The fix is overflow:visible plus a ground rect that starts above the stage, so the
+// stage's own paint fills the band and there is no boundary to see.
 //
 // WHICH IS WHY THE THREE GRADIENTS ARE userSpaceOnUse. They were objectBoundingBox (the default),
 // which defines a gradient on the unit square of the shape it fills - so growing the ground rect
@@ -16,12 +15,11 @@
 // stage coordinates instead, the rect can grow and the paint cannot move. The conversion arithmetic
 // is artifacts/qa/2026-09-05-banner-seam/gradient-convert.py.
 //
-// THE GLOWS' OUTER STOPS ARE LEFT AS GENERATED (0.021 / 0.028, not 0). They make the ellipse
-// boundary a faint hard edge, which overflow:visible exposes in the band as a 3.4/255 line at
-// stage y=-20 - well above the stage, up beside the clock. Fading them to zero removes it, and was
-// measured: it also repaints the annulus between the 82%% and 100%% rings, changing 10.6%% of the
-// visible stage by up to 6/255. That is a far bigger change to the artwork than the artifact is
-// worth, so the tails stay. The seam Joe reported - at the stage's own top edge - is 2.0/255 now.
+// THE GLOWS' OUTER STOPS ARE LEFT AS DESIGNED (0.021 / 0.028, not 0). They make the ellipse
+// boundary a faint hard edge, which overflow:visible exposes in the band as a 3.4/255 line above
+// the stage. Fading them to zero removes it, and was measured: it also repaints the annulus between
+// the 82% and 100% rings, changing 10.6% of the visible stage by up to 6/255. That is a far bigger
+// change to the artwork than the artifact is worth, so the tails stay.
 //
 export default function BannerMobileV2() {
   return (
