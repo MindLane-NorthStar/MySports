@@ -345,7 +345,7 @@ test('a day with no bare games still renders three segments', () => {
 // three carve-outs are what these pin. If any of them ever starts hiding a game, the page tells Joe
 // he cannot watch something nobody has decided about yet.
 
-import { splitHidden, pageCountLine, revealLabel } from '../lib/offservice.js';
+import { splitHidden, pageCountLine, revealLabel, revealElsewhere } from '../lib/offservice.js';
 
 const fav = (id, home) => ({ ...game(id, false, ['CBS Sports Network']), home_team_id: home });
 
@@ -401,6 +401,17 @@ test('stage 4b: the reveal names its own number, and is absent when there is not
   assert.equal(revealLabel(18), 'Show 18 not on your services');
   assert.equal(revealLabel(1), 'Show 1 not on your services');
   assert.equal(revealLabel(0), null, 'no control when pressing it would do nothing');
+});
+
+// R1, prompt 56. GRID VIEW reports the same number and does not offer to show it here, because
+// showing it here means a card list under a grid - the thing Joe's 2026-09-06 ruling retired.
+test('R1: GRID VIEW reports the hidden count and points at List rather than revealing', () => {
+  assert.equal(revealElsewhere(5), '5 not on your services — switch to List to see them');
+  assert.equal(revealElsewhere(1), '1 not on your services — switch to List to see them');
+  assert.equal(revealElsewhere(0), null, 'no clause when nothing is hidden');
+  // The two are never the same string: one is a control, one is a report.
+  assert.notEqual(revealElsewhere(5), revealLabel(5));
+  assert.doesNotMatch(revealElsewhere(5), /^Show /, 'grid view never says "Show"');
 });
 
 test('stage 4: the line and the reveal ACCOUNT FOR EVERY ROW, with nothing counted twice', () => {

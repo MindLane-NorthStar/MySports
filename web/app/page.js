@@ -419,8 +419,10 @@ export default async function HubPage({ searchParams }) {
                 <DesktopGridPerLeague />
               </div>
             ) : null}
+            {/* R1, prompt 56: `grid` is passed, never guessed. In GRID VIEW the reveal button
+                does not render, so the card list it used to open cannot reach a grid view. */}
             <PageCount summary={summary} hidden={hidden} standingsRows={standingsRows}
-                       rankingsRows={rankingsRows} />
+                       rankingsRows={rankingsRows} grid={P.isGrid} />
             <DataAsOf week />
           </>
         ) : null}
@@ -559,7 +561,7 @@ export default async function HubPage({ searchParams }) {
 
       {!error && (rows.length || hidden.length) ? (
         <PageCount summary={summary} hidden={hidden} standingsRows={standingsRows}
-                       rankingsRows={rankingsRows} />
+                   rankingsRows={rankingsRows} grid={P.isGrid} />
       ) : null}
 
       {/* R6, prompt 56: THE SAME CONDITION AS THE COUNT LINE ABOVE, which is `(rows.length ||

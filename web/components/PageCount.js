@@ -26,11 +26,23 @@ import MatchupCard from './MatchupCard.js';
 import ProgramCard from './ProgramCard.js';
 import GameDetail from './GameDetail.js';
 import { isProgram } from '../lib/programs.js';
-import { pageCountLine, revealLabel } from '../lib/offservice.js';
+import { pageCountLine, revealLabel, revealElsewhere } from '../lib/offservice.js';
 import { indexStandings, indexRankings } from '../lib/standings.js';
 import { SPORTS, SPORT_LABEL, sportMarkUrl } from '../lib/config.js';
 
-export default function PageCount({ summary, hidden = [], standingsRows, rankingsRows, showDay = false }) {
+/**
+ * R1, prompt 56: `grid` IS PASSED DOWN, NEVER GUESSED.
+ *
+ * The component cannot infer the view - it has no URL, no params and no DOM to read at render time,
+ * and a guess from either would be a second source of truth for a thing `hubparams.js` already
+ * resolves. Both call sites in page.js pass `P.isGrid`.
+ *
+ * In GRID VIEW the count line is UNCHANGED and the button does not render at all, so
+ * `.pagecount-hidden` can never open and no card, band or detail panel can reach a grid view. In
+ * LIST VIEW everything below behaves exactly as it did.
+ */
+export default function PageCount({ summary, hidden = [], standingsRows, rankingsRows,
+                                    showDay = false, grid = false }) {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState(null);
   // The same index Listing builds, from the same rows - a revealed card must render the standings
@@ -47,12 +59,14 @@ export default function PageCount({ summary, hidden = [], standingsRows, ranking
   if (!summary) return null;
 
   const line = pageCountLine(summary);
-  const label = revealLabel(hidden.length);
+  // GRID VIEW gets the clause, LIST VIEW gets the control. One or the other, never both.
+  const label = grid ? null : revealLabel(hidden.length);
+  const note = grid ? revealElsewhere(hidden.length) : null;
 
   // Bands render in SPORTS order, not kickoff order - the same order the page above uses, so the
   // revealed section reads as the page's own missing rows rather than as a differently-sorted list.
   const grouped = [];
-  if (open && hidden.length) {
+  if (open && !grid && hidden.length) {
     const by = new Map();
     for (const g of hidden) {
       if (!by.has(g.sport)) by.set(g.sport, []);
@@ -81,9 +95,12 @@ export default function PageCount({ summary, hidden = [], standingsRows, ranking
             </button>
           </>
         ) : null}
+        {/* Not a button and not focusable: there is nothing here to press. It is the count line's
+            own second clause, saying where the games it just counted actually are. */}
+        {note ? <span className="pagecount-note">{note}</span> : null}
       </p>
 
-      {open && grouped.length ? (
+      {open && !grid && grouped.length ? (
         <div className="pagecount-hidden" id="pagecount-hidden">
           {grouped.map(([s, rows]) => (
             <section className="band" key={s} aria-label={SPORT_LABEL[s] || s}>

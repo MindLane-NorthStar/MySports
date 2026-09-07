@@ -2784,6 +2784,12 @@ main > .hubctl:first-child { margin-top: 0; }
 
 .pagecount-total { color: var(--dim); }
 
+/* R1, prompt 56: GRID VIEW's second clause, where LIST VIEW has the reveal button.
+   It says the same number the button would have and names where those games are, without being a
+   control - so it takes the row's own dim rather than the button's gold underline, and it carries
+   no 44px hit area because there is nothing to hit. */
+.pagecount-note { color: var(--faint); }
+
 /* The revealed games sit IMMEDIATELY BELOW the line, so nothing above the reader moves when the
    disclosure opens. They keep `.offsvc-row`'s dim, because they are on screen for the specific
    reason that they were hidden. */

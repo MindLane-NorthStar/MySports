@@ -319,3 +319,22 @@ export function pageCountLine(summary) {
 export function revealLabel(hiddenCount) {
   return hiddenCount ? `Show ${hiddenCount} not on your services` : null;
 }
+
+/**
+ * R1, prompt 56: THE SAME NUMBER, REPORTED RATHER THAN OFFERED - the GRID VIEW wording.
+ *
+ * `revealLabel` above is a control: pressing it opens a set of sport bands, matchup and program
+ * cards and the tap-to-open detail panel. That is a CARD LIST, and Joe's ruling of 2026-09-06 is
+ * that grid view carries no cards - "I only want list cards on list view and only grids on grid
+ * view". Prompt 55 put that ruling into `Listing`; the reveal lives in `PageCount`, so the two
+ * never met and the button went on serving cards under all four grid views.
+ *
+ * A grid view still has to SAY what it is not showing - hiding games and saying nothing is the page
+ * that lies by omission, which is the whole reason D4 demanded a count line. So the number stays
+ * and the control becomes a clause naming where the games are.
+ */
+export function revealElsewhere(hiddenCount) {
+  return hiddenCount
+    ? `${hiddenCount} not on your services — switch to List to see them`
+    : null;
+}
