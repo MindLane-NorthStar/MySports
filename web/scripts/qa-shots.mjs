@@ -383,6 +383,79 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
+// ------------------------------------------ the vertical slider toggles (prompt 60 stage 2)
+//
+// The three properties a later edit can quietly undo: that the pair is ONE target rather than two,
+// that exactly one word carries the gold, and that nothing is clipped at 360 - where the whole run
+// has 0.16px of spare room and a clip would look like a row rather than like a fault.
+{
+  for (const w of [360, 390]) {
+    const ctx = await browser.newContext({
+      viewport: { width: w, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+    });
+    const page = await ctx.newPage();
+    await page.goto(`${base}/?day=2026-09-05`, { waitUntil: 'networkidle' });
+    await page.evaluate(() => window.scrollTo(0, 900));
+    await page.waitForTimeout(500);
+    const t = await page.evaluate(() => {
+      const outs = [...document.querySelectorAll('.chdr-toggle')].map((e) => {
+        const r = e.getBoundingClientRect();
+        const opts = [...e.querySelectorAll('.chdr-opt')];
+        return {
+          key: e.dataset.key,
+          w: Math.round(r.width * 100) / 100,
+          h: Math.round(r.height * 100) / 100,
+          words: opts.length,
+          gold: opts.filter((s) => getComputedStyle(s).color === 'rgb(198, 175, 122)').length,
+          clipped: opts.some((s) => s.scrollWidth > s.clientWidth + 0.5),
+          name: e.getAttribute('aria-label'),
+        };
+      });
+      const run = document.querySelector('.chdr-run');
+      return { outs, over: run.scrollWidth > run.clientWidth + 0.5 };
+    });
+    record(`${w}: three toggles, each ONE target of two words`,
+           t.outs.length === 3 && t.outs.every((o) => o.words === 2),
+           t.outs.map((o) => `${o.key}:${o.words}`).join(' '));
+    record(`${w}: exactly one word per toggle carries the gold`,
+           t.outs.every((o) => o.gold === 1), t.outs.map((o) => `${o.key}:${o.gold}`).join(' '));
+    record(`${w}: every toggle is 44px in BOTH dimensions`,
+           t.outs.every((o) => o.w >= 44 && o.h >= 44),
+           t.outs.map((o) => `${o.key} ${o.w}x${o.h}`).join('  '));
+    record(`${w}: nothing is clipped and the run does not overflow`,
+           !t.over && t.outs.every((o) => !o.clipped),
+           t.over ? 'run overflows' : 'clean');
+    await ctx.close();
+  }
+
+  // THE ACCESSIBLE NAMES, in BOTH states of the two toggles that have two. A sighted reader learns
+  // the state from the gold; `aria-label` replaces the visible text rather than adding to it, so if
+  // the name stopped naming the live half a screen-reader user would hear the pair and never the
+  // answer.
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+  });
+  const page = await ctx.newPage();
+  const nameOf = async (path, key) => {
+    await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
+    await page.evaluate(() => window.scrollTo(0, 900));
+    await page.waitForTimeout(450);
+    return page.locator(`.chdr-toggle[data-key="${key}"]`).getAttribute('aria-label');
+  };
+  const want = [
+    ['/?day=2026-09-05', 'mode', 'Time range: Day. Switch to Week'],
+    ['/?mode=week&w=2026-08-31', 'mode', 'Time range: Week. Switch to Day'],
+    ['/?day=2026-09-05', 'scope', 'Scope: All games. Switch to My teams'],
+    ['/?day=2026-09-05&scope=mine', 'scope', 'Scope: My teams. Switch to All games'],
+    ['/?day=2026-09-05', 'view', 'Presentation: List view. Switch to Grid view'],
+  ];
+  for (const [path, key, expect] of want) {
+    const got = await nameOf(path, key);
+    record(`the ${key} toggle names its state and its action`, got === expect, got);
+  }
+  await ctx.close();
+}
+
 // -------------------------------------------------- the favourites bracket, ALL GAMES only (p59)
 {
   const ctx = await browser.newContext({

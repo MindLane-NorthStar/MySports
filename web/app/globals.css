@@ -3120,6 +3120,65 @@ html[data-hdr='collapsed'] .shell {
   min-width: 0;
 }
 
+/* ---- THE VERTICAL SLIDER TOGGLES (prompt 60 stage 2) ------------------------------------------
+ *
+ * Joe: "Could these three choices be rendered as VERTICAL slider toggles? Day over Week, All Games
+ * over My Teams, List View over Grid View. All would render in the navbar with the selected button
+ * in gold."
+ *
+ * 44px, NOT 88, AND HE CHOSE IT. He asked whether doubling the bar would let the tagline come back
+ * under the wordmark. It would fit VERTICALLY and it still could not go there: "Every game. Every
+ * channel. One place." is WIDER than MYSPORTS TV, so a left column sized to the tagline would push
+ * the four controls into less room than they have now. The bar stays 44 and the tagline stays out.
+ *
+ * TWO LINES IN 44px. 12px type at 1.05 leading is 12.6px a line, 25.2px for the pair plus 1px
+ * between - 26.2px inside a 44px row, which leaves 8.9px of air above and below. The type size is
+ * the one prompt 58 measured and shipped, so the words are the same size they were; only the number
+ * of them changed.
+ *
+ * ONE TARGET, NOT TWO - see the component. The 44px minimum is applied in BOTH dimensions here, as
+ * it was for `.chdr-choice`: register §18b's two exceptions (the 31px segmented toggles, the 24px
+ * ALL SPORTS bar) are not joined by a third.
+ */
+.chdr-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 3px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  /* NEVER SHRINK, for the reason `.chdr-run`'s children have always had it: flex items shrink below
+     their content by default, and at 360 that silently clipped ALL GAMES mid-word - a clip nobody
+     would see in review because the row still looked like a row. */
+  flex: 0 0 auto;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1.05;
+}
+
+/* THE SELECTED ONE IN GOLD, THE OTHER IN --dim. Both tokens are read from the block at the top of
+   this file and neither is retyped (rule 16). --dim rather than --faint: the inactive word is a
+   live destination the reader is meant to be able to read and tap toward, not a footnote. */
+.chdr-opt { color: var(--dim); }
+.chdr-opt[data-on='true'] { color: var(--gold); }
+
+button.chdr-toggle:hover .chdr-opt[data-on='false'] { color: var(--ink); }
+
+button.chdr-toggle:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
 .chdr-choice {
   font-family: var(--display);
   font-weight: 600;

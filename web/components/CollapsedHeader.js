@@ -179,41 +179,71 @@ export default function CollapsedHeader() {
   // and it is not a regression - changing the viewing day already means scrolling to the top today.
   // Tapping DAY flips the MODE, not the date.
   /**
-   * THE THREE BINARIES, AND A THIRD ACCESSIBILITY PATTERN FOR THIS APP.
+   * THE THREE BINARIES ARE VERTICAL SLIDER TOGGLES (prompt 60 stage 2). Joe, 2026-09-07:
    *
-   * `Filters.js` records why the EXPANDED toggles are `role="radiogroup"` + `aria-checked` rather
-   * than `aria-pressed`: each is exactly one of two, and exclusivity should be announced rather
-   * than inferred. Register §17 records that the eight league tiles deliberately keep
-   * `aria-pressed`, because a filter that can be CLEARED is not a one-of-N choice.
+   *   "Could these three choices be rendered as VERTICAL slider toggles? Day over Week, All Games
+   *    over My Teams, List View over Grid View. All would render in the navbar with the selected
+   *    button in gold."
    *
-   * A COLLAPSED BINARY SHOWS ONLY ONE OPTION, so it can be neither. There is no group to be one of
-   * two within, and nothing is "pressed" - the word on screen is a STATEMENT OF FACT and the tap is
-   * a verb. So: a plain button whose VISIBLE TEXT IS THE CURRENT STATE and whose ACCESSIBLE NAME
-   * STATES THE ACTION.
+   * BOTH LABELS ARE VISIBLE AND THE ORDER NEVER MOVES. "Day over Week" is a fixed arrangement, not
+   * live-on-top: a control whose two words swap places on every tap is a control the eye has to
+   * re-read each time. The gold moves; the words do not.
    *
-   *     <button aria-label="Time range: Day. Switch to Week">DAY</button>
+   * ONE TAP TARGET PER CONTROL, NOT TWO. With exactly two states, tapping the control and tapping
+   * the inactive label are the same action - so a second 44px target would double this bar's
+   * permanent cost to buy a duplicate of the tap it already has. That is what keeps the bar at 44px,
+   * which is the height Joe chose over 88 (see globals.css for why the tagline could not come back
+   * with the extra 44).
    *
-   * That is the brief's wording and it is kept, because it reads correctly in the two places it
-   * matters: a screen reader announces "Time range: Day. Switch to Week, button" - the state, then
-   * what pressing does - and a voice-control user can say the label. Splitting state from action
-   * with a full stop rather than a dash is deliberate; a dash is read as a pause, not a boundary.
+   * THE ACCESSIBILITY PATTERN IS PROMPT 58'S, AND IT IS UNCHANGED ON PURPOSE.
    *
-   * TAPPING `LIST` IS A ONE-WAY DOOR FROM THIS BAR and that is by design, not an oversight. It
-   * switches to grid view, and the bar does not render there (stage 5), so it vanishes with the
-   * tap that caused it. Getting back is the expanded stack, one scroll up - the same journey the
-   * reader would make to change the day. Recorded so it reads as a consequence of the grid
-   * exclusion rather than as a defect.
+   * `Filters.js` records why the EXPANDED toggles are `role="radiogroup"` + `aria-checked`: each is
+   * exactly one of two, and exclusivity should be announced rather than inferred. Register §17
+   * records that the eight league tiles keep `aria-pressed`, because a filter that can be CLEARED
+   * is not a one-of-N choice.
+   *
+   * THIS IS NEITHER, AND SHOWING BOTH WORDS DID NOT CHANGE THAT. It is still ONE control, so there
+   * is no group of two for a radiogroup to describe and nothing that is "pressed". The second word
+   * is a LABEL FOR THE DESTINATION, not a second option. So the pattern stays what it was: a plain
+   * button whose accessible name states the current state and then the action.
+   *
+   *     <button aria-label="Time range: Day. Switch to Week">DAY / WEEK</button>
+   *
+   * What DID change is that the name now has to do MORE work, not less. A sighted reader learns the
+   * state from the gold; a screen-reader user never hears the colour, and `aria-label` replaces the
+   * visible text rather than adding to it - so if the name did not say which of the two is live,
+   * that reader would be told the pair and never told the answer. Splitting state from action with
+   * a full stop rather than a dash is deliberate: a dash is read as a pause, not a boundary.
+   *
+   * TAPPING THE VIEW TOGGLE IS A ONE-WAY DOOR FROM THIS BAR and that is by design. It switches to
+   * grid view, and the bar does not render there, so it vanishes with the tap that caused it.
+   * Getting back is the expanded stack, one tap on the wordmark away. Recorded so it reads as a
+   * consequence of the grid exclusion rather than as a defect.
    */
   const binaries = [
-    { key: 'mode', text: P.isWeek ? 'WEEK' : 'DAY',
+    { key: 'mode', top: 'DAY', bottom: 'WEEK', topIsOn: !P.isWeek,
       name: `Time range: ${P.isWeek ? 'Week' : 'Day'}. Switch to ${P.isWeek ? 'Day' : 'Week'}`,
       // `day` and `w` both stay in the URL - each is read only in its own mode - and the DEFAULT is
       // removed rather than written, which is what keeps `/` the canonical default state.
       onPick: () => setParam('mode', P.isWeek ? null : 'week', KEEP_SCROLL) },
-    { key: 'scope', text: P.isMine ? 'MY TEAMS' : 'ALL GAMES',
+    { key: 'scope', top: 'ALL GAMES', bottom: 'MY TEAMS', topIsOn: !P.isMine,
       name: `Scope: ${P.isMine ? 'My teams' : 'All games'}. Switch to ${P.isMine ? 'All games' : 'My teams'}`,
       onPick: () => setParam('scope', P.isMine ? null : 'mine', KEEP_SCROLL) },
-    { key: 'view', text: 'LIST',
+    // ALWAYS LIST ON TOP AND ALWAYS LIVE: this bar does not render in grid view at all, so the only
+    // state it can ever be in is the one where LIST is the answer.
+    //
+    // `LIST` / `GRID`, NOT `LIST VIEW` / `GRID VIEW`, AND THE MEASUREMENT DECIDED IT. Joe's wording
+    // is the long pair and it was measured first, at four viewports with the real font: it needs
+    // 233.44px of run against 221.73px of room at 360 and 228.13px at 390 - so it overflows by
+    // 11.71px on a small phone and by 5.31px on Joe's own. It fits only at 375 (+3.3) and 430
+    // (+34.69), which is to say it fails at both ends of the range that matters. The short pair is
+    // 221.58px and fits everywhere, with +0.16 at 360 and +6.55 at 390.
+    //
+    // AND THE NOUN IS LESS NEEDED HERE THAN IT WAS. Prompt 58 dropped it from a run of four single
+    // words on the argument that "view" was the one word droppable without losing the meaning. As a
+    // PAIR the case is stronger, not weaker: LIST over GRID is self-evidently a choice of
+    // presentation, because the two words only contrast in that one dimension.
+    { key: 'view', top: 'LIST', bottom: 'GRID', topIsOn: true,
       name: 'Presentation: List view. Switch to Grid view',
       onPick: () => setParam('view', 'grid', KEEP_SCROLL) },
   ];
@@ -251,9 +281,14 @@ export default function CollapsedHeader() {
         </button>
         <div className="chdr-run">
           {binaries.map((c) => (
-            <button key={c.key} type="button" className="chdr-choice" data-key={c.key}
+            <button key={c.key} type="button" className="chdr-toggle" data-key={c.key}
                     aria-label={c.name} onClick={c.onPick}>
-              {c.text}
+              {/* aria-hidden on BOTH words, not just the inactive one. The accessible name above
+                  already carries the state and the action in a sentence; leaving these readable
+                  would have a screen reader announce the pair twice, once as prose and once as two
+                  loose words with no indication which is which. */}
+              <span className="chdr-opt" data-on={c.topIsOn} aria-hidden="true">{c.top}</span>
+              <span className="chdr-opt" data-on={!c.topIsOn} aria-hidden="true">{c.bottom}</span>
             </button>
           ))}
           <button type="button" className="chdr-choice" data-key="sport"

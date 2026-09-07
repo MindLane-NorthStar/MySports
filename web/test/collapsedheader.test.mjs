@@ -265,3 +265,47 @@ test('the open/closed-ness is ephemeral; the URL still owns `sport`', () => {
   // the pick goes through setParam like every other sport pick in the app
   assert.match(code('components/Filters.js'), /setParam\('sport', value, setOpts\)/);
 });
+
+test('the three binaries are ONE target each, showing both words (prompt 60 stage 2)', () => {
+  const c = code('components/CollapsedHeader.js');
+  // TWO SPANS INSIDE ONE BUTTON. The failure this pins is a well-meant "make the inactive word
+  // tappable too": with exactly two states, tapping the control and tapping the other label are the
+  // same action, so a second 44px target doubles the bar's permanent cost to buy a duplicate.
+  assert.match(c, /<button key=\{c\.key\} type="button" className="chdr-toggle"/);
+  // ANCHORED FORWARD FROM THE TOGGLE. Slicing to the FIRST `</button>` in the file matched the
+  // wordmark's, which sits earlier - a backwards slice, an empty string, and a test that failed
+  // loudly rather than passing vacuously, which is the only reason it was caught here.
+  const at = c.indexOf('className="chdr-toggle"');
+  const inner = c.slice(at, c.indexOf('</button>', at));
+  assert.equal((inner.match(/<span className="chdr-opt"/g) || []).length, 2);
+  assert.doesNotMatch(inner, /<button/, 'the two words are spans, never nested buttons');
+  // THE ORDER IS FIXED, never live-on-top: `top` and `bottom` are constants and only `topIsOn`
+  // moves. Joe's wording is "Day over Week", which is an arrangement, not a sort.
+  for (const [top, bottom] of [['DAY', 'WEEK'], ['ALL GAMES', 'MY TEAMS'], ['LIST', 'GRID']]) {
+    assert.match(c, new RegExp(`top: '${top}', bottom: '${bottom}'`));
+  }
+});
+
+test('the accessible name still says which half is live (prompt 60 stage 2)', () => {
+  const c = code('components/CollapsedHeader.js');
+  // `aria-label` REPLACES the visible text; it does not add to it. Both words are now on screen and
+  // both are aria-hidden, so this sentence is the ONLY thing a screen reader gets - and the gold,
+  // which is what tells a sighted reader the answer, is not available to it at all.
+  assert.match(c, /aria-hidden="true">\{c\.top\}/);
+  assert.match(c, /aria-hidden="true">\{c\.bottom\}/);
+  assert.match(c, /Time range: \$\{P\.isWeek \? 'Week' : 'Day'\}\. Switch to/);
+  assert.match(c, /Scope: \$\{P\.isMine \? 'My teams' : 'All games'\}\. Switch to/);
+  assert.match(c, /'Presentation: List view\. Switch to Grid view'/);
+});
+
+test('the toggles keep 44px in both dimensions - no third exception (prompt 60 stage 2)', () => {
+  // Register §18b holds exactly two exceptions to the 44px minimum: the 31px segmented toggles and
+  // the 24px ALL SPORTS bar. Prompt 60's brief suspected the collapsed bar was a silent third,
+  // reading prompt 58's "the four words are 148.7px" as a TARGET measurement. It is an INK
+  // measurement: the targets were and are 44 / 58.13 / 44 / 63.45 at 360, min-width applied.
+  const css = src('app/globals.css');
+  const block = css.match(/\.chdr-toggle \{[^}]*\}/)[0];
+  assert.match(block, /min-width: 44px/);
+  assert.match(block, /height: 44px/);
+  assert.match(block, /flex: 0 0 auto/, 'a squeeze must overflow, never truncate quietly');
+});
