@@ -56,7 +56,18 @@
   --spot-3: #0e0e0e;
 
   --panel: #23262b;
-  --panel-top: #31363d;
+  /* DARKENED 2026-09-07, prompt 57 stage 5, on Joe's ruling. #31363d -> #23262b.
+     THE THIRD GREY WAS DYING. The --faint note below records the problem and hands the decision
+     here: true AA for the card's first line needed a --faint of #989fa8, which is 4.55:1 against
+     --dim's own 4.62:1 - the two tokens collapse into one and the third step disappears. The other
+     lever was the gradient's top end, and this is it.
+     SOLVED, NOT PICKED. The minimum darkening at which --faint reaches 4.5:1 on the top of the
+     gradient, along the token's own hue and saturation. It lands at 4.53:1, from 3.63:1.
+     IT COINCIDES EXACTLY WITH --panel, AND THAT IS NOT A TYPO. The arithmetic arrived there on its
+     own; the two tokens stay separate so the gradient's top can move again without dragging every
+     flat panel with it. The consequence to know is that the card's gradient is now much subtler -
+     15.29% to 12.5% HSL lightness, where it used to start at 21.57%. */
+  --panel-top: #23262b;
   --panel-bottom: #1e2126;
 
   --line: #3a3f47;
