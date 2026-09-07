@@ -3179,34 +3179,79 @@ button.chdr-toggle:focus-visible {
   border-radius: 4px;
 }
 
-.chdr-choice {
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: var(--dim);
-  /* 44px IN BOTH DIMENSIONS, AND NO THIRD EXCEPTION. The 44px minimum already carries two recorded
-     ones - the 31px segmented toggles and the 24px ALL SPORTS bar (register §18b) - and a control
-     tapped WHILE SCROLLING is the worst place in the app to spend a third. `DAY` is 18px of ink and
-     `LIST` 21px, so both are padded out to the full target.
-     The height is the bar's own 44px rather than a min-height, so the target fills it edge to edge
-     and there is no dead strip above or below the word. */
+/* ---- THE LIVE TILE (prompt 60 stage 3) --------------------------------------------------------
+ *
+ * Joe: "a tiny arrow gets embedded under 'All Sports' indicating that a tap will open a submenu, at
+ * that submenu is the league tiles. In the event the user selects a tile - that tile then takes the
+ * place of 'All Sports' in the navbar."
+ *
+ * NOT A TOGGLE. ALL plus eight leagues is nine states, and cycling them on tap would take eight
+ * presses to get from NFL back to NHL - which is not a control, it is a punishment. It is a
+ * disclosure, and `aria-expanded` on the button says so.
+ *
+ * IT IS THE ONE COLUMN THAT CHANGES SHAPE, so it is the one that can break the row - and the cap
+ * below is what stops it. MEASURED at a 20px mark height, from the art's own intrinsic dimensions:
+ * ufc 57.5px is the widest of the eight tiles, then mlb 38.0, wwe 22.0, racing 20.0, nhl 17.6,
+ * nfl 14.6, cfp 13.8, nba 8.8. All eight are inside the 63.45px ALL SPORTS already occupies, so
+ * choosing a league can only ever make this column NARROWER.
+ *
+ * THE CAP IS NOT FOR THOSE EIGHT. `?sport=nascar` is hand-typeable and `CHIP_MARK` answers it: the
+ * NASCAR wordmark is 6:1 and would render 119.9px wide at 20px tall, which is nearly twice this
+ * column's budget and would push the run off a 390px screen. The cap clamps it - the mark
+ * letterboxes inside the box rather than the box growing to the mark.
+ *
+ * 56px AND NOT 58, AND THE TWO PIXELS BUY AN INVARIANT. At 58 the widest tile is 64.0px against ALL
+ * SPORTS's 63.45px, so `?sport=nascar` at 360 - where the whole run has 0.16px of slack - ran 0.4px
+ * over its box. At 56 the tile's ceiling is 62px, which is UNDER the words it replaces, so choosing
+ * a league can only ever make this row NARROWER and the widest case the bar can ever be is the one
+ * it renders by default. What it costs is UFC, the only tile the cap now touches: 57.5px of natural
+ * art becomes 56, a 2.6% reduction, at 20px tall. */
+.chdr-tile {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 1px;
   min-width: 44px;
   height: 44px;
   padding: 0 3px;
   background: none;
   border: 0;
   cursor: pointer;
-  /* NEVER SHRINK. Flex items shrink below their content by default, and at 360 that silently
-     clipped ALL GAMES and ALL SPORTS mid-word - a clip nobody would see in review because the row
-     still looked like a row. `flex: 0 0 auto` turns any future squeeze into an obvious overflow
-     instead of a quiet truncation. */
   flex: 0 0 auto;
+  color: var(--dim);
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1.05;
+}
+
+.chdr-mark {
+  height: 20px;
+  width: auto;
+  max-width: 56px;
+  object-fit: contain;
+  display: block;
+}
+
+/* The caret follows the column's `color`, so it dims and brightens with the control rather than
+   needing a colour of its own. Rotated when the row is open - a transform on a static element,
+   never an animation, so it is a state cue and not motion. This element is inside `.chdr`, which is
+   a sibling of `.shell`, so it is nowhere on the chain between `.mrail-cell` and `.mgrid-scroll`
+   that globals.css forbids transforms on. */
+.chdr-caret { display: block; }
+.chdr-tile[data-open='true'] { color: var(--ink); }
+.chdr-tile[data-open='true'] .chdr-caret { transform: rotate(180deg); }
+
+button.chdr-tile:hover { color: var(--ink); }
+
+button.chdr-tile:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+  border-radius: 4px;
 }
 
 /* THE DISCLOSED TILE ROW. Inside `.chdr`, which is fixed, so opening it grows the bar OVER the
@@ -3221,14 +3266,10 @@ button.chdr-toggle:focus-visible {
   gap: 8px;
 }
 
-button.chdr-choice:hover { color: var(--ink); }
-
-button.chdr-choice:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: -2px;
-  border-radius: 4px;
-  color: var(--ink);
-}
+/* `.chdr-choice` IS GONE (prompt 60). It was the single-line control the bar shipped with: three
+   of them became `.chdr-toggle` in stage 2 and the fourth became `.chdr-tile` in stage 3, leaving
+   the class with no user in the repo. Removed rather than left standing - a dead class that still
+   looks live is what let `headingClass` default to `.favlabel` for a whole prompt. */
 
 /* The banner's own gold, read from the token block and never retyped (rule 16). The gradient is
    `background-clip: text`, which is how you fill type with a gradient in CSS - the SVG banner does

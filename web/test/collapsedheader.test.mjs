@@ -202,13 +202,20 @@ test('44px in BOTH dimensions, and no third exception to it', () => {
   // The 44px minimum already carries two recorded exceptions (register §18b: the 31px segmented
   // toggles and the 24px ALL SPORTS bar). A control tapped WHILE SCROLLING is the worst place in
   // the app to spend a third.
+  //
+  // `.chdr-choice` IS GONE (prompt 60): three of the four became `.chdr-toggle` and the fourth
+  // became `.chdr-tile`, so BOTH successors are checked rather than one. A test still naming the
+  // retired class would have thrown on a null match, which is how this was caught - but a test that
+  // checked only one of the two would have passed while the other quietly lost its floor.
   const css = src('app/globals.css');
-  const rule = css.match(/\.chdr-choice \{[^}]*\}/)[0];
-  assert.match(rule, /min-width: 44px/);
-  assert.match(rule, /height: 44px/);
-  // and they must never shrink below it - flex items do by default, which silently clipped two
-  // labels mid-word at 360 before this line existed
-  assert.match(rule, /flex: 0 0 auto/);
+  for (const sel of ['\\.chdr-toggle', '\\.chdr-tile']) {
+    const rule = css.match(new RegExp(`${sel} \\{[^}]*\\}`))[0];
+    assert.match(rule, /min-width: 44px/, `${sel} keeps the horizontal floor`);
+    assert.match(rule, /height: 44px/, `${sel} keeps the vertical floor`);
+    // and they must never shrink below it - flex items do by default, which silently clipped two
+    // labels mid-word at 360 before this line existed
+    assert.match(rule, /flex: 0 0 auto/, `${sel} must overflow rather than truncate`);
+  }
 });
 
 test('a tap from the bar keeps the scroll position; every other surface keeps the default', () => {
@@ -251,7 +258,11 @@ test('the closed row is ABSENT, not hidden - or focus walks into it', () => {
 
 test('it reuses SportFilter with props rather than forking it', () => {
   const c = code('components/CollapsedHeader.js');
-  assert.match(c, /import \{ useSetParam, SportFilter \} from '\.\/Filters\.js'/);
+  // LOOSE ON THE NAMED LIST, EXACT ON THE SOURCE. Pinning the whole import line broke the
+  // moment stage 3 added `chipMarkUrl` to it - the same brittleness prompt 59 hit and fixed.
+  // What matters is that these come from Filters.js and are not re-implemented here.
+  assert.match(c, /import \{[^}]*useSetParam[^}]*\} from '\.\/Filters\.js'/);
+  assert.match(c, /import \{[^}]*SportFilter[^}]*\} from '\.\/Filters\.js'/);
   assert.match(c, /<SportFilter sport=\{P\.sport\} onPicked=\{\(\) => setSportsOpen\(false\)\} setOpts=\{KEEP_SCROLL\} \/>/);
   // and the two new props default to undefined so every existing caller is unchanged
   const f = code('components/Filters.js');
@@ -308,4 +319,34 @@ test('the toggles keep 44px in both dimensions - no third exception (prompt 60 s
   assert.match(block, /min-width: 44px/);
   assert.match(block, /height: 44px/);
   assert.match(block, /flex: 0 0 auto/, 'a squeeze must overflow, never truncate quietly');
+});
+
+test('the live tile is a disclosure, and the mark table is not forked (prompt 60 stage 3)', () => {
+  const c = code('components/CollapsedHeader.js');
+  // A DISCLOSURE, NOT A NINTH BINARY. ALL plus eight leagues is nine states; cycling them on tap
+  // would take eight presses to get from NFL back to NHL.
+  assert.match(c, /className="chdr-tile"[\s\S]{0,400}aria-expanded=\{sportsOpen\}/);
+  assert.match(c, /aria-controls="chdr-sports"/);
+  assert.match(c, /id="chdr-sports"/, 'the id aria-controls names must exist when open');
+  // ONE MARK TABLE. `chipMarkUrl` comes from Filters.js, which is where the tile row builds its
+  // own eight - the bar shows THE SAME TILE and must not be able to disagree about what one is.
+  assert.match(c, /import \{[^}]*chipMarkUrl[^}]*\} from '\.\/Filters\.js'/);
+  assert.doesNotMatch(c, /\/leagues\//, 'the path is built in one place, never here');
+  // AND NOT config.js's sportMarkUrl: SPORT_MARK is five leagues and returns null for racing, ufc
+  // and wwe - three of the eight tiles.
+  const f = code('components/Filters.js');
+  assert.match(f, /export function chipMarkUrl\(sport\)/);
+  assert.match(f, /CHIP_MARK\[sport\] \|\| sport/);
+});
+
+test('the tile can only ever be NARROWER than the words it replaces (prompt 60 stage 3)', () => {
+  // The cap is the whole guard. Measured from the art's intrinsic sizes at a 20px mark height:
+  // ufc 57.5, mlb 38.0, wwe 22.0, racing 20.0, nhl 17.6, nfl 14.6, cfp 13.8, nba 8.8 - and NASCAR,
+  // reachable by a hand-typed ?sport=nascar, 119.9. At 56px the widest tile is 62px against ALL
+  // SPORTS's 63.45, so the bar's widest state is the one it renders by default.
+  const css = src('app/globals.css');
+  const rule = css.match(/\.chdr-mark \{[^}]*\}/)[0];
+  assert.match(rule, /max-width: 56px/);
+  assert.match(rule, /object-fit: contain/, 'the mark letterboxes; the box never grows to the mark');
+  assert.match(rule, /height: 20px/);
 });

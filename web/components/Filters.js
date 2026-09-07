@@ -254,6 +254,21 @@ const CHIP_MARK = {
 };
 
 /**
+ * EXPORTED FOR THE COLLAPSED HEADER'S LIVE TILE (prompt 60 stage 3), and exported rather than
+ * copied for the reason `useSetParam` and `SportFilter` already are: Joe's design is that the
+ * chosen tile "takes the place of 'All Sports' in the navbar", so the bar is showing THE SAME TILE
+ * and must not be able to disagree with the row about what a league looks like.
+ *
+ * IT IS NOT `config.js`'s `sportMarkUrl`, AND THE DIFFERENCE IS NOT COSMETIC. That table is
+ * `SPORT_MARK` - five leagues - and returns null for racing, ufc and wwe, which are three of the
+ * eight tiles. A tile row built from it would have holes exactly where this one does not.
+ */
+export function chipMarkUrl(sport) {
+  if (!sport) return null;
+  return `/leagues/${CHIP_MARK[sport] || sport}_dark.png`;
+}
+
+/**
  * `onPicked` and `setOpts` EXIST FOR THE COLLAPSED HEADER (prompt 58 stage 4), and both default to
  * undefined so every existing call site behaves exactly as it did.
  *

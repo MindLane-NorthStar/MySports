@@ -456,6 +456,92 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
+// ------------------------------------------------- the live tile (prompt 60 stage 3)
+//
+// Joe: "a tiny arrow gets embedded under 'All Sports' ... In the event the user selects a tile -
+// that tile then takes the place of 'All Sports' in the navbar." Picking ALL SPORTS in that row is
+// THE ONLY WAY BACK to the words, so it is the one direction that must never quietly stop working.
+{
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+  });
+  const page = await ctx.newPage();
+  const collapse = async (path) => {
+    await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
+    await page.evaluate(() => window.scrollTo(0, 900));
+    await page.waitForTimeout(550);
+  };
+  const tile = () => page.evaluate(() => {
+    const e = document.querySelector('.chdr-tile');
+    const img = e.querySelector('.chdr-mark');
+    const run = document.querySelector('.chdr-run');
+    return {
+      w: Math.round(e.getBoundingClientRect().width * 100) / 100,
+      shows: img ? 'mark' : (e.querySelector('.chdr-opt') || {}).textContent,
+      src: img ? img.getAttribute('src') : null,
+      expanded: e.getAttribute('aria-expanded'),
+      controls: e.getAttribute('aria-controls'),
+      row: document.querySelectorAll('#chdr-sports').length,
+      caret: !!e.querySelector('.chdr-caret'),
+      runW: Math.round(run.getBoundingClientRect().width * 100) / 100,
+      over: run.scrollWidth > run.clientWidth + 0.5,
+    };
+  });
+
+  await collapse('/?day=2026-09-05');
+  let t = await tile();
+  record('the tile shows ALL SPORTS with a caret, and the row is CLOSED',
+         t.shows === 'ALL SPORTS' && t.caret && t.expanded === 'false' && t.row === 0,
+         `${t.shows}, aria-expanded=${t.expanded}, ${t.row} row(s)`);
+  record('aria-controls names an element that exists when it is open', t.controls === 'chdr-sports',
+         t.controls);
+
+  const top = () => page.evaluate(
+    () => document.querySelector('#all-today .mcard').getBoundingClientRect().top);
+  const before = await top();
+  await page.click('.chdr-tile');
+  await page.waitForTimeout(350);
+  t = await tile();
+  const moved = Math.round(((await top()) - before) * 100) / 100;
+  const tiles = await page.locator('#chdr-sports .spbtn').count();
+  record('tapping it OPENS the league row, ALL SPORTS bar plus eight tiles',
+         t.expanded === 'true' && t.row === 1 && tiles === 9,
+         `aria-expanded=${t.expanded}, ${tiles} controls`);
+  record('the row OVERLAYS rather than pushing the content', moved === 0, `content moved ${moved}px`);
+
+  await page.locator('#chdr-sports .spbtn').nth(1).click();
+  await page.waitForTimeout(700);
+  t = await tile();
+  record('picking a league puts its MARK where the words were',
+         t.shows === 'mark' && /nfl_dark/.test(t.src || '') && t.row === 0,
+         `${t.src}, ${t.row} row(s) left open`);
+
+  // THE ONLY WAY BACK.
+  await page.click('.chdr-tile');
+  await page.waitForTimeout(300);
+  await page.locator('#chdr-sports .spbtn-all').click();
+  await page.waitForTimeout(700);
+  t = await tile();
+  record('picking ALL SPORTS in the row puts the WORDS back', t.shows === 'ALL SPORTS' && t.row === 0,
+         `${t.shows}, url ${page.url().replace(base, '')}`);
+
+  // THE ONE COLUMN THAT CHANGES SHAPE CANNOT BREAK THE ROW. Measured against the widest mark the
+  // app can reach, which is NASCAR's 6:1 wordmark via a hand-typed ?sport=nascar - not the widest
+  // of the eight tiles, and certainly not ALL SPORTS.
+  await collapse('/?day=2026-09-05');
+  const allSports = (await tile()).w;
+  let widest = 0;
+  for (const sport of ['nascar', 'ufc', 'mlb', 'wwe', 'racing', 'nhl', 'nfl', 'cfb', 'nba', 'indycar']) {
+    await collapse(`/?day=2026-09-05&sport=${sport}`);
+    const s2 = await tile();
+    widest = Math.max(widest, s2.w);
+    if (s2.over) widest = Infinity;
+  }
+  record('no league mark can widen the tile past the words it replaces',
+         widest <= allSports, `widest league ${widest}px vs ALL SPORTS ${allSports}px`);
+  await ctx.close();
+}
+
 // -------------------------------------------------- the favourites bracket, ALL GAMES only (p59)
 {
   const ctx = await browser.newContext({

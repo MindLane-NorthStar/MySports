@@ -67,8 +67,8 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { resolveHubParams } from '../lib/hubparams.js';
 import { todayET } from '../lib/format.js';
-import { SPORT_SHORT, SPORT_LABEL } from '../lib/config.js';
-import { useSetParam, SportFilter } from './Filters.js';
+import { SPORT_LABEL } from '../lib/config.js';
+import { useSetParam, SportFilter, chipMarkUrl } from './Filters.js';
 import {
   SENTINEL_ID, subscribeHeader, headerCollapsed, headerCollapsedOnServer,
   collapseHeader, expandHeader, resetHeader,
@@ -167,13 +167,13 @@ export default function CollapsedHeader() {
   // THE FOUR CURRENT CHOICES, in the control stack's own order: the page reads DAY, ALL GAMES,
   // LIST, ALL SPORTS downward when expanded, and left to right here.
   //
-  // `LIST`, NOT `LIST VIEW`. The expanded toggle says "List view" because it sits beside "Grid
-  // view" and the noun disambiguates; alone in a run of four, the noun is the only word that could
-  // be dropped without losing the meaning, and it is 21px of a 218px budget.
-  //
-  // THE SPORT USES THE SHORT LABEL. `SPORT_LABEL.cfb` is "College Football" - measured at 93.3px
-  // against the ALL SPORTS target of 57.5px with the real font, so the display name would break
-  // this row the moment CFB was selected. `SPORT_SHORT` is that fact in one place.
+  // THE SPORT USED TO BE A SHORT TEXT LABEL and this note used to explain why - `SPORT_LABEL.cfb`
+  // is "College Football" at 93.3px against an ALL SPORTS target of 57.5px, so the display name
+  // would have broken the row the moment CFB was selected, and `SPORT_SHORT` was that fact in one
+  // place. PROMPT 60 RETIRED THE QUESTION: the column shows the league's MARK now, so there is no
+  // text to be too long. `SPORT_SHORT` is no longer imported here at all - the width problem it
+  // solved is not this component's any more, and the constraint that replaced it is the 58px cap on
+  // `.chdr-mark`.
   //
   // DELIBERATELY ABSENT, so nobody helpfully adds it: THE DATE AND WEEK PICKER. There is no room,
   // and it is not a regression - changing the viewing day already means scrolling to the top today.
@@ -248,7 +248,16 @@ export default function CollapsedHeader() {
       onPick: () => setParam('view', 'grid', KEEP_SCROLL) },
   ];
 
-  const sportText = P.sport ? (SPORT_SHORT[P.sport] || P.sport).toUpperCase() : 'ALL SPORTS';
+  // THE FOURTH COLUMN IS THE LIVE TILE (prompt 60 stage 3). Joe: "a tiny arrow gets embedded
+  // under 'All Sports' indicating that a tap will open a submenu, at that submenu is the league
+  // tiles. In the event the user selects a tile - that tile then takes the place of 'All Sports' in
+  // the navbar."
+  //
+  // The words when nothing is chosen, the league's own mark when something is. `SPORT_SHORT` is no
+  // longer read here and neither is a short text label: a tile that "takes the place of ALL SPORTS"
+  // is the tile, not its abbreviation, and the marks are what Joe recognises (§13's ruling for the
+  // row itself, which this now matches).
+  const tileMark = chipMarkUrl(P.sport);
 
   /**
    * SPORT IS A DISCLOSURE, NOT A BINARY, and that is Joe's ruling rather than an implementation
@@ -291,11 +300,29 @@ export default function CollapsedHeader() {
               <span className="chdr-opt" data-on={!c.topIsOn} aria-hidden="true">{c.bottom}</span>
             </button>
           ))}
-          <button type="button" className="chdr-choice" data-key="sport"
+          <button type="button" className="chdr-tile" data-key="sport" data-open={sportsOpen}
                   aria-label={`Sport: ${P.sport ? (SPORT_LABEL[P.sport] || P.sport) : 'All sports'}`}
                   aria-expanded={sportsOpen} aria-controls="chdr-sports"
                   onClick={() => setSportsOpen((v) => !v)}>
-            {sportText}
+            {tileMark ? (
+              // alt="" because `aria-label` on the button already names the league. An alt here
+              // would have a screen reader say it twice, which is the same ruling the tile row
+              // itself carries.
+              <img className="chdr-mark" src={tileMark} alt="" />
+            ) : (
+              <span className="chdr-opt" data-on="true" aria-hidden="true">ALL SPORTS</span>
+            )}
+            {/* THE CARET IS WHAT MAKES EVERY COLUMN A TWO-LINE STACK, which is the other half of
+                why it is here: without it this column would be one line among three stacks and the
+                row would read as uneven. Drawn rather than typed - a glyph like the black
+                down-pointing triangle renders at a different size and baseline in every font on
+                the shelf, and this one has to sit level with three lines of type it does not
+                share a font with. */}
+            <svg className="chdr-caret" viewBox="0 0 10 6" width="10" height="6"
+                 aria-hidden="true" focusable="false">
+              <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.6"
+                    strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         </div>
       </div>
