@@ -44,12 +44,16 @@ export default function RootLayout({ children }) {
         <Chrome banner={<Banner />} />
         <div className="shell">
           {children}
-          <p className="footnote">
-            Every game is kept in the database — nothing is deleted. Reads are anon, read-only, live.
-          </p>
-          {/* Prompt 31: the ET suffix came off every clock in the app, so the fact is stated once
-              here instead. Its OWN line, per Joe's choice, and italic is the only thing separating
-              it from the footnote above. */}
+          {/* R5, prompt 56: the developer footnote is GONE. It read "Every game is kept in the
+              database — nothing is deleted. Reads are anon, read-only, live." on all eight views -
+              the data architecture described to someone who came to find out what is on
+              television, and the only copy in the app written from the build's side of the screen.
+              Joe approved its removal on 2026-09-06.
+
+              THE ONE BELOW STAYS, and is now the only footnote. Prompt 31 took the ET suffix off
+              every clock in the app, so the fact is stated once here instead; it is a fact the
+              reader needs rather than one the build wanted to volunteer. `.footnote-tz` keeps both
+              classes so its italic rule and the shared `.footnote` type both still apply. */}
           <p className="footnote footnote-tz">All times are Eastern · Cleveland market.</p>
         </div>
       </body>

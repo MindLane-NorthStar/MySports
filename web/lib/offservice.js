@@ -286,7 +286,7 @@ export function splitHidden(rows, favIds) {
 /**
  * THE PAGE'S ONE COUNT LINE (prompt 50 stage 4b).
  *
- * `8 games on your services`, plus `· 3 TBD` when any are, and that is the whole line. It renders
+ * `8 broadcasts on your services`, plus `· 3 TBD` when any are, and that is the whole line. It renders
  * ONCE, at the foot of the page, where the old per-band lines rendered once per band.
  *
  * THIS SUPERSEDES 05 §10's `6 airing · 48 TBD · 5 unavailable`, which prompt 26 shipped and which
@@ -296,7 +296,7 @@ export function splitHidden(rows, favIds) {
  * room for the accurate word again.
  *
  * THE `TBD` SEGMENT IS COWORK'S CALL AND IS FLAGGED FOR VETO. Joe's renderings show one segment.
- * Without a second, a day carrying 45 network-TBD games would render `6 games on your services`
+ * Without a second, a day carrying 45 network-TBD games would render `6 broadcasts on your services`
  * above 51 rows, and the line would be undercounting what is on screen by a factor of eight. The
  * alternative is that TBD games are shown but uncounted. One line to remove if Joe prefers his.
  *
@@ -306,7 +306,12 @@ export function splitHidden(rows, favIds) {
 export function pageCountLine(summary) {
   const on = summary?.onCount ?? 0;
   const tbd = (summary?.pendingCount ?? 0) + (summary?.tbdCount ?? 0);
-  const head = `${on} ${on === 1 ? 'game' : 'games'} on your services`;
+  // R7, prompt 56: BROADCAST, not GAME. `on` counts every row the page decided to show, and since
+  // v1.7 that includes programs - a NASCAR race, a UFC card, College GameDay. None of those is a
+  // game, so the noun was false for them and had been since programs landed. `broadcast` is true of
+  // all of them, and it is the word this line used before prompt 26 shortened it to fit a 390px
+  // band header; at page level there is room for the accurate one again. Joe approved 2026-09-06.
+  const head = `${on} ${on === 1 ? 'broadcast' : 'broadcasts'} on your services`;
   return tbd ? `${head} · ${tbd} TBD` : head;
 }
 

@@ -379,13 +379,13 @@ test('stage 4a: a FAVOURITE is never hidden, even when it is off-service', () =>
   assert.deepEqual(hidden.map((g) => g.id), ['2']);
 });
 
-test('stage 4b: the page line reads "N games on your services", with TBD only when there are some', () => {
+test('R7 (prompt 56): the page line reads "N broadcasts on your services", TBD only when there are some', () => {
   const s = (rows) => splitHidden(rows, new Set()).summary;
   assert.equal(pageCountLine(s([game('1', true, ['ABC']), game('2', true, ['CBS'])])),
-               '2 games on your services');
+               '2 broadcasts on your services');
   assert.equal(pageCountLine(s([game('1', true, ['ABC']), bare('2'), pend('3', ['FOX'])])),
-               '1 game on your services · 2 TBD', 'the two TBD states sum on the line, as §10 had it');
-  assert.equal(pageCountLine(s([bare('1')])), '0 games on your services · 1 TBD');
+               '1 broadcast on your services · 2 TBD', 'the two TBD states sum on the line, as §10 had it');
+  assert.equal(pageCountLine(s([bare('1')])), '0 broadcasts on your services · 1 TBD');
   // zero-count segments stay omitted
   assert.doesNotMatch(pageCountLine(s([game('1', true, ['ABC'])])), /TBD/);
   assert.doesNotMatch(pageCountLine(s([game('1', true, ['ABC'])])), /0 /);
@@ -393,8 +393,8 @@ test('stage 4b: the page line reads "N games on your services", with TBD only wh
 
 test('stage 4b: singular and plural', () => {
   const s = (rows) => splitHidden(rows, new Set()).summary;
-  assert.match(pageCountLine(s([game('1', true, ['ABC'])])), /^1 game on/);
-  assert.match(pageCountLine(s([game('1', true, ['ABC']), game('2', true, ['CBS'])])), /^2 games on/);
+  assert.match(pageCountLine(s([game('1', true, ['ABC'])])), /^1 broadcast on/);
+  assert.match(pageCountLine(s([game('1', true, ['ABC']), game('2', true, ['CBS'])])), /^2 broadcasts on/);
 });
 
 test('stage 4b: the reveal names its own number, and is absent when there is nothing to reveal', () => {
@@ -415,6 +415,6 @@ test('stage 4: the line and the reveal ACCOUNT FOR EVERY ROW, with nothing count
   assert.equal(visible.length + hidden.length, rows.length, 'no row is dropped');
   assert.equal(summary.onCount + summary.pendingCount + summary.tbdCount + summary.offCount, rows.length);
   assert.equal(hidden.length, summary.offCount, 'hidden is exactly the off-service set');
-  assert.equal(pageCountLine(summary), '2 games on your services · 3 TBD');
+  assert.equal(pageCountLine(summary), '2 broadcasts on your services · 3 TBD');
   assert.equal(revealLabel(hidden.length), 'Show 2 not on your services');
 });

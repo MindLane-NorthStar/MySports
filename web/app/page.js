@@ -562,7 +562,15 @@ export default async function HubPage({ searchParams }) {
                        rankingsRows={rankingsRows} />
       ) : null}
 
-      {!error && rows.length ? <DataAsOf day={day} today={today} overlay={overlay} /> : null}
+      {/* R6, prompt 56: THE SAME CONDITION AS THE COUNT LINE ABOVE, which is `(rows.length ||
+          hidden.length)`. It was `rows.length` alone, and week mode has always rendered its
+          provenance line inside the `(visible.length || hidden.length)` guard - so a day where
+          EVERY game is off-service showed a count line with no provenance, while the identical week
+          showed both. The two lines now appear and disappear together in all eight views. Joe
+          approved 2026-09-06. */}
+      {!error && (rows.length || hidden.length) ? (
+        <DataAsOf day={day} today={today} overlay={overlay} />
+      ) : null}
 
       {/* THE ARCHIVED GRID HAS LEFT LIST VIEW TOO (prompt 55 stage 1).
        *
