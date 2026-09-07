@@ -2,7 +2,7 @@ import './globals.css';
 import { Suspense } from 'react';
 import Banner from '../components/Banner.js';
 import Chrome from '../components/Chrome.js';
-import CollapsedHeader, { SENTINEL_ID } from '../components/CollapsedHeader.js';
+import CollapsedHeader from '../components/CollapsedHeader.js';
 
 export const metadata = {
   title: 'MySports TV',
@@ -44,10 +44,14 @@ export default function RootLayout({ children }) {
             the 1100px column. Banner is rendered here, on the server, and handed to Chrome, which
             only decides whether this route gets it or the compact bar. */}
         <Chrome banner={<Banner />} />
-        {/* THE SENTINEL, immediately after the banner and zero-height. When it leaves the viewport
-            the collapsed bar shows; when it comes back the bar hides. It is the ONLY trigger -
-            there is no scroll listener anywhere in this app and this does not add one. */}
-        <div id={SENTINEL_ID} aria-hidden="true" />
+        {/* THE SENTINEL MOVED OUT OF THIS FILE (prompt 60), and the move is the reason the collapse
+            no longer jumps the page. It used to sit HERE, immediately after the banner, so it left
+            the viewport once ~123px of banner had scrolled away - while the 216px control stack was
+            still on screen. That was harmless when collapsing only ADDED a fixed bar; now that it
+            REMOVES the banner and the stack from the flow, the trigger has to fire when the whole
+            collapsible region has gone, or the compensation has nothing like the right number to
+            work with. It is rendered by `Controls` in app/page.js, immediately after `.hubctl` and
+            deliberately OUTSIDE it - hidden by the collapse, it would have no box to measure. */}
         {/* MOUNTED HERE, BESIDE Chrome, AND THAT POSITION IS LOAD-BEARING. It makes the bar a
             sibling of `.shell` and therefore never an ancestor of `<main>` or of the mobile grid,
             so it cannot become a containing block for the grid's sticky rail. Wrapping the content

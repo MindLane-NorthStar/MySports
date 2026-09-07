@@ -19,6 +19,7 @@
 
 import BannerMobileV2 from './BannerMobileV2.jsx';
 import BannerDesktopV2 from './BannerDesktopV2.jsx';
+import BannerTap from './BannerTap.js';
 
 export default function Banner() {
   return (
@@ -26,10 +27,18 @@ export default function Banner() {
       <div className="bn-pc">
         <div className="bd-wrap">
           <BannerDesktopV2 />
+          {/* PROMPT 60: the TV collapses the header. A CLIENT component inside a SERVER one, which
+              is the whole reason this file stays a server component - the artwork is still rendered
+              on the server and only the 55x59 button hydrates. It is positioned against `.bd-wrap`
+              rather than `.bn-pc`, because `.bd-wrap` is the box the desktop SVG actually fills
+              (max-width 1600px); anchoring to `.bn-pc` would drift the button right of the TV on
+              anything wider than that. */}
+          <BannerTap variant="desktop" />
         </div>
       </div>
       <div className="bn-mobile">
         <BannerMobileV2 />
+        <BannerTap variant="mobile" />
       </div>
     </header>
   );

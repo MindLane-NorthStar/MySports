@@ -262,14 +262,23 @@ test('EXACTLY TWO elements take the top safe-area inset, and both are fixed to t
   // THE TWO ARE NOT TREATED IDENTICALLY, deliberately. `.banner` absorbs 14px of the inset
   // (prompts 45/50/51) because its ARTWORK carries its own headroom; `.chdr` takes the PLAIN inset,
   // because it is type on a ground and has no headroom to absorb.
+  //
+  // A FOURTH USE ARRIVED IN PROMPT 60 AND IT IS A DIFFERENT KIND, which is why the count moved and
+  // the guard did not weaken. `.banner` and `.chdr` PAINT at the top edge and take the inset so
+  // their own ground bleeds into the band. `html[data-hdr='collapsed'] .shell` paints nothing up
+  // there: with the banner removed from the flow, it RESERVES the space the fixed bar occupies, so
+  // the inset appears in its arithmetic as part of the bar's height. Two elements still own the top
+  // edge; a third would still be the thing to challenge.
   const css = src('app/globals.css');
   const hits = css.match(/safe-area-inset-top/g) || [];
-  assert.equal(hits.length, 3, '.banner base + .banner standalone override + .chdr, and nothing else');
+  assert.equal(hits.length, 4,
+    '.banner base + .banner standalone override + .chdr + the collapsed .shell offset');
   const stripped = css
     .replace(/\.banner\{[^}]*\}/g, '')
-    .replace(/\.chdr \{[^}]*\}/g, '');
+    .replace(/\.chdr \{[^}]*\}/g, '')
+    .replace(/html\[data-hdr='collapsed'\] \.shell \{[^}]*\}/g, '');
   assert.doesNotMatch(stripped, /safe-area-inset-top/,
-                      'no selector other than .banner and .chdr may take a top inset');
+                      'no selector other than .banner, .chdr and the collapsed .shell offset');
   // and the one that is NOT the banner must not have copied the banner's absorption
   const chdr = css.match(/\.chdr \{[^}]*\}/)[0];
   assert.match(chdr, /padding-top: env\(safe-area-inset-top, 0px\)/);

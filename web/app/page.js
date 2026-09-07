@@ -41,6 +41,7 @@ import { overlayForDay, applyOverlay } from '../lib/livescores.js';
 import { resolveHubParams } from '../lib/hubparams.js';
 import { calendarWeeksFrom, seasonWeeksFrom, daySpan, currentWeekKey, usesSeasonWeeks } from '../lib/weeks.js';
 import { favoriteIds, splitMine, scopeLine } from '../lib/favorites.js';
+import { SENTINEL_ID } from '../lib/headerstate.js';
 import { splitHidden } from '../lib/offservice.js';
 import favoritesDoc from '../../data/favorites.json';
 import PageCount from '../components/PageCount.js';
@@ -661,24 +662,37 @@ function ScopeLine({ show, count }) {
 
 function Controls({ P, choices }) {
   return (
-    <div className="hubctl">
-      {/* 1. DAY | WEEK - the time prism, and since prompt 50 also the pickers' visible label. */}
-      <ModeToggle mode={P.mode} />
-      {/* 2. ALL GAMES | MY TEAMS and LIST VIEW | GRID VIEW, four buttons on ONE row (spec §9). */}
-      <ScopeViewToggles scope={P.scope} view={P.view} />
-      {/* 3-4. The ALL SPORTS bar, then the eight league tiles. Untouched by the restack except for
-              the bar's height (stage 2c); register §16 froze the tile row's geometry. */}
-      <div className="controls controls-stack">
-        <SportFilter sport={P.sport} />
+    <>
+      <div className="hubctl">
+        {/* 1. DAY | WEEK - the time prism, and since prompt 50 also the pickers' visible label. */}
+        <ModeToggle mode={P.mode} />
+        {/* 2. ALL GAMES | MY TEAMS and LIST VIEW | GRID VIEW, four buttons on ONE row (spec §9). */}
+        <ScopeViewToggles scope={P.scope} view={P.view} />
+        {/* 3-4. The ALL SPORTS bar, then the eight league tiles. Untouched by the restack except for
+                the bar's height (stage 2c); register §16 froze the tile row's geometry. */}
+        <div className="controls controls-stack">
+          <SportFilter sport={P.sport} />
+        </div>
+        {/* 5. The picker, with its prev/next arrows. */}
+        <div className="pickrow">
+          {P.isWeek ? (
+            <WeekPicker choices={choices} sport={P.sport} />
+          ) : (
+            <DayPicker day={P.day} />
+          )}
+        </div>
       </div>
-      {/* 5. The picker, with its prev/next arrows. */}
-      <div className="pickrow">
-        {P.isWeek ? (
-          <WeekPicker choices={choices} sport={P.sport} />
-        ) : (
-          <DayPicker day={P.day} />
-        )}
-      </div>
-    </div>
+      {/* THE COLLAPSE SENTINEL (prompt 60). Zero-height, and its POSITION is the whole design:
+          immediately after the control stack, so scrolling past it means the entire collapsible
+          region - banner and stack together - has left the screen, and OUTSIDE `.hubctl`, so the
+          collapse that hides the stack cannot hide the one box the compensation has to measure.
+          lib/headerstate.js carries both halves of that reasoning.
+
+          IT LIVES IN `Controls` RATHER THAN IN EITHER RETURN, because there are two of them - the
+          week branch and the day branch - and a sentinel present in one and not the other would
+          give week mode a header that could never collapse. One element, both modes, by
+          construction. Rendered on the SERVER: it is an empty div and holds no state. */}
+      <div id={SENTINEL_ID} aria-hidden="true" />
+    </>
   );
 }

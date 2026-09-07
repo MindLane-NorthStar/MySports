@@ -293,6 +293,96 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
+// ------------------------------------------- the header's ONE-WAY state machine (prompt 60 st.1)
+//
+// Joe designed this on 2026-09-07 and every row of his table is here, because the one that would
+// rot silently is row 5: `scroll only ever collapses` is one missing `else` away from being untrue,
+// and nothing about the page LOOKS wrong when it stops holding - it just quietly goes back to
+// prompt 58's behaviour.
+{
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+  });
+  const page = await ctx.newPage();
+  const hdr = () => page.evaluate(() => ({
+    attr: document.documentElement.getAttribute('data-hdr'),
+    y: Math.round(window.scrollY),
+    banner: getComputedStyle(document.querySelector('.banner')).display,
+    stack: getComputedStyle(document.querySelector('.hubctl')).display,
+  }));
+
+  await page.goto(`${base}/?day=2026-09-05`, { waitUntil: 'networkidle' });
+  let h = await hdr();
+  record('1. first paint is EXPANDED', h.attr === null && h.banner !== 'none' && h.stack !== 'none',
+         `data-hdr=${h.attr}, banner ${h.banner}`);
+
+  await page.evaluate(() => window.scrollTo(0, 900));
+  await page.waitForTimeout(500);
+  h = await hdr();
+  record('2. scrolling past the header COLLAPSES it',
+         h.attr === 'collapsed' && h.banner === 'none' && h.stack === 'none',
+         `data-hdr=${h.attr}, banner ${h.banner}, stack ${h.stack}`);
+
+  // ROW 5, AND THE WHOLE POINT: scroll may not expand.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(500);
+  h = await hdr();
+  record('5. scrolling back to the top STAYS collapsed', h.attr === 'collapsed' && h.y === 0,
+         `data-hdr=${h.attr} at scrollY ${h.y}`);
+
+  // ROW 4: the wordmark is the only way back, and it returns the reader to the top.
+  await page.evaluate(() => window.scrollTo(0, 600));
+  await page.waitForTimeout(300);
+  await page.click('.chdr-wm');
+  await page.waitForTimeout(400);
+  h = await hdr();
+  record('4. tapping MYSPORTS TV EXPANDS and returns to the top',
+         h.attr === null && h.y === 0 && h.banner !== 'none',
+         `data-hdr=${h.attr} at scrollY ${h.y}`);
+
+  // ROW 3: a purposeful tap on the television.
+  await page.click('.bn-tvtap--mobile');
+  await page.waitForTimeout(400);
+  h = await hdr();
+  record('3. tapping the TV on the banner COLLAPSES it', h.attr === 'collapsed' && h.banner === 'none',
+         `data-hdr=${h.attr}, banner ${h.banner}`);
+
+  // THE COMPENSATION. Removing ~300px of header from the flow mid-scroll must not move the box the
+  // reader is looking at. Sampled per animation frame so the deliberate scroll and the collapse can
+  // be told apart - anything coarser measures both at once and proves nothing.
+  await page.click('.chdr-wm');
+  await page.waitForTimeout(400);
+  const moved = await page.evaluate(async () => {
+    const card = () => document.querySelector('#all-today .mcard');
+    const frames = [];
+    let stop = false;
+    const tick = () => {
+      const c = card();
+      frames.push({ attr: document.documentElement.getAttribute('data-hdr'),
+                    top: c ? c.getBoundingClientRect().top : null });
+      if (!stop) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    window.scrollTo(0, 900);
+    await new Promise((r) => setTimeout(r, 900));
+    stop = true;
+    const i = frames.findIndex((f) => f.attr === 'collapsed');
+    if (i <= 0) return null;
+    return Math.round((frames[i].top - frames[i - 1].top) * 100) / 100;
+  });
+  record('the collapse moves NOTHING under the reader', moved === 0, `card moved ${moved}px`);
+
+  // THE TV IS A REAL TARGET. 44px in both dimensions, measured rather than modelled.
+  await page.goto(`${base}/?day=2026-09-05`, { waitUntil: 'networkidle' });
+  const tv = await page.locator('.bn-tvtap--mobile').evaluate((e) => {
+    const r = e.getBoundingClientRect();
+    return { w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10, tag: e.tagName };
+  });
+  record('the TV is a <button> and clears 44px in both dimensions',
+         tv.tag === 'BUTTON' && tv.w >= 44 && tv.h >= 44, `${tv.tag} ${tv.w} x ${tv.h}`);
+  await ctx.close();
+}
+
 // -------------------------------------------------- the favourites bracket, ALL GAMES only (p59)
 {
   const ctx = await browser.newContext({

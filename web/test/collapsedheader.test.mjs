@@ -32,8 +32,11 @@ test('the trigger is an IntersectionObserver on a sentinel, and NOT a scroll lis
 
 test('the server renders the EXPANDED state, which is what makes hydration safe', () => {
   const c = code('components/CollapsedHeader.js');
-  assert.match(c, /useState\(false\)/,
-    'collapsed starts false, so the first client render equals the server render');
+  // PROMPT 60 MOVED THE STATE OUT of this component and into lib/headerstate.js, so the assertion
+  // moves with it: the promise is not "useState(false)" but "the server snapshot is a constant
+  // false", which is the third argument to useSyncExternalStore and the only one the server reads.
+  assert.match(c, /useSyncExternalStore\(subscribeHeader, headerCollapsed, headerCollapsedOnServer\)/,
+    'the server and the first client render both read false, so there is nothing to mismatch');
   // and the collapse is applied only after mount
   assert.match(c, /useEffect\(\(\) => \{/);
 });
@@ -52,7 +55,9 @@ test('it is mounted as a SIBLING of .shell, never wrapping the content', () => {
   // would then become the grid rail's containing block - prompt 30's bug, reintroduced.
   const layout = code('app/layout.js');
   assert.match(layout, /<CollapsedHeader \/>/);
-  assert.match(layout, /<div id=\{SENTINEL_ID\} aria-hidden="true" \/>/);
+  // THE SENTINEL IS NO LONGER ASSERTED HERE. Prompt 60 moved it out of the layout and into
+  // `Controls` in app/page.js - see the test below for where it went and why. What this test is
+  // about is the HEADER's mounting point, which is unchanged and still load-bearing.
   // the header tag must close before .shell opens
   const hdr = layout.indexOf('<CollapsedHeader />');
   const shell = layout.indexOf('<div className="shell">');
@@ -61,12 +66,75 @@ test('it is mounted as a SIBLING of .shell, never wrapping the content', () => {
     'the header must never wrap the content');
 });
 
-test('the sentinel sits immediately after the banner', () => {
-  const layout = code('app/layout.js');
-  const chrome = layout.indexOf('<Chrome banner=');
-  const sentinel = layout.indexOf('id={SENTINEL_ID}');
-  assert.ok(chrome > 0 && sentinel > chrome, 'the sentinel follows the banner');
-  assert.ok(sentinel < layout.indexOf('<div className="shell">'), 'and precedes the content');
+test('the sentinel sits after the control stack, and OUTSIDE it (prompt 60)', () => {
+  // IT USED TO SIT AFTER THE BANNER, in app/layout.js, and that was right for prompt 58: collapsing
+  // only ADDED a fixed bar, so the trigger could fire as soon as ~123px of banner had gone.
+  //
+  // Prompt 60's collapse REMOVES the banner AND the control stack from the flow. Two properties
+  // follow, and both are asserted because either one silently ruins the other half of the feature:
+  //
+  //   AFTER `.hubctl`  - so crossing the sentinel means the whole collapsible region has left the
+  //                      screen, and the scroll compensation is being asked to absorb a distance
+  //                      the reader has actually travelled.
+  //   OUTSIDE `.hubctl` - so the collapse that hides the stack does not hide the one box
+  //                      lib/headerstate.js measures. A display:none sentinel has no rect, the
+  //                      compensation silently becomes zero, and the page jumps ~300px.
+  const page = code('app/page.js');
+  const stackEnd = page.indexOf('</div>', page.indexOf('<div className="pickrow">'));
+  const sentinel = page.indexOf('<div id={SENTINEL_ID}');
+  assert.ok(sentinel > stackEnd, 'the sentinel follows the control stack');
+  // and it is a sibling of `.hubctl`, not a child: the stack's closing tag comes first.
+  const hubctl = page.indexOf('<div className="hubctl">');
+  const closes = page.lastIndexOf('</div>', sentinel);
+  assert.ok(hubctl > 0 && closes > hubctl && closes < sentinel,
+            'the sentinel is outside .hubctl, so the collapse cannot hide it');
+  // ONE sentinel serves BOTH returns, because it lives in the shared `Controls` component. A
+  // week branch without one would have a header that could never collapse.
+  assert.equal((page.match(/id=\{SENTINEL_ID\}/g) || []).length, 1);
+  assert.match(page, /function Controls\(\{ P, choices \}\) \{\s*return \(\s*<>/,
+               'Controls returns a fragment so the sentinel can sit beside the stack');
+});
+
+test('SCROLL ONLY EVER COLLAPSES - the one-way machine (prompt 60)', () => {
+  // Joe's design of 2026-09-07. The observer callback is one restored `else` away from prompt 58's
+  // two-way binding, and nothing on screen looks wrong when that happens - the header just quietly
+  // starts re-expanding at the top again, which is the behaviour he asked to replace.
+  const c = code('components/CollapsedHeader.js');
+  assert.match(c, /if \(!entry\.isIntersecting\) collapseHeader\(\)/,
+               'the sentinel may only collapse');
+  // SCOPED TO THE CALLBACK, not to the file. A pattern hunting for `else` was tried first and let
+  // `if (!entry.isIntersecting) collapseHeader(); else expandHeader();` straight through - the
+  // regex was checked against that exact string rather than trusted, which is how it was caught.
+  // The property is simply that NOTHING inside the observer expands.
+  const cb = c.slice(c.indexOf('new IntersectionObserver('), c.indexOf('io.observe(el)'));
+  assert.ok(cb.length > 20, 'the observer callback was located');
+  assert.doesNotMatch(cb, /expandHeader/, 'no branch may take the observer back to expanded');
+  // EXPANSION IS MANUAL AND HAS EXACTLY ONE CALLER: the wordmark button.
+  const expands = (c.match(/expandHeader\(\)/g) || []).length;
+  assert.equal(expands, 1, 'exactly one expand call site');
+  assert.match(c, /className="chdr-wm"[\s\S]{0,200}onClick=\{\(\) => expandHeader\(\)\}/,
+               'and it is the wordmark');
+  // The store, not component state: three surfaces share this boolean and one of them is a server
+  // component that can hold none.
+  const m = code('lib/headerstate.js');
+  assert.match(m, /export function headerCollapsedOnServer\(\) \{\s*return false;/,
+               'the server snapshot is a constant false - the hydration promise');
+  assert.doesNotMatch(m, /scrollTo[\s\S]{0,40}smooth/, 'no motion outside a reduced-motion gate');
+});
+
+test('the collapse compensates the scroll, measured against the sentinel', () => {
+  // Removing the banner and the stack shortens the document by ~300px. Without this the content
+  // jumps that far up under the reader's thumb. qa-shots proves it lands at 0px moved; this pins
+  // the MECHANISM, because a later edit could keep the feature and lose the compensation.
+  const m = code('lib/headerstate.js');
+  assert.match(m, /const before = sentinelTop\(\);[\s\S]{0,200}window\.scrollBy\(0, after - before\)/,
+               'measure, apply, measure, scroll by the difference');
+  // and the attribute write sits BETWEEN the two measurements, which is what makes it exact.
+  const body = m.slice(m.indexOf('export function collapseHeader'));
+  const before = body.indexOf('const before');
+  const paint = body.indexOf('paint(true)');
+  const after = body.indexOf('const after');
+  assert.ok(before < paint && paint < after, 'the layout change happens between the measurements');
 });
 
 test('grid view returns NULL, not a hidden element', () => {

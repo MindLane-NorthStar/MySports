@@ -1882,13 +1882,67 @@ input:focus-visible {
   .banner{padding-top:max(0px, calc(env(safe-area-inset-top, 0px) + 4px - 14px))}
 }
 .bn-pc{position:relative}
+/* PROMPT 60: the positioned parent for the desktop TV button. It has to be `.bd-wrap` and not
+   `.bn-pc` - `.bd-wrap` is the box the 1400x200 SVG actually fills, and past 1600px the wrapper
+   stops growing while `.bn-pc` keeps running full-bleed, so a percentage of `.bn-pc` would walk
+   the button off the television on a wide monitor. */
 /* The desktop stage is 1400 wide and the banner is full-bleed to the viewport, so past 1600px the
    art would keep stretching and the two rows of marks would drift apart. The block caps it: the
    SVG scales to 1600 and stops, which puts the ceiling at 1600 x 200/1400 = 229px. Beyond that the
    wings are .banner's gradient, which is the same three stops the stage paints. */
-.bd-wrap{max-width:1600px;margin:0 auto}
+.bd-wrap{max-width:1600px;margin:0 auto;position:relative}
 .bn-mobile{display:none;position:relative}
 @media (max-width:699px){.bn-pc{display:none}.bn-mobile{display:block}}
+/* ---- THE TV IS A CONTROL (prompt 60 stage 1) ---------------------------------------------------
+ *
+ * Joe: "I'd like the banner to collapse as you scroll up OR by a purposeful tap on the tv ON the
+ * banner." components/BannerTap.js carries why it is an overlay rather than an edit to the artwork;
+ * these are the artwork's own coordinates as PERCENTAGES OF THE STAGE, and they are the numbers that
+ * have to move if banner-mobile-v2.json ever moves the television.
+ *
+ *   phone    stage 428 x 135, TV at x=306.04 y=43.1 w=55.93 h=58.8
+ *   desktop  stage 1400 x 200, TV at x=1165.06 y=50.5 w=99.87 h=105
+ *
+ * Both SVGs are width:100% over their own viewBox with NO CSS height, so a percentage of the
+ * positioned parent is a percentage of the stage at every width and the button tracks the TV through
+ * any resize. MEASURED, not modelled: the phone target is 47.0 x 49.5 CSS px at 360, 51.0 x 53.6 at
+ * 390 and 56.2 x 59.1 at 430; the desktop one is 49.9 x 52.5 at its own 700px breakpoint. Every one
+ * clears 44px in both dimensions, so this spends none of the 44px rule's exceptions - the min-width
+ * and min-height below are a floor for a phone narrower than 336px and never bind on Joe's.
+ *
+ * IT NEEDS A VISIBLE AFFORDANCE, and that is the debatable half of this stage. An illustration that
+ * silently became tappable is worse than no control: on a phone there is no hover and no cursor, so
+ * a control whose only cue is `:hover` has no cue at all. The ring is therefore PERSISTENT and very
+ * quiet - one inset hairline of the gold token at 26% - and strengthens to 60% on hover and 85% on
+ * press. It is painted on a pseudo-element rather than the button so the colour can come from
+ * `--gold` at an opacity rather than from a retyped rgb (rule 16).
+ */
+.bn-tvtap {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 10px;
+  min-width: 44px;
+  min-height: 44px;
+  /* Above the SVG, below the collapsed bar's z-index 40. */
+  z-index: 2;
+}
+.bn-tvtap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--gold);
+  opacity: .26;
+}
+.bn-tvtap:hover::after { opacity: .6; }
+.bn-tvtap:active::after { opacity: .85; }
+.bn-tvtap:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.bn-tvtap--mobile { left: 71.5047%; top: 31.9259%; width: 13.0678%; height: 43.5556%; }
+.bn-tvtap--desktop { left: 83.2186%; top: 25.25%; width: 7.1336%; height: 52.5%; }
+
 /* forced modes for the review frames */
 .force-mobile .bn-pc{display:none}.force-mobile .bn-mobile{display:block}
 
@@ -2998,10 +3052,44 @@ main > .hubctl:first-child { margin-top: 0; }
   transform: translateY(-100%);
 }
 
-.chdr[data-collapsed] {
+/* ONE ATTRIBUTE ON <html> DRIVES THE WHOLE COLLAPSE (prompt 60), and it is not a stylistic choice.
+ * Three surfaces have to change together and one of them - the page's own control stack - is
+ * rendered by a SERVER component in app/page.js that can hold no client state. A React context
+ * could reach the bar and the TV button and never reach `.hubctl`. `data-hdr` reaches all three.
+ *
+ * IT IS ALSO WHAT MAKES THE SCROLL COMPENSATION EXACT. lib/headerstate.js writes this attribute and
+ * measures the sentinel on the very next line: the attribute write IS the layout change, so there is
+ * no frame in between for the page to jump in.
+ *
+ * The bar's own `data-collapsed` attribute is GONE with it. Two attributes describing one state is
+ * exactly the drift working rule 32 is about, and the element-level one would have lagged this by a
+ * render - showing a hidden banner and no bar for one frame. */
+html[data-hdr='collapsed'] .chdr {
   visibility: visible;
   opacity: 1;
   transform: translateY(0);
+}
+
+/* THE BANNER AND THE STACK GO AWAY. This is the difference between prompt 58's bar, which only ever
+ * appeared OVER content that had already scrolled past, and Joe's navbar, which REPLACES the header:
+ * "The navbar would take the place of the banner once a user scrolls past the banner, and [it] would
+ * remain permanently in place from that point forward."
+ *
+ * `display: none` rather than `visibility: hidden`, deliberately: the point is to reclaim the flow,
+ * and a hidden-but-reserved banner would leave 123px of empty ground under the bar the moment the
+ * reader scrolled back to the top - which is the one journey this design promises. */
+html[data-hdr='collapsed'] .banner,
+html[data-hdr='collapsed'] .hubctl {
+  display: none;
+}
+
+/* AND THE CONTENT CLEARS THE BAR. `.chdr` stays FIXED - see the note above the block - so with the
+ * banner gone there is nothing left in the flow to hold the first card below it. 8px is `.shell`'s
+ * own padding-top, restated rather than added to, so the gap under the bar is the same gap that sat
+ * under the banner. The inset is the bar's, painted but not counted: `.chdr` pads itself by it, so
+ * the space to clear is 44 + inset. */
+html[data-hdr='collapsed'] .shell {
+  padding-top: calc(44px + 8px + env(safe-area-inset-top, 0px));
 }
 
 .chdr-inner {
@@ -3086,6 +3174,12 @@ button.chdr-choice:focus-visible {
 /* The banner's own gold, read from the token block and never retyped (rule 16). The gradient is
    `background-clip: text`, which is how you fill type with a gradient in CSS - the SVG banner does
    the same thing with `fill="url(#bnGold)"`, and both trace to the same four stops. */
+button.chdr-wm:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
 .chdr-wm {
   font-family: var(--display);
   font-weight: 700;
@@ -3094,6 +3188,18 @@ button.chdr-choice:focus-visible {
   text-transform: uppercase;
   white-space: nowrap;
   flex: 0 0 auto;
+  /* A <button> SINCE PROMPT 60 - it is the only way back to the expanded header. The reset is here
+     rather than a shared one because this is the only button in the app that fills itself with a
+     gradient: `background-color: transparent` and NOT `background: none`, which would take the
+     `background-image` two rules down with it. It takes the bar's full 44px so the target is the
+     row, not the letterforms. */
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  cursor: pointer;
   background-image: linear-gradient(180deg, var(--gold-hi) 0%, var(--gold) 42%, var(--gold-mid) 70%, var(--gold-dim) 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -3170,7 +3276,7 @@ button.chdr-choice:focus-visible {
     transition: opacity 160ms ease, transform 160ms ease, visibility 0s linear 160ms;
   }
 
-  .chdr[data-collapsed] {
+  html[data-hdr='collapsed'] .chdr {
     transition: opacity 160ms ease, transform 160ms ease, visibility 0s linear 0s;
   }
 

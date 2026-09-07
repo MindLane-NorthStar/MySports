@@ -10,7 +10,17 @@
 //     218.1px beside it once padding and gaps come out, of which the four choices take 148.7px.
 //     (The brief modelled 108 and 258 from an estimated 0.45em advance; both were wrong.)
 //   * DAY, ALL GAMES and LIST flip on tap; ALL SPORTS opens the tile row
-//   * SCROLL POSITION ALONE owns the state. There is no manual expand control.
+//
+// PROMPT 60 REPLACED THE LAST OF THOSE, and it is the one thing about this bar that changed
+// shape. It read "SCROLL POSITION ALONE owns the state. There is no manual expand control."
+// Joe designed the successor across four exchanges on 2026-09-07:
+//
+//   SCROLL ONLY EVER COLLAPSES. IT NEVER EXPANDS.
+//
+// Expansion is manual and is this bar's own wordmark. Scrolling back to the top leaves the
+// header collapsed, which is what "the navbar would remain permanently in place from that point
+// forward" asks for. lib/headerstate.js carries the whole machine, the reason the asymmetry
+// removes the two-inputs-one-state conflict, and the compensation that keeps it from jumping.
 //
 // WHAT IT DOES NOT BUY, so nobody "improves" it by opening collapsed: the above-the-fold burden is
 // unchanged at banner 123 + shell padding 8 + control stack 216 = 347px before the first card. The
@@ -53,12 +63,16 @@
 // grid runs a pinch handler, so a fixed bar over the top 44px of that scroller would take touches
 // there. That is why this renders in LIST VIEW ONLY for now - see the `isGrid` return below.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { resolveHubParams } from '../lib/hubparams.js';
 import { todayET } from '../lib/format.js';
 import { SPORT_SHORT, SPORT_LABEL } from '../lib/config.js';
 import { useSetParam, SportFilter } from './Filters.js';
+import {
+  SENTINEL_ID, subscribeHeader, headerCollapsed, headerCollapsedOnServer,
+  collapseHeader, expandHeader, resetHeader,
+} from '../lib/headerstate.js';
 
 /**
  * EVERY TAP IN THIS BAR KEEPS THE SCROLL POSITION, and it has to.
@@ -72,12 +86,24 @@ import { useSetParam, SportFilter } from './Filters.js';
  */
 const KEEP_SCROLL = { scroll: false };
 
-/** The id of the zero-height element in layout.js that decides collapsed-ness. */
-export const SENTINEL_ID = 'hdr-sentinel';
+/* `SENTINEL_ID` MOVED TO lib/headerstate.js (prompt 60). Three files need it now - this one, the
+   `Controls` block in app/page.js that renders it, and the state module that measures it - and
+   the module is the only one of the three all of them already import. It is also no longer "the
+   element in layout.js": the sentinel moved out of the layout in the same change. */
 
 export default function CollapsedHeader() {
-  // FALSE ON THE SERVER AND ON THE FIRST CLIENT RENDER. That equality is the whole hydration story.
-  const [collapsed, setCollapsed] = useState(false);
+  /**
+   * FALSE ON THE SERVER AND ON THE FIRST CLIENT RENDER. That equality is the whole hydration
+   * story, and `headerCollapsedOnServer` is a constant `false` rather than a read of the module's
+   * variable so it stays true even if an earlier request in the same process collapsed something.
+   *
+   * IT IS AN EXTERNAL STORE RATHER THAN `useState` (prompt 60) because THREE surfaces now share
+   * this one boolean and only two of them are in this tree: the TV button drawn over the banner,
+   * and the page's own control stack - which is rendered by a SERVER component and can hold no
+   * client state at all. The layout half of the change therefore travels as an attribute on
+   * <html> and the CSS does the hiding; this subscription only keeps the bar's markup in step.
+   */
+  const collapsed = useSyncExternalStore(subscribeHeader, headerCollapsed, headerCollapsedOnServer);
   /**
    * THE SECOND PIECE OF EPHEMERAL UI STATE, under the same ruling as the first (see the header
    * note). The URL still owns `sport` itself - only the OPEN/CLOSED-ness of the picker is here, and
@@ -90,24 +116,48 @@ export default function CollapsedHeader() {
   // that can disagree about what a toggle does is a bug waiting for the day someone changes one.
   const setParam = useSetParam();
 
+  // ONE DECIDER FOR WHAT A QUERY STRING MEANS. `resolveHubParams` is that decider (hubparams.js is
+  // explicit that nothing else may be), so this asks it rather than reading `view` itself and
+  // inventing a second answer. `todayET()` only feeds `day`, which this component never reads.
+  //
+  // IT IS READ BEFORE THE EFFECTS, not after (prompt 60). The observer has to know about grid
+  // view: it used to be enough to return null below, because collapsing only ADDED a bar and an
+  // unseen bar cost nothing. Collapsing now HIDES THE BANNER, so a grid view that quietly
+  // collapsed would hide it with nothing rendered in its place.
+  const P = resolveHubParams(Object.fromEntries(params.entries()), todayET());
+
   useEffect(() => {
     // AN OBSERVER, NEVER A SCROLL LISTENER. A scroll handler fires every frame and this app has
     // never had one; an IntersectionObserver is a callback on a threshold crossing and costs
     // nothing between crossings.
+    if (P.isGrid) return undefined;
     const el = document.getElementById(SENTINEL_ID);
     if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+    // SCROLL ONLY EVER COLLAPSES (prompt 60). This was `setCollapsed(!entry.isIntersecting)` - a
+    // two-way binding, so scrolling back to the top re-expanded the header. The one-way form is
+    // not a restriction on the reader; it is what lets a TAP own the other direction without the
+    // two inputs ever contradicting each other. Never restore the else.
     const io = new IntersectionObserver(
-      ([entry]) => setCollapsed(!entry.isIntersecting),
+      ([entry]) => { if (!entry.isIntersecting) collapseHeader(); },
       { threshold: 0 },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [P.isGrid]);
 
-  // ONE DECIDER FOR WHAT A QUERY STRING MEANS. `resolveHubParams` is that decider (hubparams.js is
-  // explicit that nothing else may be), so this asks it rather than reading `view` itself and
-  // inventing a second answer. `todayET()` only feeds `day`, which this component never reads.
-  const P = resolveHubParams(Object.fromEntries(params.entries()), todayET());
+  // GRID VIEW CANNOT SIT COLLAPSED. Switching views already lands the reader at the top - the
+  // expanded toggles do not pass `{ scroll: false }` - so this needs no compensation. It only has
+  // to make sure the banner comes back with the one view that has no bar to replace it.
+  useEffect(() => {
+    if (P.isGrid) resetHeader();
+  }, [P.isGrid]);
+
+  // THE TILE ROW CLOSES WITH THE BAR. Expanding restores the full control stack, which contains
+  // the same eight tiles; leaving this open would render the row twice, once in a bar nobody can
+  // see.
+  useEffect(() => {
+    if (!collapsed) setSportsOpen(false);
+  }, [collapsed]);
 
   // LIST VIEW ONLY, and it returns null rather than hiding: a fixed element that is merely
   // `opacity: 0` still takes touches in some engines, which is the exact failure mode this
@@ -185,9 +235,20 @@ export default function CollapsedHeader() {
    * the verb.
    */
   return (
-    <div className="chdr" data-collapsed={collapsed || undefined} aria-hidden={!collapsed}>
+    <div className="chdr" aria-hidden={!collapsed}>
       <div className="chdr-inner">
-        <span className="chdr-wm">MYSPORTS TV</span>
+        {/* THE WORDMARK IS THE ONLY WAY BACK (prompt 60). Joe: "...until the user taps 'MySports
+            TV' in which case the full banner and expanded toggles would appear atop the app."
+            A <span> until this prompt, so it becomes a real <button> for the same reason the TV
+            did - it takes the bar's full 44px height, it is in the tab order, and it paints the
+            same gold focus ring the other controls do. The gradient fill is untouched:
+            `.chdr-wm` still carries it, and only the element under it changed.
+            The name says the ACTION, matching the pattern the three binaries use; "MySports TV"
+            alone would be read as a title rather than as a control. */}
+        <button type="button" className="chdr-wm" aria-label="Expand the banner and the controls"
+                onClick={() => expandHeader()}>
+          MYSPORTS TV
+        </button>
         <div className="chdr-run">
           {binaries.map((c) => (
             <button key={c.key} type="button" className="chdr-choice" data-key={c.key}
