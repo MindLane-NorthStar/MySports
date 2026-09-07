@@ -46,7 +46,7 @@ function anyInFlight(games) {
 export default function Listing({ games, standingsRows, rankingsRows, day, sport, generatedAt,
                                   showDay = false, grid = false, bands = false, heading = null,
                                   headingClass, nowMinute = null, gridOnly = false,
-                                  floatFavorites = true }) {
+                                  floatFavorites = true, flatLabel = null }) {
   const [open, setOpen] = useState(null);
 
   /**
@@ -221,7 +221,16 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
         // PER-BAND COUNT could share the row. Prompt 50 stage 4b retired that count, so the row had
         // nothing left to share and the heading was rendering one DOM level deeper than the
         // identical heading under ALL SPORTS for no remaining reason.
-        <SportBand sport={sport} label={null} games={games} standings={standings}
+        // `flatLabel` EXISTS FOR THE SECTION'S ACCESSIBLE NAME (prompt 60 stage 4). Until this
+        // prompt the flat branch was only ever reached from week mode WITH A LEAGUE SELECTED, so
+        // `sport` was always truthy and `SportBand`'s `aria-label={label || sport}` always had
+        // something to use. MY TEAMS under ALL SPORTS is a new state for this path: both are null,
+        // and the section would render with no accessible name at all.
+        //
+        // The CALLER supplies it, because the caller is the only one that knows the SCOPE. This
+        // component knows there is no sport; it does not know whether that means "every sport" or
+        // "your teams", and a section named for the wrong one is worse than one named for none.
+        <SportBand sport={sport} label={flatLabel} games={games} standings={standings}
                    rankings={rankings} showDay={showDay} onOpen={setOpen} showHeader={false}
                    floatFavorites={floatFavorites} />
       )}

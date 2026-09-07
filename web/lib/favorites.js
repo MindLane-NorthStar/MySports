@@ -127,3 +127,47 @@ export function splitMine(rows, ids) {
   for (const g of list) (isMine(g, ids) ? mine : rest).push(g);
   return { mine, rest };
 }
+
+/**
+ * R4's "chronological across every sport", MADE TRUE (prompt 60 stage 4).
+ *
+ * IT LIVES HERE BECAUSE THIS IS WHERE THE FALSE CLAIM LIVED. app/page.js said, twice:
+ *
+ *   "`allRows` arrives ordered by kickoff and splitMine keeps input order,
+ *    so 'chronological across every sport' is free."
+ *
+ * The second half is true and the first half is not. `allRows` is `[...games, ...programRows]` - a
+ * CONCATENATION of two separately-ordered reads. `queries.js` orders games by
+ * `canonical_kickoff_at_utc.asc` and programs by `start_at.asc`, each within itself, so the joined
+ * list is every game in order followed by every program in order. On 2026-09-06 under MY TEAMS that
+ * is 1:40 PM, 7:30 PM, then 2:30 PM, 5:00 PM, 8:00 PM.
+ *
+ * IT WAS INVISIBLE UNTIL THIS STAGE, which is why it survived: with sport bands on, `Listing`
+ * regroups by sport and the concatenation's order never reaches the screen. Turning the bands off
+ * is what exposes it - so the fix ships in the same commit as the change that reveals it.
+ *
+ * ABSOLUTE TIME, NOT MINUTES-OF-DAY. `bandstate.js` sorts by minute of the VIEWING day because it
+ * has to reason about a window that runs past midnight; this only has to put rows in order, and the
+ * ISO instant does that correctly across a viewing day's 03:00 cutover and across a whole week
+ * without knowing anything about either.
+ *
+ * A ROW WITH NO KICKOFF SORTS LAST, never first - the same rule `byKickoff` uses in bandstate.js,
+ * because a TBD is not "earliest", it is "unknown".
+ *
+ * STABLE: `Array.prototype.sort` is required to be stable, so rows sharing an instant keep the
+ * order the database gave them rather than shuffling between renders.
+ */
+export function chronological(rows) {
+  const at = (r) => {
+    const t = Date.parse(r?.canonical_kickoff_at_utc ?? r?.start_at ?? '');
+    return Number.isFinite(t) ? t : null;
+  };
+  return [...(Array.isArray(rows) ? rows : [])].sort((a, b) => {
+    const ta = at(a);
+    const tb = at(b);
+    if (ta === null && tb === null) return 0;
+    if (ta === null) return 1;
+    if (tb === null) return -1;
+    return ta - tb;
+  });
+}

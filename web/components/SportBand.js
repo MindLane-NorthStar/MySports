@@ -94,8 +94,31 @@ export default function SportBand({ sport, label, games, standings, rankings, sh
     </div>
   );
 
+  // THE NAME COMES FROM THE CALLER, AND THERE IS DELIBERATELY NO FALLBACK (prompt 60 stage 4).
+  //
+  // `label || sport` was always truthy until MY TEAMS reached the flat branch under ALL SPORTS,
+  // where both are null. `Listing` now passes `flatLabel` - "My teams" - so that section is named.
+  //
+  // A BLANKET FALLBACK WAS WRITTEN FIRST AND TAKEN BACK OUT, because the before/after snapshot
+  // caught it changing ALL GAMES: on 2026-09-13 the FIRST BAND renders through this same flat path
+  // with `sport={P.sport}`, which is null under ALL SPORTS - so that inner section has been
+  // nameless on every ALL SPORTS day since it shipped, and the fallback would have named it.
+  //
+  // THAT IS NOT A DEFECT, AND THE PLATFORM WAS CHECKED RATHER THAN RECALLED (rule 34). Read out of
+  // Chromium's own accessibility tree: an unnamed <section> is exposed as `generic`, and a named one
+  // as `region`. So the nameless section is not a broken landmark - it is not a landmark at all,
+  // which is right for a plain container. Naming it would PROMOTE it to a region nested inside
+  // `.fband`, which is already a region named by its own <h2>: one landmark's worth of content
+  // announced twice. MY TEAMS is the opposite case and is why `flatLabel` exists - there the flat
+  // section IS the page's list, and a named region is the useful thing to have.
+  //
+  // THE REST OF THIS PATH WAS CHECKED FOR THE SAME ASSUMPTION rather than only the aria-label:
+  // `sportMarkUrl(sport)` and the <h2> are both inside `showHeader`, which is false on every flat
+  // render, so neither is reached; `offServiceSummary`, `splitFavorites` and `rowClass` are all
+  // per-row and sport-agnostic; and the card choice is made per row by `isProgram`, never by the
+  // band's sport. The aria-label was the only one.
   return (
-    <section className="band" aria-label={label || sport}>
+    <section className="band" aria-label={label || sport || undefined}>
       {/* B2: the heading and the count shared ONE row. .band-headrow carries the hairline so it
           spans the whole line rather than stopping under the title.
 

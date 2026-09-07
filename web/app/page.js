@@ -40,7 +40,7 @@ import { RestError } from '../lib/rest.js';
 import { overlayForDay, applyOverlay } from '../lib/livescores.js';
 import { resolveHubParams } from '../lib/hubparams.js';
 import { calendarWeeksFrom, seasonWeeksFrom, daySpan, currentWeekKey, usesSeasonWeeks } from '../lib/weeks.js';
-import { favoriteIds, splitMine, scopeLine } from '../lib/favorites.js';
+import { favoriteIds, splitMine, scopeLine, chronological } from '../lib/favorites.js';
 import { SENTINEL_ID } from '../lib/headerstate.js';
 import { splitHidden } from '../lib/offservice.js';
 import favoritesDoc from '../../data/favorites.json';
@@ -311,7 +311,13 @@ export default async function HubPage({ searchParams }) {
     // destroys the thing a week view exists to show.
     const favIds = favoriteIds(favoritesDoc);
     // R4 + register §18d: MY TEAMS is the thirteen clubs AND the five team-less sports.
-    const scoped = P.isMine ? splitMine(rows, favIds).mine : rows;
+    //
+    // `chronological` IS NOT DECORATION HERE (prompt 60 stage 4). `rows` above is
+    // `[...games, ...toRows(progs, now)]` - a concatenation of two separately-ordered reads - so it
+    // is not in kickoff order and never was. Week mode groups by DAY and then, under MY TEAMS,
+    // renders each day FLAT, which is exactly the arrangement that shows the concatenation.
+    // ALL GAMES is untouched: it still bands, and bands regroup by sport regardless.
+    const scoped = P.isMine ? chronological(splitMine(rows, favIds).mine) : rows;
     // D4, restored and moved to the page (stage 4a): off-service games are hidden, network-TBD and
     // market-pending never are, and a favourite never is. Decided ONCE for the whole week so the
     // count line at the foot describes every day above it.
@@ -388,9 +394,16 @@ export default async function HubPage({ searchParams }) {
 
                       `gridOnly` carries prompt 53 stage 3's suppression down PER DAY: in week +
                       GRID each day shows its heading and its grid and no cards. */}
+                  {/* MY TEAMS IS ONE CHRONOLOGICAL LIST PER DAY (prompt 60 stage 4, R4). This
+                      was `bands={!P.sport}`, which is TRUE under MY TEAMS + ALL SPORTS - so the
+                      week regrouped each day into sport bands and threw away the chronology R4
+                      asks for, exactly as day mode did. Working rule 32: a ruling is not
+                      implemented until every place that renders the same thing obeys it, and this
+                      is the second of the two places. */}
                   <Listing games={grouped[d]} standingsRows={standingsRows} rankingsRows={rankingsRows}
                            day={d} heading={shortDay(d)} headingClass="weekday-head"
-                           bands={!P.sport} sport={P.sport} floatFavorites={!P.isMine}
+                           bands={!P.sport && !P.isMine} sport={P.sport} floatFavorites={!P.isMine}
+                           flatLabel={P.isMine ? 'My teams' : null}
                            grid={P.isGrid} gridOnly={P.isGrid}
                            nowMinute={d === today ? weekNow : null} />
                   {/* DESKTOP, GRID VIEW: this day's archived PC render, under this day's heading.
@@ -473,12 +486,23 @@ export default async function HubPage({ searchParams }) {
   // The marker is drawn on TODAY only. An archived day is immutable and a past day has no "now".
   const nowMinute = day === today ? viewingMinutes(now.toISOString()) : null;
 
-  // R4: MY TEAMS is a scope - favourites only, chronological across every sport. `allRows` arrives
-  // ordered by kickoff and splitFavorites keeps input order, so "chronological" is free.
+  // R4: MY TEAMS is a scope - favourites only, CHRONOLOGICAL ACROSS EVERY SPORT.
+  //
+  // THIS COMMENT SAID THE ORDERING WAS FREE, TWICE, AND IT WAS NOT (corrected in prompt 60 stage
+  // 4). It read: "`allRows` arrives ordered by kickoff and splitMine keeps input order, so
+  // 'chronological across every sport' is free." `splitMine` does keep input order; `allRows` is
+  // `[...games, ...programRows]`, a concatenation of two separately-ordered reads, so the input
+  // order is every game by kickoff followed by every program by start_at. Nothing was free.
+  //
+  // It went unseen because the RENDER layer regrouped by sport before it reached the screen, which
+  // is the same three-line gap this stage closes below: R4 was honoured in the data layer's
+  // intention and discarded by both the sort and the bands.
   const favIds = favoriteIds(favoritesDoc);
-  // R4 + register §18d. `allRows` arrives ordered by kickoff and splitMine keeps input order, so
-  // "chronological across every sport" is free.
-  const scoped = P.isMine ? splitMine(allRows, favIds).mine : allRows;
+  // ALL GAMES IS UNTOUCHED, deliberately: it keeps `allRows` exactly as it was. Its bands regroup
+  // by sport anyway, so sorting here would change what ships without being asked for - and an NFL
+  // band that lists its pregame show after the game it precedes is a real question, just not this
+  // prompt's. Recorded as open rather than fixed in passing.
+  const scoped = P.isMine ? chronological(splitMine(allRows, favIds).mine) : allRows;
   // D4, restored and moved to the page (stage 4a). Decided ONCE here so the bands below render only
   // what is visible and the single count line at the foot describes all of them.
   const { visible: rows, hidden, summary } = splitHidden(scoped, favIds);
@@ -580,7 +604,20 @@ export default async function HubPage({ searchParams }) {
           The D1 band is a LIST-view thing: in GRID VIEW there is no list beneath it for "See all
           today" to jump to, so it does not render. */}
       <div className="today-split">
-        {!error && rows.length && !P.isGrid ? (
+        {/* NOT UNDER MY TEAMS (prompt 60 stage 4). Joe, 2026-09-07: "On the MY TEAMS page, My Teams
+            render twice - once in what appears to be chronological order ... and a second time
+            divided by sport. This seems unnecessary and repetitive."
+
+            THE BAND EXISTS TO ANSWER "WHAT IS ON RIGHT NOW" when a day holds eighty rows and cannot
+            be scanned. Under MY TEAMS a day holds five, its time-window subset is nearly the whole
+            list, and its "See all today" escape points at a list identical to itself.
+
+            AND IT IS WHAT JOE READ AS A SORT FAULT, WHICH IT IS NOT. Measured on 2026-09-07: the
+            band is TONIGHT, so it shows the evening from the prime window onward - 8:00 PM MONDAY
+            NIGHT RAW - while the 1:35 PM Guardians game falls BEFORE that window and appears only
+            in the list below. Two stacked sections, each correctly ordered, putting an 8 PM row
+            above a 1:35 PM one. Removing the duplicate removes the inversion. */}
+        {!error && rows.length && !P.isGrid && !P.isMine ? (
           <FirstBand band={band} standingsRows={standingsRows} rankingsRows={rankingsRows}
                      day={day} sport={P.sport} floatFavorites={!P.isMine} />
         ) : null}
@@ -596,8 +633,18 @@ export default async function HubPage({ searchParams }) {
 
               It also settles the disagreement prompt 54 left behind: day mode's LIST showed a grid
               and week mode's did not. The toggle now means one thing in both modes. */}
+          {/* `bands={!P.isGrid && !P.isMine}` (prompt 60 stage 4). It was `!P.isGrid`, which is
+              TRUE under MY TEAMS - so three lines after the page computed a chronological
+              favourites list, the render layer regrouped it into sport bands, and
+              globals.css records that "bands render in SPORTS order, not kickoff order". R4 was
+              implemented in the data layer and discarded in the render layer.
+
+              MEASURED, 2026-09-06 under MY TEAMS: College Football 7:30 PM printed above MLB
+              1:40 PM with no first band on the page at all - so the banding is a SECOND,
+              independent cause of the same complaint. Both are gone in this commit. */}
           <Listing games={rows} standingsRows={standingsRows} rankingsRows={rankingsRows}
-                   day={day} sport={P.sport} grid={P.isGrid} bands={!P.isGrid} gridOnly={P.isGrid}
+                   day={day} sport={P.sport} grid={P.isGrid} bands={!P.isGrid && !P.isMine}
+                   gridOnly={P.isGrid} flatLabel={P.isMine ? 'My teams' : null}
                    nowMinute={nowMinute} floatFavorites={!P.isMine} />
         </div>
       </div>

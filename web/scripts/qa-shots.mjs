@@ -563,6 +563,83 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
+// ------------------------------------------------ MY TEAMS is said once, and in order (p60 st.4)
+//
+// The property, stated once: on every day and in both modes, MY TEAMS is ONE section whose rows run
+// strictly forward in time. Three separate mechanisms broke that and all three are covered by the
+// single assertion, which is the point - a later edit that reintroduces any of them fails here.
+{
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+  });
+  const page = await ctx.newPage();
+  const read = async (path) => {
+    await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(400);
+    return page.evaluate(() => {
+      const mins = (t) => {
+        const m = /(\d{1,2}):(\d{2})\s*(AM|PM)/.exec(t);
+        if (!m) return null;
+        return ((Number(m[1]) % 12) + (m[3] === 'PM' ? 12 : 0)) * 60 + Number(m[2]);
+      };
+      const cards = [...document.querySelectorAll('.mcard')]
+        .map((c) => mins(c.innerText.replace(/\s+/g, ' ')));
+      return {
+        fbands: document.querySelectorAll('.fband').length,
+        headers: document.querySelectorAll('.band-headrow').length,
+        sections: [...document.querySelectorAll('section.band')]
+          .map((x) => x.getAttribute('aria-label')),
+        cards,
+        // WITHIN a section, not across the page: week mode is one section per DAY and each day
+        // restarts the clock, so a page-wide comparison would flag a correct week.
+        inversions: [...document.querySelectorAll('section.band')].reduce((n, sec) => {
+          const t = [...sec.querySelectorAll('.mcard')]
+            .map((c) => mins(c.innerText.replace(/\s+/g, ' ')));
+          for (let i = 1; i < t.length; i += 1) {
+            if (t[i] !== null && t[i - 1] !== null && t[i] < t[i - 1]) return n + 1;
+          }
+          return n;
+        }, 0),
+      };
+    });
+  };
+
+  for (const [name, path] of [
+    ['day / my teams', '/?day=2026-09-06&scope=mine'],
+    ['day / my teams (mixed)', '/?day=2026-09-05&scope=mine'],
+    ['day / my teams (the day Joe reported)', '/?day=2026-09-07&scope=mine'],
+    ['week / my teams', '/?mode=week&w=2026-08-31&scope=mine'],
+  ]) {
+    const r = await read(path);
+    record(`${name}: said ONCE - no first band, no sport headers`,
+           r.fbands === 0 && r.headers === 0, `${r.fbands} first band(s), ${r.headers} header(s)`);
+    record(`${name}: strictly chronological`, r.inversions === 0,
+           `${r.cards.length} cards, ${r.inversions} inversion(s)`);
+    record(`${name}: the flat section is named`,
+           r.sections.length > 0 && r.sections.every((x) => x === 'My teams'),
+           r.sections.join(' / ') || 'no section');
+  }
+
+  // ALL GAMES IS UNTOUCHED, asserted rather than assumed. The first band, the sport headers and the
+  // favourites bracket are all still there, in the arrangement prompt 59 left.
+  //
+  // THE EXPECTED FIRST-BAND COUNTS ARE READ FROM THE APP, NOT GUESSED. 2026-09-05 was written as 0
+  // here on the strength of a probe run under `scope=mine`, where it IS 0; under ALL GAMES the same
+  // day has one. Day mode always renders the band and week mode never does - which is the actual
+  // rule, and is what these three rows now say.
+  for (const [name, path, wantFband] of [
+    ['day / all games', '/?day=2026-09-05', 1],
+    ['day / all games (a second day)', '/?day=2026-09-13', 1],
+    ['week / all games - week mode has no first band', '/?mode=week&w=2026-08-31', 0],
+  ]) {
+    const r = await read(path);
+    record(`${name}: still bands, and still carries its first band`,
+           r.headers > 0 && r.fbands === wantFband,
+           `${r.fbands} first band(s), ${r.headers} sport header(s)`);
+  }
+  await ctx.close();
+}
+
 await browser.close();
 writeFileSync(join(outDir, 'assertions.json'), JSON.stringify(results, null, 2) + '\n', 'utf8');
 const failed = results.filter((r) => !r.pass).length;
