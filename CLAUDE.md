@@ -19,7 +19,7 @@ one is stale — say so.
 | why a decision was made, and whether it is already settled | `docs/enhancement-register.md` |
 | what a card, block or grid is supposed to look like | `docs/rendering-contract.md` + `docs/rendering-contract-mobile.md` (the Mobile Grid Addendum) |
 | the locked visual reference the app must match | `docs/design/mobile_demo.html` |
-| what a past run was actually asked to do | `docs/prompts/` — 59 files covering 01–57, verbatim; 39 and 42 are the only gaps |
+| what a past run was actually asked to do | `docs/prompts/` — 60 files covering 01–58, verbatim; 39 and 42 are the only gaps |
 | deploy, environment, what is publishable | `docs/deployment-contract.md` |
 
 **Do not re-raise a settled decision** without first checking the register and `handoff-status.md`.
@@ -132,6 +132,15 @@ never renumber, even around the retired stub.
     negative, so it would never fire here. **Not rule 22:** the component WAS read; believing its
     claim about a tool somewhere else was the mistake.
 
+34. **A platform behaviour recalled from memory is not evidence.** Before briefing a risk or a
+    constraint that rests on what CSS, the DOM or a runtime *does*, check it — against the spec, or
+    against a note this repo already wrote beside the code it governs, and say which. Cowork briefed
+    a sticky page header as creating a containing block for the grid's sticky rail; it does not —
+    only `transform`, `filter`, `perspective`, `backdrop-filter`, `will-change` and `contain` do,
+    and `globals.css` said exactly that on `.mrail-cell` already. **Distinct from 22 and 33:** both
+    of those point at this repository; this one's object is the PLATFORM, which no file here is
+    authoritative for. Anything phrased "X creates/blocks/prevents Y" is the shape to distrust.
+
 ---
 
 ## Gates
@@ -140,13 +149,13 @@ Five, and all five are run **before** the commit, as their own commands:
 
 ```
 pytest                       # from the repo root — 494 pass + 1 skipped
-npm run test:unit            # from web/ — 401
+npm run test:unit            # from web/ — 419
 npm run smoke                # from web/ — 30/30
-node scripts/qa-shots.mjs    # from web/ — 14/14
+node scripts/qa-shots.mjs    # from web/ — 22/22
 npm run geometry             # from web/ — all hard stops (see below)
 ```
 
-Counts are the floor as of `9520310`; they may only go up. Report all five with every change, and
+Counts are the floor as of `5e126c4`; they may only go up. Report all five with every change, and
 never read a gate's result from the exit code of a chained command.
 
 ## The phone-grid geometry check

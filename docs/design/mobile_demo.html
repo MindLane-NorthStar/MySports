@@ -36,6 +36,19 @@
   that shape for the WEEK, whose day heading had been rendering with no mark and nothing on screen
   naming the league at all. This file showed the right answer first; nothing here needed to change.
 
+  THE APP HAS A COLLAPSING PAGE HEADER AND THIS FILE DOES NOT, AND THAT IS NOT DRIFT (prompt 58,
+  rule 23). From prompt 58 the app shows a fixed 44px bar - wordmark plus the four current choices -
+  once the expanded banner has scrolled away, in LIST view only. Nothing here needs to change, and
+  the reason is the scope this file has always declared: it is the authority for the CARD's
+  geometry, the chip row and the grid's own construction, and a page header is none of those.
+
+  IT ALSO COULD NOT SHOW ONE. This page models no scroll behaviour at all - each phone frame is a
+  fixed-height mock. `.abar` below is this demo's own static wordmark-and-day bar inside each frame,
+  and `.mswitch` is the demo's navigation between mockups; neither is the app's chrome. A collapsing
+  header is a behaviour over time, which is exactly what a static mock cannot depict.
+
+  The header's own rulings and measurements are register section 26.
+
   IT IS A TEMPLATE. The `__DATA__`, `__TODAY__`, `__TEAMS__`, `__STAND__`, `__PROB__`, `__LEAGUE__`,
   `__WATCH__`, `__NETLOGOS__`, `__AVAIL__`, `__GRIDSVG__` tokens are filled by `build_demo.py`, which
   is NOT in this repo — it is still project-only, along with `app_template.html`, `build_banner.py`

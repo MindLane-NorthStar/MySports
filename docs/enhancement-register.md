@@ -1894,3 +1894,213 @@ the brief quoted as "NHL"; and the mark arithmetic in §25e is 0.05 off its own 
 **And one the brief got right that I had got wrong**: `_safe` does exist at `nhl.py:266`. My earlier
 search missed it because a `head -30` truncated the output — which is working rule 31 pointing at the
 pipeline rather than the query.
+---
+
+## 26. THE COLLAPSING HEADER — 2026-09-07, prompt 58
+
+### 26a. The card gradient, walked halfway back
+
+From the prompt 57 device check. **Joe: *"walk the token change halfway back not all the way back.
+Otherwise everything else checks out."*** Prompt 57 solved for AA alone and overshot: it cleared
+`--faint`, but it also flattened the card's top-to-bottom gradient from a **1.327** luminance ratio
+to **1.064** — near enough to flat that cards, toggles, tiles and picker arrows stopped reading as
+raised objects.
+
+`--panel-top` `#23262b` → **`#2A2E34`**, the exact midpoint of prompt 57's change, verified channel
+by channel (49/35→42, 54/38→46, 61/43→52). `--faint` `#868d96` → **`#8E959E`**, because halfway alone
+drops it to 4.07 and loses the AA the last prompt won.
+
+| | `#31363d` | `#23262b` | **`#2A2E34`** |
+|---|---|---|---|
+| `--ink` | 10.86 | 13.54 | **12.17** |
+| `--dim` | 4.62 | 5.76 | **5.18** |
+| `--faint` at `#868d96` | 3.63 | 4.53 | 4.07 — fails AA |
+| `--faint` at `#8E959E` | — | — | **4.51 — clears AA** |
+| gradient spread | 1.327 | 1.064 | **1.183** |
+
+**THE BLOCKER THE OLD `--faint` COMMENT RECORDS WAS A PROPERTY OF THE GROUND, NOT OF THE TOKENS**,
+and that is the part a future reader of that comment needs. It said AA required `#989fa8`, which is
+4.55:1 against `--dim`'s own 4.62:1 — the two collapse and the third step dies. True on `#31363d`. On
+`#2A2E34`, `--dim` measures 5.18 and the room reopens: a **smaller** lift clears AA and leaves 1.148
+of separation, against 1.014 at the value that note rejected.
+
+**A COST THE BRIEF'S TABLE UNDERSTATED.** The lift buys AA for the third grey by **spending
+separation between the second and third**: `--dim` vs `--faint` was 1.272 and is now 1.148. The brief
+compared 1.148 against the dead 1.014 rather than against today's 1.272. Both greys survive and
+neither gap is comfortable. Widening it again means moving `--dim`, which is a separate change and
+still Joe's.
+
+Ten `--panel-top` consumers, all the identical gradient; 16 `--faint` sites. The active-toggle gold
+plate uses literal `#D8C595` and is untouched — read, and its computed value read back.
+
+### 26b. What Joe approved, and what it is not
+
+Ruled 2026-09-07 across four exchanges: **expanded first, then collapse on scroll** (not
+opens-collapsed); the bar carries **the wordmark and the four current choices and nothing else**;
+**no tagline, no TV cutout, no artwork**; `DAY`, `ALL GAMES` and `LIST` **flip on tap**; `ALL SPORTS`
+**opens the tile row**; and **scroll position alone owns the state** — there is no manual expand.
+
+**WHAT IT DOES NOT BUY, so nobody "improves" it by opening collapsed:** the above-the-fold burden is
+unchanged at banner 123 + shell padding 8 + control stack 216 = **347px** before the first card. The
+saving is **reachability** — the four choices follow you down a 20,000px day — not first paint.
+
+**WHY THE TAGLINE AND THE TV ARE NOT IN THE BAR, and this is the line most likely to be "restored"
+by a future reader: they were MEASURED OUT, not forgotten.** At 390 the wordmark alone is 129.9px and
+the four choices are 148.7px against 218.1px of room once padding and gaps come out. There is no
+column left for a tagline, and the TV cutout is illustration whose whole job is the expanded
+banner's warmth. Both were in Joe's original sketch and both lost to the arithmetic.
+
+### 26c. Ephemeral UI state — the line, drawn now rather than argued later
+
+This is the hub's **first client-side UI state**. `app/page.js` and globals.css both record that
+every breakpoint is CSS-gated at 699px *"precisely so there is no server/client hydration
+mismatch"*, and the hub is deliberately URL-only with no localStorage.
+
+It is legitimate because it is **post-mount and ephemeral**: the server renders the **expanded**
+state (`collapsed` starts false, so the first client render is byte-identical to the server's), the
+observer applies the collapse only after hydration, and nothing is persisted or read back.
+
+> **THE LINE.** State that answers a question **about the world** — which day, which sport, which
+> view — belongs in the URL: it has to survive a reload and be shareable. State that describes only
+> **where the reader is looking right now** is presentation, and putting it in the URL would make
+> every scroll a history entry. If a future piece of client state cannot be described by that second
+> sentence, it belongs in the URL instead.
+
+Two pieces qualify under it: whether the bar is collapsed, and whether the tile row is open. The URL
+still owns `sport` itself.
+
+### 26d. The containing-block risk did not exist, and the real one is smaller
+
+Cowork briefed a sticky page header as creating "a new containing block" above the grid's sticky
+rail, and called it a serious risk. **That is false.** `position: fixed` and `position: sticky` do
+not establish containing blocks for descendants — only `transform`, `filter`, `perspective`,
+`backdrop-filter`, `will-change` and `contain` do. And globals.css already said so on `.mrail-cell`:
+the rail holds *"only while nothing between this element and `.mgrid-scroll` carries a transform."*
+
+The header is mounted **beside `Chrome`**, which makes it a sibling of `.shell` and therefore never
+an ancestor of `<main>` or of the grid. It cannot reach that chain at all. A test asserts it never
+wraps the content, because that is the one edit that would put it there.
+
+**The real risk is touch interception**, and it is why the bar is list-view-only for now — see 26f.
+
+### 26e. A third accessibility pattern, beside §17's two
+
+§17 records that this app deliberately runs two patterns: `role="radiogroup"` + `aria-checked` for
+the three toggles (exclusivity announced, not inferred) and `aria-pressed` for the eight tiles (a
+filter that can be cleared is not a one-of-N choice).
+
+**A collapsed binary shows only ONE option, so it can be neither.** There is no group to be one of
+two within, and nothing is "pressed" — the word on screen is a statement of fact and the tap is a
+verb. So: **visible text is the current state, accessible name states the action.**
+
+```
+"DAY"        ->  Time range: Day. Switch to Week
+"ALL GAMES"  ->  Scope: All games. Switch to My teams
+"LIST"       ->  Presentation: List view. Switch to Grid view
+```
+
+A full stop between state and action, not a dash — a dash is read as a pause, not a boundary.
+
+**`ALL SPORTS` IS THE EXCEPTION WITHIN THE EXCEPTION.** It is a disclosure, so its name is state only
+— *"Sport: All sports"* — and `aria-expanded` carries the verb. A name that also said "show" would
+make a reader hear the affordance twice.
+
+### 26f. The grid exclusion — deliberate, temporary, and what has to be true before it lifts
+
+The bar is **absent from the DOM** in all four grid views, proved by eight assertions in the qa-shots
+gate (14/14 → **22/22**). Absence rather than invisibility, because a fixed element at only
+`opacity: 0` still takes touches in some engines.
+
+**Not because it would break.** 26d settles that. Because `.mgrid-scroll` sets
+`touch-action: pan-x pan-y` and runs a pinch handler, and a fixed bar over the top 44px of that
+scroller has never been tried on a real device. **Week mode compounds it**: N stacked grids, each
+with its own rail and handler, a combination itself unconfirmed on a phone.
+
+**WHAT HAS TO BE TRUE BEFORE IT LIFTS:** the bar confirmed on Joe's phone in list view; the week grid
+stack confirmed on a phone at all (still outstanding from prompt 54); and a pinch and a horizontal
+pan tried with the bar showing, at the top edge of the scroller, on a real device. Chromium will
+never reproduce the failure — prompt 30's rail bug was WebKit-only.
+
+### 26g. Measurements, and the brief's model against them
+
+The brief's width table was modelled at an estimated 0.45em advance because the font host was
+blocked, and it said so. Measured with the real font:
+
+| | modelled | measured |
+|---|---|---|
+| wordmark @22px | 108 | **129.9** |
+| run @11.5px | 244 | **142.5** |
+| available at 390 | 258 | **218.1** |
+
+They partly cancel, so the conclusion held — but **"14px does not fit" is false**: 14px is 173.4px
+against 188.1px of room at 360. Shipped at 12px, the size the brief named, leaving 39.5px spare at
+360 and 69.5px at 390.
+
+**`SPORT_LABEL.cfb` WOULD HAVE BROKEN THE ROW** — "College Football" is 93.3px against the ALL SPORTS
+target of 57.5px. Every other label fits (IndyCar, next widest, is 40.8px), so only `cfb` differs.
+`SPORT_SHORT` in config.js is that fact, and it **replaced** page.js's local `SPORT_TAG` rather than
+sitting beside it: same five keys, byte-identical values, and two short-label maps is one to update
+and one to forget.
+
+Four 44px targets forced two further changes: the gaps came down (12→8 between wordmark and run, 6→4
+between targets, 4→3 padding), and **the wordmark drops to 18px below 390** — at 22px it was 36% of a
+360px screen, and the four choices are what the bar is for. Verified at 360, 375, 390 and 430 with
+ALL SPORTS and with CFB: no overlap, nothing past the padding, nothing under 44px, nothing squeezed.
+
+**`flex: 0 0 auto` is load-bearing.** Flex items shrink below their content by default, and at 360
+that silently clipped ALL GAMES and ALL SPORTS mid-word in a row that still looked like a row.
+
+### 26h. A tap keeps the scroll position, and the one case that cannot
+
+Next's `router.push` jumps to the top. Measured before the fix: a tap threw the reader from 700 back
+to 0, the sentinel re-entered the viewport, and **the bar hid itself with the tap that caused it**.
+`useSetParam` now takes an options argument; the bar passes `{ scroll: false }` and every other
+caller keeps Next's default, which is right for them — changing the day lands you at the top of a
+different slate, and the expanded toggles are at the top anyway.
+
+**SWITCHING SCOPE STILL RESETS TO THE TOP AND CANNOT BE FIXED HERE.** The document collapses from
+20,432px to 3,021px and the browser abandons the scroll position on a change that large. `mode` and
+`view` both hold at 700. Landing at the top of a much shorter filtered page is arguably right anyway.
+
+**Tapping `LIST` is a one-way door from the bar**, by design: it switches to grid, where the bar does
+not render, so it vanishes with the tap that caused it. Getting back is the expanded stack, one
+scroll up — the same journey as changing the day.
+
+### 26i. Two test defects, one of them prompt 56's
+
+Writing a JS word-boundary through a shell heredoc turns `\b` into a literal **BACKSPACE byte**. It
+happened in this run first, and a repository-wide sweep then found **prompt 56 had shipped the same
+thing into `bandstate.test.mjs`**: R11's guard was `/<BS>of<BS>/`, which nothing can match, so it has
+**passed vacuously since the day it was written**.
+
+**And correcting the escape would not have saved it.** `/\bof\b/` matches the heading's own wording,
+*"as of 9:14 PM"*. R11 was never about the word — it was about a **fraction**, which is what the
+surviving assertion tests. The guard now also pins that the heading is the clock alone.
+
+No control bytes remain anywhere under `web/`, `tests/`, `adapters/`, `pipeline/` or `scripts/`.
+
+### 26j. Rule 23 — the locked reference is NOT stale
+
+`docs/design/mobile_demo.html` is the authority for *"the CARD's geometry, the chip row, and the
+grid's own construction."* A page header that appears on scroll is none of those. Read rather than
+assumed: its own `.abar` is a static wordmark-and-day bar inside each phone frame, its `.mswitch` is
+the demo's own navigation between mockups, and **the page models no scroll behaviour at all** — each
+frame is a fixed-height mock. Nothing the reference implements changed, so nothing there needed to.
+It carries a one-line note saying so, because "the app has a header the reference does not" is
+exactly the observation a future reader would otherwise file as drift.
+
+### 26k. Working rule 34
+
+Added. See `docs/handoff-status.md`. Distinct from 22 and 33 because its object is **platform
+semantics** rather than anything in this repository.
+
+### 26l. Citations in prompt 58 that were wrong
+
+1. **The width model** — wordmark 108 vs 129.9, run 244 vs 142.5, "14px does not fit" vs it fits at
+   every width tested. The brief flagged the figures as modelled; the direction of the error was not
+   what it expected.
+2. **"258px available"** — 218.1px at 390, because the wordmark is wider than modelled.
+3. **The tile row at "74px"** — measured **82px**.
+
+The brief's central technical correction — that a fixed or sticky header cannot become the grid
+rail's containing block — **was right**, and it was the load-bearing one.

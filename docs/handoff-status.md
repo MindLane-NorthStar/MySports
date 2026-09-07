@@ -3,7 +3,7 @@
 **This file lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at
 `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§25, all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§26, all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -16,7 +16,7 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. **59 files, covering prompts 01-57** - four numbers (13, 23, 26, 43) carry
+edited after the fact. **60 files, covering prompts 01-58** - four numbers (13, 23, 26, 43) carry
 two files each, which is why the file count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -45,17 +45,81 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 57's stage-9 commit. Gates: **494 Python tests + 1 skipped**, **401 JS unit
-tests**, smoke **30/30**, qa-shots **14/14**, **`npm run geometry`** all hard stops.
+main, HEAD is prompt 58's stage-6 commit. Gates: **494 Python tests + 1 skipped**, **419 JS unit
+tests**, smoke **30/30**, qa-shots **22/22**, **`npm run geometry`** all hard stops.
 
-> ### CFB AND NHL ODDS DO NOT APPEAR UNTIL THE NEXT SCHEDULED REFRESH
+> ### DEVICE-CONFIRMED THROUGH PROMPT 57 — rule 25 is satisfied for six prompts
 >
-> Prompt 57 stages 2 and 3 changed **adapters** and proved them at the **fixture** level. No loader
-> ran and nothing was written to the database. The rows arrive with the next `schedule_refresh` at
-> 11:00 UTC. **An empty odds slot on a CFB or NHL card the same evening is expected, not a failed
-> stage.** Check the fixture counts in register §25a before suspecting the code.
+> **Joe checked prompts 52–56 on 2026-09-07, and prompt 57 after it was pushed the same day.**
+> That closes the longest-standing outstanding item in this file. It includes **prompt 52's four
+> veto calls, all recorded as ACCEPTED**: the banner wordmark recoloured to the metallic gold
+> (§19c), LIVE kept GREEN (§19e), the card gradient kept against the rendering's flat `#2A2A2A`
+> (§19f), and the gold sites that carry information rather than selection (§19i).
+>
+> **One adjustment came out of that check and is stage 0 below:** *"walk the token change halfway
+> back not all the way back. Otherwise everything else checks out."*
+>
+> **Prompt 58 itself is NOT device-confirmed.** It adds a fixed bar over a scroller and that is
+> exactly the kind of thing a desktop browser cannot judge.
+
+**PROMPT 58 — THE COLLAPSING HEADER.** Seven commits, from `2532ac7`:
+
+| stage | commit | what shipped |
+|---|---|---|
+| 0 | `f329c83` | half the gradient back, and the third grey lifted to meet it |
+| 1 | `ae86c6f` | a collapsing header, mechanism only |
+| 2 | `2e5e02c` | the collapsed bar names the wordmark and the four choices |
+| 3 | `9b1a7cc` | the collapsed binaries flip on tap |
+| 4 | `9d4abda` | all sports opens the tile row from the collapsed bar |
+| 5 | `5e126c4` | the collapsed bar is list view only, for now |
+| 6 | *(this commit)* | register §26, **working rule 34**, the prompt filed |
+
+**Read register §26.** Joe's six rulings, why the tagline and the TV are not in the bar, the third
+accessibility pattern, the ephemeral-UI-state line, and the grid exclusion with what has to be true
+before it lifts.
+
+### THE COLOUR TOKENS ARE `#2A2E34` AND `#8E959E`
+
+Prompt 57 solved for AA alone and flattened the card gradient from 1.327 to 1.064. Halfway back
+restores **1.183** and keeps all three greys clear of AA on the card top (12.17 / 5.18 / 4.51).
+**`--dim` vs `--faint` is now 1.148, down from 1.272** — the AA lift was paid for with separation
+between the second and third greys. Widening it again means moving `--dim`, and that is still open
+and still Joe's.
+
+### THE HUB HAS CLIENT-SIDE UI STATE NOW, AND §26c DRAWS THE LINE
+
+Two pieces, both ephemeral: whether the bar is collapsed, and whether the tile row is open. **The
+server renders the expanded state**, the observer applies the collapse after hydration, nothing is
+persisted. State that answers a question about the WORLD belongs in the URL; state that describes
+where the reader is LOOKING is presentation. Cite §26c before adding a third.
+
+### THE HEADER IS A SIBLING OF `.shell`, AND THAT POSITION IS LOAD-BEARING
+
+It is mounted in `layout.js` beside `Chrome`, so it can never be an ancestor of `<main>` or of the
+mobile grid, and therefore never a containing block for `.mrail-cell`. A test asserts it never wraps
+the content. **The briefed risk that a sticky header creates a containing block is false** — see
+working rule 34.
+
+### `SPORT_SHORT` IS THE ONE SHORT-LABEL MAP
+
+In `config.js`, covering every sport. It replaced page.js's local `SPORT_TAG` (same five keys,
+identical values). "College Football" is 93.3px against an ALL SPORTS target of 57.5px, which is why
+the collapsed bar cannot use `SPORT_LABEL`.
+
+### OPEN — GRID VIEW HAS NO COLLAPSED BAR
+
+Deliberate and temporary. `.mgrid-scroll` sets `touch-action: pan-x pan-y` and runs a pinch handler,
+and a fixed bar over the top 44px of that scroller has never been tried on a device; week mode
+stacks N of them. **Before it lifts:** the bar confirmed on the phone in list view, the week grid
+stack confirmed on a phone at all (outstanding since prompt 54), and a pinch and a horizontal pan
+tried with the bar showing at the scroller's top edge. Chromium will never reproduce it — prompt
+30's rail bug was WebKit-only.
+
+Tree clean apart from always-untracked `assets/` (and `web/qa/`, which prompt 46 added to
+`.gitignore`).
 
 **PROMPT 57 — THE ODDS PIPELINE, THE THIRD GREY, AND THE BANNER GENERATOR.** Ten commits, from
+`07afc52`:
 `07afc52`:
 
 | stage | commit | what shipped |
@@ -835,6 +899,39 @@ before touching any count line.
     **The cheap defence is one `git grep` for the tool's own name** before believing a sentence
     about how a file is maintained. If it is not there, either write it or write down that it is
     missing — and the second is what prompt 55 did, correctly, when writing it was out of scope.
+
+34. **A PLATFORM BEHAVIOUR RECALLED FROM MEMORY IS NOT EVIDENCE.** Before briefing a risk, a
+    constraint or a workaround that rests on what CSS, the DOM, HTTP or a runtime *does*, check it —
+    against the spec, or against a note this repo already wrote next to the code it governs. State
+    which you checked.
+
+    **THE INSTANCE.** Cowork told Joe that a sticky page header "creates a new containing block"
+    above the mobile grid's sticky rail, called it a serious risk, and shaped a whole risk profile
+    around it. **It is false.** `position: fixed` and `position: sticky` do not establish containing
+    blocks for descendants; only `transform`, `filter`, `perspective`, `backdrop-filter`,
+    `will-change` and `contain` do. The recollection was of a real rule, applied to the wrong
+    property.
+
+    **THE REPO ALREADY HELD THE CORRECT VERSION, on the exact selector it governs.** `globals.css`
+    on `.mrail-cell` says the rail holds *"only while nothing between this element and
+    `.mgrid-scroll` carries a transform: a transformed ancestor would become its containing block…
+    which is exactly the bug prompt 30 fixed. Do not add one."* One `grep` for `mrail-cell` would
+    have produced it.
+
+    **WHAT IT COST, and it is not nothing even though the brief self-corrected.** The false version
+    reached Joe as a serious risk before a later pass caught it. A risk profile that is wrong in the
+    direction of caution still spends the reader's attention and can talk a design out of existence.
+
+    **DISTINCT FROM 22 AND 33, and the difference is what you go and read.** 22 says read THE
+    COMPONENT before asserting what it does; 33 says a note asserting something EXISTS is not
+    evidence it does. Both point at this repository. **This one's object is the platform**, which no
+    file here is authoritative for — the repo happening to carry the right note this time was luck,
+    and next time it will not. When the claim is about a language or a runtime, the spec is the
+    authority and memory is not.
+
+    **The cheap defence is that platform claims are the easiest of all to check** — one search, and
+    the answer is normative rather than a judgement. Anything phrased as "X creates/blocks/prevents
+    Y" is the shape to distrust.
 
 
 ---
