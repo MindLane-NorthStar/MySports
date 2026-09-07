@@ -57,8 +57,8 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { resolveHubParams } from '../lib/hubparams.js';
 import { todayET } from '../lib/format.js';
-import { SPORT_SHORT } from '../lib/config.js';
-import { useSetParam } from './Filters.js';
+import { SPORT_SHORT, SPORT_LABEL } from '../lib/config.js';
+import { useSetParam, SportFilter } from './Filters.js';
 
 /**
  * EVERY TAP IN THIS BAR KEEPS THE SCROLL POSITION, and it has to.
@@ -78,6 +78,13 @@ export const SENTINEL_ID = 'hdr-sentinel';
 export default function CollapsedHeader() {
   // FALSE ON THE SERVER AND ON THE FIRST CLIENT RENDER. That equality is the whole hydration story.
   const [collapsed, setCollapsed] = useState(false);
+  /**
+   * THE SECOND PIECE OF EPHEMERAL UI STATE, under the same ruling as the first (see the header
+   * note). The URL still owns `sport` itself - only the OPEN/CLOSED-ness of the picker is here, and
+   * it is not persisted, not in the URL, and gone on reload. It passes the test that note sets: it
+   * describes only where the reader is looking right now, not anything about the world.
+   */
+  const [sportsOpen, setSportsOpen] = useState(false);
   const params = useSearchParams();
   // THE SAME FUNCTION THE EXPANDED TOGGLES USE, imported rather than reimplemented. Two surfaces
   // that can disagree about what a toggle does is a bug waiting for the day someone changes one.
@@ -163,6 +170,20 @@ export default function CollapsedHeader() {
 
   const sportText = P.sport ? (SPORT_SHORT[P.sport] || P.sport).toUpperCase() : 'ALL SPORTS';
 
+  /**
+   * SPORT IS A DISCLOSURE, NOT A BINARY, and that is Joe's ruling rather than an implementation
+   * convenience. ALL plus eight league tiles is NINE states: cycling them on tap would take eight
+   * presses to get from NFL back to NHL, which is not a control, it is a punishment.
+   *
+   * IT OPENS THE TILE ROW ONLY - the 24px ALL SPORTS bar and the eight tiles - and not the full
+   * 216px control stack. It is the same `SportFilter` the expanded stack renders, given two props
+   * rather than forked.
+   *
+   * THE ACCESSIBLE NAME DOES NOT SAY "SHOW" OR "HIDE", unlike the three binaries above, and the
+   * difference is deliberate: `aria-expanded` already announces collapsed/expanded, so a name that
+   * repeated it would have a reader hear the affordance twice. State only, and the ARIA carries
+   * the verb.
+   */
   return (
     <div className="chdr" data-collapsed={collapsed || undefined} aria-hidden={!collapsed}>
       <div className="chdr-inner">
@@ -174,10 +195,25 @@ export default function CollapsedHeader() {
               {c.text}
             </button>
           ))}
-          {/* Stage 4 makes this a disclosure. */}
-          <span className="chdr-choice" data-key="sport">{sportText}</span>
+          <button type="button" className="chdr-choice" data-key="sport"
+                  aria-label={`Sport: ${P.sport ? (SPORT_LABEL[P.sport] || P.sport) : 'All sports'}`}
+                  aria-expanded={sportsOpen} aria-controls="chdr-sports"
+                  onClick={() => setSportsOpen((v) => !v)}>
+            {sportText}
+          </button>
         </div>
       </div>
+      {/* CONDITIONALLY RENDERED, never merely hidden. A row that is only visually hidden stays in
+          the accessibility tree and the focus order, so tabbing would walk into eight invisible
+          tiles the moment it closed. Absence is the only version of "closed" that is true for a
+          keyboard and a screen reader at the same time.
+          It lives INSIDE `.chdr`, which is fixed - so opening it grows the bar over the content and
+          never pushes it, exactly as the bar itself does. */}
+      {sportsOpen ? (
+        <div className="chdr-sports" id="chdr-sports">
+          <SportFilter sport={P.sport} onPicked={() => setSportsOpen(false)} setOpts={KEEP_SCROLL} />
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -253,8 +253,18 @@ const CHIP_MARK = {
   racing: 'racing', nascar: 'nascar', indycar: 'indycar', ufc: 'ufc', wwe: 'wwe',
 };
 
-export function SportFilter({ sport, available }) {
+/**
+ * `onPicked` and `setOpts` EXIST FOR THE COLLAPSED HEADER (prompt 58 stage 4), and both default to
+ * undefined so every existing call site behaves exactly as it did.
+ *
+ * The bar opens this same row as a disclosure, so it needs to know when a pick happened (to close
+ * itself) and it needs the pick to keep the scroll position (or the reader is thrown to the top and
+ * the bar hides itself). Adding two props is the alternative to forking the component, and a fork
+ * is how the tile row and the collapsed tile row would slowly stop agreeing about what a tile does.
+ */
+export function SportFilter({ sport, available, onPicked, setOpts }) {
   const setParam = useSetParam();
+  const pick = (value) => { setParam('sport', value, setOpts); if (onPicked) onPicked(); };
   const shown = available && available.length
     ? SPORT_FILTERS.filter((s) => available.includes(s))
     : SPORT_FILTERS;
@@ -271,7 +281,7 @@ export function SportFilter({ sport, available }) {
           stop scrolling. role="group" is on the WRAPPER so All is inside the named group. */}
       <div className="sportbar" role="group" aria-label="Sport">
         <button type="button" className="spbtn spbtn-all spbtn-bar" data-active={!sport}
-                aria-pressed={!sport} onClick={() => setParam('sport', null)}>
+                aria-pressed={!sport} onClick={() => pick(null)}>
           {/* Joe, 2026-09-04: "Make the ALL chip ALL SPORTS and keep its size as-is. I don't want
               to interrupt the balance horizontally that we've accomplished with this chip and the
               tiles below it." Written out in the markup because nothing uppercases it - neither
@@ -294,7 +304,7 @@ export function SportFilter({ sport, available }) {
             data-active={sport === s}
             aria-pressed={sport === s}
             aria-label={SPORT_LABEL[s] || s}
-            onClick={() => setParam('sport', s === sport ? null : s)}
+            onClick={() => pick(s === sport ? null : s)}
           >
             {/* The _dark variant, not the raw: these chips float on charcoal, and contract v1.3e is
                 explicit that the raw art is for cap endcaps and light tint plates only (addendum M12).

@@ -107,7 +107,9 @@ test('the show and hide are transform and opacity only, inside the reduced-motio
 
 test('the binaries reuse useSetParam - there is not a second one', () => {
   const c = code('components/CollapsedHeader.js');
-  assert.match(c, /import \{ useSetParam \} from '\.\/Filters\.js'/,
+  // The PROPERTY is "it imports useSetParam from Filters.js", not the exact shape of the import
+  // list - stage 4 legitimately added SportFilter to it and this fired on the punctuation.
+  assert.match(c, /import \{[^}]*useSetParam[^}]*\} from '\.\/Filters\.js'/,
     'the bar and the expanded toggles must never disagree about what a toggle does');
   assert.doesNotMatch(c, /useRouter|usePathname/,
     'no second implementation - routing belongs to useSetParam');
@@ -156,4 +158,42 @@ test('the default is REMOVED from the URL, never written', () => {
   const c = code('components/CollapsedHeader.js');
   assert.match(c, /setParam\('mode', P\.isWeek \? null : 'week'/);
   assert.match(c, /setParam\('scope', P\.isMine \? null : 'mine'/);
+});
+
+// ---------------------------------------------------------------------------------- stage 4
+
+test('ALL SPORTS is a DISCLOSURE, not a binary', () => {
+  // ALL plus eight league tiles is nine states; cycling them would take eight taps to get from NFL
+  // back to NHL. Joe ruled it opens the row.
+  const c = code('components/CollapsedHeader.js');
+  assert.match(c, /aria-expanded=\{sportsOpen\}/);
+  assert.match(c, /aria-controls="chdr-sports"/);
+  assert.match(c, /id="chdr-sports"/, 'aria-controls must point at something that exists');
+  // and the name does NOT repeat the affordance aria-expanded already announces
+  assert.match(c, /aria-label=\{`Sport: \$\{P\.sport \? \(SPORT_LABEL\[P\.sport\] \|\| P\.sport\) : 'All sports'\}`\}/);
+  assert.doesNotMatch(c, /Sport:[^`]*Show the/, 'aria-expanded carries the verb; the name must not');
+});
+
+test('the closed row is ABSENT, not hidden - or focus walks into it', () => {
+  const c = code('components/CollapsedHeader.js');
+  assert.match(c, /\{sportsOpen \? \(/, 'conditionally rendered');
+  assert.doesNotMatch(c, /hidden=\{!sportsOpen\}/, 'hidden attributes still leave it in the DOM');
+  // measured: 0 focusable elements when closed, 9 when open
+});
+
+test('it reuses SportFilter with props rather than forking it', () => {
+  const c = code('components/CollapsedHeader.js');
+  assert.match(c, /import \{ useSetParam, SportFilter \} from '\.\/Filters\.js'/);
+  assert.match(c, /<SportFilter sport=\{P\.sport\} onPicked=\{\(\) => setSportsOpen\(false\)\} setOpts=\{KEEP_SCROLL\} \/>/);
+  // and the two new props default to undefined so every existing caller is unchanged
+  const f = code('components/Filters.js');
+  assert.match(f, /export function SportFilter\(\{ sport, available, onPicked, setOpts \}\)/);
+  assert.match(f, /if \(onPicked\) onPicked\(\);/);
+});
+
+test('the open/closed-ness is ephemeral; the URL still owns `sport`', () => {
+  const c = code('components/CollapsedHeader.js');
+  assert.match(c, /const \[sportsOpen, setSportsOpen\] = useState\(false\)/);
+  // the pick goes through setParam like every other sport pick in the app
+  assert.match(code('components/Filters.js'), /setParam\('sport', value, setOpts\)/);
 });

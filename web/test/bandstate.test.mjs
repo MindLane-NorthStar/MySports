@@ -71,8 +71,17 @@ test('R9: R11 was CONSIDERED AND DECLINED - the subtext carries no fraction', ()
   // Joe weighed "2 of 14 today" beside the clock on 2026-09-06 and said no. Recorded as a test so
   // it is not re-proposed as an improvement.
   const r = bandState(SLATE.cfb('2026-09-05'), new Date('2026-09-06T01:14:00Z'), POLICY);
-  assert.doesNotMatch(r.heading, /of/);
-  assert.doesNotMatch(r.heading, /\d+\s*(of|\/)\s*\d+/);
+  // THIS ASSERTION WAS BROKEN FROM THE DAY IT WAS WRITTEN, in two ways at once (found by prompt 58).
+  // It was `/\bof\b/`, and the two `\b`s were written through a shell heredoc that turned them into
+  // literal BACKSPACE bytes - so the pattern was /<BS>of<BS>/, which nothing can ever match and
+  // which therefore passed vacuously.
+  //
+  // AND HAD IT BEEN ESCAPED CORRECTLY IT WOULD HAVE FAILED, which is the more useful half: the
+  // heading is "as of 9:14 PM", so a word-boundary match on "of" hits the heading's OWN wording.
+  // R11 was never about the word - it was about a FRACTION ("2 of 14 today"), and that is what the
+  // one surviving line actually tests.
+  assert.doesNotMatch(r.heading, /\d+\s*(of|\/)\s*\d+/, 'no "N of M" fraction beside the clock');
+  assert.match(r.heading, /^as of /, 'and the heading is still the clock alone');
 });
 
 test('the three band titles share ONE voice (prompt 56, Joe 2026-09-06)', () => {
