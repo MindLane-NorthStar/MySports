@@ -8,7 +8,7 @@ and not one of the documents that produced them.
 **As of 2026-09-06 the archive is complete except for two acknowledged gaps.** Prompt 49
 stage 2 filed the fifteen it could reach from the laptop; prompt 50 filed the **36** that existed
 only in the Project or under gitignored `artifacts/`; prompt 52 stage 8 filed itself; and 50 and 51
-were filed from `Claude outputs\` afterwards; prompts 53-58 filed themselves. **60 files are here, covering 01-58. 39 and 42 are missing,
+were filed from `Claude outputs\` afterwards; prompts 53-59 filed themselves. **61 files are here, covering 01-59. 39 and 42 are missing,
 and they are not going to be found** — see "The two gaps" below.
 
 That is the failure prompt 47 hit from the other side — the events & shows research lived only in the
@@ -96,6 +96,7 @@ the number alone suggests; everything else is one brief, one file.
 | 56 | `56-approved-revisions-vertical-rhythm.md` |
 | 57 | `57-odds-pipeline-third-grey-banner-generator.md` |
 | 58 | `58-collapsing-header.md` |
+| 59 | `59-favourites-bracket-and-two-harvests.md` |
 
 ## What is NOT here — the two gaps
 

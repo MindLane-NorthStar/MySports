@@ -2104,3 +2104,160 @@ semantics** rather than anything in this repository.
 
 The brief's central technical correction — that a fixed or sticky header cannot become the grid
 rail's containing block — **was right**, and it was the load-bearing one.
+---
+
+## 27. THE FAVOURITES BRACKET, THE PROGRAM PANEL, AND TWO HARVESTS — 2026-09-07, prompt 59
+
+### 27a. The favourites bracket
+
+**Joe, 2026-09-07:** *"On the ALL GAMES views, 'Your Teams' still appears… Because the 'Your Teams'
+section isn't noticeably separated from the rest of the content below, it leaves the user confused."*
+
+He offered two fixes — an accent marking his teams, or dropping the label and letting position do
+the work. **Neither was taken as written**, because there were **two defects and only one of them
+was the one he named**:
+
+- **`.favlabel` was `.band-title` character for character** — 25.5px display, 700, uppercase, `.09em`,
+  own bottom hairline. So a band read `COLLEGE FOOTBALL` then `YOUR TEAMS` at equal weight, and
+  nothing said where the second heading's scope ended.
+- **`.favrule` was imperceptible.** 1px of `--line-soft` on a card-gradient ground. It was the one
+  element whose whole job was *your teams end here*. **That was the actual cause** — the group had no
+  visible bottom edge, so it bled into the rest of the band.
+
+**A bracket says both things at once** — where the group starts, where it ends, and whose it is — and
+it borrows a gesture the app already owns: `.scopeline` marks the MY TEAMS scope with
+`border-left: 2px solid var(--gold)`, so a gold left rule already means *this is about your teams*
+here. Both the heading and the rule are retired.
+
+**IT RETIRES THE "Your teams" / "My teams" NAMING INCONSISTENCY DELIBERATELY**, not by accident. That
+has been an open item since prompt 58's session; the band no longer names the scope at all, so there
+is no second word left to disagree with the toggle.
+
+**THE COST WAS MEASURED, AND THE BRIEF PREDICTED THE WRONG ONE.** `.mcard`'s body track is
+`minmax(0, 1fr)`, so the inset comes out of the room `fitNameAndRecord` has. Across 26 favourite
+cards over seven days:
+
+| inset | body | records lost | name tiers dropped |
+|---|---|---|---|
+| 2 + 9 = 11px | 103px | 0 | **10 of 26** |
+| **2 + 4 = 6px** | **108px** | **0** | **0** |
+| 2 + 0 = 2px | 112px | 0 | 0 |
+
+No record is ever lost — that was the predicted cost and it does not happen. What does happen at 9px
+is ten cards dropping a name tier (12.5→11, or 15→12.5), the same harm in different clothes and
+visible on every one. **At 4px the bracket costs nothing at all.** `.scopeline` keeps its 9px because
+it sits above content rather than beside a width-constrained card: same mark, two paddings, one
+reason.
+
+Four of eight views — `floatFavorites={!P.isMine}` at all three call sites, so MY TEAMS never floats
+and never brackets. Asserted in the qa-shots gate, which goes 22/22 → 25/25.
+
+**Two things fell out.** `headingClass` defaulted to `'favlabel'` and `FirstBand` passed it with no
+`heading` to put it on; the default is gone, because defaulting to a dead class would have styled a
+future caller's heading as a band title — the exact confusion this stage ends. And two comments
+describing `.favlabel` as live were corrected in the same commit (rule 30's second half).
+
+### 27b. The detail panel did not know what a program is
+
+**Joe, 2026-09-07:** *"when you click on the event and the sub-card popup renders, the title bar says
+TBD @ TBD."* **Three defects, and he could only see one.**
+
+1. **The head.** Programs reach this panel exactly as games do — `Listing` and `PageCount` wire
+   `onOpen` to both card types and render one `<GameDetail>` for whatever was tapped. A program has
+   no `home`, no `away` and no team ids, so `cardName` fell through to its `|| 'TBD'` and printed
+   **TBD @ TBD**, flanked by two `<img>` whose `src` was built from `undefined`.
+2. **The probable-pitcher block** was gated on `sport === 'mlb'` alone, so an MLB studio show would
+   render *Probable pitchers* reading TBD / Starter TBA twice. **Verified before fixing, as the brief
+   required: this is LATENT, not live.** Zero of the 307 non-game programs carry `sport: 'mlb'` today
+   — they are nfl 80, cfb 31, nascar 98, aew 35, wwe 36, indycar 18, ufc 9. Guarded anyway; the day
+   an MLB pregame show loads is not the day to discover it.
+3. **The venue row read `game.venue?.name`.** A program's place is `location_text` — **130 of 307
+   carry one** — so the row was simply absent on every program.
+
+**AND ONE THE BRIEF DID NOT ANTICIPATE.** `subtitleFor` already falls back to `location_text` when a
+program has no subtitle of its own, which is every race. A naive Where row printed DARLINGTON
+RACEWAY twice in one panel; it now renders only when the head has not already said it.
+
+**The helpers are imported, never reimplemented** — `titleFor`, `subtitleFor`, `brandFor`,
+`tintToWhite`, `ENDCAP_GRADIENT` and `isProgram` all come from `lib/programs.js`, the same source
+`ProgramCard` and `MobileGrid` read. That is working rule 32's shape: a second title-builder would
+drift from the card's within a prompt or two. The **typographic fallback survives** — a brand with no
+art renders its short title rather than an empty box or a fabricated logo.
+
+**The game path is untouched.** The close button, Escape, Where to watch, the odds block and the
+provenance line already worked for programs and were not restructured.
+
+### 27c. What the `game_odds` surplus actually contains — a decision input, not a decision
+
+Migration `0017` is still unapplied and Joe owes two decisions on it. This answers the second.
+
+Of the 32 `(game_id, provider)` pairs holding more than one row:
+
+| | pairs | surplus rows |
+|---|---|---|
+| **identical** — only `fetched_at` differs. Pure re-fetch noise. | 12 | 31 |
+| **moved** — a real line change. | **20** | **48** |
+
+**Most of the surplus is real**, and some of the movement is large: `mlb-823091` / FanDuel went
+`-1.5 / -215 / +180` to `1.5 / +118 / -138` across three fetches — **the favourite changed sides**.
+
+**Which makes it a product question rather than a hygiene one.** A dedupe keeps the newest row, so
+the current line is never lost; what is lost is how it got there. Nothing reads that history today —
+`queries.js` takes `limit=1` ordered by `fetched_at desc`, `render_feed.py` takes `distinct on
+(game_id)` ordered the same way — so it is write-only. If *"opened at −3, now −3.5"* is ever a
+feature, this constraint is the wrong shape and a history table is the right one. If it is not, the
+48 rows are as disposable as the 31.
+
+Also checked: **there is no unbounded reader of `game_odds`.** Those two are the only consumers and
+neither can be truncated by PostgREST's silent 1,000-row cap.
+
+The evidence lives in the migration file itself rather than somewhere Joe would have to go and find.
+
+### 27d. The Universal Link harvest — groundwork
+
+Read-only, and the answer was not in this repo. Full record at
+**`docs/research/universal-links-aasa-2026-09-07.md`**; bodies at `artifacts/aasa/`, which is
+gitignored, so the document is the committed evidence.
+
+23 hosts built from `WATCH` joined to `access_profile.json` — **a slug-keyed file against a
+label-keyed one, which is rule 31's exact hazard**, so the searches are named in the document and
+both unmatched sides are reported. **11 of 23 returned a parsable AASA.**
+
+**The ESPN answer, which is the one that matters:** `www.espn.com` claims `/*/game/_/gameId/*` for
+the ESPN app, plus recap, boxscore, playbyplay, matchup and video variants. `gameId` is the
+identifier this database already holds. **But there is no general `/watch` claim**, so the declared
+route opens the app *on the game*, not on a live stream — and `plus.espn.com`, where `WATCH` sends
+ESPN+ and ESPN Unlimited, hosts no AASA at all.
+
+**Evidence only.** Nothing evaluated, ranked or recommended: the next question is which patterns
+MySports can populate from ids it holds, and the one after that is a tap test.
+
+### 27e. Rule 23 — the locked reference has no favourites group
+
+`docs/design/mobile_demo.html` was read rather than assumed: it contains **no** "Your teams",
+`.favlabel`, `.favrule` or favourites float of any kind. It never implemented what 27a changed, so
+nothing there needed to change and no annotation was added — unlike prompt 58's collapsing header,
+where the *absence* was itself worth a note because a reader might have filed it as drift. A
+favourites group the reference never depicted cannot drift from it.
+
+### 27f. No new working rule
+
+Rules stop at **34** and this run does not earn a 35th. The near-miss worth recording without minting
+a rule: **two of this run's measurements were wrong because the probe was wrong, not the app** — a
+case-sensitive filter against CSS-uppercased text reported an absent `Where` row that was present,
+and a hardcoded padding constant reported ten squeezed labels that were not. Both were caught by
+disbelieving a result that did not fit the code. That is rule 22's habit applied to one's own
+instruments rather than a new rule.
+
+### 27g. Citations in prompt 59 that were wrong
+
+Three, all small and all line-drift from edits made in prompts 57 and 58:
+
+1. **`.band-title` is at `globals.css:2120`**, not `:2094`.
+2. **`floatFavorites={!P.isMine}` is at `page.js:392`, `:584`, `:600`**, not `:389`, `:581`, `:597`.
+3. **`GameDetail.js`'s head is at `:53-57`**, not `:50-56`.
+
+`.favlabel:1989`, `.favrule:1993`, `.scopeline:2003`, `isProgram` at `programs.js:250`, `brandFor` at
+`:130` and `ProgramCard`'s head at `:66-89` were all correct. The brief's own status table said
+prompt 58's header was "pushed at stage 1"; it was pushed at the end of the prompt-58 run, which is
+why stage 1 here had nothing to do but confirm.

@@ -3,7 +3,7 @@
 **This file lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at
 `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§26, all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§27, all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -16,7 +16,7 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. **60 files, covering prompts 01-58** - four numbers (13, 23, 26, 43) carry
+edited after the fact. **61 files, covering prompts 01-59** - four numbers (13, 23, 26, 43) carry
 two files each, which is why the file count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -45,22 +45,78 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 58's stage-6 commit. Gates: **494 Python tests + 1 skipped**, **419 JS unit
-tests**, smoke **30/30**, qa-shots **22/22**, **`npm run geometry`** all hard stops.
+main, HEAD is prompt 59's stage-6 commit. Gates: **494 Python tests + 1 skipped**, **431 JS unit
+tests**, smoke **30/30**, qa-shots **25/25**, **`npm run geometry`** all hard stops.
 
-> ### DEVICE-CONFIRMED THROUGH PROMPT 57 — rule 25 is satisfied for six prompts
+> ### DEVICE-CONFIRMED THROUGH PROMPT 57. THREE THINGS ARE WAITING ON THE PHONE.
 >
-> **Joe checked prompts 52–56 on 2026-09-07, and prompt 57 after it was pushed the same day.**
-> That closes the longest-standing outstanding item in this file. It includes **prompt 52's four
-> veto calls, all recorded as ACCEPTED**: the banner wordmark recoloured to the metallic gold
-> (§19c), LIVE kept GREEN (§19e), the card gradient kept against the rendering's flat `#2A2A2A`
-> (§19f), and the gold sites that carry information rather than selection (§19i).
+> Joe checked prompts 52–57 on 2026-09-07, including prompt 52's four veto calls as **accepted**.
+> Since then, three surfaces have shipped that only a device can judge:
 >
-> **One adjustment came out of that check and is stage 0 below:** *"walk the token change halfway
-> back not all the way back. Otherwise everything else checks out."*
->
-> **Prompt 58 itself is NOT device-confirmed.** It adds a fixed bar over a scroller and that is
-> exactly the kind of thing a desktop browser cannot judge.
+> 1. **Prompt 58's collapsing header** — whether 44px at the top edge feels right under a thumb
+>    while scrolling.
+> 2. **The favourites bracket** (§27a) — whether the group now reads as separate without a heading,
+>    and whether the inset looks deliberate rather than like a mistake.
+> 3. **The program panels** (§27b) — tap a NASCAR race, a UFC card and a studio show and check the
+>    head reads as that programme rather than as a fixture.
+
+**PROMPT 59 — THE FAVOURITES BRACKET, THE PROGRAM PANEL, AND TWO HARVESTS.** Five commits, from
+`c6a423b`:
+
+| stage | commit | what shipped |
+|---|---|---|
+| 1 | *(none)* | confirmed prompt 58's deploy READY — Joe had already pushed it |
+| 2 | `0f4ba2d` | a gold bracket where the favourites heading was |
+| 3 | `f9950ba` | the panel knows a program from a matchup |
+| 4 | `2a1e7cd` | what the game_odds surplus actually contains |
+| 5 | `fa042c0` | harvest the apple-app-site-association files for every held service |
+| 6 | *(this commit)* | register §27, the prompt filed |
+
+**Read register §27.**
+
+### THE FAVOURITES GROUP IS A BRACKET, NOT A HEADING
+
+`.favlabel` and `.favrule` are **retired**. The label was `.band-title` character for character, so
+YOUR TEAMS competed with COLLEGE FOOTBALL at equal weight; the rule was 1px of `--line-soft` on a
+card gradient and nobody could see it. A gold left rule — `.scopeline`'s own gesture — says where the
+group starts, where it ends and whose it is.
+
+**4px of padding, not `.scopeline`'s 9px, and the difference was measured**: at 9px, ten of 26
+favourite cards dropped a name tier; at 4px the bracket costs nothing. `.scopeline` keeps 9px because
+it sits above content rather than beside a width-constrained card.
+
+**This retires the "Your teams" / "My teams" naming inconsistency** deliberately — the band no longer
+names the scope, so there is nothing left to disagree with the toggle.
+
+### THE DETAIL PANEL BRANCHES ON `isProgram`
+
+It printed **TBD @ TBD** for every race, fight card and studio show. Three defects, two of which Joe
+could not see: the probable-pitcher block was unguarded (latent — no program carries `sport: 'mlb'`
+today), and the venue row read `venue.name` instead of `location_text` on the 130 programs that carry
+one. Helpers are imported from `lib/programs.js`, never reimplemented.
+
+### OPEN — MIGRATION 0017, NOW WITH EVIDENCE ATTACHED
+
+Still unapplied, and Joe still owes two decisions. The second one now has data, recorded **in the
+migration file itself**: of the 79 surplus rows, **31 are identical re-fetches and 48 are real line
+movement** — one game's favourite changed sides across three fetches. A dedupe keeps the current line
+and loses only the history, which nothing reads today. **That makes it a product question**: if line
+movement is ever a feature, this constraint is the wrong shape and a history table is the right one.
+
+### OPEN — THE STREAMING FEATURE IS AT THE EVIDENCE-GATHERED STAGE
+
+`docs/research/universal-links-aasa-2026-09-07.md` holds what 23 services publicly claim; the bodies
+are at `artifacts/aasa/` (gitignored). **`www.espn.com` claims `/*/game/_/gameId/*`** and the database
+already holds those ids — but there is **no general `/watch` claim**, so the declared route opens the
+app on the game rather than on a stream. Next: which patterns MySports can populate, then a tap test.
+
+### OPEN — GRID VIEW STILL HAS NO COLLAPSED BAR
+
+Unchanged from prompt 58, deliberate and temporary. Before it lifts: the bar confirmed on the phone
+in list view, the week grid stack confirmed on a phone at all (outstanding since prompt 54), and a
+pinch and a horizontal pan tried with the bar showing at the scroller's top edge.
+
+Tree clean apart from always-untracked `assets/` (and `web/qa/` and `artifacts/`, both gitignored).
 
 **PROMPT 58 — THE COLLAPSING HEADER.** Seven commits, from `2532ac7`:
 
