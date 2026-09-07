@@ -58,6 +58,19 @@ import { useSearchParams } from 'next/navigation';
 import { resolveHubParams } from '../lib/hubparams.js';
 import { todayET } from '../lib/format.js';
 import { SPORT_SHORT } from '../lib/config.js';
+import { useSetParam } from './Filters.js';
+
+/**
+ * EVERY TAP IN THIS BAR KEEPS THE SCROLL POSITION, and it has to.
+ *
+ * Next's router.push jumps to the top by default. Measured before this: a tap here threw the reader
+ * from 700px back to 0, the sentinel re-entered the viewport, and the bar hid itself with the very
+ * tap that caused it. A control that dismisses itself when used is worse than no control.
+ *
+ * The expanded surfaces keep the default deliberately - changing the day or the sport lands you at
+ * the top of a different slate, which is right, and the expanded toggles are at the top anyway.
+ */
+const KEEP_SCROLL = { scroll: false };
 
 /** The id of the zero-height element in layout.js that decides collapsed-ness. */
 export const SENTINEL_ID = 'hdr-sentinel';
@@ -66,6 +79,9 @@ export default function CollapsedHeader() {
   // FALSE ON THE SERVER AND ON THE FIRST CLIENT RENDER. That equality is the whole hydration story.
   const [collapsed, setCollapsed] = useState(false);
   const params = useSearchParams();
+  // THE SAME FUNCTION THE EXPANDED TOGGLES USE, imported rather than reimplemented. Two surfaces
+  // that can disagree about what a toggle does is a bug waiting for the day someone changes one.
+  const setParam = useSetParam();
 
   useEffect(() => {
     // AN OBSERVER, NEVER A SCROLL LISTENER. A scroll handler fires every frame and this app has
@@ -105,24 +121,61 @@ export default function CollapsedHeader() {
   // DELIBERATELY ABSENT, so nobody helpfully adds it: THE DATE AND WEEK PICKER. There is no room,
   // and it is not a regression - changing the viewing day already means scrolling to the top today.
   // Tapping DAY flips the MODE, not the date.
-  const choices = [
-    { key: 'mode', text: P.isWeek ? 'WEEK' : 'DAY' },
-    { key: 'scope', text: P.isMine ? 'MY TEAMS' : 'ALL GAMES' },
-    { key: 'view', text: 'LIST' },
-    { key: 'sport', text: P.sport ? (SPORT_SHORT[P.sport] || P.sport).toUpperCase() : 'ALL SPORTS' },
+  /**
+   * THE THREE BINARIES, AND A THIRD ACCESSIBILITY PATTERN FOR THIS APP.
+   *
+   * `Filters.js` records why the EXPANDED toggles are `role="radiogroup"` + `aria-checked` rather
+   * than `aria-pressed`: each is exactly one of two, and exclusivity should be announced rather
+   * than inferred. Register §17 records that the eight league tiles deliberately keep
+   * `aria-pressed`, because a filter that can be CLEARED is not a one-of-N choice.
+   *
+   * A COLLAPSED BINARY SHOWS ONLY ONE OPTION, so it can be neither. There is no group to be one of
+   * two within, and nothing is "pressed" - the word on screen is a STATEMENT OF FACT and the tap is
+   * a verb. So: a plain button whose VISIBLE TEXT IS THE CURRENT STATE and whose ACCESSIBLE NAME
+   * STATES THE ACTION.
+   *
+   *     <button aria-label="Time range: Day. Switch to Week">DAY</button>
+   *
+   * That is the brief's wording and it is kept, because it reads correctly in the two places it
+   * matters: a screen reader announces "Time range: Day. Switch to Week, button" - the state, then
+   * what pressing does - and a voice-control user can say the label. Splitting state from action
+   * with a full stop rather than a dash is deliberate; a dash is read as a pause, not a boundary.
+   *
+   * TAPPING `LIST` IS A ONE-WAY DOOR FROM THIS BAR and that is by design, not an oversight. It
+   * switches to grid view, and the bar does not render there (stage 5), so it vanishes with the
+   * tap that caused it. Getting back is the expanded stack, one scroll up - the same journey the
+   * reader would make to change the day. Recorded so it reads as a consequence of the grid
+   * exclusion rather than as a defect.
+   */
+  const binaries = [
+    { key: 'mode', text: P.isWeek ? 'WEEK' : 'DAY',
+      name: `Time range: ${P.isWeek ? 'Week' : 'Day'}. Switch to ${P.isWeek ? 'Day' : 'Week'}`,
+      // `day` and `w` both stay in the URL - each is read only in its own mode - and the DEFAULT is
+      // removed rather than written, which is what keeps `/` the canonical default state.
+      onPick: () => setParam('mode', P.isWeek ? null : 'week', KEEP_SCROLL) },
+    { key: 'scope', text: P.isMine ? 'MY TEAMS' : 'ALL GAMES',
+      name: `Scope: ${P.isMine ? 'My teams' : 'All games'}. Switch to ${P.isMine ? 'All games' : 'My teams'}`,
+      onPick: () => setParam('scope', P.isMine ? null : 'mine', KEEP_SCROLL) },
+    { key: 'view', text: 'LIST',
+      name: 'Presentation: List view. Switch to Grid view',
+      onPick: () => setParam('view', 'grid', KEEP_SCROLL) },
   ];
+
+  const sportText = P.sport ? (SPORT_SHORT[P.sport] || P.sport).toUpperCase() : 'ALL SPORTS';
 
   return (
     <div className="chdr" data-collapsed={collapsed || undefined} aria-hidden={!collapsed}>
       <div className="chdr-inner">
         <span className="chdr-wm">MYSPORTS TV</span>
-        {/* STAGE 2 RENDERS THESE AS TEXT. Stage 3 makes the first three buttons and stage 4 makes
-            the fourth a disclosure; splitting it proves the layout before the interaction lands on
-            top of it. */}
         <div className="chdr-run">
-          {choices.map((c) => (
-            <span key={c.key} className="chdr-choice" data-key={c.key}>{c.text}</span>
+          {binaries.map((c) => (
+            <button key={c.key} type="button" className="chdr-choice" data-key={c.key}
+                    aria-label={c.name} onClick={c.onPick}>
+              {c.text}
+            </button>
           ))}
+          {/* Stage 4 makes this a disclosure. */}
+          <span className="chdr-choice" data-key="sport">{sportText}</span>
         </div>
       </div>
     </div>

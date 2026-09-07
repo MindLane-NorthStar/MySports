@@ -102,3 +102,58 @@ test('the show and hide are transform and opacity only, inside the reduced-motio
       `${prop} is not allowed to transition here - it could reflow`);
   }
 });
+
+// ---------------------------------------------------------------------------------- stage 3
+
+test('the binaries reuse useSetParam - there is not a second one', () => {
+  const c = code('components/CollapsedHeader.js');
+  assert.match(c, /import \{ useSetParam \} from '\.\/Filters\.js'/,
+    'the bar and the expanded toggles must never disagree about what a toggle does');
+  assert.doesNotMatch(c, /useRouter|usePathname/,
+    'no second implementation - routing belongs to useSetParam');
+  assert.match(code('components/Filters.js'), /export function useSetParam\(\)/);
+});
+
+test('A THIRD ACCESSIBILITY PATTERN: visible text is the state, accessible name is the action', () => {
+  // Filters.js explains why the expanded toggles are radiogroup + aria-checked, and register §17
+  // records that the tiles keep aria-pressed. A collapsed binary shows only ONE option, so it can
+  // be neither: there is no group to be one of two within, and nothing is "pressed".
+  const c = code('components/CollapsedHeader.js');
+  assert.doesNotMatch(c, /role="radio/, 'a single visible option is not a radiogroup');
+  assert.doesNotMatch(c, /aria-pressed/, 'and it is not a pressed toggle either');
+  assert.match(c, /aria-label=\{c\.name\}/);
+  // state, then action, separated by a full stop - a dash reads as a pause, not a boundary
+  assert.match(c, /Time range: \$\{P\.isWeek \? 'Week' : 'Day'\}\. Switch to/);
+  assert.match(c, /Scope: \$\{P\.isMine \? 'My teams' : 'All games'\}\. Switch to/);
+  assert.match(c, /Presentation: List view\. Switch to Grid view/);
+});
+
+test('44px in BOTH dimensions, and no third exception to it', () => {
+  // The 44px minimum already carries two recorded exceptions (register §18b: the 31px segmented
+  // toggles and the 24px ALL SPORTS bar). A control tapped WHILE SCROLLING is the worst place in
+  // the app to spend a third.
+  const css = src('app/globals.css');
+  const rule = css.match(/\.chdr-choice \{[^}]*\}/)[0];
+  assert.match(rule, /min-width: 44px/);
+  assert.match(rule, /height: 44px/);
+  // and they must never shrink below it - flex items do by default, which silently clipped two
+  // labels mid-word at 360 before this line existed
+  assert.match(rule, /flex: 0 0 auto/);
+});
+
+test('a tap from the bar keeps the scroll position; every other surface keeps the default', () => {
+  const c = code('components/CollapsedHeader.js');
+  assert.match(c, /const KEEP_SCROLL = \{ scroll: false \};/);
+  const picks = c.match(/setParam\([^)]*\)/g) || [];
+  assert.equal(picks.length, 3, 'exactly the three binaries set a param from here');
+  for (const p of picks) assert.match(p, /KEEP_SCROLL/, `${p} must not bounce the reader to the top`);
+  // the shared function keeps Next's default for everyone else
+  assert.match(code('components/Filters.js'), /router\.push\(qs \? `\$\{pathname\}\?\$\{qs\}` : pathname, opts\)/);
+});
+
+test('the default is REMOVED from the URL, never written', () => {
+  // `/` has to stay the canonical default state - nav.test.mjs asserts that separately.
+  const c = code('components/CollapsedHeader.js');
+  assert.match(c, /setParam\('mode', P\.isWeek \? null : 'week'/);
+  assert.match(c, /setParam\('scope', P\.isMine \? null : 'mine'/);
+});

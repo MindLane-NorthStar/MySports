@@ -9,16 +9,33 @@ import WeekSelect from './WeekSelect.js';
 import { longDay } from '../lib/format.js';
 import { SPORT_FILTERS, SPORT_LABEL } from '../lib/config.js';
 
-function useSetParam() {
+/**
+ * EXPORTED FOR THE COLLAPSED HEADER (prompt 58 stage 3), and exported rather than copied on
+ * purpose. The bar's DAY / ALL GAMES / LIST set the same three params these toggles set, and two
+ * surfaces that can disagree about what a toggle does is a bug waiting for the day someone changes
+ * one of them. One function, one meaning.
+ */
+export function useSetParam() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  return (key, value) => {
+  /**
+   * `opts.scroll` DEFAULTS TO NEXT'S OWN BEHAVIOUR - jump to the top - and every existing caller
+   * keeps it. Changing the day, the week or the sport lands you at the top of a different slate,
+   * which is right; and the expanded toggles are AT the top, so for them it is a no-op either way.
+   *
+   * THE COLLAPSED HEADER PASSES `{ scroll: false }`, and that is the whole reason the option
+   * exists. Measured: without it, a tap in the bar bounced the reader from 700px back to 0, the
+   * sentinel came back into view, and the bar hid itself with the tap that caused it - which
+   * defeats the one thing it is for. It is an option rather than a second function so the two
+   * surfaces still cannot disagree about what a toggle MEANS; they differ only in where you end up.
+   */
+  return (key, value, opts) => {
     const next = new URLSearchParams(params.toString());
     if (value === null || value === undefined || value === '') next.delete(key);
     else next.set(key, value);
     const qs = next.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname);
+    router.push(qs ? `${pathname}?${qs}` : pathname, opts);
   };
 }
 

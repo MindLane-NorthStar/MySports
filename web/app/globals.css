@@ -2941,7 +2941,10 @@ main > .hubctl:first-child { margin-top: 0; }
 .chdr-inner {
   display: flex;
   align-items: center;
-  gap: 12px;
+  /* 8px, not 12: with four 44px-minimum targets and a 129.9px wordmark the row is genuinely tight
+     at 390, and gaps are the only thing here that can give without either shrinking a tap target
+     or spending a third 44px exception. */
+  gap: 8px;
   height: 44px;
   padding: 0 12px;
   max-width: 1100px;
@@ -2956,7 +2959,9 @@ main > .hubctl:first-child { margin-top: 0; }
 .chdr-run {
   display: flex;
   align-items: center;
-  gap: 6px;
+  /* 4px BETWEEN 44px TARGETS is still a comfortable separation - the targets themselves carry the
+     size, and the gap only has to stop a thumb landing between two of them. */
+  gap: 4px;
   margin-left: auto;
   min-width: 0;
 }
@@ -2969,6 +2974,35 @@ main > .hubctl:first-child { margin-top: 0; }
   text-transform: uppercase;
   white-space: nowrap;
   color: var(--dim);
+  /* 44px IN BOTH DIMENSIONS, AND NO THIRD EXCEPTION. The 44px minimum already carries two recorded
+     ones - the 31px segmented toggles and the 24px ALL SPORTS bar (register §18b) - and a control
+     tapped WHILE SCROLLING is the worst place in the app to spend a third. `DAY` is 18px of ink and
+     `LIST` 21px, so both are padded out to the full target.
+     The height is the bar's own 44px rather than a min-height, so the target fills it edge to edge
+     and there is no dead strip above or below the word. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 3px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  /* NEVER SHRINK. Flex items shrink below their content by default, and at 360 that silently
+     clipped ALL GAMES and ALL SPORTS mid-word - a clip nobody would see in review because the row
+     still looked like a row. `flex: 0 0 auto` turns any future squeeze into an obvious overflow
+     instead of a quiet truncation. */
+  flex: 0 0 auto;
+}
+
+button.chdr-choice:hover { color: var(--ink); }
+
+button.chdr-choice:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+  border-radius: 4px;
+  color: var(--ink);
 }
 
 /* The banner's own gold, read from the token block and never retyped (rule 16). The gradient is
@@ -2986,6 +3020,16 @@ main > .hubctl:first-child { margin-top: 0; }
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+/* THE WORDMARK YIELDS BELOW 390, AND IT IS THE RIGHT THING TO GIVE UP. Four 44px targets plus
+   three 6px gaps and ALL SPORTS's own text need 215.6px; a 360px screen has 206.1px once 24px of
+   padding and a 22px wordmark come out. Something has to go, and the four choices are what the bar
+   is FOR - the wordmark is identity, already stated by the expanded banner one scroll up, and at
+   129.9px it was taking 36% of a 360px screen. At 18px it is ~106px and everything fits with room.
+   Scoped to max-width 389px so the 390 Joe measures on keeps the full 22px. */
+@media (max-width: 389px) {
+  .chdr-wm { font-size: 18px; }
 }
 
 /* ---- THE PAGE'S COUNT LINE (prompt 50 stage 4b) ----------------------------------------------
