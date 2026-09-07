@@ -34,8 +34,26 @@ from adapters.common import (access_lookup, dump_json, et_date, et_display, fetc
                              team_record, write_text, result_status, score_int)
 
 API = "https://api-web.nhle.com/v1"
-# NHL abbreviations that differ from ESPN's
+# NHL abbreviations that differ from ESPN's TEAMS endpoint (/hockey/nhl/teams), which is what
+# build_teams() joins against for colours and PNG logos.
 NHL_TO_ESPN = {"LAK": "LA", "NJD": "NJ", "TBL": "TB", "SJS": "SJ", "UTA": "UTAH"}
+
+# THE SAME QUESTION ASKED OF A DIFFERENT ENDPOINT, AND IT HAS A DIFFERENT ANSWER (prompt 57 stage 2).
+#
+# ESPN's SCOREBOARD spells Utah `UTA`; its TEAMS endpoint spells it `UTAH`. The NHL spells it `UTA`.
+# So Utah needs translating for the teams join and MUST NOT be translated for the scoreboard join -
+# `NHL_TO_ESPN` applied here would turn `UTA` into `UTAH`, match no event, and drop every Utah game
+# with no error at all. That is the exact failure `adapters/nba.py`'s game-id note warns about,
+# arriving through a different door.
+#
+# MEASURED 2026-09-07, both sides, 32 clubs each:
+#   NHL not in ESPN scoreboard : LAK, NJD, SJS, TBL
+#   ESPN scoreboard not in NHL : LA,  NJ,  SJ,  TB
+# Four divergences, not five. `UTA` appears in both sets and needs no entry.
+#
+# The two maps are asserted against each other in tests/test_nhl_odds.py, so if ESPN ever changes
+# either spelling the gate fails instead of the schedule quietly losing a club.
+NHL_TO_ESPN_SCOREBOARD = {"LAK": "LA", "NJD": "NJ", "TBL": "TB", "SJS": "SJ"}
 # NHL broadcast `market` codes: N = national, A = away-team local, H = home-team local
 NHL_MARKET = {"N": "national", "A": "local", "H": "local"}
 CANADIAN = {"Sportsnet", "SN", "SNP", "SNO", "SNE", "SNW", "TVA Sports", "TVAS", "CBC", "Sportsnet+", "Prime Video (CA)"}
@@ -106,8 +124,67 @@ def _status_scores(g: dict[str, Any]) -> dict[str, Any]:
             "homeScore": score_int((g.get("homeTeam") or {}).get("score"), st),
             "awayScore": score_int((g.get("awayTeam") or {}).get("score"), st)}
 
+def espn_abbrev(nhl_abbrev: str | None) -> str | None:
+    """NHL club abbreviation -> the spelling ESPN's SCOREBOARD uses. Identity for the other 28."""
+    if not nhl_abbrev:
+        return None
+    return NHL_TO_ESPN_SCOREBOARD.get(nhl_abbrev, nhl_abbrev)
+
+
+def fetch_espn_odds(dates: list[str]) -> dict[tuple[str, str, str], dict[str, Any]]:
+    """{(ET date, away ESPN abbrev, home ESPN abbrev): odds} for every priced game on those dates.
+
+    WHY NOT JOIN ON IDS. `adapters/nba.py` documents the trap in this codebase: ESPN's event ids are
+    not the league API's, and a loader that joins on them "would leave every NBA card without a live
+    score and raise no error at all." The same is true here, so the key is the one thing both APIs
+    agree on - who is playing, and when.
+
+    THE KEY IS UNIQUE because no NHL club plays twice in a day, and it is THREE fields rather than
+    one because working rule 18 wants a second key cross-checked: a match on one abbreviation is not
+    a match. A game is joined only when the date and BOTH clubs agree.
+
+    NO NEW PARSING. `_odds()` in adapters/espn.py already reads the exact DraftKings block ESPN
+    returns for the NHL - the same one it reads for the NFL and NBA - and `LEAGUE_PATH` already maps
+    "nhl" to "hockey/nhl". Verified live 2026-09-07: dates=20261001 returned 8 events, 8 of 8 priced.
+
+    ZERO ODDS ON A FAR-OUT DATE IS NOT A FAILURE. Books post NHL lines as the game approaches;
+    measured the same day, 2026-10-15 (11 events) and 2026-11-10 (7 events) both returned none. The
+    rolling 7-day window sits inside the horizon where they do appear, so a line lands on the second
+    or third visit to a game rather than the first.
+    """
+    from adapters.espn import fetch_scoreboard, _odds
+
+    out: dict[tuple[str, str, str], dict[str, Any] | None] = {}
+    for d in sorted({x for x in dates if x}):
+        board = fetch_scoreboard("nhl", date=d)
+        for ev in board.get("events") or []:
+            comp = (ev.get("competitions") or [{}])[0]
+            sides = {c.get("homeAway"): ((c.get("team") or {}).get("abbreviation"))
+                     for c in (comp.get("competitors") or [])}
+            away, home = sides.get("away"), sides.get("home")
+            # ET on BOTH sides of the join, through the repo's own converter - an ESPN event stamped
+            # 2026-10-02T02:00Z is a 2026-10-01 game in Cleveland, and keying it on the UTC date
+            # would miss every late start.
+            key_date = et_date(ev.get("date"))
+            if not (away and home and key_date):
+                continue
+            # EVERY event is recorded, priced or not, and that is the point. A map of only-priced
+            # events cannot tell "ESPN has no line yet" (normal, and the majority - 25 of 47 in the
+            # measured window) from "the join broke" (the silent failure this whole stage exists to
+            # prevent). With every event present, a MISSING KEY is the alarm and a None VALUE is the
+            # ordinary case.
+            out[(key_date, away, home)] = _odds(comp)
+    return out
+
+
 def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: str,
-                  teams: list[dict[str, Any]]) -> tuple[dict[str, Any], list[str]]:
+                  teams: list[dict[str, Any]],
+                  espn_odds: dict[tuple[str, str, str], dict[str, Any]] | None = None,
+                  ) -> tuple[dict[str, Any], list[str]]:
+    # DEFAULTS TO EMPTY, deliberately: an offline run, a fixture rebuilt --from-file, and every
+    # existing test all call this without odds and must keep producing exactly what they did.
+    espn_odds = espn_odds or {}
+    odds_stats = {"priced": 0, "unpriced": 0, "unjoined": []}
     available, unavailable = access_lookup(root)
     market = load_data(root, "markets.json", {}).get("nhl", {})
     local_abbrevs = set(market.get("localTeams", ["CBJ"]))
@@ -159,6 +236,22 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
                                            label=f"{nick} local TV - carrier TBA"))
             if not media:
                 notes.append(f"{et_date(start)}: {away['abbreviation']}@{home['abbreviation']} no US broadcast rows")
+            # THE ODDS JOIN. A game with no ESPN match is not an error - it is logged, counted and
+            # left alone. `odds` stays None rather than being partially filled, because a half-built
+            # line on a card is worse than an empty slot: the slot says "not known", a wrong number
+            # says "known" and is believed.
+            okey = (et_date(start), espn_abbrev(away["abbreviation"]), espn_abbrev(home["abbreviation"]))
+            odds = espn_odds.get(okey)
+            if espn_odds:
+                if okey not in espn_odds:
+                    # THE ALARM. ESPN had no event for this date and this pair of abbreviations at
+                    # all, which means the join is wrong - not that the book is slow. Measured
+                    # 2026-09-07 on the 2026-10-01 window this was 0 of 47.
+                    odds_stats["unjoined"].append(f"{okey[0]} {okey[1]}@{okey[2]}")
+                elif odds:
+                    odds_stats["priced"] += 1
+                else:
+                    odds_stats["unpriced"] += 1
             games.append({
                 "id": gid, "sport": "nhl", "season": season, "week": None,
                 "startDate": start, "startTimeET": et_display(start), "startTimeTBD": tbd,
@@ -166,7 +259,7 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
                 "venue": (g.get("venue") or {}).get("default"),
                 "home": home, "away": away, "media": media,
                 **_status_scores(g),
-                "odds": None, "records": None,
+                "odds": odds, "records": None,
                 "flags": {"gameType": GAME_TYPE.get(g.get("gameType"), str(g.get("gameType"))),
                           "gameState": g.get("gameState"), "gameScheduleState": g.get("gameScheduleState"),
                           "nhlSeason": g.get("season")},
@@ -175,6 +268,14 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
     fixture = fixture_envelope("nhl", season, None, games, source="nhl.schedule", anchorDate=anchor_date,
                                window=[d.get("date") for d in raw.get("gameWeek", [])], market="Cleveland (DMA 510)",
                                localTeams=sorted(local_abbrevs))
+    if espn_odds:
+        joined = odds_stats["priced"] + odds_stats["unpriced"]
+        print(f"  odds: {joined}/{len(games)} joined to an ESPN event, "
+              f"{odds_stats['priced']} priced, {odds_stats['unpriced']} not priced yet")
+        for u in odds_stats["unjoined"]:
+            notes.append(f"{u}: NO ESPN EVENT - the abbreviation join may be wrong")
+        if odds_stats["unjoined"]:
+            print(f"  WARN: {len(odds_stats['unjoined'])} game(s) matched no ESPN event at all - see report")
     return fixture, notes
 
 
@@ -247,7 +348,16 @@ def main(argv: list[str] | None = None) -> int:
         if postal:
             print(f"postal-lookup {zip_code}: {postal[0].get('teamName', {}).get('default')} ({postal[0].get('county')} County)")
 
-    fixture, notes = build_fixture(raw, root, season=args.season, anchor_date=args.date, teams=teams)
+    # OPTIONAL SIDE-FETCH, through _safe like every other one in this file: if ESPN is unreachable
+    # the fixture is built exactly as it was before, with `odds: None`, and the run still succeeds.
+    espn_odds = None
+    if not offline:
+        window = [d.get("date") for d in raw.get("gameWeek", []) if d.get("date")]
+        espn_odds = _safe(lambda: fetch_espn_odds(window))
+        if espn_odds is None:
+            print("  warn: ESPN scoreboard unavailable - fixture built without odds")
+    fixture, notes = build_fixture(raw, root, season=args.season, anchor_date=args.date, teams=teams,
+                                   espn_odds=espn_odds)
     fx_path = out_dir / f"nhl_{args.season}_{args.date}_fixture.json"
     dump_json(fx_path, fixture)
     write_text(out_dir / f"nhl_{args.season}_{args.date}_report.md", report_md(fixture, notes, postal))
