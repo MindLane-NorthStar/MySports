@@ -33,6 +33,41 @@
 -- additive-over-destructive and deleting 79 rows is Joe's call and not a ride-along. Read it,
 -- decide, uncomment, then apply.
 --
+-- ============================================================================================
+-- WHAT THE 79 SURPLUS ROWS ACTUALLY CONTAIN (prompt 59 stage 4, measured 2026-09-07 over
+-- paginated PostgREST anon reads). This is the evidence for the second decision and NOT a
+-- recommendation.
+--
+--   pairs holding more than one row                     32
+--     IDENTICAL - every value the same, only fetched_at
+--     differs. Pure re-fetch noise.                     12 pairs, 31 surplus rows
+--     MOVED - at least one of spread / total /
+--     home_moneyline / away_moneyline differs.
+--     Real line history.                                20 pairs, 48 surplus rows
+--
+-- SO MOST OF THE SURPLUS IS REAL. 48 of 79 rows record a line that actually moved, and some of
+-- the movement is large. `mlb-823091` / FanDuel over three fetches:
+--
+--     2026-09-05T21:40:45Z   spread -1.5   total 7.5   ml  -215 / +180
+--     2026-09-06T00:01:34Z   spread -1.5   total 7.5   ml  -198 / +166
+--     2026-09-06T13:40:52Z   spread  1.5   total 7.5   ml  +118 / -138
+--
+-- The favourite changed sides. `mlb-823336` moved its total 7.5 -> 8.5; `mlb-823417` moved
+-- 8.5 -> 8. A dedupe keeps the newest row of each pair, so the CURRENT line is never lost - what
+-- is lost is the history of how it got there.
+--
+-- WHICH MAKES THIS A PRODUCT QUESTION, NOT A HYGIENE ONE. Nothing in the app reads more than the
+-- newest row today: `queries.js` takes `odds.order=fetched_at.desc&odds.limit=1`, and
+-- `pipeline/render_feed.py` takes `distinct on (game_id) ... order by fetched_at desc`. So the
+-- history is currently write-only. If line movement is ever a feature - "opened at -3, now -3.5"
+-- is a real thing a viewer wants - then this constraint is the wrong shape entirely and the right
+-- one is a separate history table. If it is not, the 48 rows are as disposable as the 31.
+--
+-- CHECKED WHILE MEASURING: there is no unbounded reader of this table. The two consumers above are
+-- the only ones, and neither can be truncated by PostgREST's silent 1,000-row cap - one is bounded
+-- to a single row per game, the other is direct SQL.
+-- ============================================================================================
+--
 -- WHAT DOES NOT CHANGE IN THIS FILE. `pipeline/load.py` still names the OLD conflict target and
 -- must keep doing so until this is applied - shipping `(game_id, provider)` against a database
 -- with no such unique index fails every loader run with "there is no unique or exclusion
