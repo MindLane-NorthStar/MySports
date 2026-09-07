@@ -19,7 +19,7 @@ one is stale — say so.
 | why a decision was made, and whether it is already settled | `docs/enhancement-register.md` |
 | what a card, block or grid is supposed to look like | `docs/rendering-contract.md` + `docs/rendering-contract-mobile.md` (the Mobile Grid Addendum) |
 | the locked visual reference the app must match | `docs/design/mobile_demo.html` |
-| what a past run was actually asked to do | `docs/prompts/` — 57 files covering 01–55, verbatim; 39 and 42 are the only gaps |
+| what a past run was actually asked to do | `docs/prompts/` — 58 files covering 01–56, verbatim; 39 and 42 are the only gaps |
 | deploy, environment, what is publishable | `docs/deployment-contract.md` |
 
 **Do not re-raise a settled decision** without first checking the register and `handoff-status.md`.
@@ -114,6 +114,14 @@ never renumber, even around the retired stub.
     **Distinct from 30:** there the note was stale, and "check the thing itself" fixes it; here the
     file was correct, it *was* checked, and the vocabulary was wrong.
 
+32. **A ruling is not implemented until every place that renders the same thing obeys it.** Enumerate
+    the renderers — `git grep` the CLASS, the COMPONENT and the CONDITION, not the concept — and make
+    each obey or say why not. Prompt 55 put "grids only in grid view" into `Listing` while
+    `PageCount`'s reveal kept serving cards under all four grid views; prompt 56 found three more of
+    the same shape in one pass. **Distinct from 22** (which says read THE component — and prompt 55's
+    reading of `Listing` was correct) **and from 30 and 31** (an absence, and a query's vocabulary):
+    here every file was present and correct, and simply not the only file.
+
 ---
 
 ## Gates
@@ -122,13 +130,13 @@ Five, and all five are run **before** the commit, as their own commands:
 
 ```
 pytest                       # from the repo root — 466 pass + 1 skipped
-npm run test:unit            # from web/ — 377
+npm run test:unit            # from web/ — 398
 npm run smoke                # from web/ — 30/30
 node scripts/qa-shots.mjs    # from web/ — 14/14
 npm run geometry             # from web/ — all hard stops (see below)
 ```
 
-Counts are the floor as of `4d87e88`; they may only go up. Report all five with every change, and
+Counts are the floor as of `96c8c08`; they may only go up. Report all five with every change, and
 never read a gate's result from the exit code of a chained command.
 
 ## The phone-grid geometry check

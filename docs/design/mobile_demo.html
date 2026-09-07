@@ -21,6 +21,21 @@
   cannot be regenerated - and because rebuilding it by hand would put a hand-made page in the place
   of a generated authority.
 
+  THE FRAME PADDINGS BELOW ARE THIS FILE'S, NOT THE APP'S SPACING SCALE (prompt 56 stage 8, rule 23).
+  The app now has ONE vertical rhythm below the picker - 8px inside a group, 16px from a heading to
+  the content it labels, 24px between sections - recorded in register §24d and, with its three hard
+  rules, in `globals.css` above the band rules. The numbers below on `.mrows` (gap 6px, padding
+  0 12px 14px), `.secthead` (padding 10px 14px 6px) and `.mgwrap` (margin 0 12px 14px) are how THIS
+  page positions things inside a 390px phone FRAME. The app has no such frame and none of those
+  constructs exists in it, so they are not the app's spacing and never were. In particular, do not
+  read `.mrows`' 6px as the app's card gap: the app's is 8px, and it is the anchor the whole scale is
+  derived from.
+
+  ONE THING BELOW IS NOW AHEAD OF THE APP RATHER THAN BEHIND IT. `.secthead` renders `Fri Sep 4 · MLB`
+  with the league mark beside it - a DAY and a LEAGUE on one heading row. Prompt 56's R3 built exactly
+  that shape for the WEEK, whose day heading had been rendering with no mark and nothing on screen
+  naming the league at all. This file showed the right answer first; nothing here needed to change.
+
   IT IS A TEMPLATE. The `__DATA__`, `__TODAY__`, `__TEAMS__`, `__STAND__`, `__PROB__`, `__LEAGUE__`,
   `__WATCH__`, `__NETLOGOS__`, `__AVAIL__`, `__GRIDSVG__` tokens are filled by `build_demo.py`, which
   is NOT in this repo — it is still project-only, along with `app_template.html`, `build_banner.py`

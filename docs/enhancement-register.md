@@ -1355,3 +1355,262 @@ the slug against `NFL Network` the label. Rule 30's remedy does not catch it.
 
 Four instances, three in one week, including one **caught mid-stage in this very run**: a slugify
 that mapped `Paramount+` to `paramount` reported three unmarked networks when the answer was one.
+---
+
+## 24. TEN APPROVED REVISIONS, AND THE VERTICAL RHYTHM — 2026-09-06, prompt 56
+
+Every item here was proposed from a read-only pass at `017d73e`, shown to Joe as paired before/after
+mockups, and **approved by him on 2026-09-06**. R11 was shown in the same set and **declined**; it is
+recorded below so it is not re-proposed.
+
+### 24a. The ten, with the views each one changed
+
+| R | what changed | views | commit |
+|---|---|---|---|
+| **R5** | the developer footnote is removed | all eight | `a9b1664` |
+| **R7** | the count line says **broadcasts**, not games | all eight | `a9b1664` |
+| **R6** | the provenance line takes week mode's condition | all eight | `a9b1664` |
+| **R1** | the count line REPORTS in grid view, it does not reveal | the four GRID views | `05711ac` |
+| **R2** | MY TEAMS names itself | the four MY TEAMS views | `1875386` |
+| **R3** | the week's day heading carries the league mark | the four WEEK views, tile selected | `5dced9a` |
+| **R4** | the weekday heading renders at ONE level | the four WEEK views, tile selected | `5dced9a` |
+| **R8** | the empty day names the nearest LOADED day | Day · All Games, list and grid | `edb459f` |
+| **R9** | the first band's subtext is the clock alone | Day · list, both scopes | `e7a39be` |
+| **R10** | the desktop grid answers on a programs-only day | Day · Grid, desktop | `50d4a67` |
+
+**R5.** *"Every game is kept in the database — nothing is deleted. Reads are anon, read-only, live."*
+described the data architecture to a reader who came to find out what is on television, and it was
+the only copy in the app written from the build's side of the screen. `.footnote-tz` — *"All times
+are Eastern · Cleveland market."* — stays and is now the only footnote.
+
+**R7.** `pageCountLine`'s `on` counts every row the page shows, and since v1.7 that includes a NASCAR
+race, a UFC card and College GameDay. None of those is a game. **`broadcast` is true of all of them**,
+and it is the word D4 used before prompt 26 shortened it to fit a 390px band header; at page level
+there is room for the accurate one.
+
+**R6.** Day mode rendered `DataAsOf` on `!error && rows.length`; week mode renders it inside
+`(visible.length || hidden.length)`. **A day where every game was off-service showed a count line
+with no provenance, and the identical week showed both.** One condition now, in all eight views.
+
+**R1 — the reveal leaves GRID view.** `PageCount`'s `<button class="offsvc-toggle">` opened
+`.pagecount-hidden`: sport bands, `<h2>` titles, matchup and program cards and the tap-to-open
+`GameDetail` panel. **That is a card list under a grid**, and it is the direct contradiction of Joe's
+ruling *"I only want list cards on list view and only grids on grid view."* Prompt 55 implemented
+that ruling inside `Listing`; the reveal lives in `PageCount`, so the two never met.
+
+**Measured before the fix:** one press put **20** card and band elements under Day · All · GRID and
+**88** under Week · All · GRID. After: all four grid views render **0** elements matching
+`.mcard, .pcard, .band-head`, and there is no control that could open one. The count line is
+unchanged and a plain clause replaces the button — *"18 not on your services — switch to List to see
+them"*. The four LIST views are unchanged bar the request clock.
+
+**R2 — MY TEAMS names itself.** Joe pinned the wording:
+
+> **MY TEAMS · 13 CLUBS + RACING + COMBAT SPORTS**
+
+Small, gold, uppercase, marked by a **left** rule — a different gesture from every heading on the
+page, which mark with a bottom one, so it cannot be read as a band title. It renders below the
+control stack in the four MY TEAMS views and nowhere else, whether or not the day has games.
+
+**The club count is derived** from `favoriteIds(favoritesDoc).size` and never written down: a line
+reading "13 clubs" above fourteen clubs' games is worse than no line. **The two category words cover
+all five team-less sports** — `racing` = nascar + indycar, `combat sports` = ufc + wwe + aew — and a
+test asserts that coverage against `TEAMLESS_SPORTS` exactly, so a sixth team-less sport fails the
+test rather than silently going undescribed. `racing` is **already the app's own filter token** for
+those two (`FILTER_EXPANDS`), so the line and the Racing tile agree by construction; **`combat
+sports` is a display label only** and a second test refuses to let it become a filter token or a
+sport value.
+
+This is the first surface in the app to state that **MY TEAMS includes every race, fight card and
+wrestling show**, not just the clubs. §18d ruled it; nothing said it.
+
+**R3 + R4 — one heading, one level, with the league on it.** With a tile selected `bands={!P.sport}`
+is false, `Listing` took the flat branch and `SportBand` rendered `showHeader={false}` — no mark, no
+title — so three days into WEEK · NFL **nothing on screen said NFL** except a highlighted tile far
+above. And the weekday heading was **two different objects**: a `<p>` sibling above the bands under
+ALL SPORTS, a `sectionLabel` inside `.band-headrow` with a tile picked. Same text, same class, two
+DOM levels. C3 put it in that row so a per-band count could share it; prompt 50 stage 4b retired the
+count, and the reason went with it.
+
+**WEEK · ALL SPORTS is byte-identical after the change** — the mark's absence leaves the heading text
+as a bare node, so no wrapper was added to a heading that did not need one. The mark's `alt` is the
+league NAME, not empty: a band mark sits beside an `<h2>` that already says it, and this one does not.
+
+**THREE dead things fell out, not two.**
+
+- `SportBand`'s `className={sectionLabel ? 'band yourteams' : 'band'}`. The page-level YOUR TEAMS
+  section that class belonged to was retired by prompt 51 stage 4a, and prompt 55 reported the CSS
+  rule as vestigial. What kept it **alive** rather than merely unused is that the class was still
+  being APPLIED — and the only caller passing `sectionLabel` was week mode passing a **weekday**, so
+  **every Tuesday was being marked as a page-level favourites section.** `sectionLabel` and
+  `headingClass` are removed from `SportBand` outright.
+- `globals.css`'s `.listing > .yourteams { order: -2 }` and `.band-headrow > .favlabel`, both of
+  which only existed to place or un-style that heading. `git grep yourteams` returns nothing under
+  `web/`; this register and `docs/hub/hub-audit-2026-09-05.md` still name it, correctly — they record
+  what was.
+- **An EMPTY `.band-headrow`**, measured in the first band on 2026-09-06. With `showHeader` false and
+  no `sectionLabel` the row rendered with nothing in it and painted a bare hairline plus 14px above
+  the cards. The row is now gated on `showHeader`.
+
+**R8 — the empty day stops naming dates that have passed.** The generic empty state hardcoded six
+viewing days — *"try 2026-09-03 or 2026-09-04 (MLB), 2026-09-05 (CFB), 2026-09-13 (NFL), 2026-10-01
+(NHL) or 2026-10-28 (NBA)"*. **Three were already in the past**, and by November it would have been a
+list of dead ends. Week mode's *"try a CFB or NFL week"* does not age because it names no date.
+
+`nearestLoadedDay(day, sport)` is bounded — `select=viewing_day`, ordered, `limit=1`, sport-scoped,
+**never an unbounded select** (working rule 19) — and at most two calls, the second only when the
+first comes back empty. It runs **only** on a day that is already empty and is not MY TEAMS, so a
+populated page makes no extra round trip, and a failure or an empty answer falls back to a line with
+**no date in it**, because an empty state must not be able to 500.
+
+    2026-01-15          The next loaded day is Saturday, August 29, 2026.
+    2026-01-15 + MLB    The next loaded day is Monday, August 31, 2026.
+    2028-01-01          Nothing later is loaded — the most recent loaded day is Sunday, April 11, 2027.
+
+**It reads `games` only,** and that limit is stated rather than hidden: programs have no
+`viewing_day` column, so a programs-only day is never OFFERED here. It still renders normally when
+reached, because this empty state does not fire there. **`SPORT_EMPTY` is unchanged** — those lines
+name external gates ("NASCAR arrives with the playoffs, September 6"), not loaded data, which is why
+they are allowed to name a date.
+
+**R9 — the first band states the clock.** The subtext read the day label, then the clock, then " ET".
+Prompt 46 recorded Joe reconfirming that, and the reason it gave was true then: the page heading read
+the bare word DATE and this band was the one place the viewing day was spelled out. **Prompt 50
+retired that heading**, and the picker two rows above now shows the date in exactly those words. So
+the day half goes and the clock stays — **`as of 7:12 PM`** — because a band that changes with the
+time has to say which time it read. **No " ET"**: prompt 31 took that off every clock in the app and
+the footnote carries it once. `dayLabel` is removed from `bandState` with it — it fed nothing else.
+
+**R10 — the desktop grid answers on a day with no games.** The archived PC grid was gated on
+`games.length`, so a day carrying only **programs** — a NASCAR Sunday, a studio-show morning — had
+zero games, fell through both arms and rendered an **empty `.deskgrid-only` container**: no grid and
+no explanation. Week mode asks `grouped[d]?.length`, its visible rows, which counts programs, so the
+two modes disagreed about what "has content" means. Day mode now asks week mode's question — `rows`,
+the same post-`splitHidden` visible set — and `ArchivedGrid`'s existing one-liner does the rest, so
+there is no new copy. Measured at 1440: 2026-09-06 NASCAR, 2026-09-05 UFC and 2026-09-07 WWE all went
+from a 0px empty container to the honest line.
+
+### 24b. The three band titles, renamed as a set
+
+Joe asked for one and then ruled that **all three should match** rather than leaving two connectors
+doing one job.
+
+| state | was | is |
+|---|---|---|
+| `tonight` | `Tonight` | `Tonight` *(unchanged)* |
+| `live` | `On now · Next up` | **`Live & Upcoming`** |
+| `finals` | `Finals · Tomorrow` | **`Finals & Tomorrow`** |
+
+**This supersedes 05 §D1b's wording.** The three STATES are untouched and are still exactly the three
+D1b specced — only what they are called. The feature study, its mockups and the prompt archive still
+quote the old names, correctly: they record what was decided when, and this section is the
+supersession.
+
+### 24c. R11 — CONSIDERED AND DECLINED
+
+Joe weighed adding **"2 of 14 today"** beside the first band's clock on 2026-09-06 and **said no**.
+The subtext is the clock alone. **Do not re-propose it.** A test in `bandstate.test.mjs` asserts the
+absence of a fraction, so a future improvement trips rather than ships.
+
+### 24d. THE VERTICAL SCALE BELOW THE PICKER — the part a future change must obey
+
+Joe: *"evaluate the vertical spacing between cards and between sections that render below the picker
+— make sure they're standardized and not excessive."* Measured **rendered** at 390 in all eight
+views, then applied one scale, derived from the control stack's own rhythm, which prompt 51 settled
+at 8px:
+
+| role | value |
+|---|---|
+| card → card, and anything inside one group | **8px** |
+| a heading → the content it labels | **16px** |
+| one section → the next section | **24px** |
+
+**THREE HARD RULES, and they bind every later change:**
+
+1. **No rendered gap may grow.** A pair already below its target keeps what it has and is reported;
+   it is never opened up to hit a number.
+2. **Nothing inside a list card or a grid block changes.** The card contract is locked (v1.6.4) and
+   the grid's internal geometry — lane gaps, block heights, tray heights, the rail — is frozen by the
+   geometry tripwire.
+3. **The control stack is out of scope.** Prompt 51 tuned it and Joe confirmed it on the device. The
+   scale starts BELOW the picker.
+
+**MEASURE RENDERED, NEVER DECLARED.** `.listing` is `display:flex; flex-direction:column` with no
+`gap`, so its children stack on their own margins and nothing collapses out of it; elsewhere on the
+page adjacent block margins DO collapse. Two rules declaring 8px can render 8 or 16. A box-to-box gap
+also hides a margin that lives INSIDE one of the boxes — a day group's heading clearance is a flex
+item's margin and so sits inside `.weekday`, which is why the table below is ink to ink.
+
+**What moved, ink to ink at 390:**
+
+| pair | before | after |
+|---|---|---|
+| last card → next day heading | 61 *(55 in grid view)* | **24** |
+| last content → the count line | 44 *(38 in grid view)* | **18** |
+| band → band | 26 | **24** |
+| cards → favourites rule → cards | 14 both sides | **8** both sides |
+| count line → provenance line | 34 | **24** |
+| provenance line → footnote | 34 | **24** |
+| picker → first day heading (week) | 29 | **24** |
+| scope line → content (week) | 37 | **16** |
+
+**The single largest excess was a trailing margin.** `.listing` is a flex column, so the last band's
+26px did not collapse out — it simply made the container taller. `.pagecount-hidden` has carried
+`.band:last-child{margin-bottom:0}` since prompt 50; `.listing` now has its twin.
+
+**The day heading's top margin was the UA's `1em`** — 21px at 21px type, a number nobody had chosen.
+It is declared at 16px and is now the whole clearance above a day group; the group itself carries
+none, and `.weekday + .weekday` adds the 8 that makes 24. The same 16 sits under the control stack's
+own 8px padding, so the first group is 24 as well — one number, two places, from two owners that each
+mean something.
+
+**HELD BY HARD RULE 1, reported and not changed:** band header → cards **8** (target 16); day
+heading → its content **6** (16); first band → the list **22** (24); first band head → its body
+**13** (16); last content → count line **18** (24); picker → first content **8 / 22 / 24** by view.
+
+**ONE STATED EXCEPTION.** Day · My Teams · Grid: scope line → grid is **30**, not 24. It is the
+caption's 16 plus the grid panel's own 14px top margin — and that 14 is also what makes Day · All ·
+Grid's picker → grid 22px, which rule 1 forbids opening up and does not ask to be closed down. A
+stated exception is worth more than a forced number.
+
+**The geometry tripwire did not move at all:** block counts, lane counts, network-row counts, block
+widths, `scrollWidth` and all three ratios identical (12.8898 / 6.6629 / 8.5069).
+
+**Page height at 390, before → after:** 11077 → 10999, 4012 → 3972, 2156 → 2102, 1533 → 1493,
+18512 → 18111, 8739 → 8508, 4710 → 4440, 3627 → 3411.
+
+### 24e. Working rule 32
+
+Added, and **distinct from 22, 30 and 31**: a ruling implemented in one component is not implemented
+until every component that renders the same thing obeys it. **Four instances in this one run** — see
+`docs/handoff-status.md`.
+
+### 24f. THE LOCKED REFERENCE — rule 23 checked, stage by stage, and NOT edited for the build
+
+`docs/design/mobile_demo.html` declares what it is the authority for: *"the CARD's geometry, the chip
+row, and the grid's own construction."* Each stage was checked against that, and **none of them
+alters something the reference implements**:
+
+- **Stages 1, 2, 3, 5, 7** touch a page-level footer, a page-level count line and its reveal, a scope
+  caption, an empty state and a desktop container. The reference has none of these constructs.
+- **Stage 4** is the WEEK's day heading; the reference has no week view. Its `.secthead` renders
+  `Fri Sep 4 · MLB` with the league mark beside it — **the same shape stage 4 built**, so the app has
+  moved toward the reference rather than away from it.
+- **Stage 6** renames the FIRST BAND's three state titles. The reference's `Tonight · MLB` is its own
+  sport-section head (`.secthead`), not `BAND_TITLE`, and it carries no clock subtext.
+- **Stage 8** is the app's `.band` / `.weekday` / `.footnote` / `.listing` rhythm. The reference lays
+  its rows out inside one 390px phone frame with its own idiom (`.mrows{gap:6px; padding:0 12px
+  14px}`, `.secthead{padding:10px 14px 6px}`, `.mgwrap{margin:0 12px 14px}`) and none of those
+  constructs exists in the app. Its grid-above-the-cards arrangement was already recorded as
+  superseded by prompt 55.
+
+**An annotation was added to its header comment anyway**, so a later reader does not take the frame
+paddings for the app's scale. That is a note, not a restructure — `build_demo.py` is still
+project-only, so the repo copy cannot be regenerated.
+
+### 24g. Citations in prompt 56 that were wrong
+
+**One, and it is small.** The brief cites `offservice.js:306` for the string that builds the count
+line; :306 is the `pageCountLine` declaration and the string is on **:309**. Every other citation in
+the brief was correct at `017d73e`, including the two most worth re-checking: `globals.css:2040`
+really is `.listing > .yourteams { order: -2 }`, and `FirstBand.js:27` really is `band.heading`.

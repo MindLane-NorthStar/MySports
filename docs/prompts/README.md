@@ -8,7 +8,7 @@ and not one of the documents that produced them.
 **As of 2026-09-06 the archive is complete except for two acknowledged gaps.** Prompt 49
 stage 2 filed the fifteen it could reach from the laptop; prompt 50 filed the **36** that existed
 only in the Project or under gitignored `artifacts/`; prompt 52 stage 8 filed itself; and 50 and 51
-were filed from `Claude outputs\` afterwards; prompts 53, 54 and 55 filed themselves. **57 files are here, covering 01-55. 39 and 42 are missing,
+were filed from `Claude outputs\` afterwards; prompts 53, 54, 55 and 56 filed themselves. **58 files are here, covering 01-56. 39 and 42 are missing,
 and they are not going to be found** — see "The two gaps" below.
 
 That is the failure prompt 47 hit from the other side — the events & shows research lived only in the
@@ -93,6 +93,7 @@ the number alone suggests; everything else is one brief, one file.
 | 53 | `53-hub-architecture-studio-logos.md` |
 | 54 | `54-week-grid.md` |
 | 55 | `55-list-grid-split-network-marks.md` |
+| 56 | `56-approved-revisions-vertical-rhythm.md` |
 
 ## What is NOT here — the two gaps
 

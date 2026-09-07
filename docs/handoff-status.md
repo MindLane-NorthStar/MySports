@@ -3,16 +3,18 @@
 **This file lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at
 `claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§20, all
-in the repo — check there before re-raising any decision; §19 the metallic gold, §20 the rail and
-the end of the NASCAR series sub-filter), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§24, all
+in the repo — check there before re-raising any decision; §22 the week grid, §23 list-is-a-list,
+**§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
+SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
 amendment, §9 NETWORK TBD, §11 mobile page order, §12 the DATE/WEEK headers, §13 the 2026-09-05
-review), `docs/rendering-contract.md` **v1.7**, `docs/rendering-contract-mobile.md` (Addendum
+review — **D1b’s three band-title STRINGS are superseded by register §24b; its three STATES are
+not**), `docs/rendering-contract.md` **v1.7**, `docs/rendering-contract-mobile.md` (Addendum
 **v2.0** — M4 amended for the 60px rail and the ink-area fit, M5's gold moved; Addendum v1.2 + M19-M22), **`docs/design/program-card-design-v1.md`** — the program card's design of record,
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. **57 files, covering prompts 01-55** - four numbers (13, 23, 26, 43) carry
+edited after the fact. **58 files, covering prompts 01-56** - four numbers (13, 23, 26, 43) carry
 two files each, which is why the file count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -41,8 +43,95 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 55's stage-4 commit. Gates: **466 Python tests + 1 skipped**, **377 JS unit
+main, HEAD is prompt 56's stage-9 commit. Gates: **466 Python tests + 1 skipped**, **398 JS unit
 tests**, smoke **30/30**, qa-shots **14/14**, **`npm run geometry`** all hard stops.
+
+**PROMPT 56 — TEN APPROVED REVISIONS, AND THE VERTICAL RHYTHM.** Nine commits, from `017d73e`:
+
+| stage | commit | what shipped |
+|---|---|---|
+| 1 | `a9b1664` | one footer, one noun, one condition for the provenance line (R5, R7, R6) |
+| 2 | `05711ac` | the count line reports in GRID view, it does not reveal (R1) |
+| 3 | `1875386` | MY TEAMS names itself (R2) |
+| 4 | `5dced9a` | a week names its league, and its day heading holds one shape (R3, R4) |
+| 5 | `edb459f` | an empty day points at the next loaded one (R8) |
+| 6 | `e7a39be` | the first band states the clock, and its three titles share one voice (R9) |
+| 7 | `50d4a67` | the desktop grid answers on a day with no games (R10) |
+| 8 | `96c8c08` | one vertical rhythm below the picker |
+| 9 | *(this commit)* | register §24, **working rule 32**, the reference annotated, the prompt filed |
+
+**Read register §24.** Every one of the ten was shown to Joe as a paired before/after mockup and
+approved on 2026-09-06. **R11 — "2 of 14 today" beside the first band's clock — was CONSIDERED AND
+DECLINED**; a test pins its absence so it is not re-proposed.
+
+### THE THREE BAND TITLES CHANGED — 05 §D1b's WORDING IS SUPERSEDED
+
+`Tonight` (unchanged) · `On now · Next up` → **`Live & Upcoming`** · `Finals · Tomorrow` →
+**`Finals & Tomorrow`**. Joe asked for one and then ruled all three should match rather than leaving
+two connectors doing one job. **The three STATES are untouched** and are still exactly the three D1b
+specced — only what they are called. The feature study, its mockups and the prompt archive still
+quote the old names, correctly: they record what was decided when. The first band's subtext is now
+the clock alone — **`as of 7:12 PM`**, no day and no " ET".
+
+### THE VERTICAL SCALE BELOW THE PICKER — read this before changing any spacing in globals.css
+
+| role | value |
+|---|---|
+| card → card, and anything inside one group | **8px** |
+| a heading → the content it labels | **16px** |
+| one section → the next section | **24px** |
+
+**THREE HARD RULES.** (1) **No rendered gap may grow** — a pair already below its target keeps what
+it has and is reported. (2) **Nothing inside a list card or a grid block changes** — the card
+contract is locked and the grid's internal geometry is frozen by the tripwire. (3) **The control
+stack is out of scope** — prompt 51 tuned it; the scale starts BELOW the picker.
+
+**MEASURE RENDERED, NEVER DECLARED, AND INK TO INK.** `.listing` is a flex column with no `gap`, so
+nothing collapses out of it while adjacent block margins elsewhere do; and a box-to-box gap hides a
+margin living INSIDE one of the boxes, which is where the day heading's clearance sits. The scale and
+the three rules are also written into `globals.css` above the band rules, so the file carries them.
+
+Ink to ink at 390, before → after: **last card → next day heading 61 → 24**; **last content → the
+count line 44 → 18**; band → band 26 → 24; the favourites rule 14 → 8 both sides; count line →
+provenance 34 → 24; provenance → footnote 34 → 24; picker → first day heading (week) 29 → 24; scope
+line → content (week) 37 → 16. Page heights fell in all eight views (18512 → 18111 on the heaviest).
+
+**Held by hard rule 1 and NOT changed:** band header → cards 8, day heading → its content 6, first
+band → the list 22, first band head → its body 13, last content → count line 18, picker → first
+content 8 / 22 / 24 by view. **One stated exception:** Day · My Teams · Grid, scope line → grid is
+30 — the caption's 16 plus the grid panel's own 14, which is also what makes Day · All · Grid's
+picker → grid 22px.
+
+**The geometry tripwire did not move at all** — block counts, lane counts, row counts, widths,
+`scrollWidth` and all three ratios identical.
+
+### THE COUNT LINE, THE FOOTER AND THE EMPTY DAY
+
+- The page count line reads **"N broadcasts on your services"**. `on` counts every row shown, and
+  since v1.7 that includes races, fight cards and studio shows — none of them a game.
+- **The developer footnote is gone from all eight views.** `.footnote-tz` is now the only footnote.
+- **In the four GRID views the count line reports and does not reveal**: no button, and a clause —
+  *"18 not on your services — switch to List to see them"*. All four render **0** elements matching
+  `.mcard, .pcard, .band-head`, with no control that could open one. Before the fix one press put 20
+  such elements under Day · All · GRID and 88 under Week · All · GRID.
+- **The empty day names the nearest LOADED day** instead of six hardcoded dates, three of which were
+  already in the past. `nearestLoadedDay` is bounded — `select=viewing_day`, ordered, `limit=1`,
+  sport-scoped (rule 19) — runs only on a day that is already empty, and falls back to a line with no
+  date in it if it fails. It reads `games` only, so a **programs-only day is never offered**; it
+  still renders normally when reached.
+
+### `.yourteams` IS GONE, AND SO IS AN EMPTY HAIRLINE
+
+`git grep yourteams` returns nothing under `web/`. The class was not merely unused — `SportBand` was
+still APPLYING it to any band handed a `sectionLabel`, and the only caller passing one was week mode
+passing a **weekday**, so every Tuesday was marked as the page-level favourites section prompt 51
+retired. `sectionLabel` and `headingClass` are removed from `SportBand`; so are
+`.listing > .yourteams` and `.band-headrow > .favlabel`. A **third** dead thing fell out with them:
+with `showHeader` false and no `sectionLabel`, `.band-headrow` rendered EMPTY and painted a bare
+hairline plus 14px above the first band's cards. It is gated on `showHeader` now.
+
+Tree clean apart from always-untracked `assets/` (and `web/qa/`, which prompt 46 added to
+`.gitignore`).
 
 **PROMPT 55 — LIST IS A LIST, GRID IS A GRID, AND FOUR NETWORK MARKS.** Four commits, from `c18eea0`:
 
@@ -592,6 +681,36 @@ before touching any count line.
     **The cheap defence is to search for the THING, not your spelling of it** - grep the file for a
     distinctive substring (`NFL`, `Paramount`) before concluding, and read what shape came back. One
     extra command; the misses above cost a wrong recommendation and a stage of rework.
+
+32. **A RULING IS NOT IMPLEMENTED UNTIL EVERY PLACE THAT RENDERS THE SAME THING OBEYS IT.** Before
+    calling a display ruling done, **enumerate the renderers** — `git grep` the CLASS, the COMPONENT
+    and the CONDITION, not the concept — and make each one obey or say in the report why it does not.
+
+    **THIS IS NOT 22, 30 OR 31 IN A COSTUME.** Rule 22 says read THE component before asserting what
+    it does; prompt 55's assertion about `Listing` was **correct**, and `Listing` really did obey the
+    ruling. Rules 30 and 31 are about an absence and about a query's vocabulary. Every fault below is
+    code that was **present, correct in its own file, and simply not the only file** — so none of the
+    three catches it.
+
+    **Four instances in one run (prompt 56), which is why this is a rule and not an anecdote:**
+
+    - **The reveal.** Joe ruled *"I only want list cards on list view and only grids on grid view."*
+      Prompt 55 put that into `Listing`. `PageCount`'s reveal button kept opening sport bands, `<h2>`
+      titles, matchup and program cards and the detail panel — **20 card and band elements under
+      Day · All · GRID, 88 under Week · All · GRID**, measured. The two components never met.
+    - **The weekday heading**, rendered at two DOM levels by the same file: a `<p>` above the bands
+      under ALL SPORTS, a `sectionLabel` inside `.band-headrow` with a tile picked.
+    - **The provenance line**, rendered on `rows.length` in day mode and on
+      `(visible.length || hidden.length)` in week mode — so a day whose games were all off-service
+      showed a count with no provenance while the identical week showed both.
+    - **"Does this day have content?"** — asked as `games.length` by day mode and `grouped[d]?.length`
+      by week mode, so a programs-only day rendered an empty container on the laptop in one mode and
+      answered properly in the other.
+
+    **The cheap defence is to name the OTHER renderer before you start.** Three of the four above are
+    one component rendering the same thing twice, or two components rendering the same thing
+    differently — findable in one `git grep` of the class or the prop, and each one shipped and sat
+    in the app for at least a prompt.
 
 
 ---
