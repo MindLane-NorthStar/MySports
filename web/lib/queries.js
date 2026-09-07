@@ -48,6 +48,31 @@ const GAME_SELECT = [
 const ORDER = 'order=canonical_kickoff_at_utc.asc.nullslast,id.asc';
 
 /**
+ * THE NEWEST LINE, AND ONLY THE NEWEST (prompt 57 stage 1).
+ *
+ * The `odds:game_odds(...)` embed above carried NO order and NO limit, and PostgREST guarantees
+ * nothing about the order of an embedded resource. Every consumer reads `(game.odds || [])[0]`, so
+ * the card was showing whichever row the planner happened to hand back first out of a pile that
+ * grows by one per game per day (see pipeline/load.py's conflict target and prompt 57 stage 4).
+ *
+ * MEASURED 2026-09-07, and it corrects the brief that asked for this: the embed was in fact coming
+ * back NEWEST-FIRST for all seven multi-row games sampled - nfl-401872658 (5 rows) and six MLB games
+ * - so the cards have been right by luck, not showing a frozen opening line. That is not a reason to
+ * leave it: nothing promises it, and an unordered read that happens to be correct today flips
+ * silently on a planner or index change and raises no error when it does.
+ *
+ * THE PARAMS ARE TOP-LEVEL AND KEYED TO THE EMBED ALIAS - `odds.order`, not something inside the
+ * `select` string. Verified live against a game carrying five rows: without them the embed returned
+ * 5, with them exactly 1, and it was the newest by `fetched_at`.
+ *
+ * IT MUST REACH EVERY QUERY THAT EMBEDS ODDS, not just the ones a reader thinks of. That is working
+ * rule 32, and it is why this is a named constant appended at every GAME_SELECT call site rather
+ * than typed into the two that were easy to find. test/odds.test.mjs asserts the two always travel
+ * together, so a sixth call site added later fails the gate instead of quietly showing a stale line.
+ */
+const ODDS_NEWEST = '&odds.order=fetched_at.desc&odds.limit=1';
+
+/**
  * §16: the filter token is expanded HERE, never in a component, because this is the last place
  * before the wire. `racing` covers two enum values; anything else covers itself. PostgREST answers
  * `sport=eq.racing` with a 400 - `invalid input value for enum sport` - so an unexpanded token
@@ -61,13 +86,13 @@ function sportFilter(sport) {
 
 /** Every game on one viewing day, optionally one sport. */
 export async function gamesForDay(day, sport) {
-  return rest(`games?select=${GAME_SELECT}&viewing_day=eq.${day}${sportFilter(sport)}&${ORDER}`);
+  return rest(`games?select=${GAME_SELECT}&viewing_day=eq.${day}${sportFilter(sport)}&${ORDER}${ODDS_NEWEST}`);
 }
 
 /** Every game in an inclusive viewing_day range, optionally one sport. */
 export async function gamesForRange(start, end, sport) {
   return rest(
-    `games?select=${GAME_SELECT}&viewing_day=gte.${start}&viewing_day=lte.${end}${sportFilter(sport)}&${ORDER}`
+    `games?select=${GAME_SELECT}&viewing_day=gte.${start}&viewing_day=lte.${end}${sportFilter(sport)}&${ORDER}${ODDS_NEWEST}`
   );
 }
 
@@ -109,7 +134,7 @@ export async function nearestLoadedDay(day, sport) {
 /** Every game carrying one provider week label (cfb/nfl). The span is derived from what comes back. */
 export async function gamesForSeasonWeek(sport, season, week) {
   return rest(
-    `games?select=${GAME_SELECT}&sport=eq.${sport}&season=eq.${season}&week=eq.${week}&${ORDER}`
+    `games?select=${GAME_SELECT}&sport=eq.${sport}&season=eq.${season}&week=eq.${week}&${ORDER}${ODDS_NEWEST}`
   );
 }
 
@@ -129,7 +154,7 @@ export async function weekIndexRows() {
 export async function finalGames({ limit = 200, sport } = {}) {
   return rest(
     `games?select=${GAME_SELECT}&result_status=eq.final${sportFilter(sport)}` +
-      `&order=completed_at.desc.nullslast,canonical_kickoff_at_utc.desc&limit=${limit}`
+      `&order=completed_at.desc.nullslast,canonical_kickoff_at_utc.desc&limit=${limit}${ODDS_NEWEST}`
   );
 }
 
@@ -266,7 +291,7 @@ export async function standingsForGames(games) {
 
 /** One game with everything the detail panel shows. */
 export async function gameById(id) {
-  const rows = await rest(`games?select=${GAME_SELECT}&id=eq.${encodeURIComponent(id)}&limit=1`);
+  const rows = await rest(`games?select=${GAME_SELECT}&id=eq.${encodeURIComponent(id)}&limit=1${ODDS_NEWEST}`);
   return rows[0] || null;
 }
 
