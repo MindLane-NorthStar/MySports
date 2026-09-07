@@ -249,13 +249,31 @@ test('the compact bar is still GONE', () => {
   assert.doesNotMatch(css, /--nav-safe/);
 });
 
-test('.banner carries the ONLY top safe-area inset', () => {
+test('EXACTLY TWO elements take the top safe-area inset, and both are fixed to the top edge', () => {
+  // THIS WAS ".banner carries the ONLY top safe-area inset" UNTIL PROMPT 58, and the change is a
+  // real one rather than a weakening. `.chdr` - the collapsing header - is the second element in
+  // this app that paints at the very top of the viewport, so it needs the same treatment for the
+  // same reason: background bleeding up into the band, first ink below it.
+  //
+  // WHAT THE GUARD IS STILL FOR: a THIRD, unconsidered inset. Every element that takes one is
+  // making a claim about owning the top edge, and only two things can. If this count moves again,
+  // whoever moved it should have to say which element is now up there and why.
+  //
+  // THE TWO ARE NOT TREATED IDENTICALLY, deliberately. `.banner` absorbs 14px of the inset
+  // (prompts 45/50/51) because its ARTWORK carries its own headroom; `.chdr` takes the PLAIN inset,
+  // because it is type on a ground and has no headroom to absorb.
   const css = src('app/globals.css');
   const hits = css.match(/safe-area-inset-top/g) || [];
-  assert.equal(hits.length, 2, 'the base rule and the standalone override, and nothing else');
-  const withoutBanner = css.replace(/\.banner\{[^}]*\}/g, '');
-  assert.doesNotMatch(withoutBanner, /safe-area-inset-top/,
-                      'no selector other than .banner may take a top inset');
+  assert.equal(hits.length, 3, '.banner base + .banner standalone override + .chdr, and nothing else');
+  const stripped = css
+    .replace(/\.banner\{[^}]*\}/g, '')
+    .replace(/\.chdr \{[^}]*\}/g, '');
+  assert.doesNotMatch(stripped, /safe-area-inset-top/,
+                      'no selector other than .banner and .chdr may take a top inset');
+  // and the one that is NOT the banner must not have copied the banner's absorption
+  const chdr = css.match(/\.chdr \{[^}]*\}/)[0];
+  assert.match(chdr, /padding-top: env\(safe-area-inset-top, 0px\)/);
+  assert.doesNotMatch(chdr, /- 14px/, '.banner’s -14px absorption is artwork-specific');
 });
 
 test('standalone display is retained, and now the DEFAULTS are what make it safe', () => {

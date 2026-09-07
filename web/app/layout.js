@@ -1,6 +1,8 @@
 import './globals.css';
+import { Suspense } from 'react';
 import Banner from '../components/Banner.js';
 import Chrome from '../components/Chrome.js';
+import CollapsedHeader, { SENTINEL_ID } from '../components/CollapsedHeader.js';
 
 export const metadata = {
   title: 'MySports TV',
@@ -42,6 +44,18 @@ export default function RootLayout({ children }) {
             the 1100px column. Banner is rendered here, on the server, and handed to Chrome, which
             only decides whether this route gets it or the compact bar. */}
         <Chrome banner={<Banner />} />
+        {/* THE SENTINEL, immediately after the banner and zero-height. When it leaves the viewport
+            the collapsed bar shows; when it comes back the bar hides. It is the ONLY trigger -
+            there is no scroll listener anywhere in this app and this does not add one. */}
+        <div id={SENTINEL_ID} aria-hidden="true" />
+        {/* MOUNTED HERE, BESIDE Chrome, AND THAT POSITION IS LOAD-BEARING. It makes the bar a
+            sibling of `.shell` and therefore never an ancestor of `<main>` or of the mobile grid,
+            so it cannot become a containing block for the grid's sticky rail. Wrapping the content
+            instead would put it on that chain, which is the one thing globals.css tells you not to
+            do to `.mrail-cell`. Suspense because it reads useSearchParams. */}
+        <Suspense fallback={null}>
+          <CollapsedHeader />
+        </Suspense>
         <div className="shell">
           {children}
           {/* R5, prompt 56: the developer footnote is GONE. It read "Every game is kept in the

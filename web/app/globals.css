@@ -2896,6 +2896,75 @@ main > .hubctl:first-child { margin-top: 0; }
 .pk-arrow:disabled { color: var(--faint); opacity: .5; cursor: default; }
 .pk-arrow:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
+/* ================================================================================================
+ * THE COLLAPSING HEADER (prompt 58). The wordmark and the current choices, once the banner has
+ * scrolled away. components/CollapsedHeader.js carries the rulings and the hydration reasoning.
+ *
+ * FIXED, NOT STICKY, and the two are not interchangeable here. The expanded banner must scroll away
+ * normally, and the bar must appear OVER the content without pushing it - a sticky element would
+ * occupy a row in the flow and shove everything down by 44px the moment it engaged.
+ *
+ * IT COSTS THE READER 44px, not 44 + inset. The safe-area region was never usable screen: the
+ * background bleeds up into it so there is no seam, and the content sits below it.
+ *
+ * NOT `.banner`'s -14px ABSORPTION. That was a banner-specific ruling from prompts 50 and 51 about
+ * dead space above ARTWORK, and there is no artwork here - this bar is type on a ground, so its
+ * first ink must clear the status bar rather than tuck under it. Plain inset.
+ *
+ * NO TRANSFORM ON ANYTHING THAT CAN REACH THE GRID. A transform HERE is fine and is used for the
+ * motion below: this element's only descendants are its own controls, and it is a sibling of
+ * `.shell`, so it is nowhere on the chain between `.mrail-cell` and `.mgrid-scroll`. */
+.chdr {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: var(--spot-2);
+  border-bottom: 1px solid var(--line-soft);
+  padding-top: env(safe-area-inset-top, 0px);
+  /* CLOSED BY DEFAULT, and `visibility` rather than `display` so the transition below has something
+     to transition. `visibility: hidden` also takes it out of the hit-testing tree, which `opacity: 0`
+     alone does not - a fixed bar that still eats taps at the top of the screen is the failure this
+     whole element has to avoid. */
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-100%);
+}
+
+.chdr[data-collapsed] {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chdr-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  padding: 0 12px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* The banner's own gold, read from the token block and never retyped (rule 16). The gradient is
+   `background-clip: text`, which is how you fill type with a gradient in CSS - the SVG banner does
+   the same thing with `fill="url(#bnGold)"`, and both trace to the same four stops. */
+.chdr-wm {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  background-image: linear-gradient(180deg, var(--gold-hi) 0%, var(--gold) 42%, var(--gold-mid) 70%, var(--gold-dim) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 /* ---- THE PAGE'S COUNT LINE (prompt 50 stage 4b) ----------------------------------------------
  * One line at the FOOT of the page, where every sport band used to carry its own. It reads
  * `8 games on your services`, plus `· 3 TBD` when any are, then the reveal.
@@ -2946,6 +3015,20 @@ main > .hubctl:first-child { margin-top: 0; }
  * gaps prompt 51 tuned and prompt 52 stage 2 re-measured are untouched by construction.
  */
 @media (prefers-reduced-motion: no-preference) {
+  /* THE COLLAPSING HEADER'S SHOW AND HIDE (prompt 58). transform and opacity only - neither
+     reflows, so the bar cannot move a box on its way in or out. `visibility` is in the transition
+     list with a 0s delay on the way IN and the full duration on the way OUT, which is the standard
+     way to keep an element hit-testable for exactly as long as it is visible.
+     160ms sits mid-range in handoff §16's 120-220ms: this IS a state transition - the reader
+     scrolled and the interface answered - so unlike prompt 57's identity sheen, §16 does cover it. */
+  .chdr {
+    transition: opacity 160ms ease, transform 160ms ease, visibility 0s linear 160ms;
+  }
+
+  .chdr[data-collapsed] {
+    transition: opacity 160ms ease, transform 160ms ease, visibility 0s linear 0s;
+  }
+
   /* ---- THE WORDMARK SHEEN (prompt 57 stage 7, Joe 2026-09-07: "one time sheen is fine with me").
    *
    * ONE PASS, ON LOAD, ON THE WORDMARK, AND NOWHERE ELSE. `forwards` plus a single iteration is
