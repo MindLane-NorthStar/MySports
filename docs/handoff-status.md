@@ -9,7 +9,9 @@ in the repo — check there before re-raising any decision; §22 the week grid, 
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
 amendment, §9 NETWORK TBD, §11 mobile page order, §12 the DATE/WEEK headers, §13 the 2026-09-05
 review — **D1b’s three band-title STRINGS are superseded by register §24b; its three STATES are
-not**), `docs/rendering-contract.md` **v1.7**, `docs/rendering-contract-mobile.md` (Addendum
+not; and D6’s closed open-item is superseded on the PHONE SIZE of `.favlabel` by §24h, because that
+closure’s premise — that the label was the first heading on the page — expired when prompts 51 and 56
+retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `docs/rendering-contract-mobile.md` (Addendum
 **v2.0** — M4 amended for the 60px rail and the ink-area fit, M5's gold moved; Addendum v1.2 + M19-M22), **`docs/design/program-card-design-v1.md`** — the program card's design of record,
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**

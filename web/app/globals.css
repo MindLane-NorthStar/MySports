@@ -1944,10 +1944,26 @@ input:focus-visible {
  * COWORK'S CALL, one token to reverse: --ink rather than gold. Gold would mark it as the personal
  * section, but it would also make the first heading louder than every heading beneath it, and
  * D6's surviving instruction is to avoid decorative treatment here. */
-/* B1: 1.5x. 17 -> 25.5px, and 15 -> 22.5px at <=699px, matching .band-title step for step -
-   this rule's own note says it is matched to the band header deliberately and must move with it.
-   The hairline and the bottom margin move to .band-headrow, which now carries the heading AND the
-   count on one line (B2). */
+/* B1: 1.5x. 17 -> 25.5px on the desktop, and the hairline and bottom margin moved to
+   `.band-headrow`, which carried the heading and the count on one line (B2).
+
+   THE PHONE HALF OF B1 IS REVERSED (Joe, 2026-09-07): 15px, not 22.5px. B1 also took the phone size
+   15 -> 22.5 to match `.band-title` step for step, and it wrote that second rule into the
+   `.band-title` media block near the foot of this file rather than into the one right below. Equal
+   specificity, later in the file - so 22.5px won and this 15px rule had been dead ever since.
+
+   THE RULING THAT ASKED FOR 22.5px HAS EXPIRED, which is why this is not a re-raise (working rule
+   10). 05 D6's open item was CLOSED on 2026-09-03 by prompt 31 - Joe: "Your Teams renders in small
+   gray text like an afterthought" - and the reason given was explicit: 05 section 11's reorder had
+   made `.favlabel` **the first heading on the page**, "which is a different job" from the faint
+   micro-label D6 specified. **It is not that heading any more.** Prompt 51 stage 4a retired the
+   page-level YOUR TEAMS section, and prompt 56 stage 4 removed `sectionLabel`, the last path by
+   which this class could reach page level. It is once again D6's in-band micro-label and nothing
+   else - so D6's size is once again the right one.
+
+   IT ALSO ENDS A DISAGREEMENT RATHER THAN STARTING ONE. `.fband-title` is 25.5px desktop and **15px
+   on a phone**, and its own note says it is "matched to .favlabel / .band-title deliberately". At
+   22.5px `.favlabel` was the only one of the three not keeping that promise. */
 .favlabel{font-family:var(--display);font-weight:700;font-size:25.5px;letter-spacing:.09em;
   text-transform:uppercase;color:var(--ink);margin:0 0 8px;
   padding-bottom:6px;border-bottom:1px solid var(--line-soft)}
@@ -2084,7 +2100,10 @@ input:focus-visible {
 @media (max-width:699px){
   .band-mark{height:27px}
   .band-title{font-size:22.5px}
-  .favlabel{font-size:22.5px}
+  /* `.favlabel{font-size:22.5px}` LIVED HERE AND IS GONE. It was a SECOND phone rule for the same
+     class - the first is beside `.favlabel` itself, at 15px - and being later in the file with equal
+     specificity, this one won and that one was dead. See the note there for why 15px is the one that
+     survives. */
 }
 
 /* ---- desktop shows the PC grid, not the mobile one (prompt 22)

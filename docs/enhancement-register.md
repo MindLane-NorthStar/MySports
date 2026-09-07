@@ -1614,3 +1614,51 @@ project-only, so the repo copy cannot be regenerated.
 line; :306 is the `pageCountLine` declaration and the string is on **:309**. Every other citation in
 the brief was correct at `017d73e`, including the two most worth re-checking: `globals.css:2040`
 really is `.listing > .yourteams { order: -2 }`, and `FirstBand.js:27` really is `band.heading`.
+### 24h. THE YOUR TEAMS MICRO-LABEL GOES BACK TO 15px — 2026-09-07, Joe
+
+**Two `@media (max-width:699px)` rules were setting `.favlabel`'s phone size**, both at equal
+specificity: `font-size:15px` beside the class itself, and `font-size:22.5px` inside the
+`.band-title` media block ~130 lines later. **The later one won, so the 15px rule had been dead** for
+as long as both existed. Joe's ruling: keep 15px, delete the 22.5px declaration, leave the desktop
+25.5px alone.
+
+**THIS IS NOT A RE-RAISE OF A SETTLED DECISION (working rule 10) — the ruling's PREMISE expired.**
+05 §D6's open item *"whether the `YOUR TEAMS` micro-label survives Joe seeing it rendered"* was
+**CLOSED on 2026-09-03 by prompt 31**, and the reason it gave was explicit:
+
+> D6 specified it as a faint micro-label separating floated rows *inside* a band; §11's reorder made
+> it the **first heading on the page**, which is a different job. It now takes the band-header
+> treatment — same family, weight, size, letter-spacing and hairline as `.band-title` / `.band-head`.
+
+**`.favlabel` is not that heading any more.** Prompt 51 stage 4a retired the page-level YOUR TEAMS
+section §11 created, and prompt 56 stage 4 removed `sectionLabel` — the last path by which this class
+could reach page level at all (§24a). The only thing carrying `.favlabel` at runtime today is D6's
+in-band micro-label, `<p class="favlabel">Your teams</p>` inside a sport band. So the job is D6's
+again and so is the size. **05 §D6's closure is superseded on the PHONE SIZE only**; everything else
+prompt 31 set — family, weight, letter-spacing, uppercase, `--ink`, the hairline — is untouched.
+
+**IT ENDS A DISAGREEMENT RATHER THAN STARTING ONE.** `.fband-title` carries the note *"matched to
+`.favlabel` / `.band-title` deliberately: the page has ONE heading system"*, and it is **25.5px
+desktop / 15px on a phone**. At 22.5px `.favlabel` was the only one of the three not keeping that
+promise. Measured after the change:
+
+| | phone 390 | desktop 1440 |
+|---|---|---|
+| `.favlabel` | **15px** | 25.5px |
+| `.fband-title` | **15px** | 25.5px |
+| `.band-title` (day view) | 22.5px | 25.5px |
+
+**`.band-title` is now the outlier on a phone, and that is left alone deliberately** — it is a real
+band heading with a mark beside it, not a micro-label, and nobody asked for it to move. Recorded so
+the next reader sees it was noticed rather than missed.
+
+**Rules still targeting `.favlabel`, read from the file after the change** — four, and no duplicates:
+
+| where | what it sets |
+|---|---|
+| `globals.css` `.favlabel{…}` | family, weight, **25.5px**, letter-spacing, uppercase, `--ink`, margin, padding, bottom hairline |
+| `globals.css` `@media (max-width:699px){.favlabel{font-size:15px}}` | the phone size — **now the only one** |
+| `SportBand.js` `<p className="favlabel">Your teams</p>` | the sole runtime consumer |
+| `Listing.js` / `FirstBand.js` `headingClass` default | `'favlabel'`, and both pass no `heading`, so neither renders one |
+
+`.band-headrow > .favlabel` was removed by §24a and did not come back.
