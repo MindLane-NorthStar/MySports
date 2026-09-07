@@ -141,6 +141,11 @@ def build(d: dict) -> str:
              f'<feDropShadow in="s" dx="{n(t["halo"]["dx"])}" dy="{n(t["halo"]["dy"])}"'
              f' stdDeviation="{n(t["halo"]["stdDeviation"])}" floodColor="{t["halo"]["color"]}"'
              f' floodOpacity="{t["halo"]["opacity"]}"/></filter>')
+    sh = title["sheen"]
+    L.append(f'    <linearGradient id="bnSheenGrad" x1="0" y1="0" x2="1" y2="0">'
+             f'<stop offset="0" stopColor="{sh["color"]}" stopOpacity="0"/>'
+             f'<stop offset=".5" stopColor="{sh["color"]}" stopOpacity="{str(sh["peak_opacity"]).lstrip("0")}"/>'
+             f'<stop offset="1" stopColor="{sh["color"]}" stopOpacity="0"/></linearGradient>')
     L.append("    </defs>")
     L.append(f'    <rect x="{n(rect["x"])}" y="{n(rect["y"])}" width="{n(rect["w"])}" height="{n(rect_h)}" fill="url(#bnBg)"/>')
     for i, g in enumerate(glows):
@@ -155,6 +160,16 @@ def build(d: dict) -> str:
     L.append(f'    <text {ttl} fill="{title["glow"]["fill"]}" opacity="{str(title["glow"]["opacity"]).lstrip("0")}"'
              f' filter="url(#bnTitleGlow)">{title["text"]}</text>')
     L.append(f'    <text {ttl} fill="url(#bnGold)">{title["text"]}</text>')
+    # THE SHEEN (prompt 57 stage 7). A highlight band inside a mask cut to the wordmark itself, so
+    # what travels is a FILL and never a layout box - nothing here can reflow the page. It is inert
+    # markup until globals.css animates `.bn-sheen`, and that rule lives inside
+    # `@media (prefers-reduced-motion: no-preference)`, so a reader who asked for stillness gets a
+    # static banner rather than a reduced one.
+    sh = title["sheen"]
+    L.append(f'    <mask id="bnSheenMask"><text {ttl} fill="#fff">{title["text"]}</text></mask>')
+    L.append(f'    <g mask="url(#bnSheenMask)"><rect className="bn-sheen" x="{n(sh["start_x"])}"'
+             f' y="{n(sh["y"])}" width="{n(sh["band_w"])}" height="{n(sh["h"])}"'
+             f' fill="url(#bnSheenGrad)"/></g>')
     L.append(f'    <text x="{n(tag["x"])}" y="{n(tag["baseline_y"])}" fontFamily="{FONT}" fontWeight="600"'
              f' fontSize="{n(tag["font_size"])}" letterSpacing="{n(tag["letter_spacing_px"])}"'
              f' fill="{tag["fill"]}">{tag["text"]}</text>')

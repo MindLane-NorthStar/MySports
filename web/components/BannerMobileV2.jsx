@@ -33,6 +33,7 @@ export default function BannerMobileV2() {
     <filter id="bnTitleGlow" x="-20%" y="-100%" width="140%" height="300%"><feGaussianBlur stdDeviation="10"/></filter>
     <filter id="bnMark" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="0" stdDeviation="1.2" floodColor="#ffffff" floodOpacity=".22" result="halo"/><feDropShadow in="halo" dx="0" dy="2" stdDeviation="1.2" floodColor="#000000" floodOpacity=".55"/></filter>
     <filter id="bnTv" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="6" stdDeviation="4" floodColor="#000000" floodOpacity=".65" result="s"/><feDropShadow in="s" dx="0" dy="0" stdDeviation="6" floodColor="rgb(255,150,40)" floodOpacity=".28"/></filter>
+    <linearGradient id="bnSheenGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#FFFFFF" stopOpacity="0"/><stop offset=".5" stopColor="#FFFFFF" stopOpacity=".5"/><stop offset="1" stopColor="#FFFFFF" stopOpacity="0"/></linearGradient>
     </defs>
     <rect x="0" y="-90" width="428" height="225" fill="url(#bnBg)"/>
     <ellipse cx="346" cy="75" rx="138" ry="102" fill="url(#bnGlow0)"/>
@@ -63,6 +64,8 @@ export default function BannerMobileV2() {
     <image href="/banner/nascar.png" x="298.02" y="119" width="71.95" height="12" preserveAspectRatio="xMidYMid meet" filter="url(#bnMark)"/>
     <text x="14" y="29.88" fontFamily="'Barlow Condensed', 'Barlow Condensed Fallback', Impact, sans-serif" fontWeight="700" fontSize="36" letterSpacing="1.62" fill="#C6AF7A" opacity=".55" filter="url(#bnTitleGlow)">MYSPORTS TV</text>
     <text x="14" y="29.88" fontFamily="'Barlow Condensed', 'Barlow Condensed Fallback', Impact, sans-serif" fontWeight="700" fontSize="36" letterSpacing="1.62" fill="url(#bnGold)">MYSPORTS TV</text>
+    <mask id="bnSheenMask"><text x="14" y="29.88" fontFamily="'Barlow Condensed', 'Barlow Condensed Fallback', Impact, sans-serif" fontWeight="700" fontSize="36" letterSpacing="1.62" fill="#fff">MYSPORTS TV</text></mask>
+    <g mask="url(#bnSheenMask)"><rect className="bn-sheen" x="-140" y="-8" width="130" height="46" fill="url(#bnSheenGrad)"/></g>
     <text x="16" y="46" fontFamily="'Barlow Condensed', 'Barlow Condensed Fallback', Impact, sans-serif" fontWeight="600" fontSize="10" letterSpacing="1.7" fill="#A4AAB2">EVERY GAME. EVERY CHANNEL. ONE PLACE.</text>
     </svg>
   );

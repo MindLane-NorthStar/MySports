@@ -2935,6 +2935,40 @@ main > .hubctl:first-child { margin-top: 0; }
  * gaps prompt 51 tuned and prompt 52 stage 2 re-measured are untouched by construction.
  */
 @media (prefers-reduced-motion: no-preference) {
+  /* ---- THE WORDMARK SHEEN (prompt 57 stage 7, Joe 2026-09-07: "one time sheen is fine with me").
+   *
+   * ONE PASS, ON LOAD, ON THE WORDMARK, AND NOWHERE ELSE. `forwards` plus a single iteration is
+   * what makes it an arrival rather than an advert: a banner that shimmers every few seconds is
+   * exactly the gloss handoff §6 forbids.
+   *
+   * IT MUST NOT TOUCH ANY GOLD THAT CARRIES STATE, and in this app most of it does: the active
+   * toggle fill (`.seg button[data-active='true']`), the active tile border, `.scopeline`,
+   * `.weekday-head` and `.pk-arrow:focus-visible` all mean *this is selected* or *this is the day
+   * you are on*. A sheen on those turns a signal into decoration. The wordmark is pure identity and
+   * carries no state, which is the entire reason it is the one safe surface - and the selector is a
+   * class on one <rect> inside one <mask>, so it cannot reach any of them.
+   *
+   * §16 DOES NOT COVER THIS AND IS NOT CLAIMED TO. Its 120-220ms is for STATE transitions, where
+   * the speed is feedback - the reader did something and the interface answers. This is an identity
+   * gesture nobody asked for, so it is deliberately slower (1500ms) and deliberately late (400ms,
+   * after the marks have painted): fast enough at §16's speed it would read as a glitch, and a
+   * glitch on load is worse than no sheen at all.
+   *
+   * NOTHING MOVES A BOX. What translates is a <rect> INSIDE an SVG <mask> - a fill, clipped to the
+   * wordmark's own letterforms. It has no layout box to move, cannot reflow anything, and is
+   * invisible outside the letters. `transform` only, per this block's own standing rule. */
+  .bn-sheen {
+    animation: bn-sheen 1500ms cubic-bezier(0.33, 0, 0.2, 1) 400ms 1 forwards;
+  }
+
+  /* 568 = the stage's 428 plus the band's own 140 of lead-in, so it starts and ends fully off the
+     wordmark rather than appearing or vanishing mid-letter. SVG user units, which is what a CSS
+     transform on an SVG child is measured in. */
+  @keyframes bn-sheen {
+    from { transform: translateX(0); }
+    to   { transform: translateX(568px); }
+  }
+
   /* THE SELECTED-STATE TRANSITION. 160ms sits mid-range in §16's 120-220ms, and `ease` rather than
      anything springy because §16 forbids bouncing and exaggerated easing. */
   .seg button,

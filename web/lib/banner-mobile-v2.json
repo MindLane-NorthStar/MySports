@@ -106,6 +106,15 @@
       "fill": "#C6AF7A",
       "blur_std_dev": 10,
       "opacity": 0.55
+    },
+    "sheen": {
+      "band_w": 130,
+      "y": -8,
+      "h": 46,
+      "color": "#FFFFFF",
+      "peak_opacity": 0.5,
+      "start_x": -140,
+      "note": "A one-time highlight that travels across the wordmark on load. It is a rect inside a mask cut to the wordmark itself, so what moves is a fill and never a layout box. The TIMING lives in globals.css beside the other micro-interactions, under the prefers-reduced-motion guard; only the geometry is here."
     }
   },
   "tagline": {
