@@ -162,3 +162,17 @@ test('block widths still derive from `widest`, which is why they are REPORTED no
   assert.match(grid, /\$\{at\}\$\{l\.rank \? `\$\{l\.rank\} ` : ''\}\$\{l\.name\}\$\{l\.record \? ` \$\{l\.record\}` : ''\}/);
   assert.match(grid, /const pxPerMin = pxPerMinute\(widest \/ SCALE, scaleSport\) \* SCALE/);
 });
+
+// R10, prompt 56: the two modes ask the SAME question about what "has content" means.
+test('R10: the desktop day grid is gated on the VISIBLE ROWS, not on the games', () => {
+  // It asked `games.length`, so a day carrying only programs - a NASCAR Sunday, a studio-show
+  // morning - had zero games, fell through both arms and rendered an EMPTY .deskgrid-only
+  // container: no grid and no explanation. Measured at 1440 on 2026-09-06 NASCAR, 2026-09-05 UFC
+  // and 2026-09-07 WWE, all three of which now carry ArchivedGrid's own one-liner.
+  const p = page.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.match(p, /!error && rows\.length \? \(\s*<Suspense fallback=\{null\}>\s*<ArchivedGrid/,
+    'day mode gates on `rows` - the post-splitHidden visible set, games AND programs');
+  assert.doesNotMatch(p, /!error && games\.length \?/, 'the games-only gate is gone');
+  // Week mode's question, which day mode is now asking: `grouped[d]` is its own visible set.
+  assert.match(p, /grouped\[d\]\?\.length \? \(/);
+});

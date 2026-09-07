@@ -549,7 +549,18 @@ export default async function HubPage({ searchParams }) {
       {P.isGrid ? (
         <div className="deskgrid-only">
           {P.sport ? (
-            !error && games.length ? (
+            /* R10, prompt 56: `rows`, NOT `games` - week mode's question, asked here.
+             *
+             * This was gated on `games.length`, so a day carrying ONLY PROGRAMS - a NASCAR Sunday,
+             * a studio-show morning - has zero games, fell through both arms, and rendered an empty
+             * `.deskgrid-only` container: no grid, and no explanation of why there was none. Week
+             * mode asks `grouped[d]?.length`, which is its VISIBLE rows and so counts programs, and
+             * the two modes disagreed about what "has content" means.
+             *
+             * `rows` is day mode's `grouped[d]` - the same post-splitHidden visible set, games and
+             * programs together. With it, the one-liner already inside ArchivedGrid does its job and
+             * no new copy is needed. */
+            !error && rows.length ? (
               <Suspense fallback={null}>
                 <ArchivedGrid sport={P.sport} day={day} />
               </Suspense>
