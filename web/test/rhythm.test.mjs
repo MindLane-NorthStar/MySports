@@ -27,7 +27,12 @@ const css = readFileSync(join(HERE, '..', 'app', 'globals.css'), 'utf8')
 
 test('8px: card -> card, and the rule that closes the favourites group inside a band', () => {
   assert.match(css, /\.cards\s*\{[^}]*gap:\s*8px/, 'card -> card measured 8');
-  assert.match(css, /\.favrule\{[^}]*margin:8px 0\}/, 'cards -> favrule -> cards measured 14, now 8');
+  // `.favrule` was RETIRED by prompt 59 - it was 1px of --line-soft on a card gradient and nobody
+  // could see it. The 8px it resolved to survives as the favourites bracket's bottom margin, so the
+  // distance from the favourites to the rest of the band is unchanged; only the invisible hairline
+  // in the middle of it is gone.
+  assert.match(css, /\.favgroup \{[^}]*margin-bottom: 8px;/, 'favourites group -> the rest is still 8');
+  assert.doesNotMatch(css, /\.favrule\{/, 'and the rule itself is gone');
 });
 
 test('24px: band -> band, and the two lines at the foot of the page', () => {

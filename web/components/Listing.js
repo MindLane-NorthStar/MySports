@@ -45,7 +45,7 @@ function anyInFlight(games) {
  */
 export default function Listing({ games, standingsRows, rankingsRows, day, sport, generatedAt,
                                   showDay = false, grid = false, bands = false, heading = null,
-                                  headingClass = 'favlabel', nowMinute = null, gridOnly = false,
+                                  headingClass, nowMinute = null, gridOnly = false,
                                   floatFavorites = true }) {
   const [open, setOpen] = useState(null);
 
@@ -147,6 +147,11 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
    * the ONLY thing on the row naming the league, so it has to say so.
    */
   const headMark = sport ? sportMarkUrl(sport) : null;
+  // `heading` AND `headingClass` TRAVEL TOGETHER, and there is no longer a default (prompt 59). It
+  // used to default to `.favlabel`, a class that no longer exists - and it was never reached anyway:
+  // the only caller that passes a `heading` is week mode, which passes `weekday-head` with it.
+  // Defaulting to a dead class would have styled a future caller's heading as a band title, which is
+  // exactly the confusion the bracket was introduced to end.
   const dayHeading = heading ? (
     <p className={headingClass}>
       {headMark ? (

@@ -96,10 +96,6 @@ export default function SportBand({ sport, label, games, standings, rankings, sh
 
   return (
     <section className="band" aria-label={label || sport}>
-      {/* The section marker, at SECTION level and never on the card - the card contract is locked
-          and nothing here reaches inside it. Same .favlabel the in-band float uses, so the two
-          arrangements read identically and Joe's open ruling on its prominence still applies to one
-          rule rather than two. */}
       {/* B2: the heading and the count shared ONE row. .band-headrow carries the hairline so it
           spans the whole line rather than stopping under the title.
 
@@ -121,13 +117,31 @@ export default function SportBand({ sport, label, games, standings, rankings, sh
         </div>
       ) : null}
 
+      {/* A GOLD BRACKET WHERE THE HEADING AND THE RULE USED TO BE (prompt 59, Joe 2026-09-07:
+          "the 'Your Teams' section isn't noticeably separated from the rest of the content below,
+          it leaves the user confused").
+
+          TWO THINGS WERE WRONG AND ONLY ONE OF THEM WAS THE ONE HE NAMED.
+          * `.favlabel` was styled as a BAND TITLE, not a marker - 25.5px display, 700, uppercase,
+            .09em, with its own bottom hairline, which is `.band-title` character for character. So
+            a band read COLLEGE FOOTBALL then YOUR TEAMS at equal weight and nothing said where the
+            second heading's scope ended.
+          * `.favrule` was 1px of --line-soft on a card-gradient ground. It is the element whose
+            whole job was to say "your teams end here", and on a phone it was imperceptible. That
+            is the actual cause of the complaint: the group had no visible bottom edge.
+
+          THE BRACKET IS A GESTURE THE APP ALREADY OWNS. `.scopeline` marks the MY TEAMS scope with
+          `border-left: 2px solid var(--gold)`, so a gold left rule already means "this is about
+          your teams" here. Reusing it beats inventing a second vocabulary, and it says what the
+          heading said without competing with the band title.
+
+          AND IT RETIRES THE "Your teams" / "My teams" NAMING INCONSISTENCY, deliberately rather
+          than by accident: the band no longer names the scope at all, so there is no second word
+          for it to disagree with. */}
       {favorites.length ? (
-        <>
-          {/* Band level, never the card. */}
-          <p className="favlabel">Your teams</p>
+        <div className="favgroup">
           <div className="cards">{favorites.map(row)}</div>
-          <hr className="favrule" />
-        </>
+        </div>
       ) : null}
 
       <div className="cards">{rest.map(row)}</div>

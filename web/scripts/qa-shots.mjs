@@ -293,6 +293,27 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
+// -------------------------------------------------- the favourites bracket, ALL GAMES only (p59)
+{
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+  });
+  const page = await ctx.newPage();
+  await page.goto(`${base}/?day=2026-09-05`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(450);
+  const allGames = await page.locator('.favgroup').count();
+  record('the favourites bracket marks the group under ALL GAMES', allGames > 0, `${allGames} group(s)`);
+  const border = await page.locator('.favgroup').first()
+    .evaluate((e) => getComputedStyle(e).borderLeftColor);
+  record('the bracket is the gold token, not a new colour', border === 'rgb(198, 175, 122)', border);
+  // MY TEAMS floats nothing, so a band that is entirely favourites has nothing to bracket.
+  await page.goto(`${base}/?day=2026-09-05&scope=mine`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(450);
+  const mine = await page.locator('.favgroup').count();
+  record('and never appears under MY TEAMS', mine === 0, `${mine} group(s)`);
+  await ctx.close();
+}
+
 await browser.close();
 writeFileSync(join(outDir, 'assertions.json'), JSON.stringify(results, null, 2) + '\n', 'utf8');
 const failed = results.filter((r) => !r.pass).length;

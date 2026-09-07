@@ -1872,8 +1872,10 @@ input:focus-visible {
   border-bottom: 1px solid var(--line-soft);
 }
 
-/* Matched to .favlabel / .band-title deliberately: the page has ONE heading system, and a band that
-   invented its own size would read as a different kind of thing from YOUR TEAMS below it. */
+/* Matched to `.band-title` deliberately: the page has ONE heading system, and a band that invented
+   its own size would read as a different kind of thing from the sport bands below it.
+   (This said "matched to .favlabel / .band-title" until prompt 59 retired `.favlabel`. The promise
+   is unchanged - `.band-title` is the other half of it and is still 25.5px / 15px.) */
 .fband-title {
   font-family: var(--display);
   font-weight: 700;
@@ -1966,38 +1968,52 @@ input:focus-visible {
  * COWORK'S CALL, one token to reverse: --ink rather than gold. Gold would mark it as the personal
  * section, but it would also make the first heading louder than every heading beneath it, and
  * D6's surviving instruction is to avoid decorative treatment here. */
-/* B1: 1.5x. 17 -> 25.5px on the desktop, and the hairline and bottom margin moved to
-   `.band-headrow`, which carried the heading and the count on one line (B2).
-
-   THE PHONE HALF OF B1 IS REVERSED (Joe, 2026-09-07): 15px, not 22.5px. B1 also took the phone size
-   15 -> 22.5 to match `.band-title` step for step, and it wrote that second rule into the
-   `.band-title` media block near the foot of this file rather than into the one right below. Equal
-   specificity, later in the file - so 22.5px won and this 15px rule had been dead ever since.
-
-   THE RULING THAT ASKED FOR 22.5px HAS EXPIRED, which is why this is not a re-raise (working rule
-   10). 05 D6's open item was CLOSED on 2026-09-03 by prompt 31 - Joe: "Your Teams renders in small
-   gray text like an afterthought" - and the reason given was explicit: 05 section 11's reorder had
-   made `.favlabel` **the first heading on the page**, "which is a different job" from the faint
-   micro-label D6 specified. **It is not that heading any more.** Prompt 51 stage 4a retired the
-   page-level YOUR TEAMS section, and prompt 56 stage 4 removed `sectionLabel`, the last path by
-   which this class could reach page level. It is once again D6's in-band micro-label and nothing
-   else - so D6's size is once again the right one.
-
-   IT ALSO ENDS A DISAGREEMENT RATHER THAN STARTING ONE. `.fband-title` is 25.5px desktop and **15px
-   on a phone**, and its own note says it is "matched to .favlabel / .band-title deliberately". At
-   22.5px `.favlabel` was the only one of the three not keeping that promise. */
-.favlabel{font-family:var(--display);font-weight:700;font-size:25.5px;letter-spacing:.09em;
-  text-transform:uppercase;color:var(--ink);margin:0 0 8px;
-  padding-bottom:6px;border-bottom:1px solid var(--line-soft)}
-@media (max-width:699px){.favlabel{font-size:15px}}
-.favrule{border:0;border-top:1px solid var(--line-soft);margin:8px 0}
+/* THE FAVOURITES BRACKET (prompt 59, Joe 2026-09-07).
+ *
+ * `.favlabel` AND `.favrule` LIVED HERE AND ARE GONE. The label was 25.5px display / 700 /
+ * uppercase / .09em with its own bottom hairline - which is `.band-title` character for character,
+ * so a band read COLLEGE FOOTBALL then YOUR TEAMS at equal weight and the second heading's scope was
+ * ambiguous. The rule was 1px of --line-soft on a card-gradient ground: the one element whose job
+ * was to say "your teams end here", and imperceptible on a phone. That was the actual complaint.
+ *
+ * A BRACKET SAYS BOTH THINGS AT ONCE - where the group starts, where it ends, and whose it is - and
+ * it borrows `.scopeline`'s gesture rather than inventing a second one: a gold left rule already
+ * means "this is about your teams" in this app.
+ *
+ * 4px OF PADDING, NOT `.scopeline`'s 9px, AND THE DIFFERENCE WAS MEASURED. The bracket insets the
+ * favourite cards, and `.mcard`'s body track is `minmax(0, 1fr)`, so whatever the inset takes comes
+ * out of the space `fitNameAndRecord` has to place a team name and a record. Across 26 favourite
+ * cards over seven days:
+ *
+ *     inset          body     records lost   name tiers dropped
+ *     2 + 9 = 11px   103px         0              10 of 26
+ *     2 + 4 =  6px   108px         0               0 of 26
+ *     2 + 0 =  2px   112px         0               0 of 26
+ *
+ * No record is ever lost - that was the cost the brief predicted and it does not happen. What DOES
+ * happen at 9px is that ten cards drop a name tier (12.5px -> 11px, or 15px -> 12.5px), which is
+ * the same harm wearing different clothes and is visible on every one of them. At 4px the bracket
+ * costs literally nothing, and the rule is the signal - the padding was only ever comfort.
+ *
+ * `.scopeline` keeps its 9px because it sits ABOVE content rather than beside a width-constrained
+ * card, so its inset costs nothing there. Same mark, same colour, two paddings, one reason. */
+.favgroup {
+  border-left: 2px solid var(--gold);
+  padding-left: 4px;
+  /* 8px, the scale's "inside one group" step (prompt 56 §24d) - and the same 8px `.favrule`'s
+     margins resolved to, so the distance from the favourites to the rest of the band is unchanged.
+     What is gone is the 1px of invisible hairline that used to sit in the middle of it. */
+  margin-bottom: 8px;
+}
 
 /* ---- R2, prompt 56: THE MY TEAMS SCOPE LINE ---------------------------------------------------
  * `MY TEAMS · 13 CLUBS + RACING + COMBAT SPORTS`, directly below the control stack in the four MY
  * TEAMS views and nowhere else.
  *
- * IT MUST NOT READ AS A BAND TITLE. `.favlabel` right above is 25.5px display (15px on a phone) and
- * carries a full-width bottom rule - that is a heading. This is a CAPTION: small, gold, uppercase,
+ * IT MUST NOT READ AS A BAND TITLE. `.band-title` is 25.5px display (22.5px on a phone) and carries
+ * a full-width bottom rule - that is a heading. (`.favlabel` was the example here until prompt 59
+ * retired it; the bracket below now shares this rule's gold and its 9px inset.) This is a CAPTION:
+ * small, gold, uppercase,
  * and marked by a LEFT rule, which is a different gesture from every heading on the page and so
  * cannot be mistaken for one. Colour comes from the --gold token, never retyped. */
 .scopeline {

@@ -54,7 +54,6 @@ export default function FirstBand({ band, standingsRows, rankingsRows, day, spor
           day={day}
           sport={sport}
           floatFavorites={floatFavorites}
-          headingClass="favlabel"
         />
       )}
     </section>
