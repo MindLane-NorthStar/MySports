@@ -77,9 +77,45 @@ test('the now marker is server-computed and lands on exactly one day', () => {
 test('gridOnly suppresses the CARDS, never the day heading above them', () => {
   // A column of unlabelled grids is unreadable, and Joe's model is explicit that the grid comes
   // "from Wednesday, Thursday and Sunday". A first pass lost every heading in week + GRID.
-  assert.match(listing, /\{gridOnly && heading \? <p className=\{headingClass\}>\{heading\}<\/p> : null\}/);
+  //
+  // R4, prompt 56: the heading is now ONE object built once and rendered before the branch, so this
+  // pins that it is outside `gridOnly`'s ternary rather than repeated inside it.
+  assert.match(listing, /const dayHeading = heading \? \(/);
+  assert.match(listing, /\{dayHeading\}\s+\{gridOnly \? null : bands \? \(/,
+    'the heading renders BEFORE the branch that suppresses the cards, so gridOnly cannot lose it');
   // and the cards are still suppressed
   assert.match(listing, /\{gridOnly \? null : bands \? \(/);
+});
+
+// R3 + R4, prompt 56.
+test('R4: the weekday heading is ONE object at ONE level - nothing goes into SportBand', () => {
+  // It used to be a <p> sibling above the bands under ALL SPORTS and a `sectionLabel` INSIDE
+  // `.band-headrow` with a tile selected: same text, same class, two DOM levels.
+  assert.doesNotMatch(listing, /sectionLabel=/, 'Listing no longer passes a heading down');
+  const band = src('components/SportBand.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  assert.doesNotMatch(band, /sectionLabel/, 'and SportBand no longer accepts one');
+  assert.doesNotMatch(band, /headingClass/, 'nor the class that only existed to style it');
+  // The dead branch it fed: every band carrying a sectionLabel was marked as the retired
+  // page-level favourites section, which under week mode meant every weekday.
+  assert.match(band, /className="band"/, 'one class, unconditionally');
+  // COMMENTS STRIPPED, and that is not cosmetic: both removals are RECORDED in comments at the
+  // sites they left, which name the selectors. Asserting against the raw file would be asserting
+  // that the record does not exist.
+  const rules = src('app/globals.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.doesNotMatch(rules, /\.listing > \.yourteams/, 'and its order rule is gone with it');
+  assert.doesNotMatch(rules, /\.band-headrow > \.favlabel/, 'as is the rule that un-styled it');
+});
+
+test('R3: the week names its league - the weekday row carries the mark, and it is not decorative', () => {
+  assert.match(listing, /const headMark = sport \? sportMarkUrl\(sport\) : null;/,
+    'the mark is gated on a SELECTED sport - under ALL SPORTS the bands carry their own');
+  assert.match(listing, /alt=\{SPORT_LABEL\[sport\] \|\| sport\}/,
+    'a real accessible name: this mark is the ONLY thing on the row naming the league, unlike a ' +
+    'band mark, which sits beside an <h2> that already says it');
+  const css = src('app/globals.css');
+  assert.match(css, /\.weekday-head \{ display: flex;/, 'the heading is a row so it can hold both');
+  assert.match(css, /\.weekday \.band-mark \{ height: 21px; \}/,
+    'and the size stays the one .weekday already set - not restated');
 });
 
 test('the desktop week promotes archived grids and never falls back to the phone grid', () => {

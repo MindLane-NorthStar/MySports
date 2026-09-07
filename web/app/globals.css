@@ -1697,6 +1697,16 @@ input:focus-visible {
   margin-bottom: 6px;
 }
 
+/* R3, prompt 56: THE WEEKDAY ROW CARRIES THE LEAGUE MARK when a tile is selected.
+   With a tile picked the week takes Listing's FLAT branch, SportBand renders with its header off,
+   and nothing on screen said which league it was - three days into WEEK · NFL the only NFL on the
+   page was a highlighted tile far above. A flex row so the mark sits beside the weekday; the same
+   9px gap `.band-head` uses, so the two rows read as one system. The mark's SIZE is already set by
+   `.weekday .band-mark` (21px, 20px on a phone) and is not restated here.
+   Under ALL SPORTS `sport` is null, no mark renders, and this is a flex row with one child - which
+   lays out exactly as the block did. */
+.weekday-head { display: flex; align-items: center; gap: 9px; }
+
 /* the jump chip that keeps the grid one tap away now that listings come first */
 /* .jumpbar and .jumpchip were removed with 05 section 11: with the grid second on a phone, the
    Grid-down chip had nothing left to jump past. */
@@ -2005,7 +2015,9 @@ input:focus-visible {
 .band-headrow{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:12px;row-gap:2px;
   margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line-soft)}
 .band-headrow > .offsvc{margin-left:auto;margin-bottom:0}
-.band-headrow > .favlabel{margin:0;padding:0;border-bottom:0}
+/* `.band-headrow > .favlabel` lived here and is GONE (R4, prompt 56). It un-styled the section
+   heading that used to be passed into SportBand as `sectionLabel` and rendered inside this row.
+   Nothing passes `sectionLabel` any more, so no `.favlabel` can be a child of this row. */
 .band-head{display:flex;align-items:center;gap:9px;margin:0;padding:0;border-bottom:0}
 .band-mark{height:33px;width:auto;flex:0 0 auto}
 .band-title{font-family:var(--display);font-weight:700;font-size:25.5px;letter-spacing:.09em;
@@ -2048,17 +2060,18 @@ input:focus-visible {
  * putting the grid inside the list was the only way to reach a grid at all. The LIST | GRID toggle
  * did not exist until prompt 50 on 2026-09-06.
  *
- * `.yourteams`'s order is KEPT and is now also very likely vestigial: prompt 51 stage 4a retired the
- * page-level YOUR TEAMS section, so the class only reaches a SportBand carrying a `sectionLabel`,
- * which is the FLAT arrangement - one child, nothing to order against. Left in place because
- * removing it is a separate tidy-up nobody asked for, and reported instead.
+ * THE YOUR TEAMS SECTION CLASS AND ITS ORDER RULE ARE GONE (R4, prompt 56). Prompt 51 stage 4a
+ * retired the page-level YOUR TEAMS section this rule ordered; prompt 55 reported the rule as
+ * vestigial and left it. What kept it ALIVE rather than merely unused was that SportBand was still
+ * APPLYING the class - it did so for any band handed a `sectionLabel`, and the only caller still
+ * passing one was week mode passing a WEEKDAY, so every Tuesday was being marked as a page-level
+ * favourites section. The heading now renders at the outer level, nothing passes `sectionLabel`,
+ * so the class is never applied and both it and this rule are removed. The class name appears
+ * nowhere in web/ any more.
  *
- * `.listing`'s flex is kept for the same reason: its children stack identically as blocks, so
- * changing it is a change with no benefit and a small risk. */
+ * `.listing`'s flex is kept: its children stack identically as blocks, so changing it is a change
+ * with no benefit and a small risk. */
 .listing { display: flex; flex-direction: column; }
-@media (max-width: 699px) {
-  .listing > .yourteams { order: -2; }
-}
 
 /* The PC grid is drawn at 2862px for a 1398px-plus page. Crushing it into a ~950px column was a 3x
  * downscale that erased the card text and left only the charcoal ground - the "blank black area".

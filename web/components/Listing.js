@@ -12,7 +12,7 @@ import SportBand from './SportBand.js';
 import MobileGrid from './MobileGrid.js';
 import GameDetail from './GameDetail.js';
 import { indexStandings, indexRankings } from '../lib/standings.js';
-import { REFRESH_SECONDS, SPORTS, SPORT_LABEL } from '../lib/config.js';
+import { REFRESH_SECONDS, SPORTS, SPORT_LABEL, sportMarkUrl } from '../lib/config.js';
 import { offServiceSummary } from '../lib/offservice.js';
 
 function anyInFlight(games) {
@@ -125,6 +125,41 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
     return (games || []).filter((g) => !off.has(g.id));
   }, [games]);
 
+  /**
+   * R3 + R4, prompt 56: ONE HEADING, AT ONE LEVEL, WITH THE LEAGUE ON IT.
+   *
+   * R4 - THE SHAPE. The weekday heading used to be two different objects. Under ALL SPORTS it was a
+   * <p> sibling ABOVE the bands; with a league tile selected it went DOWN into SportBand as
+   * `sectionLabel` and rendered inside `.band-headrow`. Same text, same class, different DOM level
+   * and different neighbours - and `.band-headrow` was built to share its row with a per-band count
+   * line that prompt 50 retired, so the reason it had to live in there was already gone.
+   *
+   * R3 - THE MARK. With a tile selected `bands` is false, so `Listing` took the flat branch and
+   * `SportBand` rendered with `showHeader={false}` - no mark, no title. Scroll three days into
+   * WEEK · NFL and NOTHING ON SCREEN said NFL except a highlighted tile far above.
+   *
+   * So the heading renders HERE in every arrangement, and carries the league mark when - and only
+   * when - a sport is selected. Under ALL SPORTS `sport` is null, no mark renders, and the day
+   * stays the outer heading with sport bands nested beneath it, each with its own mark. Unchanged.
+   *
+   * THE ALT TEXT IS REAL HERE AND EMPTY IN A BAND, and the difference is the whole point of R3: a
+   * band's mark sits beside an <h2> that already names the league, so it is decoration; this one is
+   * the ONLY thing on the row naming the league, so it has to say so.
+   */
+  const headMark = sport ? sportMarkUrl(sport) : null;
+  const dayHeading = heading ? (
+    <p className={headingClass}>
+      {headMark ? (
+        <img className="band-mark" src={headMark} alt={SPORT_LABEL[sport] || sport} />
+      ) : null}
+      {/* NO WRAPPER AROUND THE TEXT, deliberately. A bare text node in a flex container becomes an
+          anonymous flex item and lays out exactly as a <span> would - and without one, the ALL
+          SPORTS heading, which has no mark, stays BYTE-IDENTICAL to what it rendered before this
+          change. That is the acceptance R3 was given: under ALL SPORTS nothing changes. */}
+      {heading}
+    </p>
+  ) : null;
+
   // 05 section 11: DOM order is YOUR TEAMS -> bands -> grid. At <=699px CSS `order` lifts the grid
   // between the section and the bands, so the phone reads YOUR TEAMS -> grid -> bands. `order`
   // needs a flex parent, which is what .listing is; a column flex container lays block children out
@@ -147,16 +182,12 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
           and Joe's model is explicit that the grid comes "from Wednesday, Thursday and Sunday".
           `gridOnly` suppresses the CARDS; it was never meant to suppress the label above them.
           Day mode passes no heading, so this renders nothing there and that path is unchanged. */}
-      {gridOnly && heading ? <p className={headingClass}>{heading}</p> : null}
+      {/* THE HEADING IS THE SAME OBJECT IN ALL THREE ARRANGEMENTS (R4). It used to be written out
+          three times - once for `gridOnly`, once above the bands, and once passed down into
+          SportBand - and the third one rendered at a different DOM level from the other two. */}
+      {dayHeading}
       {gridOnly ? null : bands ? (
         <>
-          {/* THE CALLER'S HEADING, WHEN THERE IS ONE, RENDERS ABOVE THE BANDS. In the flat branch it
-              goes down INTO SportBand as `sectionLabel` (C3, so the count could share its row); with
-              bands there are several SportBands and no single one to carry it, so it renders here as
-              the OUTER level. Nothing is lost: the per-band count was retired in prompt 50 stage 4
-              and the count line is page-level now, so the reason it had to live inside the band is
-              gone. Day mode passes no heading and is unaffected. */}
-          {heading ? <p className={headingClass}>{heading}</p> : null}
           {/* D6's in-band float - the hairline and the YOUR TEAMS micro-label inside each sport
               band. Prompt 50 passed false here because a page-level section was doing that job;
               that section was retired in prompt 51 stage 4a, so this is the only mechanism now.
@@ -178,12 +209,15 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
         // been since prompt 50 made the app one route.
         //
         // Same component, header off, so the count line, the toggle, the favourites float and the
-        // row wrappers have one implementation. The caller's heading renders through the SAME header
-        // row the sport bands use, and the count joins it identically; it used to be an <h3> outside
-        // this component, which is why the count could only sit below it.
+        // row wrappers have one implementation.
+        //
+        // IT NO LONGER CARRIES THE CALLER'S HEADING (R4, prompt 56). It used to take it as
+        // `sectionLabel` and render it inside `.band-headrow`, which was C3's arrangement so a
+        // PER-BAND COUNT could share the row. Prompt 50 stage 4b retired that count, so the row had
+        // nothing left to share and the heading was rendering one DOM level deeper than the
+        // identical heading under ALL SPORTS for no remaining reason.
         <SportBand sport={sport} label={null} games={games} standings={standings}
                    rankings={rankings} showDay={showDay} onOpen={setOpen} showHeader={false}
-                   sectionLabel={heading} headingClass={headingClass}
                    floatFavorites={floatFavorites} />
       )}
 

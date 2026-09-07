@@ -28,19 +28,25 @@ import favoritesDoc from '../../data/favorites.json';
 // D4: the mark table now lives in config.js - the mobile grid header needs the same one.
 import { sportMarkUrl } from '../lib/config.js';
 
-// `floatFavorites` and `sectionLabel` exist for 05 section 11. The page-level YOUR TEAMS section
-// they were written against was retired by prompt 51 stage 4a, so the float is D6's only mechanism
-// now and lives at BAND level. WEEK MODE keeps it on: it groups by DAY, and lifting a favourite out
-// of its day destroys the calendar the week exists to be.
+// `floatFavorites` exists for 05 section 11. The page-level YOUR TEAMS section it was written
+// against was retired by prompt 51 stage 4a, so the float is D6's only mechanism now and lives at
+// BAND level. WEEK MODE keeps it on: it groups by DAY, and lifting a favourite out of its day
+// destroys the calendar the week exists to be.
 //
 // PROMPT 53 STAGE 6 ADDED THE ONE EXCEPTION: under `scope=mine` the caller passes
 // `floatFavorites={false}`, because a band that contains nothing BUT favourites has nothing to
 // float them away from. See Listing's note.
 //
 // (This said "/weeks and /history keep the float on" until prompt 53; both are redirects.)
+//
+// `sectionLabel` AND `headingClass` ARE GONE (R4, prompt 56). They existed so the page-level YOUR
+// TEAMS heading could share `.band-headrow` with C3's per-band count line. Prompt 51 retired the
+// section and prompt 50 retired the count, after which the only caller still passing `sectionLabel`
+// was WEEK MODE passing a WEEKDAY - which meant every Tuesday was being marked with the retired
+// page-level favourites-section class. `Listing` renders the heading at the outer level in every
+// arrangement now, so nothing passes either prop and both are removed rather than left unset.
 export default function SportBand({ sport, label, games, standings, rankings, showDay = false, onOpen,
-                                    showHeader = true, floatFavorites = true, sectionLabel = null,
-                                    headingClass = 'favlabel' }) {
+                                    showHeader = true, floatFavorites = true }) {
   // THE BAND NO LONGER FILTERS AND NO LONGER COUNTS (prompt 50 stage 4). Both moved to the page:
   // one count line at the foot, and the hiding decided once by splitHidden() before these rows are
   // handed down. The band renders what it is given.
@@ -89,28 +95,31 @@ export default function SportBand({ sport, label, games, standings, rankings, sh
   );
 
   return (
-    <section className={sectionLabel ? 'band yourteams' : 'band'} aria-label={label || sport}>
+    <section className="band" aria-label={label || sport}>
       {/* The section marker, at SECTION level and never on the card - the card contract is locked
           and nothing here reaches inside it. Same .favlabel the in-band float uses, so the two
           arrangements read identically and Joe's open ruling on its prominence still applies to one
           rule rather than two. */}
-      {/* B2: the heading and the count share ONE row. .band-headrow carries the hairline so it spans
-          the whole line rather than stopping under the title, and wraps the count below at narrow
-          widths instead of squeezing a 1.5x heading. */}
-      <div className="band-headrow">
-        {sectionLabel ? <p className={headingClass}>{sectionLabel}</p> : null}
-        {showHeader ? (
+      {/* B2: the heading and the count shared ONE row. .band-headrow carries the hairline so it
+          spans the whole line rather than stopping under the title.
+
+          THE ROW IS NOW GATED ON `showHeader` (R4, prompt 56). It used to render unconditionally,
+          which was harmless only because the flat arrangement put `sectionLabel` inside it; with
+          that prop gone, an ungated row would paint a bare hairline above the cards with nothing on
+          it. There is one thing left that can go in this row, so the row follows it.
+
+          THE PER-BAND COUNT LINE IS GONE (prompt 50 stage 4b). One line renders at the FOOT of the
+          page instead - components/PageCount.js. This retires "every band reports its counts", the
+          `4250aa9` fix carried as do-not-regress since prompt 21; Joe's instruction supersedes it
+          and prompt 50 stage 6 struck the old note rather than leaving it standing. */}
+      {showHeader ? (
+        <div className="band-headrow">
           <header className="band-head">
             {sportMarkUrl(sport) ? <img className="band-mark" src={sportMarkUrl(sport)} alt="" /> : null}
             <h2 className="band-title">{label || sport}</h2>
           </header>
-        ) : null}
-
-        {/* THE PER-BAND COUNT LINE IS GONE (prompt 50 stage 4b). One line renders at the FOOT of the
-            page instead - components/PageCount.js. This retires "every band reports its counts",
-            the `4250aa9` fix carried as do-not-regress since prompt 21; Joe's instruction supersedes
-            it and stage 6 strikes the old note rather than leaving it standing. */}
-      </div>
+        </div>
+      ) : null}
 
       {favorites.length ? (
         <>
