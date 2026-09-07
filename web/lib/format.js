@@ -51,6 +51,24 @@ export function longDay(day) {
   return day ? DAY_LONG.format(new Date(`${day}T00:00:00Z`)) : '';
 }
 
+/**
+ * R8, prompt 56: the empty day's second sentence, from `nearestLoadedDay`'s answer.
+ *
+ * IT MUST NEVER BE ABLE TO ERROR. An empty state is the page a reader reaches when something has
+ * already gone quiet; a throw there turns "nothing loaded" into a 500. So a null, a malformed
+ * answer or a failed lookup all fall through to the generic line, which names no date and so
+ * cannot go stale - which is the whole reason the six hardcoded dates came out.
+ *
+ * @param {{day: string, past: boolean}|null} nearest
+ */
+export function loadedDayLine(nearest) {
+  const d = nearest && typeof nearest.day === 'string' ? longDay(nearest.day) : '';
+  if (!d) return 'The database currently holds loaded days only.';
+  return nearest.past
+    ? `Nothing later is loaded — the most recent loaded day is ${d}.`
+    : `The next loaded day is ${d}.`;
+}
+
 /** 'YYYY-MM-DD' -> 'Mon, Aug 31'. */
 export function shortDay(day) {
   return day ? DAY_SHORT.format(new Date(`${day}T00:00:00Z`)) : '';

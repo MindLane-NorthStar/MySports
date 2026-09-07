@@ -71,6 +71,41 @@ export async function gamesForRange(start, end, sport) {
   );
 }
 
+/**
+ * R8, prompt 56: THE NEAREST LOADED VIEWING DAY to `day`, for the empty state.
+ *
+ * The empty state used to hardcode six dates - "try 2026-09-03 or 2026-09-04 (MLB), 2026-09-05
+ * (CFB), 2026-09-13 (NFL), 2026-10-01 (NHL) or 2026-10-28 (NBA)". Three of them were already in
+ * the past on the day this shipped, and by November the paragraph would be a list of dead ends.
+ * Week mode's equivalent ("try a CFB or NFL week") does not age, because it names no date.
+ *
+ * BOUNDED, ALWAYS - `limit=1` on an ordered index scan, never an unbounded select (working rule
+ * 19), and it runs ONLY on a day that turned out to be empty, so it costs nothing on a normal page.
+ *
+ * TWO CALLS AT MOST, AND THE SECOND ONLY WHEN THE FIRST COMES BACK EMPTY: prefer the next loaded
+ * day at or AFTER the one being viewed, because that is where a reader going forward wants to land;
+ * fall back to the most recent past one when the season's loaded range ends behind them.
+ *
+ * IT LOOKS AT `games` ONLY, and that is a real limit worth stating. Programs have no `viewing_day`
+ * column - `programsForDay` derives their day from `start_at` through `viewingDayBounds` - so one
+ * ordered `viewing_day` lookup cannot see them. The consequence is narrow: a day carrying only
+ * programs is never OFFERED here, though it still renders normally when a reader lands on it,
+ * because `rows` is non-empty there and this empty state does not fire at all.
+ *
+ * @returns {{day: string, past: boolean}|null}
+ */
+export async function nearestLoadedDay(day, sport) {
+  const ahead = await rest(
+    `games?select=viewing_day&viewing_day=gte.${day}${sportFilter(sport)}&order=viewing_day.asc&limit=1`
+  );
+  if (ahead[0]?.viewing_day) return { day: ahead[0].viewing_day, past: false };
+  const behind = await rest(
+    `games?select=viewing_day&viewing_day=lt.${day}${sportFilter(sport)}&order=viewing_day.desc&limit=1`
+  );
+  if (behind[0]?.viewing_day) return { day: behind[0].viewing_day, past: true };
+  return null;
+}
+
 /** Every game carrying one provider week label (cfb/nfl). The span is derived from what comes back. */
 export async function gamesForSeasonWeek(sport, season, week) {
   return rest(

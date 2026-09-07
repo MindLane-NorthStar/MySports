@@ -27,11 +27,11 @@ import Listing from '../components/Listing.js';
 import { SportFilter, ModeToggle, ScopeViewToggles, DayPicker, WeekPicker } from '../components/Filters.js';
 import {
   gamesForDay, programsForDay, newestGridFor, gridIndex, standingsForGames, rankingsForGames,
-  weekIndexRows, gamesForRange, gamesForSeasonWeek, programsForRange,
+  weekIndexRows, gamesForRange, gamesForSeasonWeek, programsForRange, nearestLoadedDay,
 } from '../lib/queries.js';
 import { toRows } from '../lib/programs.js';
 import { viewingMinutes } from '../lib/gridmodel.js';
-import { longDay, todayET, etTime, shortDay, daySpanWeekdays } from '../lib/format.js';
+import { longDay, todayET, etTime, shortDay, daySpanWeekdays, loadedDayLine } from '../lib/format.js';
 import FirstBand from '../components/FirstBand.js';
 import { bandState } from '../lib/bandstate.js';
 import policies from '../lib/policies.js';
@@ -484,6 +484,24 @@ export default async function HubPage({ searchParams }) {
   // the client, which is what keeps a time-aware block out of the hydration path entirely.
   const band = bandState(rows, now, policies, { dayLabel: longDay(day) });
 
+  // R8, prompt 56: THE EMPTY DAY POINTS AT A REAL ONE, and computes it only when it is empty.
+  //
+  // Gated on exactly the condition the empty state below renders on, plus `!P.isMine`, because MY
+  // TEAMS has its own sentence and pointing it at a day full of somebody else's games would be
+  // wrong. So a populated page makes no extra round trip at all.
+  //
+  // WRAPPED, BECAUSE AN EMPTY STATE MUST NOT BE ABLE TO ERROR. This is the page a reader reaches
+  // when something is already quiet; a throw here turns "nothing loaded" into a 500. A failure
+  // leaves `nearest` null and `loadedDayLine` falls back to a line with no date in it.
+  let nearest = null;
+  if (!error && rows.length === 0 && !hidden.length && !P.isMine) {
+    try {
+      nearest = await nearestLoadedDay(day, P.sport);
+    } catch {
+      nearest = null;
+    }
+  }
+
   return (
     <main>
       <Controls P={P} choices={null} />
@@ -498,9 +516,15 @@ export default async function HubPage({ searchParams }) {
           ) : (
             <>
               Nothing on this viewing day{P.sport ? ` for ${SPORT_LABEL[P.sport] || P.sport}` : ''}.{' '}
-              {(P.sport && SPORT_EMPTY[P.sport]) ||
-                'The database currently holds loaded days only — try 2026-09-03 or 2026-09-04 (MLB), ' +
-                  '2026-09-05 (CFB), 2026-09-13 (NFL), 2026-10-01 (NHL) or 2026-10-28 (NBA).'}
+              {/* R8, prompt 56: THE SIX HARDCODED DATES ARE GONE. This read
+                  "try 2026-09-03 or 2026-09-04 (MLB), 2026-09-05 (CFB), 2026-09-13 (NFL),
+                  2026-10-01 (NHL) or 2026-10-28 (NBA)" - three of them already in the past when
+                  this shipped, and a list of dead ends by November.
+
+                  THE PER-SPORT LINES ARE UNCHANGED and still allowed to name a date: they name an
+                  external gate ("NASCAR arrives with the playoffs, September 6"), not loaded data,
+                  so they are true until the world changes rather than until the loader runs. */}
+              {(P.sport && SPORT_EMPTY[P.sport]) || loadedDayLine(nearest)}
             </>
           )}
         </p>
