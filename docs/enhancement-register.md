@@ -2374,8 +2374,9 @@ one dimension and no other.
 
 - `Time range: Day. Switch to Week` / `Time range: Week. Switch to Day`
 - `Scope: All games. Switch to My teams` / `Scope: My teams. Switch to All games`
-- `Presentation: List view. Switch to Grid view` (the only state this bar can be in — it does not
-  render in grid view)
+- `Presentation: List view. Switch to Grid view` / `Presentation: Grid view. Switch to List view`
+  (this said "the only state this bar can be in — it does not render in grid view" until §28h lifted
+  the exclusion; the toggle is two-way now)
 
 Showing both words did not make the name redundant; it made it **carry more**. `aria-label` REPLACES
 the visible text rather than adding to it, and both words are `aria-hidden`, so this sentence is the
@@ -2535,3 +2536,77 @@ concatenation at `page.js:471`.
 Everything else checked out: `page.js:583`/`:598`/`:599` for `FirstBand`, `Listing` and `bands`;
 `:475-479` for R4's comment; `Listing:47` for the `bands` default, `:194-226` for the two
 arrangements and `:224` for the flat branch's props; `SportBand:98` for the `aria-label`.
+### 28h. The grid exclusion is lifted — 2026-09-07, later the same day
+
+**The navbar now renders in all eight views.** Prompt 58 shipped it in list view only and prompt 60
+kept that; `resetHeader()` existed solely to serve it and is **deleted**, since the lift left it with
+no caller in the repo. The state machine is back to exactly two transitions, collapse and expand.
+
+**WHY: THE EXCLUSION COST MORE THAN IT BOUGHT, AND ITS COST FIRED ON EVERY USE.** Tapping GRID in
+the bar sets `view=grid` with `{ scroll: false }`, so the reader deliberately does not move — but the
+component then returned `null`, `resetHeader()` cleared the collapsed state, and the banner and the
+control stack came back into the flow **above** the reader with no compensation. **Measured before
+the lift: collapsed at scrollY 904, tapping GRID left scrollY 759 with the grid's top at −335 and the
+bar gone.** That is the same failure `KEEP_SCROLL` exists to prevent — a control that deletes itself
+with the tap that used it — and §28a records that exact shape as the reason the state machine is
+one-way.
+
+**THE VIEW TOGGLE HAD TO BECOME TWO-WAY IN THE SAME CHANGE**, and this is the part that would have
+shipped as a lie if it had been missed. It was hardcoded `topIsOn: true` with
+`setParam('view', 'grid')`, which was correct only while the bar could not appear in grid view. In
+grid view that markup would paint **LIST in gold while the reader is looking at a grid**, and the tap
+would set `view=grid` a second time — a control that misreports the state and then does nothing. It
+now reads `!P.isGrid` and sets `null` when leaving grid, matching `ScopeViewToggles`: the default is
+removed from the URL rather than written into it. §28b's "one-way door from this bar" note is retired
+with it.
+
+### WHAT THE EXCLUSION WAS HEDGING AGAINST IS REAL. IT WAS MEASURED, NOT WAVED THROUGH.
+
+The hedge was that `.mgrid-scroll` sets `touch-action: pan-x pan-y` and `MobileGrid` binds
+`touchstart`/`touchmove`/`touchend` to it for a two-finger pinch, so a fixed bar over the top of that
+scroller would take touches there. It had never been tried. It is true, and the mechanism is plain:
+`.chdr` is a **sibling of `.shell`**, not an ancestor of the scroller, so a touch landing on the bar
+targets the bar and its events never reach the scroller's listeners at all.
+
+Measured at 390 in grid view with **real touch input** (CDP `Input.dispatchTouchEvent`, so the events
+go through the hit test rather than being aimed at an element by script):
+
+| test | result |
+|---|---|
+| bar over `.mgrid-scroll` | **45px of overlap** — the bar's whole height |
+| pinch with **both fingers in the band** | **no zoom** — scrollWidth 1273 → 1273 |
+| the same pinch **60px lower** | zooms normally — 1273 → 799 |
+| one-finger pan **in the band** | **no pan** — scrollLeft 0 → 0 |
+| the same pan **60px lower** | pans normally — 0 → 175 |
+| pinch with **one finger in the band, one below** | **no zoom** |
+
+**The mixed case is the one that matters and is worse than the hedge predicted.** A natural pinch
+with one thumb near the top edge fails entirely: the first touch point targets the bar, so the
+scroller's `touchstart` sees a single finger and never arms `pinch.current`.
+
+**As a share of the visible scroller:** 8.3% in day mode with CFB, 9.0% with ALL SPORTS, and — the
+case prompt 58's brief specifically worried about — **26.4% in week mode**, where a stacked day-grid
+partly scrolled off has only 171px on screen and 45 of them are under the bar. That share is
+transient: it falls to 0 as the reader scrolls that day's grid into full view.
+
+**TWO THINGS MAKE IT ACCEPTABLE, AND BOTH ARE MEASURED RATHER THAN ASSUMED.**
+
+1. **The band is INERT, not hazardous.** A drag beginning on any of the five controls — the wordmark
+   and all four columns — changes nothing: no URL change, no header change, no scroll change. A drag
+   cancels the click, so a reader trying to pan the grid near the top edge does not accidentally
+   expand the header or flip a toggle. Only a deliberate tap acts, which is the control working.
+2. **The gesture is recoverable by moving a few pixels.** The same pinch 60px lower works normally.
+
+**THE RULING: ACCEPT IT, AND RECORD THE NUMBER SO IT CANNOT GROW QUIETLY.** A dead band that costs a
+reader one repositioned thumb, on the minority of gestures that begin within 45px of the top edge, is
+a smaller harm than a control that displaces the page by 340px every single time it is used. Both
+figures are in the qa-shots gate: the overlap, the failed pinch, the working pinch 60px lower, and
+the inertness of a drag on a control.
+
+**IF THE BAND IS EVER WANTED BACK**, the fix is named rather than left to be rediscovered: bind the
+pinch handler at the DOCUMENT level and gate it on whether the gesture's midpoint lies over a
+`.mgrid-scroll`, instead of binding it to the scroller. That is a change to `MobileGrid`'s touch
+handling and was deliberately out of scope here.
+
+**AND THE `SPORT_SHORT` NOTE IN `CollapsedHeader.js` SAID 58px.** The cap has been 56 since §28c
+tightened it; the note is corrected in the same commit as this work (rule 30's second half).

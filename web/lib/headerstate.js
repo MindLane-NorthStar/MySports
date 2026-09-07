@@ -134,16 +134,8 @@ export function expandHeader() {
   return true;
 }
 
-/**
- * GRID VIEW HAS NO NAVBAR (prompt 58 stage 5, unchanged), so it must not be able to sit in the
- * collapsed state either - the banner would be hidden with nothing rendered in its place. This is
- * the one path that clears the state without being an expand, and it is a VIEW CHANGE rather than a
- * reader gesture, which is why it does not scroll.
- */
-export function resetHeader() {
-  if (!collapsed) return false;
-  collapsed = false;
-  paint(false);
-  notify();
-  return true;
-}
+/* `resetHeader()` LIVED HERE AND IS GONE. It cleared the state without being an expand, for the one
+   case that needed it: grid view, which had no bar to replace the banner the collapse had hidden.
+   The navbar renders in every view now, so there are exactly TWO transitions again - collapse and
+   expand - and a third entry point that nothing calls is a trapdoor for a future edit to fall
+   through. Deleted rather than kept "in case". */

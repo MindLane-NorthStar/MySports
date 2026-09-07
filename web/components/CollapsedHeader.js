@@ -59,9 +59,20 @@
 // This bar is mounted in layout.js beside `Chrome`, which makes it a sibling of `.shell` and so
 // never an ancestor of `<main>` or of the grid. It cannot reach that chain at all.
 //
-// The real risk is different and smaller: `.mgrid-scroll` sets `touch-action: pan-x pan-y` and the
-// grid runs a pinch handler, so a fixed bar over the top 44px of that scroller would take touches
-// there. That is why this renders in LIST VIEW ONLY for now - see the `isGrid` return below.
+// THE LIST-VIEW-ONLY EXCLUSION IS LIFTED, AND WHAT IT WAS HEDGING AGAINST WAS MEASURED.
+//
+// Prompt 58 shipped this bar in list view only. The hedge was that `.mgrid-scroll` sets
+// `touch-action: pan-x pan-y` and runs a pinch handler, so a fixed bar over the top 44px of that
+// scroller would take touches there - untried on a device, and week mode stacks N such scrollers.
+//
+// IT HAD BECOME THE MORE VISIBLE DEFECT OF THE TWO. Tapping GRID in this bar sets `view=grid` with
+// `{ scroll: false }`, so the reader does not move - but the exclusion then cleared the collapsed
+// state, the banner and the control stack came back into the flow, and ~340px arrived above the
+// reader with no compensation. Measured: collapsed at scrollY 904, tapping GRID left scrollY 759
+// with the grid's top at -335 and the bar gone. The control deleted itself with the tap that used
+// it, which is the exact failure `KEEP_SCROLL` exists to prevent.
+//
+// WHAT THE TOUCH TEST FOUND is recorded beside the `view` toggle below and in register §28h.
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -71,7 +82,7 @@ import { SPORT_LABEL } from '../lib/config.js';
 import { useSetParam, SportFilter, chipMarkUrl } from './Filters.js';
 import {
   SENTINEL_ID, subscribeHeader, headerCollapsed, headerCollapsedOnServer,
-  collapseHeader, expandHeader, resetHeader,
+  collapseHeader, expandHeader,
 } from '../lib/headerstate.js';
 
 /**
@@ -120,17 +131,12 @@ export default function CollapsedHeader() {
   // explicit that nothing else may be), so this asks it rather than reading `view` itself and
   // inventing a second answer. `todayET()` only feeds `day`, which this component never reads.
   //
-  // IT IS READ BEFORE THE EFFECTS, not after (prompt 60). The observer has to know about grid
-  // view: it used to be enough to return null below, because collapsing only ADDED a bar and an
-  // unseen bar cost nothing. Collapsing now HIDES THE BANNER, so a grid view that quietly
-  // collapsed would hide it with nothing rendered in its place.
   const P = resolveHubParams(Object.fromEntries(params.entries()), todayET());
 
   useEffect(() => {
     // AN OBSERVER, NEVER A SCROLL LISTENER. A scroll handler fires every frame and this app has
     // never had one; an IntersectionObserver is a callback on a threshold crossing and costs
     // nothing between crossings.
-    if (P.isGrid) return undefined;
     const el = document.getElementById(SENTINEL_ID);
     if (!el || typeof IntersectionObserver === 'undefined') return undefined;
     // SCROLL ONLY EVER COLLAPSES (prompt 60). This was `setCollapsed(!entry.isIntersecting)` - a
@@ -143,14 +149,13 @@ export default function CollapsedHeader() {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [P.isGrid]);
+  }, []);
 
-  // GRID VIEW CANNOT SIT COLLAPSED. Switching views already lands the reader at the top - the
-  // expanded toggles do not pass `{ scroll: false }` - so this needs no compensation. It only has
-  // to make sure the banner comes back with the one view that has no bar to replace it.
-  useEffect(() => {
-    if (P.isGrid) resetHeader();
-  }, [P.isGrid]);
+  // `resetHeader()` LIVED HERE AND IS GONE with the exclusion. It existed for one job: grid view
+  // could not sit collapsed, because there was no bar there to replace the banner it had hidden.
+  // With the bar rendering in every view there is nothing left for it to do, and it had no other
+  // caller in the repo - so it is deleted from lib/headerstate.js rather than left as a function
+  // nothing calls. The observer's dependency list empties for the same reason.
 
   // THE TILE ROW CLOSES WITH THE BAR. Expanding restores the full control stack, which contains
   // the same eight tiles; leaving this open would render the row twice, once in a bar nobody can
@@ -158,11 +163,6 @@ export default function CollapsedHeader() {
   useEffect(() => {
     if (!collapsed) setSportsOpen(false);
   }, [collapsed]);
-
-  // LIST VIEW ONLY, and it returns null rather than hiding: a fixed element that is merely
-  // `opacity: 0` still takes touches in some engines, which is the exact failure mode this
-  // exclusion exists to avoid.
-  if (P.isGrid) return null;
 
   // THE FOUR CURRENT CHOICES, in the control stack's own order: the page reads DAY, ALL GAMES,
   // LIST, ALL SPORTS downward when expanded, and left to right here.
@@ -172,8 +172,9 @@ export default function CollapsedHeader() {
   // would have broken the row the moment CFB was selected, and `SPORT_SHORT` was that fact in one
   // place. PROMPT 60 RETIRED THE QUESTION: the column shows the league's MARK now, so there is no
   // text to be too long. `SPORT_SHORT` is no longer imported here at all - the width problem it
-  // solved is not this component's any more, and the constraint that replaced it is the 58px cap on
-  // `.chdr-mark`.
+  // solved is not this component's any more, and the constraint that replaced it is the 56px cap on
+  // `.chdr-mark`. (It read 58 until this commit: stage 3 tightened the cap to 56 to buy the
+  // invariant that a league mark can only ever make the row narrower, and left this note behind.)
   //
   // DELIBERATELY ABSENT, so nobody helpfully adds it: THE DATE AND WEEK PICKER. There is no room,
   // and it is not a regression - changing the viewing day already means scrolling to the top today.
@@ -215,10 +216,11 @@ export default function CollapsedHeader() {
    * that reader would be told the pair and never told the answer. Splitting state from action with
    * a full stop rather than a dash is deliberate: a dash is read as a pause, not a boundary.
    *
-   * TAPPING THE VIEW TOGGLE IS A ONE-WAY DOOR FROM THIS BAR and that is by design. It switches to
-   * grid view, and the bar does not render there, so it vanishes with the tap that caused it.
-   * Getting back is the expanded stack, one tap on the wordmark away. Recorded so it reads as a
-   * consequence of the grid exclusion rather than as a defect.
+   * THE VIEW TOGGLE IS A REAL TWO-WAY CONTROL NOW, and it had to become one with the exclusion.
+   * It was hardcoded `topIsOn: true` and `setParam('view', 'grid')`, which was correct only while
+   * the bar could not render in grid view: in grid view that markup would have painted LIST in gold
+   * while the reader was looking at a grid, and the tap would have set `view=grid` a second time -
+   * a control that lies about the state and then does nothing.
    */
   const binaries = [
     { key: 'mode', top: 'DAY', bottom: 'WEEK', topIsOn: !P.isWeek,
@@ -229,8 +231,8 @@ export default function CollapsedHeader() {
     { key: 'scope', top: 'ALL GAMES', bottom: 'MY TEAMS', topIsOn: !P.isMine,
       name: `Scope: ${P.isMine ? 'My teams' : 'All games'}. Switch to ${P.isMine ? 'All games' : 'My teams'}`,
       onPick: () => setParam('scope', P.isMine ? null : 'mine', KEEP_SCROLL) },
-    // ALWAYS LIST ON TOP AND ALWAYS LIVE: this bar does not render in grid view at all, so the only
-    // state it can ever be in is the one where LIST is the answer.
+    // LIST STAYS ON TOP IN BOTH STATES - the order is an arrangement, not a sort, exactly as the
+    // two toggles above it. Only the gold moves.
     //
     // `LIST` / `GRID`, NOT `LIST VIEW` / `GRID VIEW`, AND THE MEASUREMENT DECIDED IT. Joe's wording
     // is the long pair and it was measured first, at four viewports with the real font: it needs
@@ -243,9 +245,11 @@ export default function CollapsedHeader() {
     // words on the argument that "view" was the one word droppable without losing the meaning. As a
     // PAIR the case is stronger, not weaker: LIST over GRID is self-evidently a choice of
     // presentation, because the two words only contrast in that one dimension.
-    { key: 'view', top: 'LIST', bottom: 'GRID', topIsOn: true,
-      name: 'Presentation: List view. Switch to Grid view',
-      onPick: () => setParam('view', 'grid', KEEP_SCROLL) },
+    { key: 'view', top: 'LIST', bottom: 'GRID', topIsOn: !P.isGrid,
+      name: `Presentation: ${P.isGrid ? 'Grid view' : 'List view'}. Switch to ${P.isGrid ? 'List view' : 'Grid view'}`,
+      // `null` rather than `'list'`, matching `ScopeViewToggles`: the DEFAULT is removed from the
+      // URL rather than written into it, which is what keeps `/` the canonical default state.
+      onPick: () => setParam('view', P.isGrid ? null : 'grid', KEEP_SCROLL) },
   ];
 
   // THE FOURTH COLUMN IS THE LIVE TILE (prompt 60 stage 3). Joe: "a tiny arrow gets embedded

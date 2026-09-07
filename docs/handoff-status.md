@@ -45,8 +45,8 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 60's stage-5 commit. Gates: **494 Python tests + 1 skipped**, **445 JS unit
-tests**, smoke **30/30**, qa-shots **67/67**, **`npm run geometry`** all hard stops.
+main, HEAD is prompt 60's follow-up commit. Gates: **494 Python tests + 1 skipped**, **446 JS unit
+tests**, smoke **30/30**, qa-shots **73/73**, **`npm run geometry`** all hard stops.
 
 > ### DEVICE-CONFIRMED THROUGH PROMPT 57. FOUR THINGS ARE WAITING ON THE PHONE.
 >
@@ -58,6 +58,9 @@ tests**, smoke **30/30**, qa-shots **67/67**, **`npm run geometry`** all hard st
 >    back to the top and check that it STAYS gone; tap the television to collapse it deliberately;
 >    tap MYSPORTS TV to bring it back. Then judge the quiet gold ring around the TV, which is the
 >    one thing in this run chosen without a measurement to settle it.
+> 1a. **The navbar OVER THE GRID** (§28h) — switch to GRID while collapsed and try to pinch and pan
+>    the grid near the top edge. A browser says the top 45px is inert but harmless; a thumb is the
+>    only thing that can say whether that is annoying.
 > 2. **MY TEAMS** (§28d) — one chronological list, said once, no sport headings.
 > 3. **The favourites bracket** (§27a) — whether the group reads as separate without a heading.
 > 4. **The program panels** (§27b) — tap a NASCAR race, a UFC card and a studio show.
@@ -73,7 +76,8 @@ tests**, smoke **30/30**, qa-shots **67/67**, **`npm run geometry`** all hard st
 | 2 | `03f0ba1` | the collapsed toggles show both states |
 | 3 | `bb2527b` | the live tile opens the league row |
 | 4 | `9d7530f` | my teams is one chronological list |
-| 5 | *(this commit)* | register §28, the prompt filed |
+| 5 | `17a13f5` | register §28, the prompt filed |
+| 6 | *(this commit)* | the navbar renders in grid view too, and the hedge is measured |
 
 **Read register §28.**
 
@@ -135,12 +139,29 @@ current line and loses only history that nothing reads today, which makes it a p
 is **no general `/watch` claim**, so the declared route opens the app on the game rather than on a
 stream. Next: which patterns MySports can populate, then a tap on the phone.
 
-### OPEN — GRID VIEW STILL HAS NO NAVBAR
+### CLOSED — THE NAVBAR NOW RENDERS IN GRID VIEW (§28h)
 
-Unchanged and still deliberate: `.mgrid-scroll` sets `touch-action: pan-x pan-y` and runs a pinch
-handler, and a fixed bar over the top 44px of that scroller has never been tried on a device. The
-collapse is disabled there too now, rather than merely hidden — a grid view that collapsed would hide
-the banner with nothing rendered in its place.
+The exclusion cost more than it bought: tapping GRID in the bar deleted the bar and returned ~340px
+of header to the flow above the reader, every time. Measured before the lift — collapsed at scrollY
+904, tapping GRID left scrollY 759 with the grid's top at −335.
+
+**AND THE HEDGE IT WAS PROTECTING IS REAL, MEASURED RATHER THAN WAVED THROUGH.** The bar's **45px
+sits over `.mgrid-scroll`**, which owns the pinch; a touch landing there targets the bar, which is a
+sibling of `.shell` and not an ancestor of the scroller, so the scroller's listeners never see it. A
+pinch with both fingers in that band does not zoom (scrollWidth 1273 → 1273); **nor does a pinch with
+only ONE finger in it**, which is the natural gesture and worse than the hedge predicted. It is
+**8.3–9.0% of the visible scroller in day mode and 26.4% in week mode** at the worst transient
+position.
+
+**Accepted, on two measured grounds:** the band is INERT — a drag starting on any of the five
+controls activates nothing, because a drag cancels the click — and the same pinch 60px lower works
+normally. Every one of those figures is in the qa-shots gate.
+
+**The named fix if the band is ever wanted back:** bind the pinch at the DOCUMENT level and gate it
+on whether the gesture's midpoint is over a `.mgrid-scroll`, rather than binding it to the scroller.
+Out of scope here; it is a change to `MobileGrid`'s touch handling.
+
+**This is the one thing on the phone list that a device can settle better than a browser can.**
 
 Tree clean apart from always-untracked `assets/` (and `web/qa/` and `artifacts/`, both gitignored).
 **PROMPT 59 — THE FAVOURITES BRACKET, THE PROGRAM PANEL, AND TWO HARVESTS.** Five commits, from

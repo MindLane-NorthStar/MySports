@@ -137,11 +137,36 @@ test('the collapse compensates the scroll, measured against the sentinel', () =>
   assert.ok(before < paint && paint < after, 'the layout change happens between the measurements');
 });
 
-test('grid view returns NULL, not a hidden element', () => {
-  // A fixed element that is only `opacity: 0` still takes touches in some engines, and
-  // `.mgrid-scroll` sets `touch-action: pan-x pan-y` and runs a pinch handler. Absence is the
-  // requirement; invisibility is not enough.
-  assert.match(code('components/CollapsedHeader.js'), /if \(P\.isGrid\) return null;/);
+test('the navbar renders in EVERY view - the grid exclusion is lifted', () => {
+  // IT USED TO RETURN NULL IN GRID VIEW, and the exclusion caused a worse defect than the one it
+  // hedged against: tapping GRID in the bar sets `view=grid` with `{ scroll: false }`, so the
+  // reader does not move - but the component then vanished, `resetHeader()` cleared the collapsed
+  // state, and ~340px of banner and control stack returned to the flow above them. Measured before
+  // the lift: collapsed at scrollY 904, tapping GRID left scrollY 759 with the grid's top at -335.
+  //
+  // What the exclusion was hedging against is real and is recorded rather than denied - see
+  // register §28h and the qa-shots block that measures it.
+  const c = code('components/CollapsedHeader.js');
+  assert.doesNotMatch(c, /if \(P\.isGrid\) return null;/, 'no view-level early return');
+  assert.doesNotMatch(c, /if \(P\.isGrid\) return undefined;/, 'the observer runs in every view');
+  // AND THE DEAD FUNCTION WENT WITH IT. `resetHeader` existed for one job - clearing the state for
+  // a view that had no bar - and had no other caller in the repo.
+  assert.doesNotMatch(c, /resetHeader/, 'no caller left in the component');
+  assert.doesNotMatch(code('lib/headerstate.js'), /export function resetHeader/,
+    'and the export is deleted rather than left for a future edit to fall through');
+  // TWO TRANSITIONS AGAIN, which is what makes the one-way machine legible: collapse and expand.
+  const m = code('lib/headerstate.js');
+  assert.equal((m.match(/^export function (collapse|expand|reset)Header/gm) || []).length, 2);
+});
+
+test('the view toggle is two-way now, and had to become one', () => {
+  // It was `topIsOn: true` with `setParam('view', 'grid')` hardcoded, which was correct only while
+  // the bar could not render in grid view. Left alone it would have painted LIST in gold while the
+  // reader looked at a grid, and the tap would have set `view=grid` a second time.
+  const c = code('components/CollapsedHeader.js');
+  assert.match(c, /top: 'LIST', bottom: 'GRID', topIsOn: !P\.isGrid/);
+  assert.match(c, /setParam\('view', P\.isGrid \? null : 'grid', KEEP_SCROLL\)/,
+    "the default is REMOVED from the URL, never written - `/` stays the canonical default");
 });
 
 test('what a query string means is decided in ONE place', () => {
@@ -195,7 +220,7 @@ test('A THIRD ACCESSIBILITY PATTERN: visible text is the state, accessible name 
   // state, then action, separated by a full stop - a dash reads as a pause, not a boundary
   assert.match(c, /Time range: \$\{P\.isWeek \? 'Week' : 'Day'\}\. Switch to/);
   assert.match(c, /Scope: \$\{P\.isMine \? 'My teams' : 'All games'\}\. Switch to/);
-  assert.match(c, /Presentation: List view\. Switch to Grid view/);
+  assert.match(c, /Presentation: \$\{P\.isGrid \? 'Grid view' : 'List view'\}\. Switch to/);
 });
 
 test('44px in BOTH dimensions, and no third exception to it', () => {
@@ -306,7 +331,7 @@ test('the accessible name still says which half is live (prompt 60 stage 2)', ()
   assert.match(c, /aria-hidden="true">\{c\.bottom\}/);
   assert.match(c, /Time range: \$\{P\.isWeek \? 'Week' : 'Day'\}\. Switch to/);
   assert.match(c, /Scope: \$\{P\.isMine \? 'My teams' : 'All games'\}\. Switch to/);
-  assert.match(c, /'Presentation: List view\. Switch to Grid view'/);
+  assert.match(c, /Presentation: \$\{P\.isGrid \? 'Grid view' : 'List view'\}\. Switch to/);
 });
 
 test('the toggles keep 44px in both dimensions - no third exception (prompt 60 stage 2)', () => {

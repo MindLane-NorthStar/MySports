@@ -252,18 +252,18 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
-// ------------------------------------------------ the collapsed header, list only (prompt 58)
+// ------------------------------------------ the navbar renders in EVERY view (prompt 58, lifted)
 //
-// PROVED, NOT ASSERTED. The bar must be ABSENT FROM THE DOM in every grid view, not merely hidden:
-// `.mgrid-scroll` sets `touch-action: pan-x pan-y` and the grid runs a pinch handler, and a fixed
-// element that is only `opacity: 0` still takes touches in some engines. Invisible is not enough;
-// gone is the requirement.
+// IT USED TO BE ABSENT FROM THE DOM IN ALL FOUR GRID VIEWS, and this block asserted that. The
+// exclusion cost more than it bought: tapping GRID in the bar sets `view=grid` with
+// `{ scroll: false }`, so the reader does not move - but the component then vanished, the collapsed
+// state was cleared, and ~340px of banner and control stack returned to the flow above them, with
+// no compensation. The control deleted itself with the tap that used it.
 //
-// The exclusion is DELIBERATE AND TEMPORARY. It is not that the bar would break the grid - a header
-// mounted beside `Chrome` is a sibling of `.shell` and can never be an ancestor of `.mrail-cell`,
-// so it cannot become its containing block. It is that a fixed bar over the top 44px of a pinch
-// scroller has never been tried on a real device, and week mode stacks N of those. Ship list, prove
-// it on the phone, then extend.
+// WHAT THE EXCLUSION WAS HEDGING AGAINST IS REAL, and it is measured in the block below rather than
+// denied. It was never that the bar would break the grid's sticky rail - a header mounted beside
+// `Chrome` is a sibling of `.shell` and can never be an ancestor of `.mrail-cell`. It is that the
+// bar's 45px sits over the top of `.mgrid-scroll`, which owns the pinch.
 {
   const ctx = await browser.newContext({
     viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
@@ -272,24 +272,127 @@ for (const dev of DEVICES) {
   const DAY = '2026-09-05';
   const WEEK = '2026-08-31';
   const views = [
-    ['day / all games / GRID', `/?day=${DAY}&view=grid`, false],
-    ['day / my teams / GRID', `/?day=${DAY}&scope=mine&view=grid`, false],
-    ['week / all games / GRID', `/?mode=week&w=${WEEK}&view=grid`, false],
-    ['week / my teams / GRID', `/?mode=week&w=${WEEK}&scope=mine&view=grid`, false],
-    ['day / all games / list', `/?day=${DAY}`, true],
-    ['day / my teams / list', `/?day=${DAY}&scope=mine`, true],
-    ['week / all games / list', `/?mode=week&w=${WEEK}`, true],
-    ['week / my teams / list', `/?mode=week&w=${WEEK}&scope=mine`, true],
+    ['day / all games / GRID', `/?day=${DAY}&view=grid`],
+    ['day / my teams / GRID', `/?day=${DAY}&scope=mine&view=grid`],
+    ['week / all games / GRID', `/?mode=week&w=${WEEK}&view=grid`],
+    ['week / my teams / GRID', `/?mode=week&w=${WEEK}&scope=mine&view=grid`],
+    ['day / all games / list', `/?day=${DAY}`],
+    ['day / my teams / list', `/?day=${DAY}&scope=mine`],
+    ['week / all games / list', `/?mode=week&w=${WEEK}`],
+    ['week / my teams / list', `/?mode=week&w=${WEEK}&scope=mine`],
   ];
-  for (const [name, path, shouldExist] of views) {
+  for (const [name, path] of views) {
     await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
-    // scrolled well past the sentinel, which is where the bar would be showing if it existed
+    // scrolled well past the sentinel, which is where the bar shows
     await page.evaluate(() => window.scrollTo(0, 900));
     await page.waitForTimeout(450);
     const n = await page.locator('.chdr').count();
-    record(`collapsed bar ${shouldExist ? 'present in' : 'ABSENT from'} ${name}`,
-           shouldExist ? n === 1 : n === 0, `${n} in the DOM`);
+    record(`navbar present in ${name}`, n === 1, `${n} in the DOM`);
   }
+
+  // THE DEFECT THE EXCLUSION CAUSED, pinned so it cannot come back: tapping GRID in the bar must
+  // keep the collapse AND keep the reader where they were.
+  await page.goto(`${base}/?day=${DAY}`, { waitUntil: 'networkidle' });
+  await page.evaluate(() => window.scrollTo(0, 1200));
+  await page.waitForTimeout(600);
+  const gridTap = await page.evaluate(() => ({
+    hdr: document.documentElement.getAttribute('data-hdr'),
+    top: document.querySelector('.hubctl') ? null : null,
+  }));
+  await page.click('.chdr-toggle[data-key="view"]');
+  await page.waitForTimeout(900);
+  const afterTap = await page.evaluate(() => ({
+    hdr: document.documentElement.getAttribute('data-hdr'),
+    bar: document.querySelectorAll('.chdr').length,
+    banner: getComputedStyle(document.querySelector('.banner')).display,
+    grid: document.querySelectorAll('.mgrid-scroll').length,
+    url: location.search,
+  }));
+  record('tapping GRID in the navbar keeps the collapse',
+         gridTap.hdr === 'collapsed' && afterTap.hdr === 'collapsed' && afterTap.bar === 1
+         && afterTap.banner === 'none' && /view=grid/.test(afterTap.url),
+         `data-hdr=${afterTap.hdr}, ${afterTap.bar} bar, banner ${afterTap.banner}, ${afterTap.url}`);
+  // and back again, which is the half the old one-way door could not do at all
+  await page.click('.chdr-toggle[data-key="view"]');
+  await page.waitForTimeout(900);
+  const backToList = await page.evaluate(() => ({
+    hdr: document.documentElement.getAttribute('data-hdr'), url: location.search,
+    name: document.querySelector('.chdr-toggle[data-key="view"]').getAttribute('aria-label'),
+  }));
+  record('and GRID -> LIST works from the same control',
+         backToList.hdr === 'collapsed' && !/view=/.test(backToList.url)
+         && backToList.name === 'Presentation: List view. Switch to Grid view',
+         `${backToList.url || '(no view param)'} / ${backToList.name}`);
+  await ctx.close();
+}
+
+// ------------------------------------- what the grid exclusion was hedging against, MEASURED
+//
+// The hedge was never tested and it is real. `.chdr` is `position: fixed` over the top 45px of the
+// viewport and a SIBLING of `.shell`, so a touch landing there targets the bar and never reaches
+// `.mgrid-scroll`'s pinch listeners. This block records the cost as a number so it cannot grow
+// quietly, and records the two things that make it acceptable: the band is INERT - a drag starting
+// on any control activates nothing, because a drag cancels the click - and the gesture works
+// normally a few pixels lower.
+{
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+  });
+  const page = await ctx.newPage();
+  const cdp = await ctx.newCDPSession(page);
+  const touch = async (type, pts) => {
+    await cdp.send('Input.dispatchTouchEvent', {
+      type,
+      touchPoints: pts.map(([x, y], i) => ({ x, y, id: i, radiusX: 12, radiusY: 12, force: 1 })),
+    });
+    await page.waitForTimeout(50);
+  };
+  await page.goto(`${base}/?day=2026-09-05&sport=cfb&view=grid`, { waitUntil: 'networkidle' });
+  await page.evaluate(() => window.scrollTo(0, 3000));
+  await page.waitForTimeout(700);
+
+  const g = await page.evaluate(() => {
+    const br = document.querySelector('.chdr').getBoundingClientRect();
+    const sr = document.querySelector('.mgrid-scroll').getBoundingClientRect();
+    return { barBottom: Math.round(br.bottom),
+             overlap: Math.max(0, Math.min(br.bottom, sr.bottom) - Math.max(br.top, sr.top)) };
+  });
+  record('the bar overlays exactly its own height of the grid scroller', g.overlap === g.barBottom,
+         `${g.overlap}px of overlap, bar is ${g.barBottom}px`);
+
+  const sw = () => page.evaluate(() => document.querySelector('.mgrid-scroll').scrollWidth);
+  const pinchAt = async (y) => {
+    const before = await sw();
+    await touch('touchStart', [[120, y], [270, y]]);
+    for (const s of [0.85, 0.7, 0.55]) await touch('touchMove', [[195 - 75 * s, y], [195 + 75 * s, y]]);
+    await touch('touchEnd', []);
+    await page.waitForTimeout(250);
+    return { before, after: await sw() };
+  };
+  const inBand = await pinchAt(Math.round(g.barBottom / 2));
+  record('a pinch inside the bar band does NOT reach the grid - the known cost',
+         inBand.before === inBand.after, `scrollWidth ${inBand.before} -> ${inBand.after}`);
+  const below = await pinchAt(g.barBottom + 60);
+  record('and the same pinch 60px lower works normally - the cost is bounded to the band',
+         below.before !== below.after, `scrollWidth ${below.before} -> ${below.after}`);
+
+  // INERT, NOT HAZARDOUS. A drag that starts on a control must not activate it.
+  await page.goto(`${base}/?day=2026-09-05&sport=cfb&view=grid`, { waitUntil: 'networkidle' });
+  await page.evaluate(() => window.scrollTo(0, 3000));
+  await page.waitForTimeout(700);
+  const start = await page.evaluate(() => ({
+    hdr: document.documentElement.getAttribute('data-hdr'), url: location.search,
+    x: Math.round(document.querySelector('.chdr-wm').getBoundingClientRect().width / 2),
+  }));
+  await touch('touchStart', [[start.x, 23]]);
+  for (const x of [start.x - 40, start.x - 90, start.x - 140]) await touch('touchMove', [[x, 23]]);
+  await touch('touchEnd', []);
+  await page.waitForTimeout(600);
+  const end = await page.evaluate(() => ({
+    hdr: document.documentElement.getAttribute('data-hdr'), url: location.search,
+  }));
+  record('a drag starting on a navbar control activates nothing',
+         end.hdr === start.hdr && end.url === start.url, `data-hdr=${end.hdr}, ${end.url}`);
   await ctx.close();
 }
 

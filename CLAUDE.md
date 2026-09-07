@@ -149,9 +149,9 @@ Five, and all five are run **before** the commit, as their own commands:
 
 ```
 pytest                       # from the repo root — 494 pass + 1 skipped
-npm run test:unit            # from web/ — 445
+npm run test:unit            # from web/ — 446
 npm run smoke                # from web/ — 30/30
-node scripts/qa-shots.mjs    # from web/ — 67/67
+node scripts/qa-shots.mjs    # from web/ — 73/73
 npm run geometry             # from web/ — all hard stops (see below)
 ```
 
