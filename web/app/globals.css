@@ -61,13 +61,16 @@
      here: true AA for the card's first line needed a --faint of #989fa8, which is 4.55:1 against
      --dim's own 4.62:1 - the two tokens collapse into one and the third step disappears. The other
      lever was the gradient's top end, and this is it.
-     SOLVED, NOT PICKED. The minimum darkening at which --faint reaches 4.5:1 on the top of the
-     gradient, along the token's own hue and saturation. It lands at 4.53:1, from 3.63:1.
-     IT COINCIDES EXACTLY WITH --panel, AND THAT IS NOT A TYPO. The arithmetic arrived there on its
-     own; the two tokens stay separate so the gradient's top can move again without dragging every
-     flat panel with it. The consequence to know is that the card's gradient is now much subtler -
-     15.29% to 12.5% HSL lightness, where it used to start at 21.57%. */
-  --panel-top: #23262b;
+     PROMPT 57 SOLVED FOR AA ALONE AND WENT TOO FAR (#23262b). It was the minimum darkening at which
+     --faint reached 4.5:1, and it did - but it also flattened the card's top-to-bottom gradient from
+     a 1.327 luminance ratio to 1.064, near enough to flat that cards, toggles, tiles and picker
+     arrows stopped reading as raised objects. Joe, on the device, 2026-09-07: "walk the token change
+     halfway back not all the way back. Otherwise everything else checks out."
+     #2A2E34 IS THE EXACT MIDPOINT of #31363d and #23262b, channel by channel - 49/35 -> 42,
+     54/38 -> 46, 61/43 -> 52. It restores the gradient to 1.183 and keeps --ink and --dim clear of
+     AA on the card top (12.17 and 5.18). --faint could not follow on its own, which is why the token
+     below moved with it. */
+  --panel-top: #2A2E34;
   --panel-bottom: #1e2126;
 
   --line: #3a3f47;
@@ -91,7 +94,15 @@
      --dim's own 4.62:1 - the two tokens become the same colour and the third step dies.
      --dim is only 4.62:1 on that ground itself, so there is no room for a step above it
      without moving --dim or lightening the gradient's top end. Both are Joe's call. */
-  --faint: #868d96;
+  /* LIFTED 2026-09-07, prompt 58 stage 0: #868d96 -> #8E959E. THE BLOCKER THE NOTE ABOVE RECORDS WAS
+     A PROPERTY OF THE OLD GROUND, NOT OF THESE TOKENS. It says AA needed #989fa8, which is 4.55:1
+     against --dim's own 4.62:1 - the two collapse and the third step dies. That was true on #31363d.
+     On the halved ground #2A2E34, --dim measures 5.18 and the room reopens: a SMALLER lift clears AA
+     at 4.51:1 and leaves --dim 1.148:1 clear of --faint, against 1.014:1 at the value the note
+     rejected. THE STEP NARROWS AND THAT IS THE COST - it was 1.272:1 before this, so the lift buys
+     AA for the third grey by spending separation between the second and third. Both survive; neither
+     is comfortable. Widening it again means moving --dim, which is a separate change and Joe's. */
+  --faint: #8E959E;
 
   /* THE METALLIC GOLD FAMILY - docs/ux-reference/visual-refinement-handoff-2026-09-06.md §4,
      "the current gold/yellow should be replaced with the new approved metallic gold family".
