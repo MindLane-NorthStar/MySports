@@ -21,7 +21,11 @@ const ACCESS_LABEL = {
   unavailable: 'Not on your services',
   out_of_market: 'Out of market',
   conditional: 'Check carriage',
-  unverified: 'Assignment not entered',
+  // PROMPT 57 STAGE 8. This read 'Assignment not entered' - the build describing its own
+  // database state to someone who came to find out what is on television, which is the same class
+  // as the developer footnote R5 removed in prompt 56. What the reader needs is that the listing is
+  // not settled yet, not which table has not been filled in.
+  unverified: 'Not yet confirmed',
   unknown: 'Unknown',
 };
 

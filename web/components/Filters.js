@@ -310,21 +310,7 @@ export function SportFilter({ sport, available }) {
   );
 }
 
-export function SearchBox({ q, placeholder }) {
-  const setParam = useSetParam();
-  return (
-    <>
-      <span className="control-label">Search</span>
-      <input
-        type="search"
-        defaultValue={q || ''}
-        placeholder={placeholder}
-        aria-label="Search completed games"
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') setParam('q', e.currentTarget.value);
-        }}
-        onBlur={(e) => setParam('q', e.currentTarget.value)}
-      />
-    </>
-  );
-}
+/* `SearchBox` LIVED HERE AND IS GONE (prompt 57 stage 8). Zero callers: it was the control for
+   `/history`'s `?q=`, and prompt 50 folded that route into the hub while R8 held the cross-date
+   search over as a future MY TEAMS sub-feature. It went in one commit with the three functions in
+   lib/queries.js that answered it, so nothing is left half-wired. */

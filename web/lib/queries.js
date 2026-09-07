@@ -181,48 +181,23 @@ export async function gridIndex() {
   return rest('generated_grids?select=sport,game_date,generated_at&order=generated_at.desc');
 }
 
-/** Does this game's card have anything to say about where to watch it? */
-export function primaryBroadcast(game) {
-  const rows = (game.broadcasts || []).filter((b) => b.active !== false);
-  if (!rows.length) return null;
-  return (
-    rows.find((b) => b.is_primary) ||
-    rows.find((b) => b.delivery_surface === 'LINEAR') ||
-    rows[0]
-  );
-}
-
-export function networkName(game) {
-  const b = primaryBroadcast(game);
-  if (b?.network?.canonical_name) return b.network.canonical_name;
-  if (b?.label) return b.label;
-  if (game.network_status === 'tbd') return 'Network TBD';
-  if (game.network_status === 'no_linear_telecast') return 'No linear telecast';
-  if (game.network_status === 'stream_exclusive') return 'Streaming exclusive';
-  return null;
-}
-
-/** Free-text match used by /history's search box: team names, abbreviations, network names. */
-export function matchesSearch(game, needle) {
-  if (!needle) return true;
-  const q = needle.trim().toLowerCase();
-  if (!q) return true;
-  const hay = [
-    game.home?.canonical_name,
-    game.home?.short_name,
-    game.home?.abbreviation,
-    game.away?.canonical_name,
-    game.away?.short_name,
-    game.away?.abbreviation,
-    networkName(game),
-    ...(game.broadcasts || []).map((b) => b.network?.canonical_name),
-    ...(game.broadcasts || []).map((b) => b.label),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-  return hay.includes(q);
-}
+/* THE SEARCH CHAIN LIVED HERE AND IS GONE (prompt 57 stage 8).
+ *
+ * `matchesSearch`, `networkName` and `primaryBroadcast` stood here with ZERO callers between them
+ * outside each other. They were orphaned when `/history` folded into the hub at prompt 50 and R8
+ * held the cross-date search over as a future MY TEAMS sub-feature; nothing has called them since.
+ *
+ * DELETING THE CHAIN IS WHAT RETIRES 'No linear telecast'. `networkName` returned that string when
+ * `network_status === 'no_linear_telecast'`, and prompt 24 flagged it as a FALSE CERTAINTY: a game
+ * with no broadcast row is a game nobody has told us about, which is not the same as a game with no
+ * telecast. Left in place it was one wiring change away from a card. It is now absent from the repo.
+ *
+ * `primaryBroadcast` went with them and is the reason this is four deletions rather than three: it
+ * was exported, but `networkName` was its only caller, so it orphaned the moment the chain did.
+ * `cardBroadcast` in MatchupCard.js is a DIFFERENT function and is untouched - it is what the card
+ * actually renders from.
+ *
+ * If search returns, it returns against the hub's own params and gets written for that. */
 
 /**
  * Standings for a set of clubs. team_records keeps one row per club PER DAY, so this asks for the

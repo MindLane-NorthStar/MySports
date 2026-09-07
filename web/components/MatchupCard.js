@@ -115,7 +115,12 @@ function TeamStack({ team, teamId, sport, standings, rankings, season, week, pro
       </div>
       {/* Absent means ABSENT, per line: no blank row is reserved for anything that does not exist. */}
       {rest ? <div className="tcol-rec">{rest}</div> : null}
-      {showProbable ? <div className="tcol-pitch">{probable || 'Starter TBA'}</div> : null}
+      {/* AND THAT RULE NOW APPLIES TO THE PITCHER LINE TOO (prompt 57 stage 8). This read
+          `probable || 'Starter TBA'`, so every MLB card reserved the row whether or not anything
+          was known - which is the blank row the line above forbids, wearing a label.
+          GameDetail KEEPS its own "Starter TBA": the panel is exactly where a reader goes to find
+          out that the starter is not announced, so there the sentence IS the answer. */}
+      {showProbable && probable ? <div className="tcol-pitch">{probable}</div> : null}
     </div>
   );
 }
@@ -127,9 +132,11 @@ export function cardBroadcast(game) {
   return rows.find((b) => b.is_primary) || rows.find((b) => b.delivery_surface === 'LINEAR') || rows[0];
 }
 
-// networkText() lived here and is gone with A3: it was the only caller's only use, and it carried
-// the 'No linear telecast' string that prompt 24 flagged as a false certainty on games with no
-// broadcast row at all. The venue replaces it, so both go together.
+// networkText() lived here and went with A3: it was the only caller's only use. THE STRING IT
+// CARRIED IS NOW GONE FROM THE REPO ENTIRELY - 'No linear telecast', which prompt 24 flagged as a
+// false certainty on games with no broadcast row, left with `networkName` and the dead search chain
+// that was the last thing able to reach it (prompt 57 stage 8). This note is corrected in the same
+// commit as that deletion rather than left describing a live concern that no longer exists.
 
 /** The favoured side, from the moneylines when present and the (home) spread otherwise. */
 export function favourite(game) {
