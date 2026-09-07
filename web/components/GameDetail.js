@@ -15,6 +15,9 @@ import { teamLogoDarkUrl, watchUrl, DIRECTV_STREAM } from '../lib/config.js';
 import { markStyle, hasMark } from '../lib/marks.js';
 import { standingLine, standingFor } from '../lib/standings.js';
 import { cardName } from './MatchupCard.js';
+import {
+  ENDCAP_GRADIENT, brandFor, isProgram, subtitleFor, tintToWhite, titleFor,
+} from '../lib/programs.js';
 
 const ACCESS_LABEL = {
   available: 'On your services',
@@ -40,6 +43,22 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
 
   if (!game) return null;
   const { home, away, sport } = game;
+  /**
+   * THE PANEL DID NOT KNOW WHAT A PROGRAM WAS (prompt 59, Joe 2026-09-07: "when you click on the
+   * event and the sub-card popup renders, the title bar says TBD @ TBD").
+   *
+   * Programs reach this panel the same way games do - `PageCount` and `Listing` wire `onOpen` to
+   * both card types and render ONE <GameDetail> for whatever was tapped - and it was written for
+   * matchups only. A program has no `home`, no `away` and no team ids, so `cardName` fell through
+   * to its `|| 'TBD'` and printed TBD @ TBD, flanked by two <img> whose src was built from
+   * `undefined`.
+   *
+   * THE HELPERS ARE IMPORTED, NEVER REIMPLEMENTED. `titleFor`, `subtitleFor` and `brandFor` are
+   * what ProgramCard builds its head from; a second title-builder here would drift from the card's
+   * within a prompt or two, which is working rule 32's exact shape.
+   */
+  const program = isProgram(game);
+  const brand = program ? brandFor(game.brand_key) : null;
   const rows = (game.broadcasts || []).filter((b) => b.active !== false);
   const odds = (game.odds || [])[0];
   const state = resultLabel(game);
@@ -51,11 +70,38 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
     <div className="dpanel-scrim" role="dialog" aria-modal="true" onClick={onClose}>
       <div className="dpanel" onClick={(e) => e.stopPropagation()}>
         <div className="dpanel-head">
-          <img src={teamLogoDarkUrl(away?.id)} alt="" />
-          <strong>
-            {cardName(away, game.away_team_id)} @ {cardName(home, game.home_team_id)}
-          </strong>
-          <img src={teamLogoDarkUrl(home?.id)} alt="" />
+          {program ? (
+            <>
+              {/* The card's own endcap, at panel size: charcoal tile, brand bar on its right edge,
+                  mark inset. THE TYPOGRAPHIC FALLBACK SURVIVES - a brand with no art in the tree
+                  renders its short title rather than an empty box or a fabricated logo, which is
+                  the same promise ProgramCard makes. */}
+              <span className="pcap dpanel-cap" style={{ background: ENDCAP_GRADIENT }}>
+                {brand.mark_dark ? (
+                  <img src={brand.mark_dark} alt="" />
+                ) : (
+                  <span className="pcap-type">{brand.short_title || titleFor(game).slice(0, 10)}</span>
+                )}
+                <span className="pcap-bar" style={{ background: brand.color }} />
+              </span>
+              <span className="dpanel-ptitles">
+                <strong>{titleFor(game)}</strong>
+                {subtitleFor(game) ? (
+                  <span className="psub" style={{ color: tintToWhite(brand.color) }}>
+                    {subtitleFor(game)}
+                  </span>
+                ) : null}
+              </span>
+            </>
+          ) : (
+            <>
+              <img src={teamLogoDarkUrl(away?.id)} alt="" />
+              <strong>
+                {cardName(away, game.away_team_id)} @ {cardName(home, game.home_team_id)}
+              </strong>
+              <img src={teamLogoDarkUrl(home?.id)} alt="" />
+            </>
+          )}
           <button type="button" className="dpanel-close" onClick={onClose} aria-label="Close">
             &times;
           </button>
@@ -70,7 +116,22 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
             {/* The venue line carries the neutral-site fact, the same way the list card does since
                 2026-09-05 - and it renders even with no venue row, because the panel is where a
                 reader goes to find out exactly this. */}
-            {game.venue?.name || game.neutral_site ? (
+            {/* A PROGRAM'S PLACE IS `location_text`, which is what ProgramCard puts on its own
+                bottom line - so the row was simply absent on every program. The neutral-site
+                parenthetical stays a GAME fact; a race has no neutral site to be at. */}
+            {program ? (
+              /* AND NOT WHEN THE HEAD ALREADY SAID IT. `subtitleFor` falls back to `location_text`
+                 when a program has no subtitle of its own, which is every race - so DARLINGTON
+                 RACEWAY was about to appear twice in one panel, once under the title and once
+                 here. The row is for the 130 programs that carry a location; it is not for saying
+                 the same thing twice. */
+              game.location_text && subtitleFor(game) !== String(game.location_text).toUpperCase() ? (
+                <div>
+                  <span>Where</span>
+                  {game.location_text}
+                </div>
+              ) : null
+            ) : game.venue?.name || game.neutral_site ? (
               <div>
                 <span>Venue</span>
                 {game.venue?.name || ''}
@@ -114,7 +175,13 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
           </div>
         ) : null}
 
-        {sport === 'mlb' ? (
+        {/* GUARDED ON `!program` AS WELL AS THE SPORT. An MLB studio show would carry sport 'mlb'
+            and render a Probable pitchers block reading TBD / Starter TBA twice. MEASURED
+            2026-09-07: zero of the 307 non-game programs carry sport 'mlb' today - they are nfl 80,
+            cfb 31, nascar 98, aew 35, wwe 36, indycar 18, ufc 9 - so this is LATENT rather than a
+            live defect, and the guard is here because the day an MLB pregame show loads is not the
+            day to discover it. */}
+        {!program && sport === 'mlb' ? (
           <div className="dsec">
             <h4>Probable pitchers</h4>
             <div className="dgrid">

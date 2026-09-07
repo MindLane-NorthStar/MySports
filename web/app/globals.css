@@ -1533,6 +1533,55 @@ input:focus-visible {
   text-transform: uppercase;
 }
 
+/* THE PANEL'S PROGRAM HEAD (prompt 59). The card's endcap at the panel's own 34px, so the head of
+   the panel and the head of the card are recognisably the same object. The selectors are scoped to
+   `.dpanel-cap` rather than added to `.pcard`'s list, because the panel is not a card and its
+   `.pcap-bar` needs the shared rule below - which is why that one is a comma list. */
+.dpanel-cap {
+  position: relative;
+  flex: 0 0 34px;
+  height: 34px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.dpanel-cap img {
+  max-width: 74%;
+  max-height: 62%;
+  object-fit: contain;
+}
+
+.dpanel-cap .pcap-type {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 9px;
+  line-height: 1.02;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--ink);
+  padding: 0 3px;
+  overflow: hidden;
+}
+
+/* The title stacks over its subtitle, where a matchup's head is one line. `min-width: 0` so a long
+   race name wraps instead of pushing the close button off the row. */
+.dpanel-ptitles {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dpanel-ptitles .psub {
+  font-size: 12.5px;
+  line-height: 1.25;
+}
+
 .dpanel-close {
   margin-left: auto;
   font: inherit;
@@ -2569,7 +2618,8 @@ main > .hubctl:first-child { margin-top: 0; }
 /* The brand bar: 3px of the brand colour on the endcap's RIGHT edge. The one place the colour is
    shown undiluted, and what tells four red-branded programmes apart at a glance. */
 .pblock .pcap-bar,
-.pcard .pcap-bar {
+.pcard .pcap-bar,
+.dpanel-cap .pcap-bar {
   position: absolute;
   top: 0;
   right: 0;
