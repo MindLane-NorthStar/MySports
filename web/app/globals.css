@@ -962,7 +962,11 @@ button.mcard:hover {
 .footnote {
   color: var(--faint);
   font-size: 11.5px;
-  margin-top: 34px;
+  /* STAGE 8: 34px -> the 24px section step. This rule sets the gap TWICE - count line ->
+     provenance, and provenance -> the timezone line - because both carry this class, and both
+     measured 34. The 12px padding and the hairline are the footnote's own treatment and are inside
+     the border box, so they are not part of the gap. */
+  margin-top: 24px;
   padding-top: 12px;
   border-top: 1px solid var(--line-soft);
 }
@@ -997,7 +1001,12 @@ input:focus-visible {
   border-radius: var(--radius);
   background: var(--panel);
   overflow: hidden;
-  margin: 14px 0 20px;
+  /* STAGE 8. The 20px BELOW is gone; the neighbour owns that gap now, which is what lets one grid
+     per day in a week stack at the 24px section step instead of 20 + 14 + 21 = 55.
+     The 14px ABOVE stays: with the control stack's own 8px padding it makes picker -> grid 22px,
+     which is under the 24px section target and so may not be opened up (hard rule 1) - and taking
+     it out would push that pair down to 8px, which rule 1 does not ask for either. */
+  margin: 14px 0 0;
 }
 
 /* The grid's own header (.mgrid-head, .mgrid-headlines, .mgrid-line1/2, .mgrid-mark, .mgrid-meta)
@@ -1664,8 +1673,15 @@ input:focus-visible {
 
 /* week day grouping on /weeks (the two-week model renders locked cards under a day heading) */
 .weekday {
-  margin-bottom: 14px;
+  /* STAGE 8. The day group carries NO margin of its own between the first one and the picker - the
+     heading's own 16px clearance does that job, and doubling the two is how the old 21px UA margin
+     and this 14px added up to 35px between day groups. */
+  margin: 0;
 }
+/* One section -> the next: 8 here + the heading's 16 = 24. The first group gets only the heading's
+   16, which sits under the control stack's own 8px, so THAT pair is 24 as well. One number, two
+   places, from two owners that each mean something. */
+.weekday + .weekday { margin-top: 8px; }
 
 /* THE NESTING, and it only exists under ALL SPORTS (prompt 53 stage 5).
  *
@@ -1694,7 +1710,11 @@ input:focus-visible {
   font-family: var(--display);
   font-size: 21px;
   letter-spacing: 0.08em;
-  margin-bottom: 6px;
+  /* STAGE 8. THE TOP MARGIN IS DECLARED, and it was not before: this is a <p>, so it carried the
+     UA's `1em 0` - 21px at 21px type - which nothing had ever chosen. It is the day heading's
+     clearance and the whole of the gap above a day group.
+     The 6px BELOW is under the 16px heading -> content target and stays there under hard rule 1. */
+  margin: 16px 0 6px;
 }
 
 /* R3, prompt 56: THE WEEKDAY ROW CARRIES THE LEAGUE MARK when a tile is selected.
@@ -1932,7 +1952,7 @@ input:focus-visible {
   text-transform:uppercase;color:var(--ink);margin:0 0 8px;
   padding-bottom:6px;border-bottom:1px solid var(--line-soft)}
 @media (max-width:699px){.favlabel{font-size:15px}}
-.favrule{border:0;border-top:1px solid var(--line-soft);margin:14px 0}
+.favrule{border:0;border-top:1px solid var(--line-soft);margin:8px 0}
 
 /* ---- R2, prompt 56: THE MY TEAMS SCOPE LINE ---------------------------------------------------
  * `MY TEAMS · 13 CLUBS + RACING + COMBAT SPORTS`, directly below the control stack in the four MY
@@ -1943,6 +1963,7 @@ input:focus-visible {
  * and marked by a LEFT rule, which is a different gesture from every heading on the page and so
  * cannot be mistaken for one. Colour comes from the --gold token, never retyped. */
 .scopeline {
+  /* STAGE 8: 16px below - the scale's heading -> content step, which is what this line is. */
   margin: 0 0 16px;
   padding-left: 9px;
   border-left: 2px solid var(--gold);
@@ -1953,6 +1974,13 @@ input:focus-visible {
   text-transform: uppercase;
   line-height: 1.45;
 }
+
+/* STAGE 8. THE SCOPE LINE HAS ALREADY LEFT THE CAPTION'S 16px, so the first thing under it does not
+   leave a second. In WEEK mode `.scopeline`'s next sibling IS the first `.weekday` (the day fragment
+   creates no element of its own), and that day's heading carries a 16px clearance of its own - so
+   the pair measured 32px, against a 16px target. Only the FIRST day matches `+`; every day after it
+   keeps the clearance that makes the 24px section step. */
+.scopeline + .weekday .weekday-head { margin-top: 0; }
 
 /* ---- market pending (E5, prompt 21)
  * A regional game whose map has not published yet is neither watchable nor off-service, so it is
@@ -2002,10 +2030,41 @@ input:focus-visible {
   border:1px solid var(--line-soft);border-radius:3px;padding:2px 5px 1px}
 @media (max-width:699px){.networktbd-row::after{font-size:9px;padding:1px 4px 0}}
 
+/* ================================================================================================
+ * THE VERTICAL RHYTHM BELOW THE PICKER (prompt 56 stage 8, Joe 2026-09-06:
+ * "evaluate the vertical spacing between cards and between sections that render below the picker -
+ *  make sure they're standardized and not excessive").
+ *
+ * ONE SCALE, derived from the control stack's own rhythm, which prompt 51 settled at 8px:
+ *
+ *     8px    card -> card, and anything inside one group
+ *    16px    a heading -> the content it labels
+ *    24px    one section -> the next section
+ *
+ * THREE HARD RULES, and they bind every future change to this file:
+ *   1. NO RENDERED GAP MAY GROW. A pair already below its target keeps what it has and is reported;
+ *      it is never opened up to hit a number.
+ *   2. NOTHING INSIDE A LIST CARD OR A GRID BLOCK CHANGES. The card contract is locked (v1.6.4) and
+ *      the grid's internal geometry - lane gaps, block heights, tray heights, the rail - is frozen
+ *      by the geometry tripwire.
+ *   3. THE CONTROL STACK IS OUT OF SCOPE. `.hubctl`'s 8px gap and its 8px padding-bottom were tuned
+ *      by prompt 51 and confirmed on the device. This scale starts BELOW the picker.
+ *
+ * MEASURE RENDERED, NEVER DECLARED. `.listing` is `display:flex; flex-direction:column` with no
+ * `gap`, so its children stack on their own margins and nothing collapses out of it; elsewhere on
+ * the page adjacent block margins DO collapse. Two rules declaring 8px can render 8 or 16.
+ * ============================================================================================= */
+
 /* ---- per-sport bands (prompt 21)
  * Bands render in SPORTS order, not kickoff order, so the page reads in the product's order rather
  * than by whichever sport happened to start first. The header is band level - the card is untouched. */
-.band{margin:0 0 26px}
+.band{margin:0 0 24px}
+/* STAGE 8. THE LAST BAND'S BOTTOM MARGIN IS DEAD SPACE and was the single largest excess measured:
+   `.listing` is a flex column, so a trailing margin does not collapse out of it and simply extended
+   the container. Measured at 390 before this rule: the last card of a day group sat 61px above the
+   next day's heading (26 + 14 + 21) against 8px between cards, and 44px above the page count line.
+   `.pagecount-hidden` has carried the same rule since prompt 50; this is its `.listing` twin. */
+.listing > .band:last-child{margin-bottom:0}
 /* B2: the heading and the count share one line, the count pushed right by margin-left:auto and
    set at its own size - the header grows 1.5x, the count does not. flex-wrap on this row is what
    makes it degrade at narrow widths WITHOUT a media query: a 1.5x title plus "2 airing · 13
