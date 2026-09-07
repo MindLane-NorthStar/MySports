@@ -61,6 +61,48 @@ export function splitFavorites(games, ids) {
 export const TEAMLESS_SPORTS = ['nascar', 'indycar', 'ufc', 'wwe', 'aew'];
 
 /**
+ * R2, prompt 56: THE TWO WORDS THE SCOPE LINE USES FOR THOSE FIVE SPORTS.
+ *
+ * Nothing on a MY TEAMS page named the scope. In LIST views the only signal was the ABSENCE of the
+ * "Your teams" labels prompt 53 stage 6 correctly removed there; in GRID views there was no signal
+ * at all, so Day · My Teams · Grid was structurally identical to Day · All Teams · Grid and only
+ * the number of blocks differed.
+ *
+ * TWO CATEGORY WORDS, NOT FIVE SPORT NAMES. Joe pinned the wording on 2026-09-06 and the phrasing
+ * was chosen over naming the sports individually because five names is a list, not a scope.
+ *
+ * `racing` IS NOT NEW VOCABULARY - it is already this app's own filter token for exactly nascar and
+ * indycar (`FILTER_EXPANDS`, config.js), so the line and the Racing tile agree by construction.
+ * `combat sports` IS A DISPLAY LABEL ONLY: it is deliberately NOT a filter token and NOT a sport
+ * value, and must never become one. `aew` sits inside it and still has no chip (register §13).
+ *
+ * THE MAP IS EXPORTED SO A TEST CAN ASSERT IT COVERS `TEAMLESS_SPORTS` EXACTLY. A sixth team-less
+ * sport added above and not placed here fails that test, and the line gets revisited rather than
+ * silently under-describing the scope - which is the whole failure this line exists to fix.
+ */
+export const TEAMLESS_CATEGORIES = {
+  racing: ['nascar', 'indycar'],
+  'combat sports': ['ufc', 'wwe', 'aew'],
+};
+
+/**
+ * `MY TEAMS · 13 CLUBS + RACING + COMBAT SPORTS` - Joe's wording, 2026-09-06.
+ *
+ * The club count is ALWAYS derived by the caller from `favoriteIds(doc).size` and never written
+ * down: it changes the day Joe adds a team, and a line reading "13 clubs" above fourteen clubs'
+ * games is worse than no line at all. The category words come from TEAMLESS_CATEGORIES above, so
+ * the line cannot drift from the coverage the test pins.
+ *
+ * This is also the first surface in the app that states MY TEAMS silently includes EVERY race,
+ * fight card and wrestling show, not just the clubs. Register §18d ruled it; nothing said it.
+ */
+export function scopeLine(clubCount) {
+  const n = Number.isFinite(clubCount) ? clubCount : 0;
+  const cats = Object.keys(TEAMLESS_CATEGORIES).map((c) => c.toUpperCase()).join(' + ');
+  return `MY TEAMS · ${n} CLUB${n === 1 ? '' : 'S'} + ${cats}`;
+}
+
+/**
  * Is this row part of MY TEAMS? A favourite team's game, OR anything in a team-less sport.
  *
  * The two tests are deliberately different questions. `isFavorite` asks whether a row carries one of

@@ -1924,6 +1924,26 @@ input:focus-visible {
 @media (max-width:699px){.favlabel{font-size:15px}}
 .favrule{border:0;border-top:1px solid var(--line-soft);margin:14px 0}
 
+/* ---- R2, prompt 56: THE MY TEAMS SCOPE LINE ---------------------------------------------------
+ * `MY TEAMS · 13 CLUBS + RACING + COMBAT SPORTS`, directly below the control stack in the four MY
+ * TEAMS views and nowhere else.
+ *
+ * IT MUST NOT READ AS A BAND TITLE. `.favlabel` right above is 25.5px display (15px on a phone) and
+ * carries a full-width bottom rule - that is a heading. This is a CAPTION: small, gold, uppercase,
+ * and marked by a LEFT rule, which is a different gesture from every heading on the page and so
+ * cannot be mistaken for one. Colour comes from the --gold token, never retyped. */
+.scopeline {
+  margin: 0 0 16px;
+  padding-left: 9px;
+  border-left: 2px solid var(--gold);
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  line-height: 1.45;
+}
+
 /* ---- market pending (E5, prompt 21)
  * A regional game whose map has not published yet is neither watchable nor off-service, so it is
  * never dimmed like an off-service row and never hidden. The cue is a quiet gold "MARKET TBD" tag on

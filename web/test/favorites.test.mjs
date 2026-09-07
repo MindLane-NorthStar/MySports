@@ -173,3 +173,41 @@ test('splitMine is a SUBSET of the day, never an invention', () => {
   const { mine } = splitMine(day, new Set());
   for (const g of mine) assert.ok(day.includes(g), 'every scoped row came from the day');
 });
+
+// ---------------------------------------------------------------------------------------------
+// R2, prompt 56: THE MY TEAMS SCOPE LINE, and the coverage that keeps it honest.
+//
+// The line's whole job is to stop MY TEAMS from silently under-describing itself. If a sixth
+// team-less sport is ever added to TEAMLESS_SPORTS and not placed in a category, the line would go
+// on saying "RACING + COMBAT SPORTS" over a scope that also contained something else - which is
+// exactly the failure the line exists to fix. That is what the first test below refuses to allow.
+
+import { TEAMLESS_CATEGORIES, scopeLine } from '../lib/favorites.js';
+
+test('R2: the two category words cover TEAMLESS_SPORTS exactly - no gap, no invention', () => {
+  const covered = Object.values(TEAMLESS_CATEGORIES).flat();
+  assert.deepEqual([...covered].sort(), [...TEAMLESS_SPORTS].sort(),
+    'every team-less sport falls into exactly one category, and no category names a sport that is ' +
+    'not in the scope');
+  assert.equal(covered.length, new Set(covered).size, 'no sport is in two categories');
+  // `racing` is the app's OWN filter token for those two, not new vocabulary invented for the line.
+  assert.deepEqual(TEAMLESS_CATEGORIES.racing, ['nascar', 'indycar']);
+});
+
+test('R2: `combat sports` is a display label and must never become a filter token', async () => {
+  const { SPORT_FILTERS, SPORTS, expandSport } = await import('../lib/config.js');
+  for (const label of Object.keys(TEAMLESS_CATEGORIES)) {
+    if (label === 'racing') continue;                 // racing IS a token, deliberately
+    assert.ok(!SPORT_FILTERS.includes(label), `${label} must not be a chip token`);
+    assert.ok(!SPORTS.includes(label), `${label} must not be a sport value`);
+    assert.deepEqual(expandSport(label), [], `${label} must not resolve to any query`);
+  }
+});
+
+test('R2: the line is Joe\u2019s wording, and its club count is derived', () => {
+  assert.equal(scopeLine(ids.size), 'MY TEAMS \u00b7 13 CLUBS + RACING + COMBAT SPORTS');
+  // Derived, never written down: the day Joe adds a team the line follows on its own.
+  assert.equal(scopeLine(14), 'MY TEAMS \u00b7 14 CLUBS + RACING + COMBAT SPORTS');
+  assert.equal(scopeLine(1), 'MY TEAMS \u00b7 1 CLUB + RACING + COMBAT SPORTS', 'singular');
+  assert.equal(scopeLine(0), 'MY TEAMS \u00b7 0 CLUBS + RACING + COMBAT SPORTS');
+});

@@ -40,7 +40,7 @@ import { RestError } from '../lib/rest.js';
 import { overlayForDay, applyOverlay } from '../lib/livescores.js';
 import { resolveHubParams } from '../lib/hubparams.js';
 import { calendarWeeksFrom, seasonWeeksFrom, daySpan, currentWeekKey, usesSeasonWeeks } from '../lib/weeks.js';
-import { favoriteIds, splitMine } from '../lib/favorites.js';
+import { favoriteIds, splitMine, scopeLine } from '../lib/favorites.js';
 import { splitHidden } from '../lib/offservice.js';
 import favoritesDoc from '../../data/favorites.json';
 import PageCount from '../components/PageCount.js';
@@ -345,6 +345,7 @@ export default async function HubPage({ searchParams }) {
     return (
       <main>
         <Controls P={P} choices={choices} />
+        <ScopeLine show={P.isMine} count={favIds.size} />
         {error ? <p className="error">Could not read the database: {error}</p> : null}
         {!error && !wk ? (
           <p className="empty">
@@ -486,6 +487,7 @@ export default async function HubPage({ searchParams }) {
   return (
     <main>
       <Controls P={P} choices={null} />
+      <ScopeLine show={P.isMine} count={favIds.size} />
 
       {error ? <p className="error">Could not read the database: {error}</p> : null}
 
@@ -602,6 +604,21 @@ export default async function HubPage({ searchParams }) {
  * heading ruling, and it takes the pickers' accessible names with it - which is why each picker
  * carries `aria-labelledby` pointing at the active mode segment (see Filters.js).
  */
+/**
+ * R2, prompt 56: THE MY TEAMS SCOPE, NAMED - one line under the control stack, four views only.
+ *
+ * It renders whether or not the day has games, because an empty MY TEAMS day is exactly where a
+ * reader most needs to know what the scope covers. Under ALL GAMES it does not render at all.
+ *
+ * THE COUNT IS DERIVED AND NEVER WRITTEN DOWN - `favoriteIds(favoritesDoc).size`, computed by both
+ * branches already for the scope filter itself, so the line and the filter can never disagree. The
+ * two category words come from `TEAMLESS_CATEGORIES`, which a test pins against `TEAMLESS_SPORTS`.
+ */
+function ScopeLine({ show, count }) {
+  if (!show) return null;
+  return <p className="scopeline">{scopeLine(count)}</p>;
+}
+
 function Controls({ P, choices }) {
   return (
     <div className="hubctl">
