@@ -175,17 +175,24 @@ for (const [day, sport, wk] of CASES) {
 // ------------------------------------------------------------------ 4. REPORTED, not asserted
 console.log('');
 console.log('REPORTED - data-derived, drifts with the standings and the CFB poll.');
-console.log('The RATIO is the tell: `widest` moved and sw/widest held -> that is DATA.');
-console.log('The RATIO moved -> that is CODE, and that is the stop.');
+// THE RATIO TO WATCH IS sw/(widest+182), NOT sw/widest (corrected 2026-09-08, prompt 66).
+// pxPerMinute = (widest + 2*CAP + NAME_PAD) / blockMinutes = (widest + 182) / blockMinutes
+// (gridmodel.js:46), so scrollWidth scales with widest+182. sw/widest therefore moves whenever
+// widest moves, on pure standings drift with no code involved - it called the MLB row a CODE change
+// in prompt 64 and the cause was the records. Both are printed so an old report still lines up.
+const K = 2 * 74 + 34;   // 2*CAP + NAME_PAD, the offset in pxPerMinute
+console.log('The tell is sw/(widest+182): it HOLDS under standings drift.');
+console.log('sw/widest moves whenever widest moves and is NOT the test. sw/(widest+182) moved -> CODE.');
 console.log('');
-console.log('  day         sport  blocks  rows  widths                     widest  scrollWidth  sw/widest');
+console.log('  day         sport  blocks  rows  widths                     widest  scrollWidth  sw/widest  sw/(w+182)');
 for (const [d, sport] of [['2026-09-05', 'cfb'], ['2026-09-03', 'mlb'], ['2026-09-13', 'nfl']]) {
   await go(`/?day=${d}&sport=${sport}&view=grid`);
   const m = await shape();
   console.log(`  ${d}  ${sport.padEnd(5)} ${String(m.blocks).padStart(6)} ${String(m.rowCount).padStart(5)}  `
     + `{${m.widths.join(', ')}}`.padEnd(27)
     + `${m.widest.toFixed(2).padStart(7)} ${String(m.scrollWidth).padStart(12)} `
-    + `${(m.scrollWidth / m.widest).toFixed(4).padStart(10)}`);
+    + `${(m.scrollWidth / m.widest).toFixed(4).padStart(10)}`
+    + `${(m.scrollWidth / (m.widest + K)).toFixed(4).padStart(12)}`);
 }
 
 await b.close();

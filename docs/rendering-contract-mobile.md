@@ -283,8 +283,15 @@ transform bug); rail delta **0.0px** at every zoom after panning fully right (M4
 
 *REPORTED - data-derived:* block widths and `scrollWidth`, recorded **with `widest` and the ratio**.
 `.mgrid-canvas` carries `data-widest`, `data-pxpermin` and `data-day` so the question is answered in
-one step: **`widest` moved and `scrollWidth / widest` held -> the standings; the RATIO moved -> CODE,
-and that is the stop.**
+one step.
+
+**THE RATIO TO COMPARE IS `scrollWidth / (widest + 182)`, NOT `scrollWidth / widest`** (corrected
+2026-09-08, prompt 66). This said the second one, and it cannot work:
+`pxPerMinute = (widest + 2*CAP + NAME_PAD) / blockMinutes` = `(widest + 182) / blockMinutes`
+(`gridmodel.js:46`), so `scrollWidth` scales with `widest + 182` and `scrollWidth / widest` moves
+whenever `widest` moves — on pure standings drift, with no code involved. It called the MLB row a
+CODE change in prompt 64 and the cause was the records. `scrollWidth / data-pxpermin` says the same
+thing and is just the minutes the day spans.
 
 *The one derived check that stays a hard stop:* when `--rail-w` changes by N, `scrollWidth` must
 change by exactly N.
@@ -300,5 +307,8 @@ that day in day mode. Verified across four cases and two weeks, including a mult
 | `2026-09-13` nfl | `2026-09-07` | 17 | 3 | {264, 98, 73} | 1044 | 122.724 |
 | `2026-09-03` ALL | `2026-08-31` | 14 | 9 | {265, 245, 226} | 846 | 84.648 |
 
-**MLB is re-baselined to {226} / 564**, and the figure is EXPECTED TO DRIFT. It is recorded so the
-ratio can be compared, not so it can be defended.
+**The figures in that table are M21's own verification record and are LEFT AS MEASURED** — they are
+what day/week equality was proved against on the day it was proved, not a current baseline. The
+current, drifting figures live in `docs/handoff-status.md` and nowhere else; as of 2026-09-08 the MLB
+row reads {228} / 567 / widest 86.508 and the ALL SPORTS `scrollWidth` reads 852, both pure standings
+drift. Do not "correct" the table above to match them — it would stop being the record of anything.
