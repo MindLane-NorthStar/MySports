@@ -290,7 +290,15 @@ export default function CollapsedHeader() {
             alone would be read as a title rather than as a control. */}
         <button type="button" className="chdr-wm" aria-label="Expand the banner and the controls"
                 onClick={() => expandHeader()}>
-          MYSPORTS TV
+          {/* THE SPAN EXISTS TO CARRY AN OPTICAL SHIFT, and nothing else (prompt 61 stage 5b).
+              `.chdr-wm` is a flex container, so a bare text node becomes an ANONYMOUS flex item -
+              which CSS cannot target. All-caps Barlow Condensed sits low in its em box, so
+              `align-items: center` centres the LINE BOX and leaves the ink 2.5px off-centre at 390;
+              the span is the only handle for moving the glyphs without moving the button.
+              It is offset with `position: relative`, NOT a transform on the button: the button's
+              44px box is the tap target on purpose (see the note above), and a transform would take
+              the hit area down with the ink. Measured before and after to prove it did not. */}
+          <span className="chdr-wm-ink">MYSPORTS TV</span>
         </button>
         <div className="chdr-run">
           {binaries.map((c) => (

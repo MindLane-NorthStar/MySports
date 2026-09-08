@@ -3324,6 +3324,49 @@ button.chdr-wm:focus-visible {
   color: transparent;
 }
 
+/* ---- THE WORDMARK'S OPTICAL CENTRING (prompt 61 stage 5b) -------------------------------------
+ *
+ * Joe, 2026-09-07: "there's twice as much padding between the top of the text and bottom of bezel
+ * than there is between the bottom of the text and the bottom of the navbar."
+ *
+ * TWO DIFFERENT SPACES ARE STACKED IN WHAT HE IS SEEING, and only one of them is the navbar's.
+ * MEASURED by scanning rendered pixels at DPR 4 with the repo's own BarlowCondensed-Bold.ttf -
+ * globals.css:1841 establishes that method for this wordmark, because "a <text> element's bounding
+ * box is its em box and not its ink":
+ *
+ *              row    ink top   ink bottom   gap above   gap below   ratio
+ *   390 / 22px  44      15.25      31.25       15.25       12.75      1.20
+ *   360 / 18px  44      16.00      29.25       16.00       14.75      1.08
+ *
+ * SO THE ASYMMETRY INSIDE THE BAR IS 2.5px AT 390 AND 1.25px AT 360 - not 2:1. That much is the
+ * line-box centring artefact, it is ours, and this rule corrects it: half the difference, so the
+ * gaps meet in the middle at 14.00 each at 390 and 15.375 at 360.
+ *
+ * THE 2:1 JOE IS SEEING IS THE SAFE-AREA BAND ABOVE, AND THAT SPACE IS NOT THIS ELEMENT'S. `.chdr`
+ * takes the FULL inset at :3057 while `.banner` absorbs a net 10px of it (:1859 and :1882). The
+ * banner was tuned and the navbar never was. That is a separate decision, it needs a phone, and
+ * stage 5b deliberately does not take it - see the report's inset table.
+ *
+ * TWO VALUES, NOT ONE em, because the shift is not a clean fraction of the font size: 1.25/22 is
+ * 0.057em and 0.625/18 is 0.035em. Part of it is font metrics and part is where the ink lands on
+ * the 0.25px grid a DPR-4 scan resolves, so each breakpoint carries its own measured number.
+ *
+ * `position: relative` ON THE SPAN, never a transform on the button. The button's 44px box is the
+ * tap target by design; a transform would move the hit area with the ink. */
+.chdr-wm-ink {
+  /* NEGATIVE: THE INK MOVES UP. The gap ABOVE is the larger one (15.25 against 12.75 at 390), so
+     equalising means taking from it, which is also what Joe asked for in as many words - "reduce
+     the space ABOVE MySports TV by that amount". Prompt 61's brief said "move the ink down by half
+     the difference"; its own target of 14.00 each requires up, and a first pass that took the word
+     literally moved the ratio from 1.20 to 1.383 before the re-measure caught it. */
+  position: relative;
+  top: -1.25px;
+}
+
+@media (max-width: 389px) {
+  .chdr-wm-ink { top: -0.625px; }
+}
+
 /* THE WORDMARK YIELDS BELOW 390, AND IT IS THE RIGHT THING TO GIVE UP. Four 44px targets plus
    three 6px gaps and ALL SPORTS's own text need 215.6px; a 360px screen has 206.1px once 24px of
    padding and a 22px wordmark come out. Something has to go, and the four choices are what the bar
