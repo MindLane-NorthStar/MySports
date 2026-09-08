@@ -1,0 +1,1010 @@
+{
+  "_note": "Per-team grid-card band and ink for the four pro leagues. Joe Lull chose each on 2026-09-08 in the Pro Grid Card Colours artifact, judging the real block at grid scale. These are EXACT values, not a rule: four candidate rules were tested against them and the best (primary always paints) reproduced only 83 of 124. bandFor() in web/lib/gridmodel.js should consult this table first and fall back to its own logic for any team not listed.",
+  "decided": "2026-09-08",
+  "decided_by": "Joe Lull",
+  "scope": "NFL, NHL, MLB, NBA. College teams are NOT in this table and keep bandFor()'s own result.",
+  "counts": {
+    "teams": 124,
+    "differ_from_shipped": 86,
+    "band_is_primary": 91,
+    "band_is_secondary": 33,
+    "ink_is_team_colour": 84,
+    "ink_is_neutral": 40,
+    "below_aa_3to1": 11,
+    "_differ_from_shipped_note": "was 109; re-measured in prompt 65 against the live teams table - 86 of the 124 differ from what shipped. Corroborated by this file's own rule-agreement figure: today's rule reproduces 38 of the 124, and 124 - 38 = 86."
+  },
+  "teams": {
+    "mlb-108": {
+      "name": "Angels",
+      "sport": "mlb",
+      "band": "#ba0021",
+      "ink": "#c4ced4",
+      "ratio": 4.22,
+      "via": "B+invert"
+    },
+    "mlb-117": {
+      "name": "Astros",
+      "sport": "mlb",
+      "band": "#002d62",
+      "ink": "#eb6e1f",
+      "ratio": 4.37,
+      "via": "B+invert"
+    },
+    "mlb-133": {
+      "name": "Athletics",
+      "sport": "mlb",
+      "band": "#003831",
+      "ink": "#efb21e",
+      "ratio": 6.87,
+      "via": "B+invert"
+    },
+    "mlb-141": {
+      "name": "Blue Jays",
+      "sport": "mlb",
+      "band": "#134a8e",
+      "ink": "#6cace5",
+      "ratio": 3.62,
+      "via": "B+invert"
+    },
+    "mlb-144": {
+      "name": "Braves",
+      "sport": "mlb",
+      "band": "#ba0c2f",
+      "ink": "#f2f2f0",
+      "ratio": 5.89,
+      "via": "C"
+    },
+    "mlb-158": {
+      "name": "Brewers",
+      "sport": "mlb",
+      "band": "#13294b",
+      "ink": "#ffc72c",
+      "ratio": 9.3,
+      "via": "B+invert"
+    },
+    "mlb-138": {
+      "name": "Cardinals",
+      "sport": "mlb",
+      "band": "#be0a14",
+      "ink": "#f2f2f0",
+      "ratio": 5.78,
+      "via": "A"
+    },
+    "mlb-112": {
+      "name": "Cubs",
+      "sport": "mlb",
+      "band": "#0e3386",
+      "ink": "#f2f2f0",
+      "ratio": 10.2,
+      "via": "C+invert"
+    },
+    "mlb-109": {
+      "name": "D-backs",
+      "sport": "mlb",
+      "band": "#aa182c",
+      "ink": "#f2f2f0",
+      "ratio": 6.51,
+      "via": "C"
+    },
+    "mlb-119": {
+      "name": "Dodgers",
+      "sport": "mlb",
+      "band": "#005a9c",
+      "ink": "#ffffff",
+      "ratio": 7.14,
+      "via": "B+invert"
+    },
+    "mlb-137": {
+      "name": "Giants",
+      "sport": "mlb",
+      "band": "#fd5a1e",
+      "ink": "#000000",
+      "ratio": 6.66,
+      "via": "A"
+    },
+    "mlb-114": {
+      "name": "Guardians",
+      "sport": "mlb",
+      "band": "#e31937",
+      "ink": "#002b5c",
+      "ratio": 2.97,
+      "via": "B"
+    },
+    "mlb-136": {
+      "name": "Mariners",
+      "sport": "mlb",
+      "band": "#005c5c",
+      "ink": "#f2f2f0",
+      "ratio": 6.98,
+      "via": "C"
+    },
+    "mlb-146": {
+      "name": "Marlins",
+      "sport": "mlb",
+      "band": "#00a3e0",
+      "ink": "#000000",
+      "ratio": 7.32,
+      "via": "A"
+    },
+    "mlb-121": {
+      "name": "Mets",
+      "sport": "mlb",
+      "band": "#002d72",
+      "ink": "#ff5910",
+      "ratio": 4.13,
+      "via": "B+invert"
+    },
+    "mlb-120": {
+      "name": "Nationals",
+      "sport": "mlb",
+      "band": "#ab0003",
+      "ink": "#f2f2f0",
+      "ratio": 6.86,
+      "via": "A"
+    },
+    "mlb-110": {
+      "name": "Orioles",
+      "sport": "mlb",
+      "band": "#df4601",
+      "ink": "#000000",
+      "ratio": 5.01,
+      "via": "B"
+    },
+    "mlb-135": {
+      "name": "Padres",
+      "sport": "mlb",
+      "band": "#2f241d",
+      "ink": "#ffc425",
+      "ratio": 9.47,
+      "via": "B+invert"
+    },
+    "mlb-143": {
+      "name": "Phillies",
+      "sport": "mlb",
+      "band": "#e81828",
+      "ink": "#101214",
+      "ratio": 4.11,
+      "via": "A"
+    },
+    "mlb-134": {
+      "name": "Pirates",
+      "sport": "mlb",
+      "band": "#000000",
+      "ink": "#fdb827",
+      "ratio": 12.06,
+      "via": "B+invert"
+    },
+    "mlb-140": {
+      "name": "Rangers",
+      "sport": "mlb",
+      "band": "#c0111f",
+      "ink": "#f2f2f0",
+      "ratio": 5.61,
+      "via": "C"
+    },
+    "mlb-139": {
+      "name": "Rays",
+      "sport": "mlb",
+      "band": "#092c5c",
+      "ink": "#8fbce6",
+      "ratio": 6.88,
+      "via": "B+invert"
+    },
+    "mlb-111": {
+      "name": "Red Sox",
+      "sport": "mlb",
+      "band": "#bd3039",
+      "ink": "#f2f2f0",
+      "ratio": 5.14,
+      "via": "A"
+    },
+    "mlb-113": {
+      "name": "Reds",
+      "sport": "mlb",
+      "band": "#c6011f",
+      "ink": "#ffffff",
+      "ratio": 6.13,
+      "via": "A+invert"
+    },
+    "mlb-115": {
+      "name": "Rockies",
+      "sport": "mlb",
+      "band": "#33006f",
+      "ink": "#f2f2f0",
+      "ratio": 13.67,
+      "via": "A"
+    },
+    "mlb-118": {
+      "name": "Royals",
+      "sport": "mlb",
+      "band": "#004687",
+      "ink": "#f2f2f0",
+      "ratio": 8.42,
+      "via": "C+invert"
+    },
+    "mlb-116": {
+      "name": "Tigers",
+      "sport": "mlb",
+      "band": "#0a2240",
+      "ink": "#ff4713",
+      "ratio": 4.68,
+      "via": "B+invert"
+    },
+    "mlb-142": {
+      "name": "Twins",
+      "sport": "mlb",
+      "band": "#031f40",
+      "ink": "#e20e32",
+      "ratio": 3.41,
+      "via": "B+invert"
+    },
+    "mlb-145": {
+      "name": "White Sox",
+      "sport": "mlb",
+      "band": "#000000",
+      "ink": "#c4ced4",
+      "ratio": 13.13,
+      "via": "B+invert"
+    },
+    "mlb-147": {
+      "name": "Yankees",
+      "sport": "mlb",
+      "band": "#132448",
+      "ink": "#c4ced4",
+      "ratio": 9.56,
+      "via": "B+invert"
+    },
+    "nba-ATL": {
+      "name": "Atlanta Hawks",
+      "sport": "nba",
+      "band": "#c8102e",
+      "ink": "#fdb927",
+      "ratio": 3.4,
+      "via": "B+invert"
+    },
+    "nba-BOS": {
+      "name": "Boston Celtics",
+      "sport": "nba",
+      "band": "#008348",
+      "ink": "#ffffff",
+      "ratio": 4.84,
+      "via": "B+invert"
+    },
+    "nba-BKN": {
+      "name": "Brooklyn Nets",
+      "sport": "nba",
+      "band": "#000000",
+      "ink": "#ffffff",
+      "ratio": 21.0,
+      "via": "B+invert"
+    },
+    "nba-CHA": {
+      "name": "Charlotte Hornets",
+      "sport": "nba",
+      "band": "#1d1060",
+      "ink": "#008ca8",
+      "ratio": 4.1,
+      "via": "B+invert"
+    },
+    "nba-CHI": {
+      "name": "Chicago Bulls",
+      "sport": "nba",
+      "band": "#ce1141",
+      "ink": "#000000",
+      "ratio": 3.78,
+      "via": "B"
+    },
+    "nba-CLE": {
+      "name": "Cleveland Cavaliers",
+      "sport": "nba",
+      "band": "#860038",
+      "ink": "#bc945c",
+      "ratio": 3.64,
+      "via": "B+invert"
+    },
+    "nba-DAL": {
+      "name": "Dallas Mavericks",
+      "sport": "nba",
+      "band": "#0064b1",
+      "ink": "#bbc4ca",
+      "ratio": 3.43,
+      "via": "B+invert"
+    },
+    "nba-DEN": {
+      "name": "Denver Nuggets",
+      "sport": "nba",
+      "band": "#0e2240",
+      "ink": "#fec524",
+      "ratio": 10.01,
+      "via": "B+invert"
+    },
+    "nba-DET": {
+      "name": "Detroit Pistons",
+      "sport": "nba",
+      "band": "#c8102e",
+      "ink": "#f2f2f0",
+      "ratio": 5.25,
+      "via": "C"
+    },
+    "nba-GSW": {
+      "name": "Golden State Warriors",
+      "sport": "nba",
+      "band": "#fdb927",
+      "ink": "#1d428a",
+      "ratio": 5.52,
+      "via": "A"
+    },
+    "nba-HOU": {
+      "name": "Houston Rockets",
+      "sport": "nba",
+      "band": "#000000",
+      "ink": "#ce0e2d",
+      "ratio": 3.73,
+      "via": "B+invert"
+    },
+    "nba-IND": {
+      "name": "Indiana Pacers",
+      "sport": "nba",
+      "band": "#0c2340",
+      "ink": "#ffd520",
+      "ratio": 11.12,
+      "via": "A+invert"
+    },
+    "nba-LAC": {
+      "name": "LA Clippers",
+      "sport": "nba",
+      "band": "#c8102e",
+      "ink": "#f2f2f0",
+      "ratio": 5.25,
+      "via": "A"
+    },
+    "nba-LAL": {
+      "name": "Los Angeles Lakers",
+      "sport": "nba",
+      "band": "#552583",
+      "ink": "#fdb927",
+      "ratio": 6.14,
+      "via": "B+invert"
+    },
+    "nba-MEM": {
+      "name": "Memphis Grizzlies",
+      "sport": "nba",
+      "band": "#5d76a9",
+      "ink": "#12173f",
+      "ratio": 3.79,
+      "via": "A"
+    },
+    "nba-MIA": {
+      "name": "Miami Heat",
+      "sport": "nba",
+      "band": "#98002e",
+      "ink": "#f2f2f0",
+      "ratio": 7.89,
+      "via": "C"
+    },
+    "nba-MIL": {
+      "name": "Milwaukee Bucks",
+      "sport": "nba",
+      "band": "#00471b",
+      "ink": "#eee1c6",
+      "ratio": 8.46,
+      "via": "B+invert"
+    },
+    "nba-MIN": {
+      "name": "Minnesota Timberwolves",
+      "sport": "nba",
+      "band": "#266092",
+      "ink": "#79bc43",
+      "ratio": 2.87,
+      "via": "B+invert"
+    },
+    "nba-NOP": {
+      "name": "New Orleans Pelicans",
+      "sport": "nba",
+      "band": "#0a2240",
+      "ink": "#b4975a",
+      "ratio": 5.71,
+      "via": "B+invert"
+    },
+    "nba-NYK": {
+      "name": "New York Knicks",
+      "sport": "nba",
+      "band": "#1d428a",
+      "ink": "#f58426",
+      "ratio": 3.73,
+      "via": "B+invert"
+    },
+    "nba-OKC": {
+      "name": "Oklahoma City Thunder",
+      "sport": "nba",
+      "band": "#ef3b24",
+      "ink": "#101214",
+      "ratio": 4.76,
+      "via": "A"
+    },
+    "nba-ORL": {
+      "name": "Orlando Magic",
+      "sport": "nba",
+      "band": "#0150b5",
+      "ink": "#f2f2f0",
+      "ratio": 6.65,
+      "via": "C+invert"
+    },
+    "nba-PHI": {
+      "name": "Philadelphia 76ers",
+      "sport": "nba",
+      "band": "#e01234",
+      "ink": "#f2f2f0",
+      "ratio": 4.35,
+      "via": "A"
+    },
+    "nba-PHX": {
+      "name": "Phoenix Suns",
+      "sport": "nba",
+      "band": "#29127a",
+      "ink": "#e56020",
+      "ratio": 4.12,
+      "via": "B+invert"
+    },
+    "nba-POR": {
+      "name": "Portland Trail Blazers",
+      "sport": "nba",
+      "band": "#000000",
+      "ink": "#e03a3e",
+      "ratio": 4.84,
+      "via": "B+invert"
+    },
+    "nba-SAC": {
+      "name": "Sacramento Kings",
+      "sport": "nba",
+      "band": "#5a2d81",
+      "ink": "#f2f2f0",
+      "ratio": 8.81,
+      "via": "C+invert"
+    },
+    "nba-SAS": {
+      "name": "San Antonio Spurs",
+      "sport": "nba",
+      "band": "#000000",
+      "ink": "#c4ced4",
+      "ratio": 13.13,
+      "via": "B+invert"
+    },
+    "nba-TOR": {
+      "name": "Toronto Raptors",
+      "sport": "nba",
+      "band": "#d91244",
+      "ink": "#000000",
+      "ratio": 4.12,
+      "via": "A"
+    },
+    "nba-UTA": {
+      "name": "Utah Jazz",
+      "sport": "nba",
+      "band": "#4e008e",
+      "ink": "#79a3dc",
+      "ratio": 4.72,
+      "via": "A+invert"
+    },
+    "nba-WAS": {
+      "name": "Washington Wizards",
+      "sport": "nba",
+      "band": "#e31837",
+      "ink": "#f2f2f0",
+      "ratio": 4.21,
+      "via": "A"
+    },
+    "nfl-22": {
+      "name": "Arizona Cardinals",
+      "sport": "nfl",
+      "band": "#a40227",
+      "ink": "#ffffff",
+      "ratio": 8.03,
+      "via": "B+invert"
+    },
+    "nfl-1": {
+      "name": "Atlanta Falcons",
+      "sport": "nfl",
+      "band": "#000000",
+      "ink": "#a71930",
+      "ratio": 2.82,
+      "via": "B+invert"
+    },
+    "nfl-33": {
+      "name": "Baltimore Ravens",
+      "sport": "nfl",
+      "band": "#29126f",
+      "ink": "#f2f2f0",
+      "ratio": 13.28,
+      "via": "C"
+    },
+    "nfl-2": {
+      "name": "Buffalo Bills",
+      "sport": "nfl",
+      "band": "#d50a0a",
+      "ink": "#f2f2f0",
+      "ratio": 4.83,
+      "via": "C"
+    },
+    "nfl-29": {
+      "name": "Carolina Panthers",
+      "sport": "nfl",
+      "band": "#000000",
+      "ink": "#0085ca",
+      "ratio": 5.21,
+      "via": "A+invert"
+    },
+    "nfl-3": {
+      "name": "Chicago Bears",
+      "sport": "nfl",
+      "band": "#e64100",
+      "ink": "#101214",
+      "ratio": 4.58,
+      "via": "C"
+    },
+    "nfl-4": {
+      "name": "Cincinnati Bengals",
+      "sport": "nfl",
+      "band": "#000000",
+      "ink": "#fb4f14",
+      "ratio": 6.23,
+      "via": "B+invert"
+    },
+    "nfl-5": {
+      "name": "Cleveland Browns",
+      "sport": "nfl",
+      "band": "#ff3c00",
+      "ink": "#101214",
+      "ratio": 5.27,
+      "via": "C"
+    },
+    "nfl-6": {
+      "name": "Dallas Cowboys",
+      "sport": "nfl",
+      "band": "#002a5c",
+      "ink": "#b0b7bc",
+      "ratio": 6.96,
+      "via": "B+invert"
+    },
+    "nfl-7": {
+      "name": "Denver Broncos",
+      "sport": "nfl",
+      "band": "#0a2343",
+      "ink": "#fc4c02",
+      "ratio": 4.63,
+      "via": "B+invert"
+    },
+    "nfl-8": {
+      "name": "Detroit Lions",
+      "sport": "nfl",
+      "band": "#bbbbbb",
+      "ink": "#0076b6",
+      "ratio": 2.56,
+      "via": "B"
+    },
+    "nfl-9": {
+      "name": "Green Bay Packers",
+      "sport": "nfl",
+      "band": "#204e32",
+      "ink": "#ffb612",
+      "ratio": 5.44,
+      "via": "B+invert"
+    },
+    "nfl-34": {
+      "name": "Houston Texans",
+      "sport": "nfl",
+      "band": "#eb0028",
+      "ink": "#021018",
+      "ratio": 4.19,
+      "via": "B"
+    },
+    "nfl-11": {
+      "name": "Indianapolis Colts",
+      "sport": "nfl",
+      "band": "#003b75",
+      "ink": "#ffffff",
+      "ratio": 11.16,
+      "via": "B+invert"
+    },
+    "nfl-30": {
+      "name": "Jacksonville Jaguars",
+      "sport": "nfl",
+      "band": "#007487",
+      "ink": "#f2f2f0",
+      "ratio": 4.87,
+      "via": "C+invert"
+    },
+    "nfl-12": {
+      "name": "Kansas City Chiefs",
+      "sport": "nfl",
+      "band": "#e31837",
+      "ink": "#f2f2f0",
+      "ratio": 4.21,
+      "via": "C+invert"
+    },
+    "nfl-13": {
+      "name": "Las Vegas Raiders",
+      "sport": "nfl",
+      "band": "#a5acaf",
+      "ink": "#101214",
+      "ratio": 8.15,
+      "via": "C"
+    },
+    "nfl-24": {
+      "name": "Los Angeles Chargers",
+      "sport": "nfl",
+      "band": "#0080c6",
+      "ink": "#ffc20e",
+      "ratio": 2.65,
+      "via": "B+invert"
+    },
+    "nfl-14": {
+      "name": "Los Angeles Rams",
+      "sport": "nfl",
+      "band": "#003594",
+      "ink": "#ffd100",
+      "ratio": 7.42,
+      "via": "B+invert"
+    },
+    "nfl-15": {
+      "name": "Miami Dolphins",
+      "sport": "nfl",
+      "band": "#008e97",
+      "ink": "#101214",
+      "ratio": 4.75,
+      "via": "C+invert"
+    },
+    "nfl-16": {
+      "name": "Minnesota Vikings",
+      "sport": "nfl",
+      "band": "#4f2683",
+      "ink": "#ffc62f",
+      "ratio": 6.9,
+      "via": "B+invert"
+    },
+    "nfl-17": {
+      "name": "New England Patriots",
+      "sport": "nfl",
+      "band": "#c60c30",
+      "ink": "#f2f2f0",
+      "ratio": 5.36,
+      "via": "C"
+    },
+    "nfl-18": {
+      "name": "New Orleans Saints",
+      "sport": "nfl",
+      "band": "#d3bc8d",
+      "ink": "#000000",
+      "ratio": 11.35,
+      "via": "A"
+    },
+    "nfl-19": {
+      "name": "New York Giants",
+      "sport": "nfl",
+      "band": "#003c7f",
+      "ink": "#f2f2f0",
+      "ratio": 9.59,
+      "via": "C+invert"
+    },
+    "nfl-20": {
+      "name": "New York Jets",
+      "sport": "nfl",
+      "band": "#115740",
+      "ink": "#ffffff",
+      "ratio": 8.53,
+      "via": "B+invert"
+    },
+    "nfl-21": {
+      "name": "Philadelphia Eagles",
+      "sport": "nfl",
+      "band": "#06424d",
+      "ink": "#f2f2f0",
+      "ratio": 9.89,
+      "via": "C"
+    },
+    "nfl-23": {
+      "name": "Pittsburgh Steelers",
+      "sport": "nfl",
+      "band": "#000000",
+      "ink": "#ffb612",
+      "ratio": 11.95,
+      "via": "B+invert"
+    },
+    "nfl-25": {
+      "name": "San Francisco 49ers",
+      "sport": "nfl",
+      "band": "#b3995d",
+      "ink": "#aa0000",
+      "ratio": 2.82,
+      "via": "B"
+    },
+    "nfl-26": {
+      "name": "Seattle Seahawks",
+      "sport": "nfl",
+      "band": "#002a5c",
+      "ink": "#69be28",
+      "ratio": 6.06,
+      "via": "B+invert"
+    },
+    "nfl-27": {
+      "name": "Tampa Bay Buccaneers",
+      "sport": "nfl",
+      "band": "#3e3a35",
+      "ink": "#bd1c36",
+      "ratio": 1.82,
+      "via": "B+invert"
+    },
+    "nfl-10": {
+      "name": "Tennessee Titans",
+      "sport": "nfl",
+      "band": "#001532",
+      "ink": "#4495d2",
+      "ratio": 5.61,
+      "via": "B+invert"
+    },
+    "nfl-28": {
+      "name": "Washington Commanders",
+      "sport": "nfl",
+      "band": "#5a1414",
+      "ink": "#ffb612",
+      "ratio": 7.74,
+      "via": "B+invert"
+    },
+    "nhl-24": {
+      "name": "Anaheim Ducks",
+      "sport": "nhl",
+      "band": "#fc4c02",
+      "ink": "#000000",
+      "ratio": 6.17,
+      "via": "B"
+    },
+    "nhl-6": {
+      "name": "Boston Bruins",
+      "sport": "nhl",
+      "band": "#231f20",
+      "ink": "#fdb71a",
+      "ratio": 9.29,
+      "via": "B+invert"
+    },
+    "nhl-7": {
+      "name": "Buffalo Sabres",
+      "sport": "nhl",
+      "band": "#00468b",
+      "ink": "#fdb71a",
+      "ratio": 5.32,
+      "via": "B+invert"
+    },
+    "nhl-20": {
+      "name": "Calgary Flames",
+      "sport": "nhl",
+      "band": "#dd1a32",
+      "ink": "#000000",
+      "ratio": 4.27,
+      "via": "B"
+    },
+    "nhl-12": {
+      "name": "Carolina Hurricanes",
+      "sport": "nhl",
+      "band": "#000000",
+      "ink": "#e30426",
+      "ratio": 4.31,
+      "via": "B+invert"
+    },
+    "nhl-16": {
+      "name": "Chicago Blackhawks",
+      "sport": "nhl",
+      "band": "#000000",
+      "ink": "#e31937",
+      "ratio": 4.46,
+      "via": "B+invert"
+    },
+    "nhl-21": {
+      "name": "Colorado Avalanche",
+      "sport": "nhl",
+      "band": "#860038",
+      "ink": "#f2f2f0",
+      "ratio": 9.05,
+      "via": "C+invert"
+    },
+    "nhl-29": {
+      "name": "Columbus Blue Jackets",
+      "sport": "nhl",
+      "band": "#002d62",
+      "ink": "#e31937",
+      "ratio": 2.87,
+      "via": "B+invert"
+    },
+    "nhl-25": {
+      "name": "Dallas Stars",
+      "sport": "nhl",
+      "band": "#20864c",
+      "ink": "#000000",
+      "ratio": 4.58,
+      "via": "B"
+    },
+    "nhl-17": {
+      "name": "Detroit Red Wings",
+      "sport": "nhl",
+      "band": "#e30526",
+      "ink": "#ffffff",
+      "ratio": 4.87,
+      "via": "B+invert"
+    },
+    "nhl-22": {
+      "name": "Edmonton Oilers",
+      "sport": "nhl",
+      "band": "#00205b",
+      "ink": "#ff4c00",
+      "ratio": 4.63,
+      "via": "B+invert"
+    },
+    "nhl-13": {
+      "name": "Florida Panthers",
+      "sport": "nhl",
+      "band": "#002d62",
+      "ink": "#e51937",
+      "ratio": 2.92,
+      "via": "B+invert"
+    },
+    "nhl-26": {
+      "name": "Los Angeles Kings",
+      "sport": "nhl",
+      "band": "#a2aaad",
+      "ink": "#121212",
+      "ratio": 7.93,
+      "via": "B"
+    },
+    "nhl-30": {
+      "name": "Minnesota Wild",
+      "sport": "nhl",
+      "band": "#124734",
+      "ink": "#f2f2f0",
+      "ratio": 9.48,
+      "via": "C+invert"
+    },
+    "nhl-8": {
+      "name": "Montr\u00e9al Canadiens",
+      "sport": "nhl",
+      "band": "#c41230",
+      "ink": "#f2f2f0",
+      "ratio": 5.39,
+      "via": "C"
+    },
+    "nhl-18": {
+      "name": "Nashville Predators",
+      "sport": "nhl",
+      "band": "#002d62",
+      "ink": "#fdba31",
+      "ratio": 7.89,
+      "via": "B+invert"
+    },
+    "nhl-1": {
+      "name": "New Jersey Devils",
+      "sport": "nhl",
+      "band": "#e30b2b",
+      "ink": "#000000",
+      "ratio": 4.35,
+      "via": "B"
+    },
+    "nhl-2": {
+      "name": "New York Islanders",
+      "sport": "nhl",
+      "band": "#00529b",
+      "ink": "#f47d31",
+      "ratio": 2.92,
+      "via": "B+invert"
+    },
+    "nhl-3": {
+      "name": "New York Rangers",
+      "sport": "nhl",
+      "band": "#0056ae",
+      "ink": "#f2f2f0",
+      "ratio": 6.37,
+      "via": "C+invert"
+    },
+    "nhl-9": {
+      "name": "Ottawa Senators",
+      "sport": "nhl",
+      "band": "#b79257",
+      "ink": "#101214",
+      "ratio": 6.49,
+      "via": "C"
+    },
+    "nhl-4": {
+      "name": "Philadelphia Flyers",
+      "sport": "nhl",
+      "band": "#fe5823",
+      "ink": "#000000",
+      "ratio": 6.63,
+      "via": "B"
+    },
+    "nhl-5": {
+      "name": "Pittsburgh Penguins",
+      "sport": "nhl",
+      "band": "#000000",
+      "ink": "#fdb71a",
+      "ratio": 11.96,
+      "via": "B+invert"
+    },
+    "nhl-28": {
+      "name": "San Jose Sharks",
+      "sport": "nhl",
+      "band": "#00788a",
+      "ink": "#070707",
+      "ratio": 3.89,
+      "via": "B"
+    },
+    "nhl-55": {
+      "name": "Seattle Kraken",
+      "sport": "nhl",
+      "band": "#000d33",
+      "ink": "#a3dce4",
+      "ratio": 12.59,
+      "via": "B+invert"
+    },
+    "nhl-19": {
+      "name": "St. Louis Blues",
+      "sport": "nhl",
+      "band": "#0070b9",
+      "ink": "#fdb71a",
+      "ratio": 2.98,
+      "via": "B+invert"
+    },
+    "nhl-14": {
+      "name": "Tampa Bay Lightning",
+      "sport": "nhl",
+      "band": "#003e7e",
+      "ink": "#ffffff",
+      "ratio": 10.55,
+      "via": "B+invert"
+    },
+    "nhl-10": {
+      "name": "Toronto Maple Leafs",
+      "sport": "nhl",
+      "band": "#003e7e",
+      "ink": "#f2f2f0",
+      "ratio": 9.41,
+      "via": "C+invert"
+    },
+    "nhl-68": {
+      "name": "Utah Mammoth",
+      "sport": "nhl",
+      "band": "#7ab2e1",
+      "ink": "#000000",
+      "ratio": 9.28,
+      "via": "B"
+    },
+    "nhl-23": {
+      "name": "Vancouver Canucks",
+      "sport": "nhl",
+      "band": "#003e7e",
+      "ink": "#f2f2f0",
+      "ratio": 9.41,
+      "via": "C+invert"
+    },
+    "nhl-54": {
+      "name": "Vegas Golden Knights",
+      "sport": "nhl",
+      "band": "#b4975a",
+      "ink": "#101214",
+      "ratio": 6.72,
+      "via": "C"
+    },
+    "nhl-15": {
+      "name": "Washington Capitals",
+      "sport": "nhl",
+      "band": "#d71830",
+      "ink": "#f2f2f0",
+      "ratio": 4.61,
+      "via": "C"
+    },
+    "nhl-52": {
+      "name": "Winnipeg Jets",
+      "sport": "nhl",
+      "band": "#002d62",
+      "ink": "#f2f2f0",
+      "ratio": 12.07,
+      "via": "C+invert"
+    }
+  }
+}

@@ -428,6 +428,13 @@ const TEAMS = __TEAMS__;
 // capFor() does in the app and is exactly today's behaviour.
 const CAPTABLE = {"194":{t:0.72,a:"raw"}, "2":{t:1,a:"dark"}, "228":{t:1,a:"dark"}, "99":{t:0.72,a:"dark"}, "mlb-108":{t:0.72,a:"raw"}, "mlb-109":{t:1,a:"raw"}, "mlb-110":{t:0.72,a:"dark"}, "mlb-111":{t:1,a:"raw"}, "mlb-112":{t:1,a:"raw"}, "mlb-113":{t:1,a:"raw"}, "mlb-114":{t:1,a:"raw"}, "mlb-115":{t:1,a:"dark"}, "mlb-116":{t:1,a:"raw"}, "mlb-117":{t:1,a:"raw"}, "mlb-118":{t:1,a:"raw"}, "mlb-119":{t:1,a:"raw"}, "mlb-120":{t:1,a:"raw"}, "mlb-121":{t:0.72,a:"dark"}, "mlb-133":{t:0.72,a:"dark"}, "mlb-134":{t:0.72,a:"raw"}, "mlb-135":{t:1,a:"raw"}, "mlb-136":{t:1,a:"dark"}, "mlb-137":{t:0.72,a:"dark"}, "mlb-138":{t:1,a:"dark"}, "mlb-139":{t:0.72,a:"raw"}, "mlb-140":{t:0.72,a:"dark"}, "mlb-141":{t:1,a:"raw"}, "mlb-142":{t:0.72,a:"raw"}, "mlb-143":{t:0.72,a:"raw"}, "mlb-144":{t:1,a:"raw"}, "mlb-145":{t:0.72,a:"raw"}, "mlb-146":{t:0.72,a:"dark"}, "mlb-147":{t:1,a:"raw"}, "mlb-158":{t:0.72,a:"raw"}};
 
+// Joe's per-team BAND and INK for the teams this file draws, copied from data/grid_colors_pro.json
+// (his 124 pro-league judgements, 2026-09-08). A TABLE, NOT A RULE: bandFor() below implements the
+// rule, and measured against these judgements the rule agrees with him on 38 of 124 - so for a team
+// listed here the table answers and the rule is not consulted. Unknown ids - every college team -
+// fall through to the rule, which is exactly today's behaviour.
+const GRIDCOL = {"mlb-108":{b:"#ba0021",k:"#c4ced4"}, "mlb-109":{b:"#aa182c",k:"#f2f2f0"}, "mlb-110":{b:"#df4601",k:"#000000"}, "mlb-111":{b:"#bd3039",k:"#f2f2f0"}, "mlb-112":{b:"#0e3386",k:"#f2f2f0"}, "mlb-113":{b:"#c6011f",k:"#ffffff"}, "mlb-114":{b:"#e31937",k:"#002b5c"}, "mlb-115":{b:"#33006f",k:"#f2f2f0"}, "mlb-116":{b:"#0a2240",k:"#ff4713"}, "mlb-117":{b:"#002d62",k:"#eb6e1f"}, "mlb-118":{b:"#004687",k:"#f2f2f0"}, "mlb-119":{b:"#005a9c",k:"#ffffff"}, "mlb-120":{b:"#ab0003",k:"#f2f2f0"}, "mlb-121":{b:"#002d72",k:"#ff5910"}, "mlb-133":{b:"#003831",k:"#efb21e"}, "mlb-134":{b:"#000000",k:"#fdb827"}, "mlb-135":{b:"#2f241d",k:"#ffc425"}, "mlb-136":{b:"#005c5c",k:"#f2f2f0"}, "mlb-137":{b:"#fd5a1e",k:"#000000"}, "mlb-138":{b:"#be0a14",k:"#f2f2f0"}, "mlb-139":{b:"#092c5c",k:"#8fbce6"}, "mlb-140":{b:"#c0111f",k:"#f2f2f0"}, "mlb-141":{b:"#134a8e",k:"#6cace5"}, "mlb-142":{b:"#031f40",k:"#e20e32"}, "mlb-143":{b:"#e81828",k:"#101214"}, "mlb-144":{b:"#ba0c2f",k:"#f2f2f0"}, "mlb-145":{b:"#000000",k:"#c4ced4"}, "mlb-146":{b:"#00a3e0",k:"#000000"}, "mlb-147":{b:"#132448",k:"#c4ced4"}, "mlb-158":{b:"#13294b",k:"#ffc72c"}};
+
 const STAND = __STAND__;       // team id -> "70-68, 2nd AL Central"
 const PROB  = __PROB__;        // game pk -> {a:"A. Abbott (6-10, 4.49)", h:...} (nulls where unannounced)
 const LEAGUE = __LEAGUE__;
@@ -593,7 +600,12 @@ function buildMobileGrid(style){
       const lumOf=h=>{const n=parseInt(String(h||"").replace("#",""),16);
         return 0.2126*lin1((n>>16)&255)+0.7152*lin1((n>>8)&255)+0.0722*lin1(n&255);};
       const cr=(a,b)=>{const x=lumOf(a),y=lumOf(b);return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05);};
-      const bandFor=(p1,s1)=>{
+      // PROMPT 65: a team Joe has ruled on takes his exact band and ink and the rule below is not
+      // consulted. Eleven of his 124 measure under 3:1 and ship that way on purpose - he chose each
+      // with the ratio on screen beside it, so nothing here may "rescue" them.
+      const bandFor=(p1,s1,id)=>{
+        const R=id!=null?GRIDCOL[String(id)]:null;
+        if(R) return {band:R.b, ink:R.k, ruled:true};
         const ok=h=>/^#?[0-9a-f]{6}$/i.test(String(h||"").trim());
         const P=ok(p1)?p1:"#6e747c", S=ok(s1)?s1:null;
         if(S && cr(P,S)>=3.0){const b=lumOf(S)>lumOf(P)?S:P; return {band:b, ink:b===S?P:S};}
@@ -610,9 +622,14 @@ function buildMobileGrid(style){
         return cr("#f2f2f0",surface)>=cr("#101214",surface) ? "#f2f2f0" : "#101214";
       };
       const capOf=(t)=>CAPTABLE[t.id]||{t:0.72,a:"raw"};
-      const surfaceOf=(t)=>{const B=bandFor(t.c1,t.c2); return capOf(t).t===1?B.band:tint(B.band,0.72);};
+      const surfaceOf=(t)=>{const B=bandFor(t.c1,t.c2,t.id); return capOf(t).t===1?B.band:tint(B.band,0.72);};
+      // A RULED TEAM'S INK IS JOE'S. inkOn() re-derives the ink for whichever surface a team got, and
+      // for an unruled team that is still the right answer - but running it on a ruled team would
+      // recompute the ink he chose and ship his band with someone else's ink. MobileGrid.js:585 does
+      // exactly this.
+      const inkFinal=(t,S)=>{const B=bandFor(t.c1,t.c2,t.id); return B.ruled?B.ink:inkOn(S,t.c1,t.c2);};
       const band=(t,side)=>{const S=surfaceOf(t);
-        return `<span class="mgband ${side==="home"?"h":"a"}" style="background:${S}"><span class="nm" style="color:${inkOn(S,t.c1,t.c2)}">${nm(t,g,side)}</span></span>`;};
+        return `<span class="mgband ${side==="home"?"h":"a"}" style="background:${S}"><span class="nm" style="color:${inkFinal(t,S)}">${nm(t,g,side)}</span></span>`;};
       const od=g.odds?`<span class="od">O/U ${esc(g.odds.ou)}${w>=150?` · ${esc(g.odds.fav)}`:""}</span>`:"";
       return `<span class="mgblk" style="left:${l.toFixed(0)}px;width:${w.toFixed(0)}px">${cap(a,"away")}${band(a,"away")}${band(h,"home")}${cap(h,"home")}<span class="mgseamline" style="background:linear-gradient(90deg,${surfaceOf(a)},${surfaceOf(h)})"></span><span class="mgtray"><span>${esc(timeOf(g))}</span>${od}</span></span>`;}).join("");
     return `<div class="mgrow"><span class="mglab">${lab}</span>${blocks}</div>`;}).join("");

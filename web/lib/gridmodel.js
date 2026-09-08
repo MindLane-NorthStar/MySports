@@ -7,7 +7,15 @@
 // at render size by scripts/build_cap_table.py; read here, never derived here.
 import capTable from './cap-table.json' with { type: 'json' };
 
+// Joe's per-team band and ink for the four pro leagues (2026-09-08), judged by eye at grid scale.
+// A TABLE AND NOT A RULE, on purpose: four candidate rules were tested against these 124 judgements
+// and the best of them reproduced 83, so a rule plus 41 overrides would be bigger and less honest
+// than the table itself. Read here, never derived here, and never extended to college - nobody has
+// judged a college block, so those keep bandFor()'s own answer.
+import proColours from '../../data/grid_colors_pro.json' with { type: 'json' };
+
 const CAP_TABLE = capTable.teams || {};
+const PRO_COLOURS = proColours.teams || {};
 /** The tinted level. With candidate D this is one of TWO cap surfaces, not the global one. */
 export const CAP_TINT = 0.72;
 
@@ -256,11 +264,44 @@ export function contrastRatio(a, b) {
 }
 
 /**
+ * Joe's ruled band and ink for one team, or null where he has not ruled.
+ *
+ * Shaped like capFor(): an id the table does not carry falls back to TODAY'S behaviour, so college -
+ * every team of it - and any team that arrives before the table is extended renders exactly as it
+ * does now rather than breaking.
+ */
+export function gridColourFor(teamId) {
+  const row = teamId == null ? null : PRO_COLOURS[String(teamId)];
+  return row ? { band: row.band, ink: row.ink } : null;
+}
+
+/**
  * One team's band and the ink that goes on it.
+ *
+ * WITH A teamId THE TABLE ANSWERS, and the rule below is not consulted at all. Without one - which
+ * is every existing caller and every test written about the rule - nothing changes. The ratio is
+ * recomputed here by contrastRatio() rather than read from the file, so a stale number in the JSON
+ * can never reach the app; the file's own `ratio` field is documentation, not input.
+ *
+ * ELEVEN OF JOE'S 124 LAND UNDER BAND_MIN_RATIO and that is deliberate - he chose each with the
+ * measured ratio on screen beside it. This function does not correct them, and must not grow a floor
+ * that overrides the table: a threshold that silently overrules a judgement is worse than a low one.
  *
  * @returns {{band: string, ink: string, inkIsNeutral: boolean, ratio: number}}
  */
-export function bandFor(primaryHex, secondaryHex) {
+export function bandFor(primaryHex, secondaryHex, teamId = null) {
+  const ruled = gridColourFor(teamId);
+  if (ruled) {
+    const neutral = (c) => String(c).trim().toLowerCase();
+    return {
+      band: ruled.band,
+      ink: ruled.ink,
+      inkIsNeutral: neutral(ruled.ink) === neutral(BAND_INK)
+                 || neutral(ruled.ink) === neutral(BAND_CHARCOAL),
+      ratio: contrastRatio(ruled.ink, ruled.band),
+    };
+  }
+
   // The grey fallback on a missing primary is the same one tint() uses, and gridbands.test.mjs pins it.
   const p = rgbOf(primaryHex) ? String(primaryHex).trim() : '#6e747c';
   const s = rgbOf(secondaryHex) ? String(secondaryHex).trim() : null;

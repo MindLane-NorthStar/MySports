@@ -2628,3 +2628,63 @@ handling and was deliberately out of scope here.
 
 **AND THE `SPORT_SHORT` NOTE IN `CollapsedHeader.js` SAID 58px.** The cap has been 56 since §28c
 tightened it; the note is corrected in the same commit as this work (rule 30's second half).
+
+---
+
+## 29. THE PRO GRID COLOURS ARE A TABLE — 2026-09-08, prompt 65
+
+Joe judged all 124 pro-league grid blocks by eye at grid scale on 2026-09-08, choosing the band and
+the ink for each. `data/grid_colors_pro.json` holds them; `bandFor()` consults it first and falls
+through to its own rule for any team not listed.
+
+**WHY A TABLE AND NOT A RULE.** Four candidate rules were tested against the 124 judgements. None
+fits, and the best one still needs 41 overrides:
+
+| rule | agrees with Joe |
+|---|---|
+| today's — the lighter of the two colours paints | 38 / 124 |
+| the darker paints, the lighter inks | 68 / 124 |
+| the darker paints, best available ink | 68 / 124 |
+| the primary always paints | 83 / 124 |
+
+A rule plus 41 exceptions is bigger than the table and pretends to a generality it does not have.
+
+**THE OPEN QUESTION, RECORDED RATHER THAN ACTED ON.** `bandFor()`'s rule agrees with Joe's taste on
+**38 of 124 pro teams — 31%.** "The primary always paints" would agree on 67%. Every one of the 684
+college teams still runs on the 31% rule, because nobody has judged a college block and a rule
+nobody has checked is not improved by swapping it for another nobody has checked. What this says is
+narrower than "the rule is wrong": it says the rule has never been measured against taste on the
+teams it still governs. **Do not change the college default without judgements to check it against.**
+
+**ELEVEN OF THE 124 MEASURE UNDER 3:1**, which is `BAND_MIN_RATIO`, the AA floor for large text that
+`gridmodel.js` names. Joe chose each with the measured ratio on screen beside it, and they ship as
+chosen — verified independently in this run against `contrastRatio()`, all eleven agreeing to the
+hundredth: Buccaneers 1.82, Lions 2.56, Chargers 2.65, 49ers 2.82, Falcons 2.82, Timberwolves 2.87,
+Blue Jackets 2.87, Panthers 2.92, Islanders 2.92, Guardians 2.97, Blues 2.98. `gridcolors.test.mjs`
+pins all eleven BELOW the threshold on purpose: a later change that "rescued" them would be
+overriding a judgement, and would look like an improvement while doing it.
+
+**THE TRAP THIS RUN NEARLY SHIPPED.** `bandFor().ink` is never painted. `MobileGrid.js:585` re-derives
+the ink through `inkFor()` for whichever surface the team's cap gave it, so teaching `bandFor()` the
+table alone would have shipped Joe's 124 BANDS while silently recomputing his INKS from the raw team
+colours — half a ruling, with nothing failing to say so. The renderer takes the ruled ink directly and
+`inkFor()` still answers for every unruled team.
+
+**COUNT CORRECTED.** The file's `counts.differ_from_shipped` said 109. Measured against the live team
+table, **86** of the 124 differ from what shipped — which is what the 38/124 agreement figure in the
+same file implies (124 − 38 = 86). The count was corrected in the same commit as the work.
+
+**STILL OPEN, AND MEASURED: 42 OF THE 124 GET A TINTED CAP.** `capFor()` gives 42 of these teams
+`tint: 0.72`, so what is painted is `tint(band, 0.72)` and NOT the band Joe chose — his ink lands
+exactly, his band lands darkened. Verified in the DOM on 2026-09-08: the Guardians (flat) render
+`rgb(227, 25, 55)` / `rgb(0, 43, 92)`, his values to the byte, while the Brewers (tinted) render
+`rgb(19, 35, 60)` where his band is `#13294b` = `rgb(19, 41, 75)`.
+
+The tint moves the ratio he was shown. Over the 42 it raises it on 26 and lowers it on 16, and **four
+teams he chose ABOVE 3:1 are painted below it** — Bulls 3.78 → 2.51, Phillies 4.11 → 2.61, Raptors
+4.12 → 2.68, Thunder 4.76 → 2.98 — while the Lions go 2.56 → **1.46**, the worst block in the app.
+
+**This was not touched here.** The cap tint is its own measured ruling and the band table is Joe's;
+reconciling them is a judgement, not a bug fix. The question for him is which block he was judging.
+The cheap options if he wants them reconciled: give a ruled team `tint: 1` so his band paints as
+chosen, or record his band as the pre-tint value that produces the colour he picked.

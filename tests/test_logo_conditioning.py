@@ -44,9 +44,19 @@ def _sha(p: Path) -> str:
 
 # --------------------------------------------------------------------------- the file itself
 def test_counts_match_the_declared_counts():
-    """The file states its own counts; a ruling lost to a bad edit shows up here."""
-    assert len(SKIP) == RULINGS["counts"]["skip_derive"] == 101
-    assert len(DERIVE) == RULINGS["counts"]["derive"] == 23
+    """The file states its own counts; a ruling lost to a bad edit shows up here.
+
+    THESE WERE 101 AND 23 WHEN THE FILE HELD THE PRO LEAGUES ALONE, and pinning those literals was a
+    mistake: the file's own `scope` said from the first commit that college rulings were coming, and
+    they landed the same day. A test that fails when the data grows the way the data said it would
+    is testing the snapshot, not the invariant. The invariant is that the file agrees with ITSELF.
+    """
+    assert len(SKIP) == RULINGS["counts"]["skip_derive"]
+    assert len(DERIVE) == RULINGS["counts"]["derive"]
+    total = RULINGS["counts"].get("teams_total")
+    if total is not None:
+        split = RULINGS["counts"].get("split_by_context", 0)
+        assert len(SKIP) + len(DERIVE) + split == total, "the lists do not add up to teams_total"
 
 
 def test_the_two_lists_are_disjoint():
@@ -54,10 +64,18 @@ def test_the_two_lists_are_disjoint():
     assert not both, f"ruled both ways: {sorted(both)}"
 
 
-def test_every_ruling_names_a_pro_team_id():
-    """Pro leagues only, by scope. A college id here means the file grew past what was decided."""
-    stray = [i for i in list(SKIP) + list(DERIVE) if i.split("-")[0] not in {"nfl", "nhl", "mlb", "nba"}]
-    assert not stray, f"not a pro-league id: {stray}"
+def test_every_ruling_names_a_well_formed_team_id():
+    """No junk keys. Pro ids are `{league}-{id}`; college ids are the bare ESPN number."""
+    bad = [i for i in list(SKIP) + list(DERIVE)
+           if not (i.split("-")[0] in {"nfl", "nhl", "mlb", "nba"} or i.isdigit())]
+    assert not bad, f"not a team id: {bad}"
+
+
+def test_a_split_by_context_team_is_in_neither_list():
+    """Three teams are deliberately unruled so they keep raw-on-plate and derived-on-charcoal."""
+    split = RULINGS.get("split_by_context") or {}
+    for team_id in split:
+        assert team_id not in SKIP and team_id not in DERIVE, f"{team_id} is ruled and split"
 
 
 def test_the_loader_reads_what_the_file_says():

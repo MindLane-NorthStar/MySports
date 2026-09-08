@@ -16,7 +16,8 @@
 //
 // Exits non-zero on the first failure. Reads nothing secret: the anon key is publishable.
 
-import { rest, RestError } from '../lib/rest.js';
+import { rest, restAll, RestError } from '../lib/rest.js';
+import proColours from '../../data/grid_colors_pro.json' with { type: 'json' };
 import { SUPABASE_URL, ASSET_BASE_URL, gridAssetUrl } from '../lib/config.js';
 import { indexStandings, standingLine } from '../lib/standings.js';
 
@@ -200,6 +201,27 @@ console.log('\n(f) standings, probables, display names, MLB short names');
   assert(byId['mlb-145'] === 'White Sox', 'mlb-145 is the White Sox', String(byId['mlb-145']));
   assert(byId['mlb-111'] !== byId['mlb-145'], 'Red Sox and White Sox are different names');
   assert(byId['mlb-141'] === 'Blue Jays', 'mlb-141 is the Blue Jays', String(byId['mlb-141']));
+
+  // -- Joe's pro grid colours name teams that actually exist (prompt 65)
+  //
+  // THE FAILURE THIS CATCHES is a team id changing under the table. The rulings are keyed by id, and
+  // an id that stops resolving does not throw and does not render wrong - it silently falls back to
+  // the rule, and that team quietly stops being the colour Joe chose. Only live data can see it, so
+  // it is a smoke check rather than a unit test. restAll, not rest: 809 teams is past the 1,000-row
+  // cap today but the margin is one season of expansion, and rule 19 does not have exceptions.
+  const allTeams = await restAll('teams?select=id,sport&order=id.asc');
+  const known = new Map(allTeams.map((t) => [String(t.id), t.sport]));
+  const ruledIds = Object.keys(proColours.teams);
+  const unresolved = ruledIds.filter((id) => !known.has(id));
+  assert(unresolved.length === 0, 'every ruled grid colour names a real team',
+         unresolved.length ? unresolved.join(', ') : `${ruledIds.length} ids resolve`);
+  const wrongSport = ruledIds.filter((id) => known.get(id) !== proColours.teams[id].sport);
+  assert(wrongSport.length === 0, 'every ruled team is in the sport the table says',
+         wrongSport.length ? wrongSport.join(', ') : `${ruledIds.length} agree`);
+  const proUnruled = allTeams.filter((t) => t.sport !== 'cfb' && !proColours.teams[String(t.id)]);
+  assert(proUnruled.every((t) => String(t.id).endsWith('-TBD')),
+         'the only unruled pro rows are TBD placeholders',
+         proUnruled.map((t) => t.id).join(', ') || 'none');
 }
 
 console.log(`\n${failures === 0 ? 'OK' : 'FAILED'} - ${checks - failures}/${checks} checks passed`);

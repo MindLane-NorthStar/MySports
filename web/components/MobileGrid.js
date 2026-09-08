@@ -36,6 +36,7 @@ import {
   packLanes,
   viewingMinutes,
   bandFor,
+  gridColourFor,
   tint,
   inkFor,
   capFor,
@@ -567,8 +568,8 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
   const home = teamLine(game, 'home', standings);
   const cap = Math.min(blockH, w / 3);
   // C2: each half of the block gets its team's band and ink.
-  const awayBand = bandFor(away.color, away.color2);
-  const homeBand = bandFor(home.color, home.color2);
+  const awayBand = bandFor(away.color, away.color2, away.id);
+  const homeBand = bandFor(home.color, home.color2, home.id);
   // CANDIDATE D: the cap's surface is per team - the band itself, or its 0.72 tint - and the NAME ROW
   // takes that same surface, so cap and names are one continuous field on every block. The ink then
   // has to be re-derived for whichever surface this team got, which is what inkFor() is for; on a
@@ -577,8 +578,12 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
   const homeCap = capFor(home.id);
   const awaySurface = awayCap.tint === 1 ? awayBand.band : tint(awayBand.band, CAP_TINT);
   const homeSurface = homeCap.tint === 1 ? homeBand.band : tint(homeBand.band, CAP_TINT);
-  const awayInk = inkFor(awaySurface, away.color, away.color2).ink;
-  const homeInk = inkFor(homeSurface, home.color, home.color2).ink;
+  // A RULED TEAM'S INK IS JOE'S, NOT inkFor()'s. bandFor().ink is never painted by itself - this
+  // line is what reaches the screen - so leaving inkFor() to answer here would have shipped his
+  // BANDS while silently recomputing his INKS from the raw team colours, which is half a ruling.
+  // inkFor() still answers for every unruled team, college included, exactly as before.
+  const awayInk = gridColourFor(away.id) ? awayBand.ink : inkFor(awaySurface, away.color, away.color2).ink;
+  const homeInk = gridColourFor(home.id) ? homeBand.ink : inkFor(homeSurface, home.color, home.color2).ink;
   const b = item.broadcast;
   // Contract §3 / legend: MARQUEE = BOTH RANKED, or a TIER-1 rivalry. Not "is ranked #1", which is
   // what this used to test - render_day.py's rule is `bool(ra and rh) or bool(rv and rv[1] == 1)`.
