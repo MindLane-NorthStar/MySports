@@ -3412,6 +3412,26 @@ button.chdr-wm:focus-visible {
   border: 0;
   background-color: transparent;
   cursor: pointer;
+}
+
+/* THE GRADIENT LIVES ON THE ELEMENT THAT HOLDS THE TEXT, and it has to (prompt 63 stage 1).
+ *
+ * It was on `.chdr-wm` - the BUTTON - and worked for as long as the button held the text directly.
+ * Prompt 61 stage 5b moved the text into `<span class="chdr-wm-ink">` for an optical offset, and
+ * left the paint behind: `background-clip: text` clips an element's background to glyphs, the
+ * button then had none of its own, and the span inherited `color: transparent` and painted nothing.
+ *
+ * CHROMIUM DOES NOT SHOW THIS. Measured 2026-09-08 at DPR 4: the wordmark's box still contained
+ * gold - #cab480, #c9b37f, #c2ab77 - because Chromium clips a parent's `background-clip: text` to
+ * the glyphs of its DESCENDANTS too. Joe's phone is WebKit and does not, which is why every gate
+ * here was green while the wordmark was invisible on the device. That is the whole reason stage 1's
+ * guard is a CONTRACT test on the declarations rather than a pixel or box measurement - a browser
+ * that happens to be forgiving cannot be the thing that checks this.
+ *
+ * ONE VISIBLE CONSEQUENCE, and it is an improvement rather than a cost: the gradient's four stops
+ * now map to the TEXT's box rather than the button's 44px, so the ramp runs over the letterforms
+ * exactly as `bnGold` does in the SVG banner it was traced from. */
+.chdr-wm-ink {
   background-image: linear-gradient(180deg, var(--gold-hi) 0%, var(--gold) 42%, var(--gold-mid) 70%, var(--gold-dim) 100%);
   -webkit-background-clip: text;
   background-clip: text;

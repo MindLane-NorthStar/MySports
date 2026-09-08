@@ -131,10 +131,23 @@ const gridFor = (day) => page.evaluate((dd) => {
   };
 }, day);
 
+// SEASON-WEEK SPORTS ARE KEYED BY THEIR SEASON WEEK, NOT BY A DATE (corrected 2026-09-08).
+// CFB and NFL run on season weeks, so their `?w=` keys are `cfb-2026-1` / `nfl-2026-1`; MLB and ALL
+// SPORTS run on calendar weeks and are keyed by the Monday, which is why those two are dates here.
+//
+// BOTH SEASON CASES USED TO PASS A DATE, AND BOTH PASSED BY ACCIDENT. A `?w=` that matches nothing
+// falls back to the CURRENT week, which happened to be the week containing the case's day - until
+// the date rolled past Sunday Sep 7 and CFB's fallback moved to week 2 (Sep 10-12). The gate then
+// reported "missing (day true, week false)" for a day the app renders perfectly well. NFL's case was
+// the same time bomb and had simply not gone off yet.
+//
+// This is a correction to the gate's INPUT, not a re-baseline of a measured figure: the day/week
+// equality it checks is unchanged, and it is now immune to the date rather than quietly dependent
+// on it.
 const CASES = [
-  ['2026-09-05', 'cfb', '2026-08-31'],
+  ['2026-09-05', 'cfb', 'cfb-2026-1'],
   ['2026-09-03', 'mlb', '2026-08-31'],
-  ['2026-09-13', 'nfl', '2026-09-07'],
+  ['2026-09-13', 'nfl', 'nfl-2026-1'],
   ['2026-09-03', null, '2026-08-31'],   // ALL SPORTS - a slate spanning more than one sport
 ];
 for (const [day, sport, wk] of CASES) {
