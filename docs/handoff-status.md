@@ -922,9 +922,26 @@ that day. **`--force` was added for exactly this** (`scripts/sync_assets.py`): i
 file under `--prefix` even where the bytes match, which is the only way to set a header on an object
 that already exists. Verify with `head_object`, not by looking at the image.
 
-**THE OTHER PREFIXES STILL HAVE NO POLICY** — `network-logos/`, `fonts/` and `brand/` in the public
-bucket, and every `grids/` object. Same one command with a different `--prefix` when someone wants
-them; nothing has gone wrong there yet because that art changes far less often.
+**`fonts/` CLOSED TOO (prompt 68): 5 objects re-uploaded**, `CacheControl` `None` →
+`public, max-age=300`, verified on all five.
+
+**THE OTHER THREE ARE NOT A ONE-COMMAND JOB, and that is why they are still open.** Running
+`--force` over them would do more than rewrite headers:
+
+| prefix | in bucket | local | `--force` would ALSO publish |
+|---|---|---|---|
+| `network-logos/` | 31 | 40 | **9 new objects** — incl. `hbo-max-wide-2023-retired.svg` |
+| `brand/` | 9 | 21 | **12 new objects** — incl. `app-icon-mysports-tv-v5-retired.png`, `…-v6a-rejected.png` |
+| `grids/` | 35 | **0** | nothing — `--force` cannot reach it at all |
+
+The first two would push RETIRED and REJECTED art into a public bucket, which is a publish and not a
+header fix. `grids/` cannot be reached because `sync_assets.local_files()` walks
+`FOLDERS = ("logos", "network-logos", "fonts", "brand")` and grid objects arrive by `--push-grids`
+from `artifacts/rendering`, which is not a local cache directory.
+
+**What would close them:** a flag that rewrites only objects the bucket ALREADY has — one condition
+next to `--force` — plus, for `grids/`, either widening that walk or a `--push-grids --force`. Both
+are code, and prompt 68's brief said to stop and say why before writing one. This is the why.
 
 **Deliberately NOT done, and both are bigger decisions:** a service worker, and cache-busting query
 strings or content-addressed filenames. The second is the real fix for "the URL never changes when
