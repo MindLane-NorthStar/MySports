@@ -70,8 +70,16 @@ never renumber, even around the retired stub.
     `experimental.useWasmBinary`. Standing caution: that apostrophe will keep breaking any tooling
     that interpolates paths into quoted strings.
 13. A numeric threshold is measured against the **local background**, never a global corner sample.
-14. The database hard stop is "no direct Postgres connection, no writer credential, no DML."
-    PostgREST reads with the publishable anon key are the app's normal read path and always allowed.
+14. **Database writes go through the Supabase connector, and only through it.** There is still no
+    direct Postgres connection and no writer credential in the repo, in `.env`, or in any prompt —
+    the connector holds it. PostgREST reads with the publishable anon key remain the app's normal
+    read path and are always allowed. Four conditions bind every write: **named approval for that
+    operation** — approval for one is never standing approval for the next; **SELECT and paste
+    first** (rule 6); **the schedule checked first** (rule 27); and **every DDL statement exists as
+    a file in `db/migrations/` before it is applied, and is applied from that file** — the repo is
+    the schema's record, and a change applied through the connector and not written down is drift
+    no gate can catch. Still hard stops, with or without approval: `drop`, `truncate`, a `delete`
+    with no `where`, and any write while the loader is running.
 15. `npm run test:unit` is `node --test "test/**/*.test.mjs"` — the glob stays quoted.
 16. Colour tokens are read from `web/app/globals.css`, never retyped from a mockup.
 17. Edit JSON data files **through a parser**, never line-based, and assert nothing but the intended

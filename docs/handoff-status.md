@@ -744,9 +744,13 @@ cloud workspace. **Never reapply a bare browser UA.**
 ## Opened by prompt 57 — TWO, AND THEY MUST LAND IN THIS ORDER
 
 - **THE `game_odds` UNIQUENESS MIGRATION AWAITS JOE.**
-  `db/migrations/0017_game_odds_one_row_per_book.sql` is written and **not applied**. Rule 14's hard
-  stop is no connection, no writer credential, no DML, so applying it is Joe's call; rule 27's
-  schedule check (`gh run list --workflow schedule_refresh.yml -L 1`) applies when it happens.
+  `db/migrations/0017_game_odds_one_row_per_book.sql` is written and **not applied**. Applying it
+  is still Joe's call, but for a different reason since rule 14 was revised on 2026-09-07: not a
+  blanket bar on writing, but **named approval for that operation**, plus SELECT-and-paste first
+  and rule 27's schedule check (`gh run list --workflow schedule_refresh.yml -L 1`) when it
+  happens. **AND IT CANNOT BE APPLIED FROM CLAUDE CODE**: the Supabase connector is attached to
+  COWORK, not to this session, so Cowork applies it. The DDL is already a file, which is what the
+  revised rule requires — it is applied FROM `0017`, never retyped into a connector call.
   **The existing rows violate it** — measured 2026-09-07: 471 rows, 392 distinct (game_id, provider)
   pairs, **32 pairs carrying 79 surplus rows**. The dedupe is in the file, commented out, with its
   SELECT-first query beside it. Two decisions are Joe's: approve the constraint, and say whether the
@@ -875,8 +879,13 @@ before touching any count line.
     the repo path contains an apostrophe and will keep breaking tooling that interpolates paths into
     quoted strings.**
 13. **A numeric threshold is measured against the LOCAL background, never a global corner sample.**
-14. The DB hard stop is "no direct Postgres connection, no writer credential, no DML" — PostgREST
-    reads with the publishable anon key are the app's normal read path and are always allowed.
+14. **DB writes go through the Supabase connector and only it** — still no direct Postgres
+    connection and no writer credential in the repo, `.env` or any prompt. Anon PostgREST reads
+    stay the normal read path. Every write needs NAMED approval for that operation (never
+    standing), SELECT-and-paste first (6), the schedule checked (27), and **every DDL statement
+    already in `db/migrations/` and applied FROM that file** — a connector change nobody wrote
+    down is drift no gate can catch. Hard stops regardless: `drop`, `truncate`, `delete` with no
+    `where`, any write while the loader runs.
 15. `npm run test:unit` is `node --test "test/**/*.test.mjs"` — quoted glob.
 16. Colour tokens are read from `web/app/globals.css`, never quoted from the mockups.
 17. **Edit JSON data files through a parser, never line-based**, and assert nothing but the intended

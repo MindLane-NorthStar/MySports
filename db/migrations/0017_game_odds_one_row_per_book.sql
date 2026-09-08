@@ -2,9 +2,13 @@
 --
 -- ============================================================================================
 -- PREPARED, NOT APPLIED. Prompt 57 stage 4 wrote this file and deliberately did not run it.
--- Working rule 14's hard stop is "no direct Postgres connection, no writer credential, no DML",
--- and this needs Joe's explicit approval before it is applied. Rule 27 applies when it is:
--- check `gh run list --workflow schedule_refresh.yml -L 1` first, and never run two at once.
+-- Working rule 14 was revised on 2026-09-07: database writes go through the Supabase connector,
+-- and every DDL statement must already exist as a file in `db/migrations/` and be applied FROM
+-- that file. This IS that file, so the rule is satisfied by applying it as written and not by
+-- retyping it into a connector call. What it still needs is Joe's NAMED approval for this
+-- operation - approval for one write is never standing approval for the next - and rule 27's
+-- check `gh run list --workflow schedule_refresh.yml -L 1` first; never run two at once.
+-- THE CONNECTOR IS ATTACHED TO COWORK, NOT TO CLAUDE CODE. Cowork applies this.
 -- ============================================================================================
 --
 -- WHY THIS EXISTS. `0003_games.sql:146` declares `unique (game_id, provider, fetched_at)`, and
