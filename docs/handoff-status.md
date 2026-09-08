@@ -925,6 +925,12 @@ that already exists. Verify with `head_object`, not by looking at the image.
 **`fonts/` CLOSED TOO (prompt 68): 5 objects re-uploaded**, `CacheControl` `None` →
 `public, max-age=300`, verified on all five.
 
+**`network-logos/` AND `brand/` CLOSED BY PROMPT 69 with a new `--existing-only` flag** — the one
+prompt 68 proposed. It never creates an object: a local file the bucket does not have is skipped
+rather than uploaded, so the local cache decides only WHICH bytes get rewritten and never what the
+bucket contains. `network-logos/` 31 rewritten / 9 skipped, `brand/` 9 rewritten / 12 skipped, both
+verified 31/31 and 9/9 afterwards, and **nothing named `-retired` or `-rejected` is in the bucket.**
+
 **THE OTHER THREE ARE NOT A ONE-COMMAND JOB, and that is why they are still open.** Running
 `--force` over them would do more than rewrite headers:
 
@@ -932,16 +938,20 @@ that already exists. Verify with `head_object`, not by looking at the image.
 |---|---|---|---|
 | `network-logos/` | 31 | 40 | **9 new objects** — incl. `hbo-max-wide-2023-retired.svg` |
 | `brand/` | 9 | 21 | **12 new objects** — incl. `app-icon-mysports-tv-v5-retired.png`, `…-v6a-rejected.png` |
-| `grids/` | 35 | **0** | nothing — `--force` cannot reach it at all |
+| `grids/` | 35 | **0** | nothing — neither `--force` nor `--existing-only` can reach it |
 
 The first two would push RETIRED and REJECTED art into a public bucket, which is a publish and not a
 header fix. `grids/` cannot be reached because `sync_assets.local_files()` walks
 `FOLDERS = ("logos", "network-logos", "fonts", "brand")` and grid objects arrive by `--push-grids`
 from `artifacts/rendering`, which is not a local cache directory.
 
-**What would close them:** a flag that rewrites only objects the bucket ALREADY has — one condition
-next to `--force` — plus, for `grids/`, either widening that walk or a `--push-grids --force`. Both
-are code, and prompt 68's brief said to stop and say why before writing one. This is the why.
+**TWO OF THE THREE ARE NOW CLOSED** (see above). **`grids/` IS STILL OPEN AND STAYS OPEN.** The
+flag rewrites what the local cache holds, and the cache holds no grids at all: `local_files()` walks
+`FOLDERS = ("logos", "network-logos", "fonts", "brand")` and grid objects are uploaded by
+`--push-grids` straight from `artifacts/rendering`. Reaching them needs either that tuple widened —
+which changes what a plain `--push` uploads, a reach well beyond a cache header — or a
+`--push-grids --force`. Prompt 69 was told to say so and stop rather than widen it. All 35 `grids/`
+objects still answer with no `Cache-Control`.
 
 **Deliberately NOT done, and both are bigger decisions:** a service worker, and cache-busting query
 strings or content-addressed filenames. The second is the real fix for "the URL never changes when

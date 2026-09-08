@@ -187,6 +187,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--make-dark", action="store_true",
                     help="before pushing, build any missing assets/logos/{id}_dark.png (charcoal-floating "
                          "contexts, mobile addendum M12). Idempotent; a provider's own dark art is kept.")
+    ap.add_argument("--existing-only", action="store_true",
+                    help="never create an object: rewrite only keys the bucket ALREADY has, and skip "
+                         "every local file it does not. Pair with --force to reset METADATA (the "
+                         "cache header) without publishing anything new.")
     ap.add_argument("--force", action="store_true",
                     help="push every local file under --prefix even where the bytes already match. "
                          "For rewriting METADATA on objects that are otherwise unchanged - a header "
@@ -219,9 +223,18 @@ def main(argv: list[str] | None = None) -> int:
     remote = remote_objects(s3, bucket, args.prefix)
     print(f"bucket {bucket}: {len(remote)} objects; local cache: {len(local)} files" + (f" (prefix {args.prefix})" if args.prefix else ""))
 
-    to_push, to_pull, same = [], [], 0
+    to_push, to_pull, same, unpublished = [], [], 0, 0
     for key, p in local.items():
         r = remote.get(key)
+        # --existing-only NEVER CREATES AN OBJECT (prompt 69). --force alone would have closed the
+        # remaining cache-header gap in one command, and prompt 68 stopped because of what else it
+        # would have done: 9 new objects under `network-logos/` and 12 under `brand/`, among them
+        # `hbo-max-wide-2023-retired.svg`, `app-icon-mysports-tv-v5-retired.png` and
+        # `...-v6a-rejected.png`. Publishing retired and rejected art is not a header fix. With this
+        # flag the local cache decides only WHICH bytes to rewrite, never what the bucket contains.
+        if args.existing_only and r is None:
+            unpublished += 1
+            continue
         # --force PUSHES BYTES THAT ALREADY MATCH, and the only reason it exists is HEADERS.
         # A normal push compares size then sha256 and skips anything identical, which is right for
         # bytes and wrong for metadata: prompt 66 added `Cache-Control: public, max-age=300` to
@@ -237,7 +250,8 @@ def main(argv: list[str] | None = None) -> int:
     for key in remote:
         if key not in local:
             to_pull.append(key)
-    print(f"  unchanged {same} · local-only/changed {len(to_push)} · bucket-only {len(to_pull)}")
+    print(f"  unchanged {same} · local-only/changed {len(to_push)} · bucket-only {len(to_pull)}"
+          + (f" · not in bucket, SKIPPED {unpublished}" if args.existing_only else ""))
 
     if args.check:
         for k in to_push[:50]:
