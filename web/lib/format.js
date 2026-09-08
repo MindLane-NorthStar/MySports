@@ -219,6 +219,43 @@ export function row2Size(awayScore, homeScore) {
   return wide ? ROW2_PX.wide : ROW2_PX.normal;
 }
 
+/**
+ * THE FAVOURITE'S OWN LINE FOR ROW 2 - the point spread, falling back to the moneyline.
+ *
+ * Joe's ruling: the right rail shows the POINT SPREAD, not the moneyline, with the favourite's mark
+ * above it. The mark stays in the right rail only; the matchup keeps away-on-top and does not
+ * reorder.
+ *
+ * `game_odds.spread` IS HOME-RELATIVE - negative means the home side is favoured (`0003_games.sql`).
+ * So a home favourite reads its own number and an away favourite reads the negation: at spread
+ * +7.5 the away side is favoured by 7.5 and its line is `-7.5`. THE SIGN IS ALWAYS NEGATIVE FOR THE
+ * FAVOURITE, because that is what a spread means.
+ *
+ * THE MONEYLINE IS THE FALLBACK, not a legacy path (Joe's ruling). MLB is usually priced on the
+ * moneyline and the run line, so this is the common route there rather than an edge case, and
+ * nothing renders blank where a number exists.
+ *
+ * AND IT FALLS BACK WHEN THE TWO SOURCES DISAGREE ABOUT WHO IS FAVOURED, which is not hypothetical:
+ * measured 2026-09-08 over 119 rows, SEVEN disagree - all MLB near-pick'ems where the moneyline has
+ * home by four cents (-110 / -106) while the run line has home at +1.5, i.e. the underdog by runs.
+ * `favourite()` picks the side from the moneylines first, so on those rows the spread belongs to the
+ * OTHER team and would render as a positive number beside the favourite's mark. A `+3.5` under a
+ * favourite's badge is a card that contradicts itself; the moneyline that chose the side is shown
+ * instead.
+ *
+ * A PICK'EM IS NOT A FAVOURITE and never reaches here - `favourite()` returns null at spread 0.
+ */
+function favLine(fav) {
+  const sp = Number(fav.odds?.spread);
+  if (Number.isFinite(sp) && sp !== 0) {
+    const own = fav.side === 'home' ? sp : -sp;
+    if (own < 0) return String(own);
+  }
+  return fav.ml === null || !Number.isFinite(Number(fav.ml))
+    ? '-'
+    : (fav.ml > 0 ? `+${fav.ml}` : String(fav.ml));
+}
+
 export function slotContent(game, fav = null) {
   const status = game?.result_status ?? null;
 
@@ -274,8 +311,11 @@ export function slotContent(game, fav = null) {
       kind: 'odds',
       markSide: fav.side,
       tied: false,
-      row2: fav.ml === null ? '-' : (fav.ml > 0 ? `+${fav.ml}` : String(fav.ml)),
-      // A moneyline never needs the step-down: the widest, "-1200", is 54.95px at 17px.
+      row2: favLine(fav),
+      // NEITHER LINE NEEDS THE STEP-DOWN, and the spread is the narrower of the two. The widest
+      // moneyline, "-1200", is 54.95px at 17px. The widest favourite-spread in the data is "-49.5"
+      // - the same five characters, but one of them is a full stop, which is narrower than a digit.
+      // Measured rather than inherited from that claim: see prompt 63's report.
       row2Px: ROW2_PX.normal,
       row3: total != null ? `O/U ${Number(total)}` : null,
       tone: 'sched',
