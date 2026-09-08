@@ -253,7 +253,7 @@ export function isProgram(row) {
 
 // --------------------------------------------------------------------------- the normalizer
 //
-// ONE SHAPE FOR BOTH KINDS OF ROW, so that offservice.js, bandstate.js, primewindow.js and every
+// ONE SHAPE FOR BOTH KINDS OF ROW, so that offservice.js, primewindow.js and every
 // count line keep working with no branch in them. A program is given the four fields those modules
 // read off a game - `id`, `canonical_kickoff_at_utc`, `kickoff_status`, `result_status` - and keeps
 // everything of its own beside them. Nothing is invented: each mapped field is the program's own
@@ -263,7 +263,7 @@ export function isProgram(row) {
 // result - nobody reports that a race is over the way a scoreboard reports a final - so the honest
 // answer is the one the schedule implies: before its start it is scheduled, inside its window it is
 // live, after it is final. Taking `now` as an argument is what keeps that off the client: page.js
-// calls this once on the server from the request time, exactly as bandstate() is called.
+// calls this once on the server from the request time.
 
 /**
  * The viewing day an instant belongs to: the ET calendar date, with anything before 03:00 ET

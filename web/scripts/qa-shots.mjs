@@ -740,21 +740,21 @@ for (const dev of DEVICES) {
            r.sections.join(' / ') || 'no section');
   }
 
-  // ALL GAMES IS UNTOUCHED, asserted rather than assumed. The first band, the sport headers and the
-  // favourites bracket are all still there, in the arrangement prompt 59 left.
+  // ALL GAMES STILL BANDS BY SPORT, and NOTHING renders a first band any more.
   //
-  // THE EXPECTED FIRST-BAND COUNTS ARE READ FROM THE APP, NOT GUESSED. 2026-09-05 was written as 0
-  // here on the strength of a probe run under `scope=mine`, where it IS 0; under ALL GAMES the same
-  // day has one. Day mode always renders the band and week mode never does - which is the actual
-  // rule, and is what these three rows now say.
-  for (const [name, path, wantFband] of [
-    ['day / all games', '/?day=2026-09-05', 1],
-    ['day / all games (a second day)', '/?day=2026-09-13', 1],
-    ['week / all games - week mode has no first band', '/?mode=week&w=2026-08-31', 0],
+  // These three rows used to assert the band's presence - 1 in day mode, 0 in week - and the counts
+  // were themselves a correction, read from the app after a probe run under `scope=mine` had been
+  // mistaken for ALL GAMES. Joe removed the band outright on 2026-09-08 (prompt 67): the preview
+  // repeated rows that the chronological list below already carried. The expectation is now 0
+  // everywhere, and it is kept rather than deleted so that a band reappearing fails a gate.
+  for (const [name, path] of [
+    ['day / all games', '/?day=2026-09-05'],
+    ['day / all games (a second day)', '/?day=2026-09-13'],
+    ['week / all games', '/?mode=week&w=2026-08-31'],
   ]) {
     const r = await read(path);
-    record(`${name}: still bands, and still carries its first band`,
-           r.headers > 0 && r.fbands === wantFband,
+    record(`${name}: still bands by sport, and carries NO first band`,
+           r.headers > 0 && r.fbands === 0,
            `${r.fbands} first band(s), ${r.headers} sport header(s)`);
   }
   await ctx.close();

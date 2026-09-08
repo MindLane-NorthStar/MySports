@@ -1958,84 +1958,23 @@ input:focus-visible {
  * `.homenav` and `.hn-nav` rules went with it; the height they occupied is reclaimed for the
  * control stack. Chrome.js carries why the row existed and why it no longer has to. */
 
-/* ---------------------------------------------------------------- D1: the first band (prompt 46)
- * 05-home-page-decisions.md D1, ruled at prompt 20 and unconsumed until now. Its STATE comes from
- * web/lib/bandstate.js on the server; this only dresses it.
+/* THE FIRST BAND AND ITS D5 TWO-COLUMN LAYOUT WERE REMOVED (prompt 67, Joe 2026-09-08).
  *
- * It sits below the tile row and above YOUR TEAMS, which means it inherits stage 1B rule 2 for free:
- * .controls margin-bottom is what sets the gap to whatever block is first, and this is now that
- * block. Nothing here restates that number - if it did, the two would drift the first time Joe moved
- * one of them. */
-.fband {
-  margin: 0 0 22px;
-}
-
-.fband-head {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  column-gap: 12px;
-  row-gap: 2px;
-  margin: 0 0 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--line-soft);
-}
-
-/* Matched to `.band-title` deliberately: the page has ONE heading system, and a band that invented
-   its own size would read as a different kind of thing from the sport bands below it.
-   (This said "matched to .favlabel / .band-title" until prompt 59 retired `.favlabel`. The promise
-   is unchanged - `.band-title` is the other half of it and is still 25.5px / 15px.) */
-.fband-title {
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: 25.5px;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--ink);
-  margin: 0;
-}
-
-.fband-when {
-  color: var(--dim);
-  font-size: 12px;
-  margin: 0;
-}
-
-.fband-all {
-  margin-left: auto;
-  color: var(--gold);
-  font-size: 12px;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-@media (max-width: 699px) {
-  .fband-title { font-size: 15px; }
-}
-
-/* D5: band left, grid right - but only when both actually fit.
+ * `.fband`, `.fband-head`, `.fband-title`, `.fband-when`, `.fband-all` dressed a preview of the
+ * day - TONIGHT / Live & Upcoming / Finals & Tomorrow - that repeated rows the chronological list
+ * below already carried. Joe ruled it out; `components/FirstBand.js` and `lib/bandstate.js` went
+ * with it.
  *
- * 1120 grid minimum + 400 band + 24 gap + 48 padding = 1592. Below that the band sits ABOVE the
- * grid, never beside it and never after it: a grid-first page buries the thing the band exists to
- * answer. Today only, and only below the tile row - the banner keeps its own full-bleed wrapper
- * (prompt 43 unit 3) and the header row keeps 1B's rules. */
-@media (min-width: 1592px) {
-  .today-split {
-    display: grid;
-    grid-template-columns: minmax(400px, 1fr) minmax(1120px, 2fr);
-    align-items: start;
-    column-gap: 24px;
-    /* IT HAS TO ESCAPE THE 1100px COLUMN. .shell caps content at 1100 and D5 needs 400 + 1120 + 24
-       = 1544, so inside the shell the two columns simply overflow and the page scrolls sideways -
-       measured at 1600 and 1920 before this was added. Centred on the shell (which is itself
-       centred, so this is the viewport centre) with a negative margin rather than a transform:
-       prompt 30 established that a transformed ancestor becomes the containing block for the grid's
-       sticky rail, and that is not a thing to reintroduce for a layout tweak. */
-    width: min(1600px, calc(100vw - 48px));
-    margin-left: calc(50% - min(800px, 50vw - 24px));
-  }
-  .today-split > .fband { margin-bottom: 0; }
-}
+ * THE @media (min-width: 1592px) RULE HAD TO GO TOO, and that is the part worth saying out loud.
+ * D5 made `.today-split` a two-column grid - band left at minmax(400px, 1fr), list right at
+ * minmax(1120px, 2fr). With the band gone the wrapper has ONE child, so that rule would have laid
+ * the whole day's list out in the 400px column and left 1120px empty at any width above 1592.
+ * Deleting the band without deleting this would have been a desktop regression that nothing on the
+ * phone could see.
+ *
+ * `.today-split` ITSELF IS KEPT as a plain block with no rules of its own. It carries no styling
+ * now, but the prompt-60/62 probes and `qa/tools/s0-gaps.mjs`, `s3-old.mjs` and `s3-spacing.mjs`
+ * reach for it by name as a landmark, and renaming a selector out from under them buys nothing. */
 
 /* ---- off-service games (D4/E3, prompt 20)
  * The count line is deliberately quiet but always present: hiding games and saying nothing would be

@@ -36,8 +36,8 @@ test('both retired classes are gone from the stylesheet, not merely unused', () 
   assert.doesNotMatch(rules, /\.favlabel\s*\{/);
   assert.doesNotMatch(rules, /\.favrule\s*\{/);
   // and nothing anywhere still names them as a class
-  for (const f of ['components/SportBand.js', 'components/Listing.js', 'components/FirstBand.js',
-                   'app/page.js']) {
+  // components/FirstBand.js was the fourth file here until prompt 67 deleted it with the band.
+  for (const f of ['components/SportBand.js', 'components/Listing.js', 'app/page.js']) {
     assert.doesNotMatch(code(f), /favlabel|favrule/, `${f} still references a retired class`);
   }
 });
@@ -67,16 +67,17 @@ test('`heading` and `headingClass` travel together - no default to a dead class'
   const l = code('components/Listing.js');
   assert.doesNotMatch(l, /headingClass = '/, 'no default');
   assert.match(l, /headingClass, nowMinute/);
-  assert.doesNotMatch(code('components/FirstBand.js'), /headingClass/,
-    'FirstBand passed a class with no heading to put it on');
+  // The third file this checked, components/FirstBand.js, was deleted with the band (prompt 67).
 });
 
 test('the bracket cannot appear under MY TEAMS', () => {
-  // floatFavorites={!P.isMine} at all three call sites, so `favorites` is empty under MY TEAMS and
-  // the group never renders. A band that contains nothing BUT favourites has nothing to bracket.
+  // floatFavorites={!P.isMine} at every call site, so `favorites` is empty under MY TEAMS and the
+  // group never renders. A band that contains nothing BUT favourites has nothing to bracket.
+  // THREE UNTIL 2026-09-08: the FirstBand call site went with the band (prompt 67). The rule is
+  // "every call site passes it", not "there are three of them", so the count follows the code.
   const p = code('app/page.js');
   const uses = p.match(/floatFavorites=\{[^}]*\}/g) || [];
-  assert.equal(uses.length, 3);
+  assert.equal(uses.length, 2);
   for (const u of uses) assert.equal(u, 'floatFavorites={!P.isMine}');
   const b = code('components/SportBand.js');
   assert.match(b, /const favorites = floatFavorites \? split\.favorites : \[\];/);

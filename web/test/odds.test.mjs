@@ -62,7 +62,7 @@ test('rule 32: all THREE consumers read index 0, and there are exactly three', (
   }
   // and nothing else in web/ does
   const others = ['components/ProgramCard.js', 'components/SportBand.js', 'components/Listing.js',
-                  'components/PageCount.js', 'components/FirstBand.js', 'components/Filters.js'];
+                  'components/PageCount.js', 'components/Filters.js'];  // FirstBand.js deleted, prompt 67
   for (const f of others) {
     assert.doesNotMatch(code(f), /game\.odds/, `${f} is not an odds consumer - update this list if it becomes one`);
   }

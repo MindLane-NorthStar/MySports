@@ -32,8 +32,6 @@ import {
 import { toRows } from '../lib/programs.js';
 import { viewingMinutes } from '../lib/gridmodel.js';
 import { longDay, todayET, etTime, shortDay, daySpanWeekdays, loadedDayLine } from '../lib/format.js';
-import FirstBand from '../components/FirstBand.js';
-import { bandState } from '../lib/bandstate.js';
 import policies from '../lib/policies.js';
 import { SPORT_LABEL, SPORT_SHORT, gridAssetUrl } from '../lib/config.js';
 import { RestError } from '../lib/rest.js';
@@ -476,10 +474,10 @@ export default async function HubPage({ searchParams }) {
   const overlay = await overlayForDay(day, games, { today });
   games = applyOverlay(games, overlay.map);
 
-  // THE REQUEST TIME, used twice and read once. bandState() already takes it as an argument; the
-  // grid's now marker takes the same instant as a minute-of-viewing-day. Both are computed HERE, on
-  // the server, so neither reaches the client as a clock - which is what keeps a time-aware line out
-  // of the hydration path entirely (the trap prompt 42 fell into twice).
+  // THE REQUEST TIME. It named bandState() as one of its two readers until prompt 67 removed the
+  // band; the grid's now marker still takes this instant as a minute-of-viewing-day. Computed HERE,
+  // on the server, so it never reaches the client as a clock - which is what keeps a time-aware line
+  // out of the hydration path entirely (the trap prompt 42 fell into twice).
   const now = new Date();
   const programRows = toRows(programs, now);
   const allRows = [...games, ...programRows];
@@ -506,13 +504,6 @@ export default async function HubPage({ searchParams }) {
   // D4, restored and moved to the page (stage 4a). Decided ONCE here so the bands below render only
   // what is visible and the single count line at the foot describes all of them.
   const { visible: rows, hidden, summary } = splitHidden(scoped, favIds);
-
-  // D1. Computed ONCE, here, from the request time - the page is force-dynamic, so this is the
-  // clock the reader is actually looking at. It reaches the band as data; nothing recomputes it on
-  // the client, which is what keeps a time-aware block out of the hydration path entirely.
-  // R9, prompt 56: no `dayLabel`. The band's subtext is the clock alone now - the picker two rows
-  // above already shows this date, in these words.
-  const band = bandState(rows, now, policies);
 
   // R8, prompt 56: THE EMPTY DAY POINTS AT A REAL ONE, and computes it only when it is empty.
   //
@@ -599,28 +590,24 @@ export default async function HubPage({ searchParams }) {
         </div>
       ) : null}
 
-      {/* D1 above, the day below. .today-split only becomes two columns at 1592px (D5); under that
-          it is a plain block, so the band sits ABOVE the grid and never after it.
-          The D1 band is a LIST-view thing: in GRID VIEW there is no list beneath it for "See all
-          today" to jump to, so it does not render. */}
+      {/* THE TONIGHT BAND IS GONE (prompt 67, Joe's ruling 2026-09-08).
+          Joe: "In DAY view, ALL GAMES, LIST - we're still seeing the same games two times."
+
+          IT WAS NEVER A BUG. `FirstBand` was a deliberate filtered preview - TONIGHT / Live &
+          Upcoming / Finals & Tomorrow - with a "See all today" link into the full chronological
+          list below it, built that way by prompt 56 and narrowed twice since (out of GRID, then out
+          of MY TEAMS). Each narrowing was the same complaint arriving about a smaller slice.
+
+          WHAT IT EXISTED TO ANSWER IS NOW ANSWERED BETTER. Its job was "what is on right now" on a
+          day too long to scan; stage 2 of the same prompt scrolls the reader to exactly that on
+          entry, in LIST and GRID and in day and week. The list below is already chronological and
+          the picker two rows up already names the day, so the preview bought a repeat and nothing
+          else.
+
+          `#all-today` STAYS. Nothing renders into it that did not before, but qa-shots.mjs:464 and
+          :620 measure card positions through it and the prompt-60/61/62 probes reach for it by name.
+          It is a live selector, not a leftover of the band. */}
       <div className="today-split">
-        {/* NOT UNDER MY TEAMS (prompt 60 stage 4). Joe, 2026-09-07: "On the MY TEAMS page, My Teams
-            render twice - once in what appears to be chronological order ... and a second time
-            divided by sport. This seems unnecessary and repetitive."
-
-            THE BAND EXISTS TO ANSWER "WHAT IS ON RIGHT NOW" when a day holds eighty rows and cannot
-            be scanned. Under MY TEAMS a day holds five, its time-window subset is nearly the whole
-            list, and its "See all today" escape points at a list identical to itself.
-
-            AND IT IS WHAT JOE READ AS A SORT FAULT, WHICH IT IS NOT. Measured on 2026-09-07: the
-            band is TONIGHT, so it shows the evening from the prime window onward - 8:00 PM MONDAY
-            NIGHT RAW - while the 1:35 PM Guardians game falls BEFORE that window and appears only
-            in the list below. Two stacked sections, each correctly ordered, putting an 8 PM row
-            above a 1:35 PM one. Removing the duplicate removes the inversion. */}
-        {!error && rows.length && !P.isGrid && !P.isMine ? (
-          <FirstBand band={band} standingsRows={standingsRows} rankingsRows={rankingsRows}
-                     day={day} sport={P.sport} floatFavorites={!P.isMine} />
-        ) : null}
 
         <div id="all-today">
           {/* JOE, 2026-09-06: "I only want list cards on list view and only grids on grid view."

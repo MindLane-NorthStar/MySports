@@ -71,10 +71,21 @@ test('equal instants keep the order the database gave them', () => {
   assert.deepEqual(chronological(rows).map((r) => r.id), ['first', 'second']);
 });
 
-test('the first band does not render under MY TEAMS', () => {
+test('THE FIRST BAND DOES NOT RENDER AT ALL - it was removed on 2026-09-08', () => {
+  // This asserted the band rendered everywhere EXCEPT grid and MY TEAMS. Joe ruled the whole thing
+  // out (prompt 67): "In DAY view, ALL GAMES, LIST - we're still seeing the same games two times."
+  // The narrowing this test recorded - out of GRID, then out of MY TEAMS - was the same complaint
+  // arriving about a smaller slice each time, and the answer in the end was none of it.
+  //
+  // It is inverted rather than deleted because a test that pinned a feature is the right place to
+  // record that the feature is gone, and to fail if it comes back by accident.
   const page = code('app/page.js');
-  assert.match(page, /\{!error && rows\.length && !P\.isGrid && !P\.isMine \? \(\s*<FirstBand/);
+  assert.doesNotMatch(page, /<FirstBand/, 'the band render is gone');
+  assert.doesNotMatch(page, /bandState\s*\(/, 'and so is the state it rendered from');
+  assert.doesNotMatch(page, /from '\.\.\/lib\/bandstate\.js'/, 'and the import');
+  assert.doesNotMatch(page, /from '\.\.\/components\/FirstBand\.js'/, 'and the component import');
 });
+
 
 test('MY TEAMS does not band, in EITHER mode (rule 32)', () => {
   const page = code('app/page.js');

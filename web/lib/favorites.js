@@ -146,12 +146,12 @@ export function splitMine(rows, ids) {
  * regroups by sport and the concatenation's order never reaches the screen. Turning the bands off
  * is what exposes it - so the fix ships in the same commit as the change that reveals it.
  *
- * ABSOLUTE TIME, NOT MINUTES-OF-DAY. `bandstate.js` sorts by minute of the VIEWING day because it
+ * ABSOLUTE TIME, NOT MINUTES-OF-DAY. `bandstate.js` sorted by minute of the VIEWING day because it
  * has to reason about a window that runs past midnight; this only has to put rows in order, and the
  * ISO instant does that correctly across a viewing day's 03:00 cutover and across a whole week
  * without knowing anything about either.
  *
- * A ROW WITH NO KICKOFF SORTS LAST, never first - the same rule `byKickoff` uses in bandstate.js,
+ * A ROW WITH NO KICKOFF SORTS LAST, never first - the same rule `byKickoff` used in bandstate.js,
  * because a TBD is not "earliest", it is "unknown".
  *
  * STABLE: `Array.prototype.sort` is required to be stable, so rows sharing an instant keep the
