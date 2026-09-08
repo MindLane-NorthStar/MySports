@@ -2704,8 +2704,33 @@ show is the number Joe chose with it in front of him. Two of the 26 drop under 3
 After the change exactly eleven blocks measure under 3:1, and they are his eleven: the app now shows
 the ratios he picked, no more and no fewer.
 
-**ONE LOOSE END, LEFT ON PURPOSE.** `cap.art` is unchanged, and 16 of the 42 carry `art: 'dark'` —
-chosen because the dark lockup read better on the TINTED surface, which has just gone away under
-them. Re-measuring that needs the pixels at render size through `scripts/build_cap_table.py`; it is
-not a runtime rule and was not in this change. Whether those 16 still want their dark art on the
-brighter surface is a measurement nobody has taken.
+**THE LOOSE END, NOW MEASURED (prompt 67 stage 4b — evidence only, nothing changed).** `cap.art` is
+still as the cap table left it, and 16 of the 42 carry `art: 'dark'`, chosen because the dark lockup
+read better on the TINTED surface that has gone away under them. Measured with the builder's own
+`edge_crisp` (`scripts/build_cap_table.py:152` — share of silhouette pixels at ≥1.5:1 luminance
+against the surface, at 138px, which is 46 CSS px at DPR 3), against the band as it NOW paints:
+
+**Only ONE of the 16 was made wrong: the Philadelphia 76ers**, raw **0.599** against dark **0.005**
+on `#e01234`. Its dark lockup all but vanishes on the flat band. `art: 'dark'` would need flipping to
+`'raw'` — a one-row change to `web/lib/cap-table.json` — and it is Joe's to make.
+
+**Twelve of the other fifteen cannot be wrong, for a reason worth writing down.** Their `_dark.png`
+is a BYTE COPY of the raw file, because prompts 64 and 66 put them in `logo_conditioning.json`'s
+`skip_derive` list — Joe judged the raw art better on charcoal. So `art: 'dark'` and `art: 'raw'`
+select the same pixels and the distinction has quietly stopped existing for them. Two more (Houston
+Rockets, and the Athletics-style ties) score identically on both files. Only the Rangers (+0.166) and
+the Raptors (+0.308) still earn `dark` by the builder's own >0.05 margin.
+
+**AND THE WIDER FINDING NOBODY ASKED FOR, which matters more than the sixteen.** The builder chooses
+`tint: 1` only when the better art reaches `edge_crisp >= 0.85` on the flat band — that threshold IS
+what the tint existed to rescue. Prompt 66 gave all 42 ruled teams `tint: 1` without consulting it,
+and **19 of the 42 fall below it on their new flat band**: Giants **0.000**, Orioles **0.000**,
+Phillies **0.000**, Utah Mammoth 0.092, Lions 0.222, Raptors 0.308, Marlins 0.357, then a tail from
+0.535 to 0.741. A 0.000 means the logo's silhouette carries essentially no luminance contrast against
+the band it now sits on — it is the shape disappearing into its own colour.
+
+**This is a flag, not a verdict.** `edge_crisp` scores the LOGO against the CAP surface; Joe judged
+the band and the ink at grid scale, which is a different question, and his eye is the authority on
+his own grid. But nineteen blocks whose endcap art the measurement says has stopped reading is worth
+his look before it is called finished — and the fix, if he wants one, is per-team `tint: 0.72` back,
+which trades his exact band for a legible logo on those teams only.

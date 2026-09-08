@@ -7,6 +7,7 @@ The bucket `mysports-assets` is the source of truth; `assets/` on any machine is
     python scripts/sync_assets.py --push           # upload local files the bucket lacks or that differ
     python scripts/sync_assets.py --pull           # download bucket files the cache lacks or that differ
     python scripts/sync_assets.py --push --prefix logos/   # one prefix only
+    python scripts/sync_assets.py --push --prefix logos/ --force   # rewrite even unchanged bytes (headers)
     python scripts/sync_assets.py --push-grids artifacts/rendering            # grids/{sport}/grid_{date}.svg|.png|@2x.png (public bucket)
     python scripts/sync_assets.py --push-data artifacts/validation --prefix fixtures/2026-09-01/   # private bucket (R2_BUCKET_DATA)
     python scripts/sync_assets.py --push-data backup.sql.gz --prefix backups/ --keep 8            # upload one file, prune oldest beyond 8
@@ -114,7 +115,8 @@ def remote_sha(s3, bucket: str, key: str) -> str | None:
 #
 # ONLY NEW UPLOADS CARRY IT. Objects already in the bucket keep the headers they were written with,
 # and the push below skips anything whose bytes match, so the fix reaches an object the first time
-# its art changes - or all at once if someone forces a re-upload.
+# its art changes. `--force` rewrites them all at once and is the only way to set a header on an
+# object that already exists; prompt 67 ran it over `logos/` to close the 1,145 that had none.
 CACHE_CONTROL = "public, max-age=300"
 
 
@@ -185,6 +187,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--make-dark", action="store_true",
                     help="before pushing, build any missing assets/logos/{id}_dark.png (charcoal-floating "
                          "contexts, mobile addendum M12). Idempotent; a provider's own dark art is kept.")
+    ap.add_argument("--force", action="store_true",
+                    help="push every local file under --prefix even where the bytes already match. "
+                         "For rewriting METADATA on objects that are otherwise unchanged - a header "
+                         "cannot be set on an existing object any other way. Use --prefix.")
     ap.add_argument("--keep", type=int, help="push-data: after upload, delete the oldest objects under --prefix beyond this count")
     args = ap.parse_args(argv)
     if args.push_grids or args.push_data:
@@ -216,7 +222,13 @@ def main(argv: list[str] | None = None) -> int:
     to_push, to_pull, same = [], [], 0
     for key, p in local.items():
         r = remote.get(key)
-        if r is None:
+        # --force PUSHES BYTES THAT ALREADY MATCH, and the only reason it exists is HEADERS.
+        # A normal push compares size then sha256 and skips anything identical, which is right for
+        # bytes and wrong for metadata: prompt 66 added `Cache-Control: public, max-age=300` to
+        # uploads and it reached only the 387 objects whose art happened to change that day, leaving
+        # 1,145 answering with no policy at all - the behaviour that cost an hour on 2026-09-08.
+        # There is no way to set a header on an existing R2 object except by writing it again.
+        if args.force or r is None:
             to_push.append(key)
         elif r["size"] != p.stat().st_size or (remote_sha(s3, bucket, key) or "") != sha256(p):
             to_push.append(key)

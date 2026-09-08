@@ -893,11 +893,19 @@ on a small PNG. `stale-while-revalidate` was considered and rejected: it lets a 
 STALE copy while refetching, so the first load after a change still paints the old art — the exact
 symptom, just shorter. Append `, stale-while-revalidate=604800` if request count ever matters more.
 
-**ONLY NEW UPLOADS CARRY IT, and this is the part to remember.** A `--push` compares size and sha256
-and SKIPS anything unchanged, so an object already in the bucket keeps the headers it was written
-with. After prompt 66's push, 387 of the 1,532 `logos/` objects carry the policy and **1,145 still
-answer with none.** They get it the first time their art changes — or all at once if someone forces a
-re-upload, which nobody has done. Verify with `head_object`, not by looking at the image.
+**CLOSED FOR `logos/` ON 2026-09-08 (prompt 67 stage 4a). All 1,532 objects carry the policy** —
+verified by `head_object` on a random sample of 25 and on `logos/mlb-114.png`, which read
+`CacheControl=None` before and reads `public, max-age=300` after.
+
+A `--push` compares size and sha256 and SKIPS anything unchanged, so an object already in the bucket
+keeps the headers it was written with and prompt 66's fix had reached only the 387 whose art changed
+that day. **`--force` was added for exactly this** (`scripts/sync_assets.py`): it pushes every local
+file under `--prefix` even where the bytes match, which is the only way to set a header on an object
+that already exists. Verify with `head_object`, not by looking at the image.
+
+**THE OTHER PREFIXES STILL HAVE NO POLICY** — `network-logos/`, `fonts/` and `brand/` in the public
+bucket, and every `grids/` object. Same one command with a different `--prefix` when someone wants
+them; nothing has gone wrong there yet because that art changes far less often.
 
 **Deliberately NOT done, and both are bigger decisions:** a service worker, and cache-busting query
 strings or content-addressed filenames. The second is the real fix for "the URL never changes when
