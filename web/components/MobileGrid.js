@@ -47,7 +47,7 @@ import { splitOverlaps } from '../lib/overlap.js';
 import { useTextMeasurer } from '../lib/useTextMeasurer.js';
 // sportMarkUrl and SPORT_LABEL went with the grid's header (prompt 50 stage 5a): the tile row
 // above the grid is what states the sport now.
-import { teamLogoUrl, teamLogoDarkUrl } from '../lib/config.js';
+import { teamLogoUrl, teamLogoDarkUrl, teamLogoCapUrl } from '../lib/config.js';
 import { markStyle, hasMark, railMark } from '../lib/marks.js';
 // longDay went with the header too - the picker directly above the grid carries the date.
 import { etTime } from '../lib/format.js';
@@ -560,6 +560,13 @@ export function fitNameSize(measure, sides, span, marker = '@ ') {
   return NAME_MIN;
 }
 
+/** The endcap's art file, per the cap table's `art`. Unknown values fall through to the raw file. */
+function capArt(art, teamId) {
+  if (art === 'cap') return teamLogoCapUrl(teamId);
+  if (art === 'dark') return teamLogoDarkUrl(teamId);
+  return teamLogoUrl(teamId);
+}
+
 function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) {
   const { game } = item;
   const x = scale.toX(item.start);
@@ -633,7 +640,9 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
             background: awaySurface,
           }}
         >
-          <img src={awayCap.art === 'dark' ? teamLogoDarkUrl(away.id) : teamLogoUrl(away.id)}
+          {/* THREE ART CONTEXTS since prompt 69, and this is the only place the third is chosen.
+              A FALL-THROUGH ON PURPOSE: a row that does not say 'cap' behaves exactly as it did. */}
+          <img src={capArt(awayCap.art, away.id)}
                alt="" loading="lazy" />
         </div>
         <div className="mnames">
@@ -672,7 +681,9 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
             background: homeSurface,
           }}
         >
-          <img src={homeCap.art === 'dark' ? teamLogoDarkUrl(home.id) : teamLogoUrl(home.id)}
+          {/* THREE ART CONTEXTS since prompt 69, and this is the only place the third is chosen.
+              A FALL-THROUGH ON PURPOSE: a row that does not say 'cap' behaves exactly as it did. */}
+          <img src={capArt(homeCap.art, home.id)}
                alt="" loading="lazy" />
         </div>
       </div>

@@ -157,7 +157,12 @@ class GeneratedTable(unittest.TestCase):
         self.assertEqual(doc["_rule"]["dark_margin"], DARK_MARGIN)
         for tid, row in doc["teams"].items():
             self.assertIn(row["tint"], (1.0, CAP_TINT), tid)
-            self.assertIn(row["art"], ("raw", "dark"), tid)
+            # 'cap' JOINED THE TWO IN PROMPT 69 - a black silhouette for a bright band, read only
+            # by the grid endcap through teamLogoCapUrl(). It is a THIRD art context, not a third
+            # value of the same one: the raw and dark files both score edge_crisp 0.000 on the
+            # Giants' #fd5a1e band, and the silhouette that scores 1.000 there scores 0.000 on the
+            # charcoal the listings card floats a logo on. build_web_marks.py --cap-art builds it.
+            self.assertIn(row["art"], ("raw", "dark", "cap"), tid)
             self.assertGreaterEqual(row["edge_crisp"], 0.0, tid)
             self.assertLessEqual(row["edge_crisp"], 1.0, tid)
 

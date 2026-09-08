@@ -7,8 +7,10 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { bandFor, inkFor, capFor, tint, CAP_TINT, BAND_MIN_RATIO, contrastRatio } from '../lib/gridmodel.js';
+import { teamLogoUrl, teamLogoDarkUrl, teamLogoCapUrl, ASSET_BASE_URL } from '../lib/config.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const src = (rel) => readFileSync(join(HERE, '..', rel), 'utf8');
 const table = JSON.parse(readFileSync(join(HERE, '..', 'lib', 'cap-table.json'), 'utf8'));
 // the study fixture carries every team's real colour pair, which is what makes the pin real data
 const fixture = JSON.parse(
@@ -75,7 +77,8 @@ test('every row in the shipped table is one of the two levels and one of the two
   for (const id of ids) {
     const r = table.teams[id];
     assert.ok(r.tint === 1 || r.tint === CAP_TINT, `${id} tint ${r.tint}`);
-    assert.ok(r.art === 'raw' || r.art === 'dark', `${id} art ${r.art}`);
+    // 'cap' joined the two in prompt 69 - a black silhouette for a bright band, grid endcap only.
+    assert.ok(r.art === 'raw' || r.art === 'dark' || r.art === 'cap', `${id} art ${r.art}`);
     assert.ok(r.edge_crisp >= 0 && r.edge_crisp <= 1, `${id} edge_crisp ${r.edge_crisp}`);
   }
 });
@@ -94,6 +97,14 @@ const OVERRIDES = {
   // a close call about which reads better, a lockup that has stopped rendering as a shape. A stale
   // input rather than a preference, so it is corrected. One row, reversible by deleting this entry.
   'nba-PHI': { art: 'raw' },
+
+  // Prompt 69 stage 3. Joe ruled the Giants' SF mark black on their orange band. Measured with the
+  // builder's own edge_crisp at render size: on #fd5a1e the raw file scores 0.000, the dark file
+  // 0.000 and a black silhouette 1.000 - and on charcoal that silhouette scores 0.000, where the raw
+  // and dark files both score 1.000. The two contexts want opposite art for this team, so it gets a
+  // THIRD file rather than a different one of the two: `logos/{id}_cap.png`, read only by the grid
+  // endcap through teamLogoCapUrl(). `art: 'cap'` is what selects it.
+  'mlb-137': { art: 'cap' },
 };
 
 test('the shipped table matches the study field for field on tint and art', () => {
@@ -301,4 +312,50 @@ test('exactly the 26 teams Joe accepted give up a team-colour ink', () => {
     'nhl-17',   // Red Wings
     'nhl-7',    // Sabres
   ].sort());
+});
+
+// ---------------------------------------------------------------------------------------------
+// THE THIRD ART CONTEXT (prompt 69 stage 3).
+//
+// The app had two: the RAW file for the grid endcap and the light tint plates, and `_dark.png` for a
+// logo floating on charcoal. Joe ruled the Giants' SF mark black on their orange band, and black
+// cannot live in either - measured with the builder's own edge_crisp at render size:
+//
+//     art                on the band #fd5a1e     on charcoal #101214
+//     raw                              0.000                   1.000
+//     dark                             0.000                   1.000
+//     BLACK silhouette                 1.000                   0.000
+//
+// Putting the silhouette in `_dark.png` would score 1.000 where it is wanted and 0.000 in the four
+// other places that file is rendered. So: `logos/{id}_cap.png`, read only by the grid endcap.
+
+test('teamLogoCapUrl names the third file, and lowercases the id like its two siblings', () => {
+  assert.equal(teamLogoCapUrl('MLB-137'), `${ASSET_BASE_URL}logos/mlb-137_cap.png`);
+  assert.equal(teamLogoCapUrl('mlb-137'), teamLogoCapUrl('MLB-137'));
+  assert.equal(teamLogoCapUrl(null), null);
+  assert.equal(teamLogoCapUrl(''), null);
+});
+
+test('the three URL builders are three DIFFERENT files', () => {
+  const id = 'mlb-137';
+  const three = new Set([teamLogoUrl(id), teamLogoDarkUrl(id), teamLogoCapUrl(id)]);
+  assert.equal(three.size, 3);
+});
+
+test('the endcap selects cap art by the table, and FALLS THROUGH for everything else', () => {
+  // capArt() lives in MobileGrid.js, which cannot be imported outside the bundler, so the selector
+  // is asserted in source. The fall-through is the property that matters: a row that does not say
+  // 'cap' must render exactly what it rendered before this existed.
+  const g = src('components/MobileGrid.js');
+  assert.match(g, /if \(art === 'cap'\) return teamLogoCapUrl\(teamId\);/);
+  assert.match(g, /if \(art === 'dark'\) return teamLogoDarkUrl\(teamId\);/);
+  assert.match(g, /return teamLogoUrl\(teamId\);/);
+  // both endcaps go through it - rule 32, the same thing rendered in two places
+  assert.match(g, /src=\{capArt\(awayCap\.art, away\.id\)\}/);
+  assert.match(g, /src=\{capArt\(homeCap\.art, home\.id\)\}/);
+});
+
+test('exactly one team asks for cap art today - the mechanism is general, the roster is one', () => {
+  const wants = Object.entries(table.teams).filter(([, r]) => r.art === 'cap').map(([id]) => id);
+  assert.deepEqual(wants, ['mlb-137']);
 });

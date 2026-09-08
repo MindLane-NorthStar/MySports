@@ -245,3 +245,66 @@ def test_the_lookup_is_not_league_aware(college_logos):
     skip, der = bwm.conditioning_rulings()
     assert _one(SKIP, True) in skip and _one(SKIP, False) in skip
     assert _one(DERIVE, True) in der and _one(DERIVE, False) in der
+
+
+# ------------------------------------------------- the grid's own cap art (prompt 69 stage 3)
+#
+# A THIRD ART CONTEXT. The app had two - the raw file for the grid endcap and the light plates,
+# `{id}_dark.png` for a logo floating on charcoal - and Joe ruled the Giants' SF mark black on their
+# orange band. Measured with build_cap_table.py's edge_crisp at render size: on #fd5a1e the raw and
+# dark files both score 0.000 and a black silhouette 1.000, while on charcoal the silhouette scores
+# 0.000 and the other two 1.000. The two contexts want opposite art, so a third file settles it.
+
+
+def test_cap_art_is_a_silhouette_not_a_darkening(tmp_path, monkeypatch):
+    """Every visible pixel to #000000, ALPHA UNTOUCHED - the shape and its edge survive exactly."""
+    monkeypatch.setattr(bwm, "LOGO_DIR", tmp_path)
+    table = tmp_path / "cap-table.json"
+    table.write_text(json.dumps({"teams": {"zz-1": {"tint": 1, "art": "cap"}}}), encoding="utf-8")
+    monkeypatch.setattr(bwm, "CAP_TABLE", table)
+
+    src = tmp_path / "zz-1.png"
+    im = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
+    im.putpixel((1, 1), (250, 90, 30, 255))     # opaque brand colour
+    im.putpixel((2, 2), (250, 90, 30, 128))     # a half-transparent antialiased edge pixel
+    im.save(src, "PNG")
+
+    c = bwm.team_cap_art()
+    assert c["generated"] == 1
+    out = Image.open(tmp_path / "zz-1_cap.png").convert("RGBA")
+    assert out.getpixel((1, 1)) == (0, 0, 0, 255), "an opaque pixel goes black and stays opaque"
+    assert out.getpixel((2, 2)) == (0, 0, 0, 128), "ALPHA UNTOUCHED - the edge keeps its coverage"
+    assert out.getpixel((0, 0))[3] == 0, "and a transparent pixel stays transparent"
+
+
+def test_cap_art_roster_is_the_cap_table_and_it_is_idempotent(tmp_path, monkeypatch):
+    monkeypatch.setattr(bwm, "LOGO_DIR", tmp_path)
+    table = tmp_path / "cap-table.json"
+    table.write_text(json.dumps({"teams": {
+        "zz-1": {"art": "cap"}, "zz-2": {"art": "dark"}, "zz-3": {"art": "raw"},
+    }}), encoding="utf-8")
+    monkeypatch.setattr(bwm, "CAP_TABLE", table)
+    for stem in ("zz-1", "zz-2", "zz-3"):
+        Image.new("RGBA", (4, 4), (200, 100, 50, 255)).save(tmp_path / f"{stem}.png", "PNG")
+
+    assert bwm.team_cap_art()["generated"] == 1
+    assert (tmp_path / "zz-1_cap.png").exists()
+    assert not (tmp_path / "zz-2_cap.png").exists(), "'dark' does not ask for cap art"
+    assert not (tmp_path / "zz-3_cap.png").exists(), "'raw' does not either"
+    assert bwm.team_cap_art()["generated"] == 0, "a second run writes nothing"
+
+
+def test_a_cap_file_is_not_a_base_logo(tmp_path, monkeypatch):
+    """THE TRAP: `{id}_cap.png` must not be conditioned into `{id}_cap_dark.png`.
+
+    `team_dark_variants()` walks every `*.png` that is not a derived file. `_cap` had to join
+    `_dark` in that exclusion, or the new silhouette would be read as a team logo, get a dark variant
+    nothing renders, and put every count of the 766 out by one per cap file.
+    """
+    monkeypatch.setattr(bwm, "LOGO_DIR", tmp_path)
+    monkeypatch.setattr(bwm, "CONDITIONING", tmp_path / "none.json")
+    _base(tmp_path / "zz-9.png")
+    _base(tmp_path / "zz-9_cap.png")
+    bwm.team_dark_variants()
+    assert (tmp_path / "zz-9_dark.png").exists(), "a real base is still conditioned"
+    assert not (tmp_path / "zz-9_cap_dark.png").exists(), "a cap file is not a base"

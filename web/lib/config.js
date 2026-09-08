@@ -147,15 +147,42 @@ export function gridAssetUrl(key) {
 }
 
 /**
- * The dark-context team logo (mobile addendum M12). TWO contexts, two files:
+ * The dark-context team logo (mobile addendum M12). THREE contexts, three files:
  *   - grid cap endcaps and light tint plates use teamLogoUrl()  - RAW, never lightness-adjusted;
- *   - a logo FLOATING on charcoal (listings line 1, the odds slot) uses this one.
+ *   - a logo FLOATING on charcoal (listings line 1, the odds slot) uses this one;
+ *   - a grid endcap whose BAND IS BRIGHT uses teamLogoCapUrl() - a black silhouette (prompt 69).
  * Built by scripts/build_web_marks.py --team-logos, which keeps a provider's own dark art where ESPN
  * offers it and derives the rest.
  */
 export function teamLogoDarkUrl(teamId) {
   if (!teamId) return null;
   return `${ASSET_BASE_URL}logos/${String(teamId).toLowerCase()}_dark.png`;
+}
+
+/**
+ * THE THIRD CONTEXT (prompt 69, Joe's ruling 2026-09-08): the grid endcap's own art, black.
+ *
+ * Joe ruled the Giants' SF mark should go black on their orange band. Measured with
+ * `build_cap_table.py`'s `edge_crisp` at render size, the two existing files and the black
+ * silhouette are exact opposites:
+ *
+ *     art                on the band #fd5a1e     on charcoal #101214
+ *     raw                              0.000                   1.000
+ *     dark                             0.000                   1.000
+ *     BLACK silhouette                 1.000                   0.000
+ *
+ * SO IT CANNOT GO IN `_dark.png`. That file is what a listings card floats on charcoal - read at
+ * MatchupCard.js:108 and :250 and GameDetail.js:98 and :102 - and a black Giants mark scores 0.000
+ * there. The two contexts genuinely want opposite art for this team, which is what makes a third
+ * file the answer instead of a preference between the two.
+ *
+ * ONLY REACHED WHEN THE CAP TABLE SAYS `art: "cap"`, so a team with no `_cap.png` never asks for one
+ * and renders exactly as it does today. `logo_conditioning.json`'s three `split_by_context` teams
+ * are the same architecture one context earlier.
+ */
+export function teamLogoCapUrl(teamId) {
+  if (!teamId) return null;
+  return `${ASSET_BASE_URL}logos/${String(teamId).toLowerCase()}_cap.png`;
 }
 
 /**

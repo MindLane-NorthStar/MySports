@@ -610,7 +610,11 @@ def team_dark_variants(force: bool = False) -> dict[str, int]:
     """
     counts = {"present": 0, "generated": 0, "skipped": 0, "reconditioned": 0, "ruled_raw": 0}
     skip_derive, _derive_ruled = conditioning_rulings()
-    bases = sorted(p for p in LOGO_DIR.glob("*.png") if not p.stem.endswith("_dark"))
+    # `_dark` AND `_cap` ARE DERIVED FILES, NOT BASES. `_cap` joined this in prompt 69: without it
+    # the cap silhouette would be read as a team logo and get a `{id}_cap_dark.png` of its own, which
+    # nothing renders and every count of the 766 would then be wrong.
+    bases = sorted(p for p in LOGO_DIR.glob("*.png")
+                   if not (p.stem.endswith("_dark") or p.stem.endswith("_cap")))
     for p in bases:
         dark = p.with_name(f"{p.stem}_dark.png")
         if p.stem in skip_derive:
@@ -642,6 +646,69 @@ def team_dark_variants(force: bool = False) -> dict[str, int]:
     return counts
 
 
+CAP_TABLE = ROOT / "web" / "lib" / "cap-table.json"
+
+
+def team_cap_art(force: bool = False) -> dict[str, int]:
+    """Build `logos/{id}_cap.png` for every team the cap table asks for - A THIRD ART CONTEXT.
+
+    THE APP ALREADY HAD TWO, and `web/lib/config.js:151` documents them: the grid's cap endcap and
+    the light tint plates take the RAW file, and a logo FLOATING ON CHARCOAL - a listings card's
+    line 1, the odds slot, the detail panel - takes `{id}_dark.png`. Prompt 69 added the third
+    because Joe ruled the Giants' SF mark should go BLACK on their orange band, and black cannot
+    live in either of the existing files.
+
+    MEASURED, WITH build_cap_table.py's OWN `edge_crisp`, at render size on 2026-09-08:
+
+        art                on the band #fd5a1e     on charcoal #101214
+        raw                              0.000                   1.000
+        dark                             0.000                   1.000
+        BLACK silhouette                 1.000                   0.000
+
+    Writing the silhouette into `mlb-137_dark.png` would score 1.000 where it is wanted and 0.000
+    where the app renders it four other times - MatchupCard.js:108 and :250, GameDetail.js:98 and
+    :102 - so the Giants would vanish from every list card in the app. The two contexts genuinely
+    disagree about this team, which is what makes a third file the answer rather than a nicety.
+
+    THE OPERATION IS A SILHOUETTE, NOT A DARKENING. Every visible pixel to #000000 with ALPHA
+    UNTOUCHED - so the shape, its holes and its antialiased edge all survive exactly, and only the
+    colour goes. It is deliberately NOT the guarded derive + 0.5 lightness floor that
+    `logo_conditioning.json`'s `derive` list describes; that chain exists to lift art OFF a dark
+    ground, and this one is pushing art onto a bright one.
+
+    THE ROSTER IS THE CAP TABLE, not a list here: a team gets a `_cap.png` exactly when its row says
+    `art: "cap"`. One team says so today. Idempotent - an existing file is left alone unless --force.
+    """
+    counts = {"generated": 0, "present": 0, "missing_base": 0}
+    try:
+        rows = json.loads(CAP_TABLE.read_text(encoding="utf-8")).get("teams") or {}
+    except (FileNotFoundError, ValueError) as e:  # noqa: BLE001
+        print(f"  warn: {CAP_TABLE.name}: {e} - no cap art built")
+        return counts
+    for team_id, row in sorted(rows.items()):
+        if row.get("art") != "cap":
+            continue
+        base = LOGO_DIR / f"{team_id}.png"
+        if not base.exists():
+            print(f"  warn: {team_id} wants cap art but has no base logo - skipped")
+            counts["missing_base"] += 1
+            continue
+        out = base.with_name(f"{team_id}_cap.png")
+        if out.exists() and not force:
+            counts["present"] += 1
+            continue
+        im = Image.open(base).convert("RGBA")
+        px = im.load()
+        for y in range(im.height):
+            for x in range(im.width):
+                r, g, b, a = px[x, y]
+                if a:
+                    px[x, y] = (0, 0, 0, a)
+        im.save(out, "PNG", optimize=True)
+        counts["generated"] += 1
+    return counts
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--only", nargs="+",
@@ -659,8 +726,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--list", action="store_true", help="print the recipe per slug and exit")
     ap.add_argument("--team-logos", action="store_true",
                     help="also build assets/logos/{id}_dark.png for charcoal-floating contexts")
+    ap.add_argument("--cap-art", action="store_true",
+                    help="build assets/logos/{id}_cap.png - a BLACK SILHOUETTE for the grid endcap - "
+                         "for every team whose cap-table row says art: \"cap\"")
     ap.add_argument("--force", action="store_true", help="rebuild dark variants that already exist")
     args = ap.parse_args(argv)
+    if args.cap_art:
+        c = team_cap_art(args.force)
+        print(f"team cap art: {c['generated']} generated, {c['present']} already present, "
+              f"{c['missing_base']} wanted but had no base logo")
     if args.team_logos:
         c = team_dark_variants(args.force)
         print(f"team dark variants: {c['generated']} generated ({c['reconditioned']} of them files "
