@@ -45,8 +45,46 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 60's follow-up commit. Gates: **494 Python tests + 1 skipped**, **446 JS unit
-tests**, smoke **30/30**, qa-shots **73/73**, **`npm run geometry`** all hard stops.
+main, HEAD is prompt 62's stage-4 commit. Gates: **496 Python tests + 1 skipped**, **451 JS unit
+tests**, smoke **30/30**, qa-shots **88/88**, **`npm run geometry`** all hard stops.
+
+### THE SPLIT SHIPPED (prompt 62) — the picker joins the bar
+
+`.chdr` is **sticky in flow**, not fixed. Collapsed, `.hubctl` becomes `display: contents` and its
+four non-picker children `display: none`, so `.pickrow` becomes a direct child of `<main>` and
+sticks under the bar at `var(--stack-h)` — a ResizeObserver on `.chdr`, so the offset carries the
+44px row, the safe-area inset and the league row without arithmetic. **The picker is not moved and
+its data is not threaded**: it still renders from `Controls` in `app/page.js`, server-side.
+
+Measured, day and week: closed, bar 45 / picker top 45, flush. Row open, bar 127 / picker top 127 —
+**the bar grew 82px and the picker moved 82px.** That is the split.
+
+**THE 160ms SLIDE-IN IS GONE** and could not be kept — the two states differ by `display`, which has
+no intermediate frame. Nothing replaced it.
+
+### THE DEAD BAND OVER THE GRID IS NOW 92px, MEASURED
+
+Prompt 60 measured **45px against the 44px navbar**. The stack is 44 + 48.39 = **92.39px**, and a
+touch landing on it targets the stack rather than `.mgrid-scroll`. Re-measured 2026-09-08 with real
+CDP touch input, 390, grid view:
+
+| where | dead band | visible grid | share |
+|---|---|---|---|
+| day / grid, most positions | 92px | 844 | **10.9%** |
+| day / grid, near the foot | 92px | 542 | **17%** |
+| week / grid, a day fully in view | 92px | 715 | **0%** — the stack is not over it |
+| week / grid, partly scrolled | 92px | 370 | **25%** |
+| week / grid, worst position | 92px | 171 | **54%** |
+
+**It roughly doubled**, and at the worst week-mode position it is now more than half the visible
+grid. A pinch inside the band does not reach the grid; the same pinch 60px lower works normally.
+**With the league row open it is 100% of that worst position** — transient, and the reader opened it.
+
+**This is reported, not fixed.** `MobileGrid`'s touch handling is untouched and the document-level
+pinch rebind stays shelved — the named fix if the band is ever wanted back is to bind the pinch at
+the document level and gate it on the gesture's midpoint being over a `.mgrid-scroll`. **This is the
+first thing to look at on the phone**, because 54% is a number a browser can measure and only a
+thumb can judge.
 
 > ### DEVICE-CONFIRMED THROUGH PROMPT 57. FOUR THINGS ARE WAITING ON THE PHONE.
 >

@@ -37,22 +37,36 @@
   naming the league at all. This file showed the right answer first; nothing here needed to change.
 
   THE APP HAS A COLLAPSING PAGE HEADER AND THIS FILE DOES NOT, AND THAT IS NOT DRIFT (prompt 58,
-  rule 23; REWRITTEN in prompt 60, because what it described has been replaced). The app's header is
-  now a 44px NAVBAR that takes the banner's place: the wordmark, three VERTICAL toggles showing both
-  of their states with the live one in gold, and a live tile carrying either ALL SPORTS or the
-  chosen league's mark over a caret. It arrives when the reader scrolls past the header OR taps the
-  television on the banner, it REMOVES the banner and the control stack rather than merely covering
-  them, and it stays until the reader taps MYSPORTS TV. Scroll only ever collapses; it never expands.
+  rule 23; rewritten in prompt 60 and again in prompt 62, each time because what it described had
+  been replaced). The app's header is now a STACK OF TWO STICKY BLOCKS, and the stack is the part
+  that matters here:
+
+    the NAVBAR - 44px: the wordmark, three vertical toggles showing both of their states with the
+    live one in gold, and a live tile carrying either ALL SPORTS or the chosen league's mark;
+    the PICKER - 47px: the same date or week control the expanded stack renders, and literally the
+    same element. It is not moved and not duplicated - the stack around it becomes
+    `display: contents` so the picker becomes a direct child of <main> and sticks there.
+
+  Tapping the tile opens the league row BETWEEN them, which PUSHES the picker and the schedule down
+  rather than covering them - Joe's ruling, because a dropdown belongs immediately below the control
+  that opened it. Three gold hairlines tier the result: 0.28 under the navbar, 0.28 under the league
+  row while it is open, and the full 0.55 `--gold-line` under the picker, which is the outer edge of
+  the block.
 
   NOTHING HERE NEEDS TO CHANGE, and the reason is the scope this file has always declared: it is the
   authority for the CARD's geometry, the chip row and the grid's own construction, and a page header
-  is none of those.
+  is none of those. The CARDS below are still exactly the cards the app renders under that stack.
 
-  IT ALSO COULD NOT SHOW ONE, and prompt 60 makes that stronger rather than weaker. This page models
-  no scroll behaviour at all - each phone frame is a fixed-height mock. `.abar` below is this demo's
-  own static wordmark-and-day bar inside each frame, and `.mswitch` is the demo's navigation between
-  mockups; neither is the app's chrome. A header with FIVE transitions between two states is a
-  behaviour over time, which is exactly what a static mock cannot depict.
+  IT ALSO COULD NOT SHOW ONE, and each rewrite makes that stronger rather than weaker. This page
+  models no scroll behaviour at all - each phone frame is a fixed-height mock. `.abar` below is this
+  demo's own static wordmark-and-day bar inside each frame, and `.mswitch` is the demo's navigation
+  between mockups; neither is the app's chrome. A header whose two blocks are sticky, whose middle
+  block appears and pushes the rest down, and whose offset is written from a ResizeObserver every
+  frame, is a behaviour over time - which is exactly what a static mock cannot depict.
+
+  ONE NUMBER FROM THE APP IS WORTH CARRYING HERE ANYWAY, because it is about the GRID and the grid
+  is in this file's scope: the sticky stack sits over the top 92px of `.mgrid-scroll`, and a touch
+  landing there targets the stack rather than the grid. Measured 2026-09-08 - see the handoff.
 
   AND THIS FILE HAS NO `MY TEAMS` AT ALL, WHICH IS ALSO NOT DRIFT (prompt 60, rule 23). It renders
   one ALL GAMES arrangement, with a `.secthead` per day and league. The app has a scope toggle, and
