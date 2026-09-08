@@ -256,9 +256,29 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
                "and split_part(o.normalized_value, '|', 1) = b.service_id) where b.game_id = %s", (gid,), tag="game_broadcasts.active")
         od = g.get("odds")
         if od and od.get("spread") is not None:
+            # ONE ROW PER (GAME, BOOK) - migration 0017's STEP 3, applied 2026-09-08 once the
+            # constraint existed. `game_odds_game_provider_key` is unique on (game_id, provider),
+            # so the OLD conflict target of (game_id, provider, fetched_at) no longer matches any
+            # constraint and every refreshed line would raise a unique violation and take the whole
+            # load down with it. The target has to be the constraint that exists.
+            #
+            # AND THE UPDATE LIST HAS TO BE NON-EMPTY. `db.upsert` compiles `[]` to `DO NOTHING`
+            # (db.py:186-192, read rather than taken from the docstring above it), which with the
+            # new constraint would silently freeze every book at the first line it ever quoted.
+            # Naming the five columns compiles to `DO UPDATE SET c = excluded.c`, so a refreshed
+            # line REPLACES rather than accumulating - which is the whole point of 0017.
+            #
+            # `fetched_at` IS IN THE UPDATE LIST ON PURPOSE: it stops being part of the key and
+            # becomes a value, and `render_feed.py:63` still orders by it to pick the newest.
+            # NO `preserve` HERE, deliberately: these are all facts a successful fetch restates in
+            # full, and a book that stops quoting a total should clear it rather than keep showing
+            # a stale one. `spread_open` and `total_open` exist in 0003 and no loader has ever
+            # written them; 0017 leaves them alone and so does this.
             db.upsert("game_odds", [{"game_id": gid, "provider": od.get("provider") or "unknown", "spread": od.get("spread"), "total": od.get("overUnder"),
                                      "home_moneyline": _int(od.get("moneylineHome")), "away_moneyline": _int(od.get("moneylineAway")),
-                                     "fetched_at": parse_iso(od.get("fetchedAt")) or datetime.now(timezone.utc)}], "game_id, provider, fetched_at", [], tag="game_odds")
+                                     "fetched_at": parse_iso(od.get("fetchedAt")) or datetime.now(timezone.utc)}],
+                      "game_id, provider",
+                      ["spread", "total", "home_moneyline", "away_moneyline", "fetched_at"], tag="game_odds")
             counts["odds"] += 1
         recs = g.get("records") or {}
         # The same adapter records that feed team_records also go on the GAME, so the grid's record run
