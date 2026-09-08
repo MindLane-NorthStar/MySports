@@ -10,6 +10,12 @@ WHY THIS EXISTS. `build_web_marks.py`'s `team_dark_variants()` skips any team th
 where none does - so the file's EXISTENCE is not evidence of provider art, and byte-identity with the
 base is how the absence is detected.
 
+READ THIS BEFORE ACTING ON THE COUNT. Since prompt 64, `data/logo_conditioning.json` names 101 pro
+teams whose dark file is a byte copy of the base ON PURPOSE - Joe judged the raw art better on
+charcoal than the derived version. They are identical, they may well be dark, and they will appear
+in the list below, but they are NOT absences and must not be conditioned. This audit reports bytes;
+the rulings file decides.
+
 THE LUMINANCE DEFINITION IS THE MODULE'S OWN, NOT A SECOND ONE. `floor_l` (build_web_marks.py:89-106)
 raises a visible pixel whenever `0.5 + l*0.25 > l`, i.e. whenever HLS lightness `l < 2/3`. That
 inequality IS the module's line for "too dark to float on charcoal", so it is what this counts -

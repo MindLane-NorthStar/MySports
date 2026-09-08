@@ -539,10 +539,37 @@ def build(only: list[str] | None = None, out_dir: Path | None = None,
 # ----------------------------------------------------------------------------- team logos, dark context
 LOGO_DIR = ROOT / "assets" / "logos"
 DARK_MAX = 256        # the dark variant is a LISTINGS asset (<= 40px on screen); the raw stays 500px
+CONDITIONING = ROOT / "data" / "logo_conditioning.json"
 
 
 def _sha(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
+def conditioning_rulings() -> tuple[set[str], set[str]]:
+    """Joe's per-team rulings from `data/logo_conditioning.json`: (skip_derive, derive).
+
+    Decided by eye on 2026-09-08 over the 124 pro-league teams, each judged on both grounds the app
+    uses. The file is the AUTHORITY over the byte-identity test below, and it has to be, because for
+    a `skip_derive` team the two say opposite things about the same bytes: that team's dark file is
+    a byte copy of its base ON PURPOSE, and the identity test reads exactly that as "the provider
+    shipped no dark art, condition it". Left to run, the identity test would silently undo every
+    ruling on the next nightly build and nothing would fail.
+
+    A missing or unparseable file means NO rulings, not a crash: the nightly runner must keep
+    conditioning logos even if this file is ever removed. Unruled teams - all 642 college teams as
+    of this commit - are untouched by any of it.
+    """
+    try:
+        d = json.loads(CONDITIONING.read_text(encoding="utf-8"))
+    except (FileNotFoundError, ValueError) as e:  # noqa: BLE001 - rulings are optional, not required
+        print(f"  warn: {CONDITIONING.name}: {e} - no per-team rulings applied")
+        return set(), set()
+    skip, der = set(d.get("skip_derive") or ()), set(d.get("derive") or ())
+    both = skip & der
+    if both:
+        raise ValueError(f"{CONDITIONING.name}: ruled both ways: {sorted(both)}")
+    return skip, der
 
 
 def team_dark_variants(force: bool = False) -> dict[str, int]:
@@ -571,11 +598,30 @@ def team_dark_variants(force: bool = False) -> dict[str, int]:
     Idempotent either way: a conditioned variant is a 256px re-render and can never come back
     byte-identical to its 500px source, so a second run sees it as present and leaves it alone.
     --force still rebuilds everything.
+
+    **JOE'S RULINGS OUTRANK THE IDENTITY TEST** (prompt 64). `conditioning_rulings()` names 101
+    teams whose charcoal-context art he judged better as the RAW file - a strong single-colour
+    roundel, a logo already light enough, one whose derived version went chalky. For those the dark
+    file is a byte copy of the base, and the identity test is not consulted at all: here the
+    identity IS the intent, and letting the test see it would recondition all 101 on the next
+    nightly run with nothing to show it had happened. That copy is its own idempotence signal - a
+    second run finds the bytes already equal and writes nothing. The other 23 ruled teams keep the
+    conditioned chain, which is what the code below already does for them, so they need no branch.
     """
-    counts = {"present": 0, "generated": 0, "skipped": 0, "reconditioned": 0}
+    counts = {"present": 0, "generated": 0, "skipped": 0, "reconditioned": 0, "ruled_raw": 0}
+    skip_derive, _derive_ruled = conditioning_rulings()
     bases = sorted(p for p in LOGO_DIR.glob("*.png") if not p.stem.endswith("_dark"))
     for p in bases:
         dark = p.with_name(f"{p.stem}_dark.png")
+        if p.stem in skip_derive:
+            # RULED RAW. No identity test - see the note above. --force re-copies; the bytes are the
+            # same either way, so it is the write that is skipped, never the ruling.
+            if not (dark.exists() and not force and _sha(dark) == _sha(p)):
+                shutil.copyfile(p, dark)
+                counts["ruled_raw"] += 1
+            else:
+                counts["present"] += 1
+            continue
         if dark.exists() and not force:
             # IDENTICAL BYTES MEAN NO PROVIDER ART - see the note above. `_sha` rather than a size
             # compare: two different lockups can share a byte count, and this decides whether a
@@ -618,8 +664,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.team_logos:
         c = team_dark_variants(args.force)
         print(f"team dark variants: {c['generated']} generated ({c['reconditioned']} of them files "
-              f"that existed but were byte-identical to their base), {c['present']} already present "
-              f"(real provider art kept), {c['skipped']} unreadable")
+              f"that existed but were byte-identical to their base), {c['ruled_raw']} copied raw "
+              f"(Joe's skip_derive rulings), {c['present']} already present "
+              f"(real provider art kept, or a ruling already satisfied), {c['skipped']} unreadable")
     if args.list:
         for s in slugs():
             kind, _ = RECIPES.get(s, ("png", dark_ready))

@@ -28,8 +28,10 @@ AND `logos[1]` IS NOT ALWAYS DARK ART. ESPN serves that URL for every team wheth
 dark lockup exists, returning the base bytes where none does - measured 2026-09-07, 449 of 766 files
 written here came back byte-identical to their base. Conditioning is
 `scripts/build_web_marks.py --team-logos`, which since prompt 61 treats byte-identity with the base
-as the ABSENCE of provider art and conditions those, keeping only genuinely distinct art. Run it
-after this; the workflow's push step does it with --make-dark.
+as the ABSENCE of provider art and conditions those, keeping only genuinely distinct art - EXCEPT
+for the teams `data/logo_conditioning.json` rules `skip_derive`, where Joe judged the raw art the
+better charcoal art and the identity is deliberate. Run it after this; the workflow's push step does
+it with --make-dark.
 """
 import argparse, json, os, re, sys, time, urllib.request, urllib.error
 from pathlib import Path

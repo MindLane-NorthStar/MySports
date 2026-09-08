@@ -164,10 +164,16 @@ def main(argv: list[str] | None = None) -> int:
         # Two logo contexts ship to the same bucket: the RAW {id}.png that grid cap endcaps use
         # unmodified, and the {id}_dark.png a listings card floats on charcoal. The second is derived
         # here so it can never drift from the first. Pillow only; the push itself is unchanged.
+        #
+        # Since prompt 64 `data/logo_conditioning.json` overrides that derive for the teams Joe ruled
+        # raw: their dark file is a byte copy of the base, and the byte-identity test that normally
+        # means "no provider art" is not applied to them. Reported separately below so a run that
+        # quietly reconditioned a ruled team would show up as a number that moved.
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         from build_web_marks import team_dark_variants
         c = team_dark_variants()
-        print(f"dark logo variants: {c['generated']} generated, {c['present']} already present "
+        print(f"dark logo variants: {c['generated']} generated, {c['ruled_raw']} copied raw "
+              f"(ruled skip_derive), {c['present']} already present "
               f"(provider art kept), {c['skipped']} unreadable")
     s3 = client()
     local = local_files(root, args.prefix)
