@@ -80,13 +80,34 @@ test('every row in the shipped table is one of the two levels and one of the two
   }
 });
 
+/**
+ * ROWS DELIBERATELY EDITED AWAY FROM THE STUDY, each with the reason it was.
+ *
+ * The test below exists to catch hand-editing drift, so an override is declared HERE rather than
+ * softened into the assertion: any row that differs and is not named fails, and a named row that
+ * stops differing fails too. Reverting one means deleting its entry, which is the point.
+ */
+const OVERRIDES = {
+  // Prompt 68 stage 4. The study chose `dark` measured against tint 0.72; prompt 66 gave every
+  // ruled team tint 1, so that surface no longer exists. Re-measured on the band as it now paints
+  // (#e01234, Joe's chosen 76ers band): raw scores edge_crisp 0.599 and the dark lockup 0.005 - not
+  // a close call about which reads better, a lockup that has stopped rendering as a shape. A stale
+  // input rather than a preference, so it is corrected. One row, reversible by deleting this entry.
+  'nba-PHI': { art: 'raw' },
+};
+
 test('the shipped table matches the study field for field on tint and art', () => {
   let flatRaw = 0, flatDark = 0, tintRaw = 0, tintDark = 0;
   for (const row of fixture.teams) {
     const mine = table.teams[row.id];
     assert.ok(mine, `${row.id} missing from the shipped table`);
-    assert.equal(mine.tint, row.tint, `${row.id} tint`);
-    assert.equal(mine.art, row.art, `${row.id} art`);
+    const over = OVERRIDES[row.id] || {};
+    assert.equal(mine.tint, 'tint' in over ? over.tint : row.tint, `${row.id} tint`);
+    assert.equal(mine.art, 'art' in over ? over.art : row.art, `${row.id} art`);
+    for (const [field, want] of Object.entries(over)) {
+      assert.notEqual(row[field], want,
+        `${row.id} ${field} is declared an override but matches the study - delete the entry`);
+    }
     if (row.tint === 1 && row.art === 'raw') flatRaw++;
     else if (row.tint === 1) flatDark++;
     else if (row.art === 'raw') tintRaw++;
