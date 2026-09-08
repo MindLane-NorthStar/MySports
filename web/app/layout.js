@@ -2,6 +2,7 @@ import './globals.css';
 import { Suspense } from 'react';
 import Banner from '../components/Banner.js';
 import Chrome from '../components/Chrome.js';
+import AutoScroll from '../components/AutoScroll.js';
 import CollapsedHeader from '../components/CollapsedHeader.js';
 
 export const metadata = {
@@ -59,6 +60,14 @@ export default function RootLayout({ children }) {
             do to `.mrail-cell`. Suspense because it reads useSearchParams. */}
         <Suspense fallback={null}>
           <CollapsedHeader />
+        </Suspense>
+        {/* Lands the reader on what is on now (prompt 67 stage 2). Mounted HERE for the same reason
+            CollapsedHeader is: a sibling of `.shell`, never an ancestor of `<main>` or of the mobile
+            grid, so it can never become a containing block for the grid's sticky rail. It renders
+            nothing at all, but the rule is about the element chain and not about the pixels.
+            Suspense because it reads useSearchParams. */}
+        <Suspense fallback={null}>
+          <AutoScroll />
         </Suspense>
         <div className="shell">
           {children}

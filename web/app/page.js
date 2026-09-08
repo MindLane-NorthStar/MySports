@@ -369,7 +369,12 @@ export default async function HubPage({ searchParams }) {
           <>
             {days.map((d) =>
               grouped[d]?.length ? (
-                <div key={d} className="weekday">
+                // `data-daykey` / `data-istoday`: the anchor components/AutoScroll.js scrolls to
+                // (prompt 67 stage 2). `d === today` is the SAME comparison `nowMinute` below
+                // already makes, reused rather than recomputed - and it is what makes "never on a
+                // week that does not contain today" fall out for free: no element carries
+                // data-istoday, so the scroll finds nothing and does nothing.
+                <div key={d} className="weekday" data-daykey={d} data-istoday={d === today ? 'true' : undefined}>
                   {/* C3: the day heading renders THROUGH Listing -> SportBand, so it shares the
                       header row exactly as a sport band does.
 
@@ -609,7 +614,12 @@ export default async function HubPage({ searchParams }) {
           It is a live selector, not a leftover of the band. */}
       <div className="today-split">
 
-        <div id="all-today">
+        {/* DAY MODE'S ANCHOR, the same two attributes the week's day blocks carry, so
+            components/AutoScroll.js has one rule rather than two. In day mode the day IS the page,
+            so "scroll to the current day" means "scroll to what is on now inside it" - and on a day
+            that is not today there is nothing on now, `data-istoday` is absent, and the scroll
+            correctly does nothing. */}
+        <div id="all-today" data-daykey={day} data-istoday={day === today ? 'true' : undefined}>
           {/* JOE, 2026-09-06: "I only want list cards on list view and only grids on grid view."
               `grid={P.isGrid}` rather than a bare `grid`.
 

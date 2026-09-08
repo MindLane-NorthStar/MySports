@@ -269,12 +269,20 @@ export default function MatchupCard({ game, standings, rankings, showDay = false
     </>
   );
 
+  // `data-live` IS THE SCROLL TARGET'S ONLY MARKER (prompt 67 stage 2), and it is written from
+  // `result_status` on the SERVER for the same reason `nowMinute` is: the client must not hold a
+  // clock. It is not styling and nothing in globals.css reads it - components/AutoScroll.js finds
+  // the earliest one inside today's block and lands the reader there. `slot.kind` was the
+  // alternative and is wrong for this: a live game WITH scores reports kind 'score', so half the
+  // live slate would not have matched.
+  const live = game?.result_status === 'in_progress' ? '1' : undefined;
+
   if (onOpen) {
     return (
-      <button type="button" className="mcard" onClick={() => onOpen(game)}>
+      <button type="button" className="mcard" data-live={live} onClick={() => onOpen(game)}>
         {body}
       </button>
     );
   }
-  return <div className="mcard">{body}</div>;
+  return <div className="mcard" data-live={live}>{body}</div>;
 }

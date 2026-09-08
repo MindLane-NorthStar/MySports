@@ -86,6 +86,14 @@ test('THE FIRST BAND DOES NOT RENDER AT ALL - it was removed on 2026-09-08', () 
   assert.doesNotMatch(page, /from '\.\.\/components\/FirstBand\.js'/, 'and the component import');
 });
 
+test('what the band answered is answered by the scroll instead', () => {
+  // The band existed to say "what is on right now" on a day too long to scan. Removing it without
+  // replacing that would have been a loss; prompt 67 stage 2 lands the reader on the live game on
+  // entry. If the anchors ever come out, this says what has to go back in their place.
+  const page = code('app/page.js');
+  assert.match(page, /data-istoday=/, 'the day blocks carry the anchor the scroll needs');
+});
+
 
 test('MY TEAMS does not band, in EITHER mode (rule 32)', () => {
   const page = code('app/page.js');
