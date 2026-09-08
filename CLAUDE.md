@@ -156,14 +156,14 @@ never renumber, even around the retired stub.
 Five, and all five are run **before** the commit, as their own commands:
 
 ```
-pytest                       # from the repo root — 494 pass + 1 skipped
+pytest                       # from the repo root — 496 pass + 1 skipped
 npm run test:unit            # from web/ — 446
 npm run smoke                # from web/ — 30/30
 node scripts/qa-shots.mjs    # from web/ — 73/73
 npm run geometry             # from web/ — all hard stops (see below)
 ```
 
-Counts are the floor as of `9d7530f`; they may only go up. Report all five with every change, and
+Counts are the floor as of `f7fe047`; they may only go up. Report all five with every change, and
 never read a gate's result from the exit code of a chained command.
 
 ## The phone-grid geometry check

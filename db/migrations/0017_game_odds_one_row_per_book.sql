@@ -1,14 +1,30 @@
 -- 0017 — one row per (game, book), so a refreshed line UPDATES instead of accumulating.
 --
 -- ============================================================================================
--- PREPARED, NOT APPLIED. Prompt 57 stage 4 wrote this file and deliberately did not run it.
--- Working rule 14 was revised on 2026-09-07: database writes go through the Supabase connector,
--- and every DDL statement must already exist as a file in `db/migrations/` and be applied FROM
--- that file. This IS that file, so the rule is satisfied by applying it as written and not by
--- retyping it into a connector call. What it still needs is Joe's NAMED approval for this
--- operation - approval for one write is never standing approval for the next - and rule 27's
--- check `gh run list --workflow schedule_refresh.yml -L 1` first; never run two at once.
--- THE CONNECTOR IS ATTACHED TO COWORK, NOT TO CLAUDE CODE. Cowork applies this.
+-- APPLIED 2026-09-08 at 01:34 UTC, from Cowork, on Joe Lull's explicit named approval.
+--
+-- It sat PREPARED from prompt 57 stage 4 until then. Working rule 14 was revised on 2026-09-07 to
+-- allow database writes through the Supabase connector, under four conditions, and all four were
+-- met: named approval for THIS operation, SELECT-and-paste first, rule 27's schedule check, and
+-- the DDL already existing as this file and being applied FROM it rather than retyped.
+--
+-- WHAT ACTUALLY RAN, and in this order: the STEP 1 delete below, then the constraint. Measured
+-- either side of it -
+--
+--     595 rows before          516 after          79 deleted
+--     32 (game_id, provider) pairs held more than one row      0 remain
+--     BOTH unique constraints now present: the new game_odds_game_provider_key on
+--     (game_id, provider), and 0003's original three-column one, kept deliberately - see STEP 2.
+--
+-- THE 111 ROWS OF THOSE 32 PAIRS ARE ARCHIVED, each marked KEEP or DELETE, at
+-- `docs/research/game-odds-surplus-2026-09-08.json`. Its six checksums - rows 111, delete 79,
+-- keep 32, pairs 32, id_sum 58110, delete_id_sum 30462 - were verified against the live database
+-- before the delete ran, and recompute from the file itself. Rule 6 says close, do not delete;
+-- `game_odds` has no `valid_to`, so the archive IS the closure.
+--
+-- STEP 3 LANDED SEPARATELY as `f7fe047`, and it had to: with the new constraint in place the
+-- loader's old conflict target of (game_id, provider, fetched_at) matched nothing and the next
+-- nightly run would have raised a unique violation and taken `pipeline.load` down with it.
 -- ============================================================================================
 --
 -- WHY THIS EXISTS. `0003_games.sql:146` declares `unique (game_id, provider, fetched_at)`, and
@@ -85,9 +101,9 @@
 begin;
 
 -- ---------------------------------------------------------------------------------------------
--- STEP 1 (DESTRUCTIVE - REVIEW BEFORE UNCOMMENTING). Keep the newest row per (game_id, provider)
--- and delete the rest. 79 rows on the 2026-09-07 measurement; re-count before running, because the
--- daily refresh adds more every morning until this lands.
+-- STEP 1 (DESTRUCTIVE - APPLIED). Keep the newest row per (game_id, provider) and delete the rest.
+-- 79 rows on the 2026-09-07 measurement, and 79 when it ran on 2026-09-08 - the count held because
+-- the pairs were already duplicated and the nightly adds to existing pairs rather than new ones.
 --
 -- `id` breaks ties: it is `generated always as identity`, so the highest id is the most recently
 -- inserted row even when two share a `fetched_at` to the second - which the measured data does
@@ -101,13 +117,14 @@ begin;
 --     having count(*) > 1
 --      order by rows desc;
 --
--- delete from mysports.game_odds o
---  where exists (
---        select 1 from mysports.game_odds n
---         where n.game_id = o.game_id
---           and n.provider = o.provider
---           and (n.fetched_at, n.id) > (o.fetched_at, o.id)
---  );
+-- UNCOMMENTED 2026-09-08: this is the statement that ran. 79 rows.
+delete from mysports.game_odds o
+ where exists (
+       select 1 from mysports.game_odds n
+        where n.game_id = o.game_id
+          and n.provider = o.provider
+          and (n.fetched_at, n.id) > (o.fetched_at, o.id)
+ );
 
 -- ---------------------------------------------------------------------------------------------
 -- STEP 2. The new uniqueness. Additive: the old three-column constraint is KEPT, not dropped -

@@ -125,12 +125,25 @@ is unsorted for every scope; under ALL GAMES the sport bands regroup it, so with
 program can still follow a game it precedes. Sorting `allRows` outright would reorder ALL GAMES
 without being asked. It is a small, real question for a later prompt.
 
-### OPEN — MIGRATION 0017, WITH ITS EVIDENCE ATTACHED
+### CLOSED — MIGRATION 0017 IS APPLIED (2026-09-08)
 
-Unchanged from prompt 59 and still unapplied. Joe owes two decisions; the second has data recorded
-**in the migration file itself** — of the 79 surplus rows, **31 are identical re-fetches and 48 are
-real line movement**, one game's favourite changing sides across three fetches. A dedupe keeps the
-current line and loses only history that nothing reads today, which makes it a product question.
+Applied from **Cowork** at **01:34 UTC on 2026-09-08**, on Joe's explicit named approval, under the
+rule 14 revised the day before. Measured either side:
+
+| | |
+|---|---|
+| rows before / after | **595 → 516**, 79 deleted |
+| `(game_id, provider)` pairs holding more than one row | **32 → 0** |
+| constraints | **both** present — the new `game_odds_game_provider_key` on `(game_id, provider)`, and 0003's three-column one, kept deliberately |
+
+**The 111 rows of those 32 pairs are archived**, each marked KEEP or DELETE, at
+`docs/research/game-odds-surplus-2026-09-08.json` — six checksums verified against the live database
+before the delete ran, and they recompute from the file. Rule 6 says close rather than delete;
+`game_odds` has no `valid_to`, so the archive IS the closure.
+
+**The loader followed separately in `f7fe047`** and had to: with the constraint in place its old
+conflict target of `(game_id, provider, fetched_at)` matched nothing, and the next nightly run would
+have raised a unique violation and taken `pipeline.load` down with it.
 
 ### OPEN — THE STREAMING TAP TEST IS STILL OWED
 
@@ -199,13 +212,13 @@ could not see: the probable-pitcher block was unguarded (latent — no program c
 today), and the venue row read `venue.name` instead of `location_text` on the 130 programs that carry
 one. Helpers are imported from `lib/programs.js`, never reimplemented.
 
-### OPEN — MIGRATION 0017, NOW WITH EVIDENCE ATTACHED
+### CLOSED — MIGRATION 0017 IS APPLIED (2026-09-08)
 
-Still unapplied, and Joe still owes two decisions. The second one now has data, recorded **in the
-migration file itself**: of the 79 surplus rows, **31 are identical re-fetches and 48 are real line
-movement** — one game's favourite changed sides across three fetches. A dedupe keeps the current line
-and loses only the history, which nothing reads today. **That makes it a product question**: if line
-movement is ever a feature, this constraint is the wrong shape and a history table is the right one.
+Both of Joe's decisions were taken: the constraint approved, and the 79 surplus rows deleted rather
+than kept — 31 of them identical re-fetches, 48 real line movement, all 111 rows of the 32 affected
+pairs archived at `docs/research/game-odds-surplus-2026-09-08.json` first. See the repo-state entry
+above for the before/after counts. If line movement is ever wanted as a FEATURE, this constraint is
+the wrong shape and a history table is the right one; that question is not closed by this.
 
 ### OPEN — THE STREAMING FEATURE IS AT THE EVIDENCE-GATHERED STAGE
 
@@ -743,27 +756,25 @@ cloud workspace. **Never reapply a bare browser UA.**
 
 ## Opened by prompt 57 — TWO, AND THEY MUST LAND IN THIS ORDER
 
-- **THE `game_odds` UNIQUENESS MIGRATION AWAITS JOE.**
-  `db/migrations/0017_game_odds_one_row_per_book.sql` is written and **not applied**. Applying it
-  is still Joe's call, but for a different reason since rule 14 was revised on 2026-09-07: not a
-  blanket bar on writing, but **named approval for that operation**, plus SELECT-and-paste first
-  and rule 27's schedule check (`gh run list --workflow schedule_refresh.yml -L 1`) when it
-  happens. **AND IT CANNOT BE APPLIED FROM CLAUDE CODE**: the Supabase connector is attached to
-  COWORK, not to this session, so Cowork applies it. The DDL is already a file, which is what the
-  revised rule requires — it is applied FROM `0017`, never retyped into a connector call.
-  **The existing rows violate it** — measured 2026-09-07: 471 rows, 392 distinct (game_id, provider)
-  pairs, **32 pairs carrying 79 surplus rows**. The dedupe is in the file, commented out, with its
-  SELECT-first query beside it. Two decisions are Joe's: approve the constraint, and say whether the
-  79 duplicates are deleted or left.
+- **BOTH CLOSED, 2026-09-08, AND THEY LANDED IN THE ORDER THIS ENTRY DEMANDED.**
 
-- **THE LOADER CHANGE MUST NOT SHIP BEFORE IT.** Once the constraint exists,
-  `pipeline/load.py:259-261` becomes conflict target `"game_id, provider"` with update list
-  `["spread", "total", "home_moneyline", "away_moneyline", "fetched_at"]`. **Shipping that first
-  fails every loader run** with "there is no unique or exclusion constraint matching the ON CONFLICT
-  specification". `load.py` was deliberately left untouched by prompt 57 for exactly this reason.
+  **The migration** was applied from Cowork at 01:34 UTC on Joe's explicit named approval: 595 rows
+  → 516, 79 deleted, 32 duplicate pairs → 0, both unique constraints present. All 111 rows of the
+  affected pairs were archived KEEP/DELETE at
+  `docs/research/game-odds-surplus-2026-09-08.json`, with six checksums verified against the live
+  database first.
 
-  **Neither is urgent.** Prompt 57 stage 1 put `order=fetched_at.desc&limit=1` on the odds embed, so
-  the card already shows the newest line however many rows sit behind it. This is table hygiene.
+  **The loader followed in `f7fe047`**, not before — `pipeline/load.py` now upserts on
+  `"game_id, provider"` with the update list
+  `["spread", "total", "home_moneyline", "away_moneyline", "fetched_at"]`. Shipping it first would
+  have failed every loader run with "there is no unique or exclusion constraint matching the ON
+  CONFLICT specification"; shipping the migration alone would have failed them the other way, which
+  is why the loader went in the same morning rather than waiting for a docs stage.
+
+  **One thing this did NOT settle.** The non-empty update list is what makes the constraint useful:
+  `pipeline/db.py:186-192` compiles an empty list to `DO NOTHING`, which with the new constraint
+  would silently freeze every book at the first line it ever quoted. That is a quieter failure than
+  the violation, and it is why the update list is pinned in the file's own comment.
 
 ## Opened by prompt 52
 
