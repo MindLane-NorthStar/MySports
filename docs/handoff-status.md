@@ -50,7 +50,9 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-08, prompt 69 — after the last gate run of the run, not during it:**
+**Measured 2026-09-08, prompt 70 — after the last gate run of the run, not during it. Unchanged
+from prompt 69: neither of that run's stages touches app code, and both counts were re-measured
+rather than carried forward.**
 
 | gate | run from | floor |
 |---|---|---|
@@ -947,13 +949,27 @@ header fix. `grids/` cannot be reached because `sync_assets.local_files()` walks
 `FOLDERS = ("logos", "network-logos", "fonts", "brand")` and grid objects arrive by `--push-grids`
 from `artifacts/rendering`, which is not a local cache directory.
 
-**TWO OF THE THREE ARE NOW CLOSED** (see above). **`grids/` IS STILL OPEN AND STAYS OPEN.** The
-flag rewrites what the local cache holds, and the cache holds no grids at all: `local_files()` walks
-`FOLDERS = ("logos", "network-logos", "fonts", "brand")` and grid objects are uploaded by
-`--push-grids` straight from `artifacts/rendering`. Reaching them needs either that tuple widened —
-which changes what a plain `--push` uploads, a reach well beyond a cache header — or a
-`--push-grids --force`. Prompt 69 was told to say so and stop rather than widen it. All 35 `grids/`
-objects still answer with no `Cache-Control`.
+**ALL THREE ARE CLOSED, AND SO IS THE WHOLE BUCKET (prompt 70).** `grids/`: 35 seen, 34 rewritten,
+1 already correct, **35 objects before and 35 after**. Every prefix re-run as a verification pass and
+all reported 0 rewritten. **The public bucket is 1,613 objects and every one carries
+`public, max-age=300`** — checked one `head_object` at a time, not sampled.
+
+**NEITHER ROUTE PROMPT 69 NAMED WOULD HAVE DONE IT, and only one of them was a dead end.** Widening
+`FOLDERS` is: `local_files()` walks `assets/{folder}` and there is no `assets/grids/`. But
+`--push-grids artifacts/rendering` was NOT — that directory holds 13 grid files here, and all 13 keys
+already exist in the bucket. It would have fixed **13 of 35** and left 22, and it is an upload path,
+so a stray file under the directory it is pointed at becomes a published object.
+
+**`--recache` is what closed it.** It reads no local file: it lists the bucket under a prefix and
+rewrites `Cache-Control` in place on the keys `list_objects_v2` just returned. Creating an object is
+not something it declines to do — it has no expression for it, which is a stronger guarantee than
+`--existing-only`'s skipping. `copy_object` onto the same key with `MetadataDirective="REPLACE"`,
+**verified against R2 before it was built** (rule 34): Cloudflare's S3 page lists
+`x-amz-metadata-directive` and `Cache-Control` as implemented, and one real call on
+`grids/cfb/grid_2026-08-29.svg` confirmed it — header set, ContentType and the `sha256` metadata
+preserved, ETag and byte count unmoved, so no data transfer. `REPLACE` replaces metadata wholesale,
+so both are read first and passed back; dropping the `sha256` would make the next `--push` see the
+whole bucket as changed.
 
 **Deliberately NOT done, and both are bigger decisions:** a service worker, and cache-busting query
 strings or content-addressed filenames. The second is the real fix for "the URL never changes when

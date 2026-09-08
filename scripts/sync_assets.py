@@ -8,6 +8,7 @@ The bucket `mysports-assets` is the source of truth; `assets/` on any machine is
     python scripts/sync_assets.py --pull           # download bucket files the cache lacks or that differ
     python scripts/sync_assets.py --push --prefix logos/   # one prefix only
     python scripts/sync_assets.py --push --prefix logos/ --force   # rewrite even unchanged bytes (headers)
+    python scripts/sync_assets.py --recache --prefix grids/        # set Cache-Control in place, no local file needed
     python scripts/sync_assets.py --push-grids artifacts/rendering            # grids/{sport}/grid_{date}.svg|.png|@2x.png (public bucket)
     python scripts/sync_assets.py --push-data artifacts/validation --prefix fixtures/2026-09-01/   # private bucket (R2_BUCKET_DATA)
     python scripts/sync_assets.py --push-data backup.sql.gz --prefix backups/ --keep 8            # upload one file, prune oldest beyond 8
@@ -134,6 +135,61 @@ def _put(s3, bucket: str, key: str, p: Path) -> None:
     s3.upload_file(str(p), bucket, key, ExtraArgs=_extra_args(p))
 
 
+def recache(args) -> int:
+    """Rewrite `Cache-Control` on objects the bucket ALREADY holds. Reads no local file at all.
+
+    WHY THIS EXISTS RATHER THAN A WIDER `--push`. Every other route to an object needs a local file:
+    `local_files()` walks `assets/{folder}` for the folders in FOLDERS, and `_put()` calls
+    `upload_file(str(p), ...)`. `grids/` has no local cache directory - `assets/grids/` does not
+    exist - so widening FOLDERS walks nothing. `--push-grids artifacts/rendering` DOES find grids
+    here, 13 of them, but the bucket holds 35: it fixes a third and leaves the rest, and it is an
+    upload path, so a stray file under the directory it is pointed at becomes a published object.
+
+    THIS CANNOT PUBLISH, and not by remembering to skip. It iterates the keys `list_objects_v2`
+    just returned and writes only those, so creating an object is not something it declines to do -
+    it is something it has no expression for. `--existing-only` reaches the same result by skipping
+    local files, which is a weaker guarantee for the same outcome.
+
+    `copy_object` ONTO THE SAME KEY, verified against R2 before it was built (rule 34). Cloudflare's
+    S3 compatibility page lists `x-amz-metadata-directive` and `Cache-Control` as implemented, and
+    one real call on `grids/cfb/grid_2026-08-29.svg` confirmed it: the header was set, ContentType
+    and the `sha256` user metadata survived, and the ETag and byte count did not move. No data
+    transfer - one request per object, whatever the object weighs.
+
+    METADATA IS REPLACED WHOLESALE, which is what REPLACE means, so ContentType and the sha256 this
+    script writes on every upload are read first and passed back. Dropping the sha256 would make the
+    next `--push` see every object as changed and re-upload the bucket.
+    """
+    root = find_repo_root()
+    load_dotenv(root / ".env")
+    s3 = client()
+    bucket = os.getenv("R2_BUCKET_ASSETS", "mysports-assets")
+    remote = remote_objects(s3, bucket, args.prefix)
+    seen = len(remote)
+    rewritten = already = 0
+    for key in sorted(remote):
+        h = s3.head_object(Bucket=bucket, Key=key)
+        if h.get("CacheControl") == CACHE_CONTROL:
+            already += 1
+            continue
+        ctype = h.get("ContentType") or CONTENT_TYPES.get(
+            Path(key).suffix.lower(), "application/octet-stream")
+        s3.copy_object(
+            Bucket=bucket, Key=key, CopySource={"Bucket": bucket, "Key": key},
+            MetadataDirective="REPLACE", CacheControl=CACHE_CONTROL,
+            ContentType=ctype, Metadata=h.get("Metadata") or {},
+        )
+        rewritten += 1
+        if rewritten % 50 == 0:
+            print(f"  rewritten {rewritten}")
+    after = len(remote_objects(s3, bucket, args.prefix))
+    print(f"{args.prefix or '(whole bucket)'}: {seen} seen · {rewritten} rewritten · "
+          f"{already} already correct")
+    print(f"  objects under the prefix before {seen}, after {after}"
+          + ("" if after == seen else "  <-- COUNT MOVED, WHICH THIS MODE CANNOT DO"))
+    return 0 if after == seen else 1
+
+
 def special_modes(args) -> int:
     root = find_repo_root()
     load_dotenv(root / ".env")
@@ -183,6 +239,10 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--pull", action="store_true")
     g.add_argument("--push-grids", metavar="DIR", help="upload grid_*.svg/png from DIR (and DIR/{sport}/) to grids/{sport}/grid_{date}.* - the key register_grids.py stores")
     g.add_argument("--push-data", metavar="PATH", help="upload a file or directory tree to the PRIVATE bucket under --prefix")
+    g.add_argument("--recache", action="store_true",
+                   help="rewrite Cache-Control on objects the bucket ALREADY has, in place, reading "
+                        "no local file. The only route to a prefix with no local cache, such as "
+                        "grids/. Cannot create an object.")
     ap.add_argument("--prefix", help="key prefix filter (check/push/pull) or destination prefix (push-data)")
     ap.add_argument("--make-dark", action="store_true",
                     help="before pushing, build any missing assets/logos/{id}_dark.png (charcoal-floating "
@@ -197,6 +257,8 @@ def main(argv: list[str] | None = None) -> int:
                          "cannot be set on an existing object any other way. Use --prefix.")
     ap.add_argument("--keep", type=int, help="push-data: after upload, delete the oldest objects under --prefix beyond this count")
     args = ap.parse_args(argv)
+    if args.recache:
+        return recache(args)
     if args.push_grids or args.push_data:
         return special_modes(args)
 
