@@ -7,6 +7,8 @@ WHAT THIS GUARDS. `build_web_marks.team_dark_variants()` was taught in prompt 61
 `{id}_dark.png` byte-identical to its base is not provider art - it is the ABSENCE of provider art
 wearing the filename - and so it re-derives those. Prompt 64 added the 124 pro-league rulings Joe
 made by eye on 2026-09-08, and 101 of them say the charcoal-context file should BE the raw art.
+Prompt 66 added the 642 college teams the same way: 463 skip_derive, 300 derive, 3 deliberately
+in neither list. The mechanism did not change to take them.
 
 Those two statements describe the same bytes and disagree. If the identity test is ever allowed to
 run on a `skip_derive` team, the next nightly `sync_assets.py --push --prefix logos/ --make-dark`
@@ -137,7 +139,13 @@ def test_a_ruled_teams_identical_bytes_are_never_reconditioned(logos):
 
 
 def test_an_unruled_team_still_gets_conditioned(logos):
-    """The prompt-61 behaviour is intact for the 642 college teams nobody has ruled yet."""
+    """The prompt-61 behaviour is intact for any team nobody has ruled.
+
+    IT SAID "the 642 college teams nobody has ruled yet" until prompt 66, and that stopped being
+    true on the same day it was written: Joe ruled all 642 of them and 639 are now in the file. The
+    branch this covers is unchanged and still reachable - a split-by-context team, a team that
+    arrives before the file is extended - so the test stands and only its reason had gone stale.
+    """
     d, _, unruled = logos
     base, dark = d / f"{unruled}.png", d / f"{unruled}_dark.png"
 
@@ -164,3 +172,76 @@ def test_missing_rulings_file_falls_back_to_prompt_61_behaviour(logos, monkeypat
     monkeypatch.setattr(bwm, "CONDITIONING", d / "nope.json")
     bwm.team_dark_variants()
     assert _sha(d / f"{ruled}_dark.png") != _sha(d / f"{ruled}.png")
+
+
+# ------------------------------------------------- the college rulings (prompt 66)
+#
+# The pro leagues were ruled first (prompt 64) and college followed on the same day. The mechanism
+# did not change to take them - the rulings check already sat above the byte-identity branch and the
+# reader already took no arguments - so what these add is COVERAGE OF THE OTHER HALF OF THE FILE
+# rather than of new code. A college id is a bare ESPN number where a pro id is `{league}-{number}`,
+# and that difference is the one thing here that could plausibly break: nothing in the lookup is
+# league-aware, and these prove it.
+
+
+def _one(mapping, digits: bool):
+    """A real id from the real file: college ids are bare numbers, pro ids are not."""
+    return next(i for i in mapping if i.isdigit() is digits)
+
+
+@pytest.fixture
+def college_logos(tmp_path, monkeypatch):
+    """A temp LOGO_DIR with a real college team from each list, plus a real split team."""
+    ids = {
+        "skip": _one(SKIP, True),
+        "derive": _one(DERIVE, True),
+        "split": next(iter(RULINGS["split_by_context"])),
+    }
+    for stem in ids.values():
+        _base(tmp_path / f"{stem}.png")
+    monkeypatch.setattr(bwm, "LOGO_DIR", tmp_path)
+    return tmp_path, ids
+
+
+def test_a_college_skip_derive_team_takes_the_raw_art(college_logos):
+    d, ids = college_logos
+    base, dark = d / f'{ids["skip"]}.png', d / f'{ids["skip"]}_dark.png'
+    c1 = bwm.team_dark_variants()
+    assert _sha(dark) == _sha(base), f'{ids["skip"]} is skip_derive and must take its base bytes'
+    stamp = _sha(dark)
+    c2 = bwm.team_dark_variants()
+    assert c2["ruled_raw"] < c1["ruled_raw"], "the second run must not rewrite a satisfied ruling"
+    assert _sha(dark) == stamp
+
+
+def test_a_college_derive_team_is_conditioned_and_stays_conditioned(college_logos):
+    """The other half of the ruling: `derive` keeps the guarded derive and the 0.5 floor."""
+    d, ids = college_logos
+    base, dark = d / f'{ids["derive"]}.png', d / f'{ids["derive"]}_dark.png'
+    bwm.team_dark_variants()
+    assert _sha(dark) != _sha(base), f'{ids["derive"]} is ruled derive and must NOT be the raw art'
+    stamp = _sha(dark)
+    bwm.team_dark_variants()
+    assert _sha(dark) == stamp, "a conditioned variant is idempotent - it is a 256px re-render"
+
+
+def test_a_split_team_is_conditioned_like_an_unruled_one(college_logos):
+    """Wake Forest, Pacific Lutheran and West Virginia are in NEITHER list on purpose.
+
+    Joe wants the raw art on the coloured cap plate and the derived art on charcoal. Nothing in this
+    module has to do that: the cap reads `capFor(id).art`, which is 'raw' for all three, while this
+    function keeps building the derived `_dark.png` the charcoal contexts read. Measured 2026-09-08:
+    154 raw/tint 1, 277 raw/tint 1, 2486 raw/tint 0.72. So the split is served by leaving them out,
+    and the thing to guard is that they are NOT quietly given the raw bytes here.
+    """
+    d, ids = college_logos
+    base, dark = d / f'{ids["split"]}.png', d / f'{ids["split"]}_dark.png'
+    bwm.team_dark_variants()
+    assert _sha(dark) != _sha(base), f'{ids["split"]} is split by context and must keep derived art'
+
+
+def test_the_lookup_is_not_league_aware(college_logos):
+    """A bare-number college id and a `{league}-{number}` pro id resolve through the same path."""
+    skip, der = bwm.conditioning_rulings()
+    assert _one(SKIP, True) in skip and _one(SKIP, False) in skip
+    assert _one(DERIVE, True) in der and _one(DERIVE, False) in der
