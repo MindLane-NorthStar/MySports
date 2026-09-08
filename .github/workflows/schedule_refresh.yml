@@ -229,7 +229,13 @@ jobs:
         run: python -m pipeline.reconcile --programs --workflow schedule_refresh
 
       - name: Push new logos to R2
-        run: python scripts/sync_assets.py --push --prefix logos/
+        # --make-dark CONDITIONS BEFORE PUSHING (prompt 61 stage 2). The step above fetches a base
+        # logo for every team, but a listings card floats the logo on charcoal and reads
+        # {id}_dark.png; without this the runner would push 766 base files and whatever dark art the
+        # provider happened to serve, which for most teams is a byte copy of the base that sinks
+        # into --panel #23262B. sync_assets.py:152 documents the flag as idempotent, and
+        # build_web_marks.team_dark_variants leaves genuinely distinct provider art alone.
+        run: python scripts/sync_assets.py --push --prefix logos/ --make-dark
       - name: Load fixtures into mysports.* (evidence only — Milestone 1 loader)
         run: python -m pipeline.load --all --workflow schedule_refresh
       - name: CFB ranks, records + rivalry flags into games (loader-written provider facts)

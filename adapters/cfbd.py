@@ -235,8 +235,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.teams and provider is not None:
         teams = provider.fetch_teams(args.year)
         dump_json(out_dir / f"cfbd_{args.year}_teams.json", teams)
-        needed = {str(g[s]["id"]) for g in fixture["games"] for s in ("home", "away")}
-        print(f"teams: {len(teams)}; logos:", fetch_logos(teams, root / "assets" / "logos", needed))
+        # EVERY TEAM IN THE RESPONSE, not this week's fixture (prompt 61 stage 2). This passed a
+        # `needed` set built from `fixture["games"]`, so a team first appearing this week had no art
+        # until the night its game loaded - and `assets/` is untracked, so a local backfill lives on
+        # one machine and nowhere else. Production reads what the runner pushed to R2, and that step
+        # can only push what the runner has. FCS opponents rendered as broken images for exactly
+        # this reason; scripts/fetch_team_assets.py lost the same sampling in the same week.
+        #
+        # IT COSTS ALMOST NOTHING ON AN ORDINARY NIGHT. `fetch_logos` goes through
+        # `adapters.common.download`, whose `skip_existing` default returns "cached" for any file
+        # already on disk with a non-zero size (common.py:206-209) - and the runner pulls the whole
+        # asset cache from R2 in the step above before this one runs. So the wide net is one HEAD-
+        # less stat per team, and only a genuinely new team costs a request.
+        print(f"teams: {len(teams)}; logos:", fetch_logos(teams, root / "assets" / "logos"))
     return 0
 
 

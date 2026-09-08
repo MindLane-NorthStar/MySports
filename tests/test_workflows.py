@@ -86,3 +86,44 @@ def test_schedule_refresh_is_still_scheduled():
     """Prompt 46 promised this file stays byte-identical; a later run must not quietly unschedule it."""
     text = (ROOT / ".github" / "workflows" / "schedule_refresh.yml").read_text(encoding="utf-8")
     assert "schedule:" in text and "cron:" in text
+
+
+def test_schedule_refresh_conditions_logos_before_pushing():
+    """The nightly push must build dark variants, not just upload whatever was fetched.
+
+    RULE 28: this parses the YAML and walks to the STEP, rather than asserting the flag appears
+    somewhere in the file. A substring test would pass if `--make-dark` were sitting in a comment,
+    in a different job, or on the `--push-data` archive step at the bottom - none of which would
+    condition a single logo. What has to be true is that the step whose name says it pushes logos is
+    the step that carries the flag.
+
+    WHY IT MATTERS ENOUGH TO PIN. `fetch_logos` writes only `{id}.png`. A listings card floats the
+    logo on charcoal and reads `{id}_dark.png`, so without this step the runner pushes base art and
+    the provider's own dark file - which for 449 of 766 teams, measured 2026-09-07, is a byte copy
+    of the base. Dropping the flag would not fail any other gate; it would just quietly put dark
+    logos back on a dark panel.
+    """
+    doc = yaml.safe_load((ROOT / ".github" / "workflows" / "schedule_refresh.yml").read_text(encoding="utf-8"))
+    steps = doc["jobs"]["refresh"]["steps"]
+    pushes = [s for s in steps if "logos" in str(s.get("name", "")).lower()]
+    assert len(pushes) == 1, f"expected exactly one logo push step, found {len(pushes)}"
+    run = pushes[0]["run"]
+    assert "sync_assets.py --push --prefix logos/" in run
+    assert "--make-dark" in run, "the logo push step must condition dark variants on the runner"
+
+
+def test_cfbd_teams_fetch_is_not_restricted_to_the_week():
+    """The other half of the same defect, and the half no workflow file can show.
+
+    `adapters/cfbd.py` used to pass a `needed` set built from the current fixture, so `--teams`
+    fetched art only for teams playing that week. The workflow calls `--teams` every night, so the
+    two together meant a team's logo arrived the night its game loaded and not before. Pinned here
+    rather than in a Python unit test because the WORKFLOW is what makes it a nightly promise.
+    """
+    text = (ROOT / "adapters" / "cfbd.py").read_text(encoding="utf-8")
+    assert "fetch_logos(teams, root / \"assets\" / \"logos\")" in text, (
+        "the CFBD --teams path must fetch every team, not a fixture subset"
+    )
+    assert 'for s in ("home", "away")}' not in text.split("if args.teams")[1], (
+        "a fixture-derived `needed` set is back on the --teams path"
+    )
