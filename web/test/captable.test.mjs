@@ -172,10 +172,21 @@ const colours = JSON.parse(
   readFileSync(join(HERE, 'fixtures', 'team-colours.json'), 'utf8')
 ).teams;
 
-/** Walk one team the way Block() does: table -> surface -> ink. */
+/**
+ * Walk one team the way Block() does for an UNRULED team: cap table -> surface -> ink.
+ *
+ * IT READS THE CAP TABLE DIRECTLY RATHER THAN capFor(), and the distinction matters. Since prompt 66
+ * `capFor()` returns `tint: 1` for any team in `data/grid_colors_pro.json`, so that Joe's chosen band
+ * paints as chosen instead of being darkened under him. That is a later ruling about the pro leagues,
+ * and this study is about something else: the prompt-40 ink rule over a frozen 307-team fixture,
+ * including the JS/Python agreement that bf5a297 broke. Routing it through capFor() would let the
+ * pro override rewrite the study's counts, which would be measuring the override, not the rule.
+ * `gridcolors.test.mjs` pins the override; this file pins what it overrides.
+ */
 function renderInk(id) {
   const c = colours[id];
-  const cap = capFor(id);
+  const row = table.teams[id];
+  const cap = row ? { tint: row.tint, art: row.art } : { tint: CAP_TINT, art: 'raw' };
   const b = bandFor(c.primary, c.secondary);
   const surface = cap.tint === 1 ? b.band : tint(b.band, CAP_TINT);
   return { cap, band: b, surface, got: inkFor(surface, c.primary, c.secondary) };

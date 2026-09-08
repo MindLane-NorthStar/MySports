@@ -2684,7 +2684,28 @@ The tint moves the ratio he was shown. Over the 42 it raises it on 26 and lowers
 teams he chose ABOVE 3:1 are painted below it** — Bulls 3.78 → 2.51, Phillies 4.11 → 2.61, Raptors
 4.12 → 2.68, Thunder 4.76 → 2.98 — while the Lions go 2.56 → **1.46**, the worst block in the app.
 
-**This was not touched here.** The cap tint is its own measured ruling and the band table is Joe's;
-reconciling them is a judgement, not a bug fix. The question for him is which block he was judging.
-The cheap options if he wants them reconciled: give a ruled team `tint: 1` so his band paints as
-chosen, or record his band as the pre-tint value that produces the colour he picked.
+**CLOSED BY PROMPT 66 — a ruled team's cap is untinted.** `capFor()` now returns `tint: 1` for any
+team in the colour table, so the surface IS the band Joe chose. Measured in the DOM on 2026-09-08
+across five days and 44 name rows: every one paints a chosen band exactly, over 40 distinct ruled
+teams. The Lions go **1.46 → 2.56**, and Bulls, Phillies, Raptors and Thunder are back above 3:1.
+
+**The other option in this section was impossible, and that is why this one shipped.** Recording a
+PRE-TINT value that comes out as the colour he picked cannot work: `tint(c, f)` computes
+`c*f + 255*(1-f)*0.08`, so at `f = 0.72` it maps 0–255 onto **5.712–189.312**, and **33 of the 124
+ruled bands have a channel above that ceiling** — the Browns' `#ff3c00`, the Flyers' `#fe5823`, the
+Warriors' `#fdb927`. A quarter of the table is not an output of that function at any input. The
+usual objection to mixing cap levels does not apply here: a grid renders one sport, every pro team
+is ruled and no college team is, so no view mixes a tinted cap with an untinted one.
+
+**26 teams gave a ratio back, and that is the point rather than a cost.** The tint had been
+flattering them — Colts 13.31 → 11.16, Chiefs 6.58 → 4.21, Brewers 10.09 → 9.30 — and what they now
+show is the number Joe chose with it in front of him. Two of the 26 drop under 3:1, the Chargers
+(4.08 → 2.65) and the Blue Jackets (3.21 → 2.87), and BOTH were already among his deliberate eleven.
+After the change exactly eleven blocks measure under 3:1, and they are his eleven: the app now shows
+the ratios he picked, no more and no fewer.
+
+**ONE LOOSE END, LEFT ON PURPOSE.** `cap.art` is unchanged, and 16 of the 42 carry `art: 'dark'` —
+chosen because the dark lockup read better on the TINTED surface, which has just gone away under
+them. Re-measuring that needs the pixels at render size through `scripts/build_cap_table.py`; it is
+not a runtime rule and was not in this change. Whether those 16 still want their dark art on the
+brighter surface is a measurement nobody has taken.

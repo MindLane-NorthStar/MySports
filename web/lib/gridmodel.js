@@ -391,7 +391,31 @@ export function inkFor(surfaceHex, primaryHex, secondaryHex) {
  */
 export function capFor(teamId) {
   const row = teamId == null ? null : CAP_TABLE[String(teamId)];
-  return row ? { tint: row.tint, art: row.art } : { tint: CAP_TINT, art: 'raw' };
+  const cap = row ? { tint: row.tint, art: row.art } : { tint: CAP_TINT, art: 'raw' };
+
+  // A RULED TEAM'S CAP PAINTS THE BAND JOE CHOSE, UNTINTED (prompt 66).
+  //
+  // The two tables disagreed about the same pixels and the cap table was winning. 42 of the 124
+  // ruled teams carry `tint: 0.72`, so what reached the screen was `tint(band, 0.72)` and not the
+  // band he picked - his ink landed exactly, his band landed darkened. Measured in the DOM on
+  // 2026-09-08: the Brewers painted rgb(19, 35, 60) where his choice is #13294b = rgb(19, 41, 75).
+  // It cost four teams the 3:1 he chose them above - Bulls 3.78 -> 2.51, Phillies 4.11 -> 2.61,
+  // Raptors 4.12 -> 2.68, Thunder 4.76 -> 2.98 - and took the Lions to 1.46, the worst block in the
+  // app.
+  //
+  // STORING A PRE-TINT VALUE INSTEAD CANNOT WORK. `tint()` below computes c*f + 255*(1-f)*0.08, so
+  // at f = 0.72 it maps 0-255 onto 5.712-189.312. THIRTY-THREE of the 124 ruled bands have a channel
+  // above that ceiling and are not outputs of that function at any input - the Browns' #ff3c00, the
+  // Flyers' #fe5823, the Warriors' #fdb927. A quarter of the table cannot be expressed that way.
+  //
+  // The usual objection to mixing cap levels does not apply: a grid renders one sport, every pro
+  // team is ruled and no college team is, so no single view mixes a tinted cap with an untinted one.
+  //
+  // `art` IS LEFT AS THE TABLE MEASURED IT, and that is a known loose end rather than an oversight:
+  // 16 of the 42 carry `art: 'dark'`, chosen because the dark lockup read better on the TINTED
+  // surface, and the surface under them has just changed. Re-measuring it needs the pixels at render
+  // size (scripts/build_cap_table.py), which is not a runtime rule and not this change.
+  return gridColourFor(teamId) ? { tint: 1, art: cap.art } : cap;
 }
 
 export function tint(hex, f) {

@@ -621,7 +621,12 @@ function buildMobileGrid(style){
         if (best && best.r>=3.0 && String(best.c).toLowerCase()!==String(surface).toLowerCase()) return best.c;
         return cr("#f2f2f0",surface)>=cr("#101214",surface) ? "#f2f2f0" : "#101214";
       };
-      const capOf=(t)=>CAPTABLE[t.id]||{t:0.72,a:"raw"};
+      // PROMPT 66: a RULED team's cap is untinted, so the band Joe chose paints as chosen. The cap
+      // table gave 42 of the 124 t:0.72, which repainted his band before it reached the screen and
+      // took the Lions to 1.46:1. gridmodel.js capFor() does exactly this. The ART is left as the
+      // table measured it.
+      const capOf=(t)=>{const c=CAPTABLE[t.id]||{t:0.72,a:"raw"};
+        return GRIDCOL[String(t.id)]?{t:1,a:c.a}:c;};
       const surfaceOf=(t)=>{const B=bandFor(t.c1,t.c2,t.id); return capOf(t).t===1?B.band:tint(B.band,0.72);};
       // A RULED TEAM'S INK IS JOE'S. inkOn() re-derives the ink for whichever surface a team got, and
       // for an unruled team that is still the right answer - but running it on a ruled team would

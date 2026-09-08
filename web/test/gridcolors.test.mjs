@@ -21,7 +21,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { bandFor, gridColourFor, contrastRatio, BAND_MIN_RATIO } from '../lib/gridmodel.js';
+import { bandFor, gridColourFor, contrastRatio, capFor, tint, CAP_TINT, BAND_MIN_RATIO }
+  from '../lib/gridmodel.js';
+import CAP_TABLE from '../lib/cap-table.json' with { type: 'json' };
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DOC = JSON.parse(readFileSync(join(HERE, '..', '..', 'data', 'grid_colors_pro.json'), 'utf8'));
@@ -151,4 +153,56 @@ test('gridColourFor answers null for anything unruled, and the pair for anything
 test('a numeric id still resolves - the table is keyed by string', () => {
   // capFor() takes String(teamId) for the same reason; a payload that hands a number must not miss.
   assert.deepEqual(gridColourFor('mlb-114'), gridColourFor(String('mlb-114')));
+});
+
+// --------------------------------------------------------------------------- the cap the band paints on
+//
+// PROMPT 66. Two tables described the same pixels and the older one was winning. `capFor()` gave 42
+// of the 124 ruled teams `tint: 0.72`, so `tint(band, 0.72)` reached the screen instead of the band
+// Joe chose - his ink exact, his band darkened. Four teams he chose above 3:1 painted below it and
+// the Lions painted at 1.46. `capFor()` now returns `tint: 1` for any ruled team.
+
+test('a ruled team\'s cap is untinted, so the band paints as chosen', () => {
+  for (const id of IDS) {
+    assert.equal(capFor(id).tint, 1, id);
+  }
+});
+
+test('the cap ART is left as the cap table measured it', () => {
+  // Deliberately NOT changed: 'dark' was chosen from the pixels at render size against the tinted
+  // surface. Re-measuring it needs scripts/build_cap_table.py, not a runtime rule.
+  const rows = Object.entries(CAP_TABLE.teams).filter(([id]) => TABLE[id]);
+  assert.ok(rows.length >= 100, `expected the ruled teams in the cap table, got ${rows.length}`);
+  for (const [id, row] of rows) assert.equal(capFor(id).art, row.art, id);
+});
+
+test('an UNRULED team still gets the cap table row untouched', () => {
+  for (const [id, row] of Object.entries(CAP_TABLE.teams)) {
+    if (TABLE[id]) continue;                       // ruled - covered above
+    assert.deepEqual(capFor(id), { tint: row.tint, art: row.art }, id);
+  }
+});
+
+test('the painted surface IS the chosen band for every ruled team', () => {
+  // What Block() computes: cap.tint === 1 ? band : tint(band, CAP_TINT). With the cap untinted the
+  // first branch is taken for all 124, so the surface is the hex Joe picked.
+  for (const id of IDS) {
+    const b = bandFor(null, null, id);
+    const surface = capFor(id).tint === 1 ? b.band : tint(b.band, CAP_TINT);
+    assert.equal(surface, TABLE[id].band, id);
+  }
+});
+
+test('a pre-tint value could not have worked - a third of the bands are above the ceiling', () => {
+  // tint(c, f) = round(c*f + 255*(1-f)*0.08). At f = 0.72 the output range is 5.712 .. 189.312, so a
+  // band with any channel above that is not an output of the function at ANY input. This is the
+  // reason the fix is the cap level and not a stored pre-tint colour; if CAP_TINT ever changes, this
+  // recomputes rather than restating a number.
+  const ceiling = 255 * CAP_TINT + 255 * (1 - CAP_TINT) * 0.08;
+  assert.ok(Math.abs(ceiling - 189.312) < 1e-9, `ceiling ${ceiling}`);
+  const above = IDS.filter((id) => {
+    const n = parseInt(TABLE[id].band.slice(1), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255].some((c) => c > ceiling);
+  });
+  assert.equal(above.length, 33, `above the ceiling: ${above.length}`);
 });
