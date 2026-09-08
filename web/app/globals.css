@@ -3052,22 +3052,36 @@ main > .hubctl:first-child { margin-top: 0; }
  * NO TRANSFORM ON ANYTHING THAT CAN REACH THE GRID. A transform HERE is fine and is used for the
  * motion below: this element's only descendants are its own controls, and it is a sibling of
  * `.shell`, so it is nowhere on the chain between `.mrail-cell` and `.mgrid-scroll`. */
+/* STICKY IN FLOW SINCE PROMPT 62, NOT FIXED - and that is the whole split.
+ *
+ * Joe's ruling: tapping ALL SPORTS opens the league row BETWEEN the navbar and the picker, pushing
+ * the picker and the schedule down rather than covering them, because a dropdown belongs
+ * immediately below the control that opened it.
+ *
+ * A FIXED ELEMENT PUSHES NOTHING. Sticky puts `.chdr` in normal flow, so opening `.chdr-sports`
+ * grows it and everything after it in flow moves down - which is the push, with no new structure.
+ *
+ * IT IS STILL A SIBLING OF `.shell`, which is the property app/layout.js:55-59 calls load-bearing:
+ * `.chdr` is never an ancestor of `<main>` or of the mobile grid, so it can never become a
+ * containing block for the grid's sticky rail. Sticky preserves that exactly - it is the same
+ * element in the same place, only in flow. Do NOT wrap the content to achieve the push.
+ *
+ * `display: none` IS THE EXPANDED STATE, and it has to be. The old hide was
+ * `visibility: hidden; opacity: 0; transform: translateY(-100%)`, which keeps the box - fine for a
+ * fixed element, and 77px of empty ground above the banner once it is in flow. A transformed
+ * in-flow element still occupies its space.
+ *
+ * WHAT THAT COSTS: the 160ms slide-in. You cannot transition out of `display: none`, so the bar now
+ * appears and disappears instantly. Accepted (prompt 62 stage 2) and recorded here so it reads as a
+ * consequence rather than as something that rotted. */
 .chdr {
-  position: fixed;
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
   z-index: 40;
   background: var(--spot-2);
   border-bottom: 1px solid var(--line-soft);
   padding-top: env(safe-area-inset-top, 0px);
-  /* CLOSED BY DEFAULT, and `visibility` rather than `display` so the transition below has something
-     to transition. `visibility: hidden` also takes it out of the hit-testing tree, which `opacity: 0`
-     alone does not - a fixed bar that still eats taps at the top of the screen is the failure this
-     whole element has to avoid. */
-  visibility: hidden;
-  opacity: 0;
-  transform: translateY(-100%);
+  display: none;
 }
 
 /* ONE ATTRIBUTE ON <html> DRIVES THE WHOLE COLLAPSE (prompt 60), and it is not a stylistic choice.
@@ -3083,21 +3097,80 @@ main > .hubctl:first-child { margin-top: 0; }
  * exactly the drift working rule 32 is about, and the element-level one would have lagged this by a
  * render - showing a hidden banner and no bar for one frame. */
 html[data-hdr='collapsed'] .chdr {
-  visibility: visible;
-  opacity: 1;
-  transform: translateY(0);
+  display: block;
 }
 
-/* THE BANNER AND THE STACK GO AWAY. This is the difference between prompt 58's bar, which only ever
- * appeared OVER content that had already scrolled past, and Joe's navbar, which REPLACES the header:
- * "The navbar would take the place of the banner once a user scrolls past the banner, and [it] would
+/* ---- THE SPLIT: the picker joins the bar, the league row divides them (prompt 62 stage 2) -------
+ *
+ * `display: contents` ON `.hubctl`, AND IT IS LOAD-BEARING RATHER THAN TIDY. It removes the stack's
+ * own box, so `.pickrow` becomes a direct child of `<main>` for layout - which is what gives its
+ * `position: sticky` a containing block worth sticking in. MEASURED over a 3000px page: with it the
+ * picker holds at the offset from scrollY 200 to 2500; the decisive control was the third arm of
+ * that test, where merely hiding the four siblings collapses `.hubctl` to 31.38px and the picker
+ * never sticks at all.
+ *
+ * THE PICKER IS NOT MOVED AND ITS DATA IS NOT THREADED. It still renders from `Controls` in
+ * app/page.js, server-side, with `choices` computed there - which is why three earlier routes were
+ * rejected. There is exactly ONE `.pickrow` in the DOM in both states; the test pins that. */
+html[data-hdr='collapsed'] .hubctl {
+  display: contents;
+}
+
+/* THE SIBLING TRAP IS DELIBERATE AND IS PINNED IN A TEST. This hides by DEFAULT, so a sixth child
+   added to `Controls` would vanish silently with no gate failing. test/split.test.mjs asserts the
+   expected child list so that addition breaks loudly instead. */
+html[data-hdr='collapsed'] .hubctl > :not(.pickrow) {
+  display: none;
+}
+
+/* THE PICKER STICKS UNDER THE BAR, AND THE OFFSET TRACKS THE OPEN ROW.
+ *
+ * SCOPED TO COLLAPSED, which is not optional: expanded, `.chdr` is `display: none` and out of flow,
+ * so an unscoped sticky would detach the picker from the control stack and park it partway down the
+ * viewport with nothing above it.
+ *
+ * `--stack-h` IS WRITTEN FROM components/CollapsedHeader.js by a ResizeObserver on `.chdr`, so it
+ * carries the bar's real rendered height - the 44px row, the safe-area inset it pads itself by, and
+ * the league row when open, without this stylesheet doing any arithmetic. The fallback is the bare
+ * 44px for the frames before the observer's first callback.
+ *
+ * THE 8px IS THE GAP `display: contents` TOOK AWAY, AND IT IS PADDING RATHER THAN MARGIN.
+ * `.hubctl` set the space above this row with its `gap` and the space below with its
+ * `padding-bottom`, both 8px, and `.pickrow` carries `margin: 0` because of it. With the stack's
+ * box gone both have to be restated here - but as MARGIN the top one is transparent, and a
+ * transparent 8px band between two sticky elements is a letterbox that the schedule scrolls
+ * through. It did: a card's FINAL and its sport stripe were visible between the league row and the
+ * picker in the first build of this stage.
+ *
+ * As PADDING the space is inside the plate, so the ground runs unbroken from the bar's lower edge
+ * to the picker's - one block, which is what stage 3's outer-edge hairline is drawn at the bottom
+ * of. `top` is then the bare `--stack-h`, because the 8px is no longer outside the border box. */
+html[data-hdr='collapsed'] .pickrow {
+  position: sticky;
+  top: var(--stack-h, 44px);
+  z-index: 30;
+  /* OPAQUE, or the cards scroll visibly through it - `body` is a radial gradient, not a flat
+     ground. `--spot-2` is the bar's own ground (rule 16, read from the token block), so the two
+     read as one block. */
+  background: var(--spot-2);
+  padding: 8px 0;
+  margin: 0;
+}
+
+/* THE BANNER GOES AWAY. This is the difference between prompt 58's bar, which only ever appeared
+ * OVER content that had already scrolled past, and Joe's navbar, which REPLACES the header: "The
+ * navbar would take the place of the banner once a user scrolls past the banner, and [it] would
  * remain permanently in place from that point forward."
  *
  * `display: none` rather than `visibility: hidden`, deliberately: the point is to reclaim the flow,
  * and a hidden-but-reserved banner would leave 123px of empty ground under the bar the moment the
- * reader scrolled back to the top - which is the one journey this design promises. */
-html[data-hdr='collapsed'] .banner,
-html[data-hdr='collapsed'] .hubctl {
+ * reader scrolled back to the top - which is the one journey this design promises.
+ *
+ * `.hubctl` USED TO BE ON THIS SELECTOR AND IS NOT ANY MORE (prompt 62 stage 2). The whole stack
+ * went with the banner, picker included. It now becomes `display: contents` instead and keeps its
+ * picker - see the split block below. Hiding it here as well would win on source order and silently
+ * undo the split, which is exactly what a first pass did before this comment existed. */
+html[data-hdr='collapsed'] .banner {
   display: none;
 }
 
@@ -3106,9 +3179,11 @@ html[data-hdr='collapsed'] .hubctl {
  * own padding-top, restated rather than added to, so the gap under the bar is the same gap that sat
  * under the banner. The inset is the bar's, painted but not counted: `.chdr` pads itself by it, so
  * the space to clear is 44 + inset. */
-html[data-hdr='collapsed'] .shell {
-  padding-top: calc(44px + 8px + env(safe-area-inset-top, 0px));
-}
+/* `html[data-hdr='collapsed'] .shell { padding-top: calc(44px + 8px + inset) }` LIVED HERE AND IS
+   GONE (prompt 62 stage 2). It existed for one reason: to clear a FIXED bar that occupied no space.
+   The bar is sticky and in flow now, so it occupies its own space and the content below it needs no
+   reservation - and the hardcoded 44px would otherwise have had to track the whole stack, league
+   row included, which is exactly the arithmetic `--stack-h` exists to avoid. */
 
 .chdr-inner {
   display: flex;
@@ -3433,13 +3508,14 @@ button.chdr-wm:focus-visible {
      way to keep an element hit-testable for exactly as long as it is visible.
      160ms sits mid-range in handoff §16's 120-220ms: this IS a state transition - the reader
      scrolled and the interface answered - so unlike prompt 57's identity sheen, §16 does cover it. */
-  .chdr {
-    transition: opacity 160ms ease, transform 160ms ease, visibility 0s linear 160ms;
-  }
+  /* THE HEADER'S 160ms SLIDE IS GONE (prompt 62 stage 2), and it could not be kept. It animated
+     `opacity` and `transform` between two states that differ by `display` now, and `display` is not
+     an animatable property - there is no intermediate frame to interpolate. The bar appears and
+     disappears instantly.
 
-  html[data-hdr='collapsed'] .chdr {
-    transition: opacity 160ms ease, transform 160ms ease, visibility 0s linear 0s;
-  }
+     NOTHING REPLACED IT. A height or max-height animation on a sticky element whose height is the
+     thing the picker's offset tracks would fight `--stack-h` for the whole duration, and Joe asked
+     for a split, not for motion. Recorded rather than quietly dropped. */
 
   /* ---- THE WORDMARK SHEEN (prompt 57 stage 7, Joe 2026-09-07: "one time sheen is fine with me").
    *

@@ -269,16 +269,19 @@ test('EXACTLY TWO elements take the top safe-area inset, and both are fixed to t
   // there: with the banner removed from the flow, it RESERVES the space the fixed bar occupies, so
   // the inset appears in its arithmetic as part of the bar's height. Two elements still own the top
   // edge; a third would still be the thing to challenge.
+  //
+  // AND IT IS BACK TO THREE IN PROMPT 62. The fourth was `html[data-hdr='collapsed'] .shell`, which
+  // reserved space for a FIXED bar. The bar is sticky and in flow now, so it occupies its own space
+  // and that rule is deleted - the count falling is the split working, not a guard weakening. Two
+  // elements own the top edge, exactly as before; a THIRD would still be the thing to challenge.
   const css = src('app/globals.css');
   const hits = css.match(/safe-area-inset-top/g) || [];
-  assert.equal(hits.length, 4,
-    '.banner base + .banner standalone override + .chdr + the collapsed .shell offset');
+  assert.equal(hits.length, 3, '.banner base + .banner standalone override + .chdr, and nothing else');
   const stripped = css
     .replace(/\.banner\{[^}]*\}/g, '')
-    .replace(/\.chdr \{[^}]*\}/g, '')
-    .replace(/html\[data-hdr='collapsed'\] \.shell \{[^}]*\}/g, '');
+    .replace(/\.chdr \{[^}]*\}/g, '');
   assert.doesNotMatch(stripped, /safe-area-inset-top/,
-                      'no selector other than .banner, .chdr and the collapsed .shell offset');
+                      'no selector other than .banner and .chdr may take a top inset');
   // and the one that is NOT the banner must not have copied the banner's absorption
   const chdr = css.match(/\.chdr \{[^}]*\}/)[0];
   assert.match(chdr, /padding-top: env\(safe-area-inset-top, 0px\)/);

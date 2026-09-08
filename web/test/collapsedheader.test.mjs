@@ -178,21 +178,41 @@ test('what a query string means is decided in ONE place', () => {
 test('the bar carries the top inset PLAINLY, without the banner’s artwork absorption', () => {
   const css = src('app/globals.css');
   const rule = css.match(/\.chdr \{[^}]*\}/)[0];
-  assert.match(rule, /position: fixed/);
+  // THE INSET HALF IS UNCHANGED and is what this test is for: `.banner` absorbs a net 10px of the
+  // inset because its ARTWORK carries headroom; `.chdr` is type on a ground and takes the plain
+  // inset. Prompt 61 stage 5b measured what that costs and deliberately did not spend it.
   assert.match(rule, /padding-top: env\(safe-area-inset-top, 0px\)/);
   assert.doesNotMatch(rule, /- 14px/);
-  // hidden by default, and hidden in a way that also removes it from hit-testing
-  assert.match(rule, /visibility: hidden/);
+  // THE POSITIONING HALF MOVED IN PROMPT 62. It asserted `position: fixed` and `visibility: hidden`;
+  // the split needs the bar IN FLOW so that opening the league row can push the picker and the
+  // schedule down, and needs the expanded state OUT of flow entirely - a transformed in-flow
+  // element still occupies its box, which would leave ~77px of empty ground above the banner.
+  assert.match(rule, /position: sticky/);
+  assert.match(rule, /display: none/);
+  assert.doesNotMatch(rule, /position: fixed/, 'fixed pushes nothing - that was the whole problem');
 });
 
-test('the show and hide are transform and opacity only, inside the reduced-motion guard', () => {
+test('the header has NO transition, and that is a consequence rather than an omission', () => {
+  // This asserted that the show/hide transitioned `opacity`, `transform` and `visibility` and
+  // nothing that could reflow. PROMPT 62 REMOVED THE TRANSITION ENTIRELY: the two states now differ
+  // by `display`, which is not an animatable property, so there is no intermediate frame to
+  // interpolate and the 160ms slide could not be kept.
+  //
+  // THE GUARD THAT MATTERS SURVIVES, INVERTED. What the old test really protected was "nothing on
+  // `.chdr` may transition a property that reflows". With no transition at all that is trivially
+  // true - but if one is ever added back it must obey the same rule, so the check is that either
+  // there is none, or every property in it is on the safe list.
   const css = src('app/globals.css');
   const guard = css.slice(css.indexOf('@media (prefers-reduced-motion: no-preference)'));
-  assert.match(guard, /\.chdr \{\s*transition:/, 'the transition lives inside the guard');
-  const t = guard.match(/\.chdr \{\s*transition: ([^;]+);/)[1];
-  for (const prop of t.split(',').map((x) => x.trim().split(/\s+/)[0])) {
-    assert.ok(['opacity', 'transform', 'visibility'].includes(prop),
-      `${prop} is not allowed to transition here - it could reflow`);
+  const m = guard.match(/\.chdr \{\s*transition: ([^;]+);/);
+  if (m) {
+    for (const prop of m[1].split(',').map((x) => x.trim().split(/\s+/)[0])) {
+      assert.ok(['opacity', 'transform', 'visibility'].includes(prop),
+        `${prop} is not allowed to transition here - it could reflow`);
+    }
+  } else {
+    assert.doesNotMatch(guard, /\.chdr \{[^}]*transition/,
+      'no .chdr transition, which is the state prompt 62 left it in');
   }
 });
 

@@ -157,6 +157,36 @@ export default function CollapsedHeader() {
   // caller in the repo - so it is deleted from lib/headerstate.js rather than left as a function
   // nothing calls. The observer's dependency list empties for the same reason.
 
+  /**
+   * `--stack-h` - THE BAR'S REAL RENDERED HEIGHT, ON `<html>`, FOR THE PICKER'S STICKY OFFSET.
+   *
+   * Both `.chdr` and `.pickrow` are sticky now: the bar sticks at 0 and GROWS when the league row
+   * opens, so a picker stuck at the closed height would slide underneath it. The offset has to
+   * track the bar.
+   *
+   * A ResizeObserver rather than arithmetic, and that is the point: the bar's height is 44 plus
+   * `env(safe-area-inset-top)` plus the league row when open, and only the browser knows the first
+   * two. Measuring the element carries all three, and keeps carrying them if the bar ever changes
+   * height for a reason nobody has thought of yet.
+   *
+   * ON THE FRAME THE ROW OPENS, NOT ONE LATER. ResizeObserver delivers between layout and paint, so
+   * the custom property is updated before the frame that first shows the taller bar is painted -
+   * there is no frame in which the picker sits at the old offset. Verified in the browser by
+   * measuring the picker's top against the bar's bottom immediately after the tap; qa-shots pins it.
+   */
+  useEffect(() => {
+    const el = document.querySelector('.chdr');
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const write = () => {
+      document.documentElement.style.setProperty(
+        '--stack-h', `${el.getBoundingClientRect().height}px`);
+    };
+    write();
+    const ro = new ResizeObserver(write);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // THE TILE ROW CLOSES WITH THE BAR. Expanding restores the full control stack, which contains
   // the same eight tiles; leaving this open would render the row twice, once in a bar nobody can
   // see.

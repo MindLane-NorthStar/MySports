@@ -422,8 +422,13 @@ for (const dev of DEVICES) {
   await page.evaluate(() => window.scrollTo(0, 900));
   await page.waitForTimeout(500);
   h = await hdr();
-  record('2. scrolling past the header COLLAPSES it',
-         h.attr === 'collapsed' && h.banner === 'none' && h.stack === 'none',
+  // `stack === 'contents'`, NOT `'none'` (prompt 62 stage 2). Prompt 60's collapse took the whole
+  // control stack away with the banner. The split keeps ONE of its five children - the picker - by
+  // making `.hubctl` `display: contents` and hiding the other four, so the stack no longer has a box
+  // and no longer has `display: none`. Asserting the new value rather than dropping the check: if
+  // this ever reads `none` again the picker has gone with it, which is the regression to catch.
+  record('2. scrolling past the header COLLAPSES it, and the stack becomes contents',
+         h.attr === 'collapsed' && h.banner === 'none' && h.stack === 'contents',
          `data-hdr=${h.attr}, banner ${h.banner}, stack ${h.stack}`);
 
   // ROW 5, AND THE WHOLE POINT: scroll may not expand.
@@ -751,6 +756,74 @@ for (const dev of DEVICES) {
     record(`${name}: still bands, and still carries its first band`,
            r.headers > 0 && r.fbands === wantFband,
            `${r.fbands} first band(s), ${r.headers} sport header(s)`);
+  }
+  await ctx.close();
+}
+
+// ------------------------------------------------ THE SPLIT (prompt 62 stage 2)
+//
+// Joe's ruling: the league row opens BETWEEN the navbar and the picker and pushes the picker and the
+// schedule down. The source test pins the CSS; this pins that it actually happens, in both modes,
+// and that the offset is right ON THE FRAME THE ROW OPENS rather than one frame later.
+{
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+  });
+  const page = await ctx.newPage();
+  const read = () => page.evaluate(() => {
+    const q = (x) => document.querySelector(x);
+    const r = (e) => (e ? e.getBoundingClientRect() : null);
+    const pick = q('.pickrow');
+    const chdr = q('.chdr');
+    return {
+      pickers: document.querySelectorAll('.pickrow').length,
+      dateInputs: document.querySelectorAll('#viewing-day').length,
+      pickTop: pick ? Math.round(r(pick).top * 100) / 100 : null,
+      chdrBottom: chdr ? Math.round(r(chdr).bottom * 100) / 100 : null,
+      chdrH: chdr ? Math.round(r(chdr).height * 100) / 100 : null,
+      hub: q('.hubctl') ? getComputedStyle(q('.hubctl')).display : null,
+      pickPos: pick ? getComputedStyle(pick).position : null,
+      pickBg: pick ? getComputedStyle(pick).backgroundColor : null,
+      stackH: getComputedStyle(document.documentElement).getPropertyValue('--stack-h').trim(),
+      hdr: document.documentElement.getAttribute('data-hdr'),
+    };
+  });
+
+  for (const [mode, path] of [['day', '/?day=2026-09-05'], ['week', '/?mode=week&w=2026-08-31']]) {
+    await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(350);
+    let v = await read();
+    record(`${mode}: expanded renders ONE picker and a normal stack`,
+           v.pickers === 1 && v.hub === 'flex' && v.pickPos === 'static',
+           `${v.pickers} picker(s), .hubctl ${v.hub}, position ${v.pickPos}`);
+
+    await page.evaluate(() => window.scrollTo(0, 1200));
+    await page.waitForTimeout(600);
+    v = await read();
+    const closedTop = v.pickTop;
+    record(`${mode}: collapsed keeps ONE picker, and the stack becomes display:contents`,
+           v.pickers === 1 && v.hub === 'contents' && v.pickPos === 'sticky',
+           `${v.pickers} picker(s), .hubctl ${v.hub}, position ${v.pickPos}`);
+    // THE PICKER SITS DIRECTLY UNDER THE BAR - not one pixel of the schedule between them.
+    record(`${mode}: the picker sits flush under the bar`,
+           Math.abs(v.pickTop - v.chdrBottom) < 0.6,
+           `picker top ${v.pickTop} vs bar bottom ${v.chdrBottom}`);
+    record(`${mode}: the picker is opaque, or the schedule scrolls through it`,
+           v.pickBg === 'rgb(27, 27, 27)', v.pickBg);
+
+    // THE SPLIT: opening the row must PUSH the picker down by the row's own height, not cover it.
+    const before = v.chdrH;
+    await page.click('.chdr-tile');
+    await page.waitForTimeout(400);
+    v = await read();
+    const grew = Math.round((v.chdrH - before) * 100) / 100;
+    const moved = Math.round((v.pickTop - closedTop) * 100) / 100;
+    record(`${mode}: opening the league row PUSHES the picker down by the row's height`,
+           grew > 40 && Math.abs(moved - grew) < 0.6,
+           `bar grew ${grew}px, picker moved ${moved}px`);
+    record(`${mode}: and the offset tracked it - still flush, no overlap`,
+           Math.abs(v.pickTop - v.chdrBottom) < 0.6 && v.stackH === `${v.chdrH}px`,
+           `picker top ${v.pickTop} vs bar bottom ${v.chdrBottom}, --stack-h ${v.stackH}`);
   }
   await ctx.close();
 }
