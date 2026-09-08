@@ -50,12 +50,12 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-08, prompt 67 stage 1:**
+**Measured 2026-09-08, prompt 67 stage 3 — after the last gate run of the run, not during it:**
 
 | gate | run from | floor |
 |---|---|---|
 | `pytest` | repo root | **511 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **449** |
+| `npm run test:unit` | `web/` | **470** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **91/91** |
 | `npm run geometry` | `web/` | all hard stops |
@@ -63,10 +63,12 @@ the winner — do not put a number back there, and do not add a third copy anywh
 They are a floor and may only go up — **with the one exception that a removed feature takes its
 tests with it, and that has to be said out loud each time it happens.**
 
-**`test:unit` WENT DOWN, 474 → 449, and the 25 are accounted for.** Prompt 67 removed the TONIGHT
-band, which made `web/lib/bandstate.js` unreferenced; `web/test/bandstate.test.mjs` held exactly 25
-tests of that module and went with it. No test was weakened or deleted to make a gate pass. The tests
-that pinned the band's RENDER were inverted instead, so a band coming back fails a gate.
+**`test:unit` DIPPED TO 449 MID-RUN AND CAME BACK TO 470, and both halves are accounted for.**
+Prompt 67 removed the TONIGHT band, which made `web/lib/bandstate.js` unreferenced;
+`web/test/bandstate.test.mjs` held exactly 25 tests of that module and went with it, 474 → 449. Its
+stages 2 and 3 then added 21: `autoscroll.test.mjs` (11) and `weekrange.test.mjs` (10). No test was
+weakened or deleted to make a gate pass, and the ones that pinned the band's RENDER were inverted
+rather than removed, so a band coming back fails a gate.
 
 **AND THE 473 IN THIS TABLE BEFORE THIS EDIT WAS WRONG — it was 474.** Prompt 66 wrote its own floors
 here mid-run, before its last test additions landed, in the very commit whose point was that a number

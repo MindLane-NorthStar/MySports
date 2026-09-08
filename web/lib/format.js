@@ -26,6 +26,21 @@ const DAY_SHORT = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
 });
 
+/**
+ * 'Monday, Sep 7' - the calendar week picker's ends (prompt 67). Full weekday, SHORT month.
+ *
+ * NOT `DAY_LONG` above, which is 'Monday, September 7, 2026' - long month AND year, and the two
+ * things this format exists to drop. The first attempt at this reused that name and shadowed it;
+ * the dev server caught it as "Identifier 'DAY_LONG' has already been declared" and every route
+ * 500'd, which is the useful version of that mistake.
+ */
+const DAY_WEEKDAY_LONG = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'UTC',
+  weekday: 'long',
+  month: 'short',
+  day: 'numeric',
+});
+
 const MONTH_DAY = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
 
 /**
@@ -104,21 +119,43 @@ export function daySpanLabel(start, end) {
 }
 
 /**
- * 'Mon Aug 24 - Sun Aug 30, 2026' - a span with the weekday on BOTH ends.
+ * The week picker's range. 'Monday, Sep 7 - Sunday, Sep 13', or 'Wed Sep 9 - Mon Sep 14'.
  *
  * A SIBLING rather than a change to daySpanLabel. All four of daySpanLabel's callers live in
  * weeks/page.js and all four want this form, so changing it in place would have compiled - but it is
  * exported and generically named, and silently changing what an exported formatter returns is how the
  * next surface gets a shape it never asked for. daySpanLabel keeps its en-dash bare-month form.
  *
- * DAY_SHORT already emits 'Mon, Aug 24' - weekday, month and day together - so this drops its comma
- * rather than composing a second month/day, which would have read 'Mon Aug 24 Aug 24'.
+ * THE YEAR IS GONE (prompt 67 stage 3, Joe's ruling 2026-09-08). It read 'Mon Aug 24 - Sun Aug 30,
+ * 2026'; the year is the least useful thing in a picker whose whole list is the current season, and
+ * it cost the room that full weekday names needed.
+ *
+ * EXCEPT ACROSS A YEAR BOUNDARY, where it is the only thing that disambiguates. A week running 29
+ * December to 4 January is genuinely two years, so that one shows 'Monday, Dec 29 - Sunday, Jan 4,
+ * 2027' - the END's year, since that is the one a reader would otherwise get wrong.
+ *
+ * TWO WEEKDAY WIDTHS, and the reason is the room the pill actually has. A calendar week has the
+ * range to itself and takes FULL weekday names, which is what Joe asked for. A season week carries a
+ * gold `NFL Week 1 ·` prefix first, and `.pk-sport` is the part that may not ellipsize, so its range
+ * stays on short weekdays rather than pushing the week number out. Measured in the real font at 360:
+ * 196px for the long form against 203px of room, and 149px for the short one behind its prefix.
+ *
+ * DAY_SHORT emits 'Mon, Sep 7' and DAY_WEEKDAY_LONG 'Monday, Sep 7'. The short form drops its comma - it
+ * would otherwise read 'Mon, Sep 7 - Sun, Sep 13', four commas in a nine-word label - and the long
+ * form keeps it, because that is the shape Joe wrote.
  */
-export function daySpanWeekdays(start, end) {
+export function daySpanWeekdays(start, end, { longWeekday = false } = {}) {
   if (!start) return '';
-  const one = (d) => DAY_SHORT.format(new Date(`${d}T00:00:00Z`)).replace(',', '');
-  if (!end || end === start) return `${one(start)}, ${start.slice(0, 4)}`;
-  return `${one(start)} - ${one(end)}, ${end.slice(0, 4)}`;
+  const fmt = longWeekday ? DAY_WEEKDAY_LONG : DAY_SHORT;
+  const one = (d) => {
+    const s = fmt.format(new Date(`${d}T00:00:00Z`));
+    return longWeekday ? s : s.replace(',', '');
+  };
+  if (!end || end === start) return one(start);
+  const crossesYears = start.slice(0, 4) !== end.slice(0, 4);
+  return crossesYears
+    ? `${one(start)} - ${one(end)}, ${end.slice(0, 4)}`
+    : `${one(start)} - ${one(end)}`;
 }
 
 /** Today's date in ET as 'YYYY-MM-DD' - the default the Today page opens on. */

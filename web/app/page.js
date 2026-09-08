@@ -206,9 +206,12 @@ function weekChoices({ index, pick, sport, seasonMode }) {
   // separately so the sport-week can be gold and the range grey (prompt 46 unit 1C).
   const parts = (w) =>
     seasonMode
+      // A season week's range keeps SHORT weekdays: it sits behind a gold `NFL Week 1 ·` prefix,
+      // and `.pk-sport` is the half that may not ellipsize. A calendar week has the pill to itself
+      // and takes the full names Joe asked for. Prompt 67 stage 3.
       ? { prefix: `${SPORT_SHORT[w.sport] || w.sport.toUpperCase()} Week ${w.week}`,
           range: daySpanWeekdays(w.start, w.end) }
-      : { range: daySpanWeekdays(w.start, w.end) };
+      : { range: daySpanWeekdays(w.start, w.end, { longWeekday: true }) };
   const join = (p) => (p.prefix ? `${p.prefix} · ${p.range}` : p.range);
   const options = all.map((w) => {
     const p = parts(w);
