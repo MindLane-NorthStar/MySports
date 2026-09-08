@@ -50,12 +50,12 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-08, prompt 67 stage 3 — after the last gate run of the run, not during it:**
+**Measured 2026-09-08, prompt 68 — after the last gate run of the run, not during it:**
 
 | gate | run from | floor |
 |---|---|---|
 | `pytest` | repo root | **511 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **470** |
+| `npm run test:unit` | `web/` | **479** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **91/91** |
 | `npm run geometry` | `web/` | all hard stops |
@@ -74,6 +74,25 @@ rather than removed, so a band coming back fails a gate.
 here mid-run, before its last test additions landed, in the very commit whose point was that a number
 kept in two places drifts. One place is necessary and not sufficient: the number still has to be
 written after the last gate run, not during.
+
+### WHERE THE AUTO-SCROLL LANDS — measured, because the figures were living in a commit message
+
+`components/AutoScroll.js` lands the reader on what is on now; `lib/autoscroll.js` holds its pure
+half. Prompt 67 recorded its landing positions in a commit message and nowhere else, which is how a
+figure survives the change that invalidates it. **Re-measured 2026-09-08 at 390×844 after prompt 68
+raised the gap from 8px to 16px**, sticky stack 92px, so a correct landing is `92 + 16 = 108`:
+
+| scenario | scrollY | target top |
+|---|---|---|
+| 70-card day, the 30th card live | 4108 | 109 |
+| an earlier card also live (earliest wins) | 1583 | 108 |
+| week containing today, list | 754 | 108 |
+| week containing today, grid | 596 | 108 |
+| nothing live, or a week without today | 0 | no scroll |
+
+Every scrollY moved by exactly −8 from prompt 67's figures, which is the gap increase and nothing
+else. **AT THE TOP OF THE PAGE THE GAP CANNOT APPLY** — day mode's target sits ~100px down with the
+page already at 0, so there is nowhere to scroll up to. See the buffer note below.
 
 **`qa-shots` GOES FLAKY WHEN THE MACHINE IS DIRTY, and it is the gate rather than the app.** Prompt 66
 ran it nine times while stray processes were alive and got 91/91 once, the other eight returning one

@@ -7,8 +7,18 @@
 // could drift. Prompt 68 needed the arrival rule pinned properly, so the whole pure half moved out.
 // `lib/headerstate.js` is the same shape and the same reason.
 
-/** Breathing room between the sticky stack and the thing scrolled to. */
-export const SCROLL_GAP = 8;
+/**
+ * Breathing room between the sticky stack's lower edge and whatever the scroll lands on.
+ *
+ * EIGHT WAS THE WRONG STEP (prompt 68, Joe 2026-09-08): "Below the gold line that rests below the
+ * picker, the league logo is super tight to the gold line. There's no buffer above the league logo
+ * and beneath the gold line." In day mode the target is `#all-today` and the first thing inside it
+ * is the band header row carrying `.band-mark`, so 8px put a league logo 8px under the gold rule.
+ *
+ * 8px is the type scale's INSIDE-ONE-GROUP step (prompt 56 §24d). What this actually does is seat a
+ * new section under a rule, which is the heading-to-content step, 16px at minimum.
+ */
+export const SCROLL_GAP = 16;
 
 /** The fallback if `--stack-h` has not been written yet - the bar's collapsed height. */
 const BAR_FALLBACK = 44;

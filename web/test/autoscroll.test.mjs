@@ -19,7 +19,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { decideScroll, scrollTargetFor } from '../lib/autoscroll.js';
+import { decideScroll, scrollTargetFor, SCROLL_GAP } from '../lib/autoscroll.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const src = (p) => readFileSync(join(HERE, '..', p), 'utf8');
@@ -115,13 +115,16 @@ test('the offset clears BOTH sticky elements, not just the bar', () => {
   // parks the target behind the picker - measured at 56px against a 92px stack before this was
   // fixed.
   //
-  // THE INVARIANT IS THAT THE GAP IS ADDED TO stackBottom(), NOT WHAT THE GAP IS - the two terms,
-  // not the constant.
+  // THE INVARIANT IS THAT THE GAP IS ADDED TO stackBottom(), NOT WHAT THE GAP IS. It went 8 -> 16 in
+  // prompt 68 because 8px seated a league logo hard under the gold rule; it may move again, and this
+  // reads the constant rather than restating it so that a change of taste does not fail a structural
+  // test. What must not change is the two terms it is added to.
   const lib = src('lib/autoscroll.js');
   assert.match(lib, /--stack-h/);
   assert.match(lib, /querySelector\('\.pickrow'\)/);
   assert.match(src('components/AutoScroll.js'),
     /getBoundingClientRect\(\)\.top - stackBottom\(\) - SCROLL_GAP/);
+  assert.equal(SCROLL_GAP, 16, 'prompt 68 set the landing gap to the 16px heading-to-content step');
 });
 
 // ------------------------------------------------------- the arrival rule (prompt 68, Joe's ruling)
