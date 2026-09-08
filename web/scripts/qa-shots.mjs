@@ -826,6 +826,46 @@ for (const dev of DEVICES) {
            `picker top ${v.pickTop} vs bar bottom ${v.chdrBottom}, --stack-h ${v.stackH}`);
   }
 
+  // ---- THE PLATE REACHES THE EDGES, AND --stack-h SURVIVES AN INSET (prompt 63 stage 2).
+  await page.goto(`${base}/?day=2026-09-05`, { waitUntil: 'networkidle' });
+  await page.evaluate(() => window.scrollTo(0, 1200));
+  await page.waitForTimeout(600);
+  const plate = await page.evaluate(() => {
+    const r = (s) => document.querySelector(s).getBoundingClientRect();
+    return {
+      chdr: [Math.round(r('.chdr').left), Math.round(r('.chdr').right)],
+      pick: [Math.round(r('.pickrow').left), Math.round(r('.pickrow').right)],
+      arrow: Math.round(r('.pk-arrow').left),
+      vw: window.innerWidth,
+    };
+  });
+  // THE COLOUR WAS NEVER WRONG - the REACH was. `.pickrow` lived inside `.shell`'s 12px padding, so
+  // the page's radial ground showed through at #242424 down both edges against a full-bleed navbar.
+  record('the picker plate reaches both edges, exactly as the navbar does',
+         plate.pick[0] === plate.chdr[0] && plate.pick[1] === plate.chdr[1] && plate.pick[1] === plate.vw,
+         `navbar ${plate.chdr.join('-')}, picker ${plate.pick.join('-')}, viewport ${plate.vw}`);
+  // and the CONTENT stays in the column - the bleed is the box, not the controls
+  record('the picker controls stay inside the column', plate.arrow >= 12,
+         `first arrow at x=${plate.arrow}`);
+
+  // --stack-h MUST TRACK THE BORDER BOX. `.chdr` pads itself by env(safe-area-inset-top); a
+  // content-box ResizeObserver never sees an inset change, so --stack-h went stale and the picker
+  // stuck 59px too high, opening a strip of schedule above it. Simulated by setting the same
+  // padding the env() sets.
+  const inset = await page.evaluate(async () => {
+    const el = document.querySelector('.chdr');
+    el.style.paddingTop = '59px';
+    await new Promise((r) => setTimeout(r, 200));
+    const h = el.getBoundingClientRect().height;
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--stack-h').trim();
+    const gap = document.querySelector('.pickrow').getBoundingClientRect().top - el.getBoundingClientRect().bottom;
+    el.style.paddingTop = '';
+    return { h: Math.round(h), v, gap: Math.round(gap) };
+  });
+  record('--stack-h tracks the bar through a safe-area inset change',
+         inset.v === `${inset.h}px` && inset.gap === 0,
+         `bar ${inset.h}px, --stack-h ${inset.v}, gap to picker ${inset.gap}px`);
+
   // ---- THE THREE GOLD HAIRLINES, TIERED (prompt 62 stage 3). Joe's ruling from the renderings:
   // the OUTER edge of the block leads at .55, the divisions inside it stay divisions at .28. All
   // three are 1px - the renderings drew them at 2px so they would read at that size and said so.

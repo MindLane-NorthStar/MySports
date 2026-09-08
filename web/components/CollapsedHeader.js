@@ -183,7 +183,14 @@ export default function CollapsedHeader() {
     };
     write();
     const ro = new ResizeObserver(write);
-    ro.observe(el);
+    // BORDER-BOX, NOT THE DEFAULT CONTENT-BOX (prompt 63 stage 2). `.chdr` pads itself by
+    // `env(safe-area-inset-top)`, and an inset change moves the BORDER box while leaving the content
+    // box exactly as it was - so a content-box observer never fires and `--stack-h` keeps a stale
+    // height. Reproduced: with the inset raised to 59 after mount, `.chdr` measured 103px while
+    // `--stack-h` still read 44px, which parks the picker 59px too high and opens a strip of
+    // schedule between the navbar's hairline and the picker. That is the "more space above the
+    // picker than below" Joe reported, and why he only saw it on a device.
+    ro.observe(el, { box: 'border-box' });
     return () => ro.disconnect();
   }, []);
 

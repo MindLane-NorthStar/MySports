@@ -67,7 +67,12 @@ test('the collapsed stack is `display: contents`, and the picker sticks against 
   assert.match(rule, /position: sticky/);
   assert.match(rule, /top: var\(--stack-h, 44px\)/, 'the offset tracks the bar, with a bare fallback');
   assert.match(rule, /background: var\(--spot-2\)/, 'opaque, or the schedule scrolls through it');
-  assert.match(rule, /padding: 8px 0/, 'the gap is INSIDE the plate - as margin it was a letterbox');
+  // THE 8px IS INSIDE THE PLATE - as margin it was a transparent letterbox the schedule showed
+  // through. The horizontal half became a full BLEED in prompt 63 stage 2: the plate has to reach
+  // the viewport edges like the navbar above it, while its CONTENT stays in the column.
+  assert.match(rule, /padding: 8px calc\(50vw - 50%\)/, 'vertical gap inside, horizontal bleed');
+  assert.match(rule, /margin-inline: calc\(50% - 50vw\)/, 'the box grows to the viewport');
+  assert.match(rule, /margin-block: 0/, 'and gains no vertical margin doing it');
   // SCOPED TO COLLAPSED. Unscoped, the expanded picker would detach from the stack and park itself
   // partway down the viewport with nothing above it, because `.chdr` is display:none there.
   const unscoped = css.match(/^\.pickrow \{[^}]*\}/m)[0];
@@ -98,7 +103,12 @@ test('--stack-h is measured from the bar, not computed from constants', () => {
   // The bar's height is 44 + env(safe-area-inset-top) + the league row when open, and only the
   // browser knows the first two. A ResizeObserver carries all three and keeps carrying them.
   assert.match(c, /new ResizeObserver\(write\)/);
-  assert.match(c, /ro\.observe\(el\)/);
+  // BORDER-BOX, NOT THE DEFAULT (prompt 63 stage 2). `.chdr` pads itself by the safe-area inset, and
+  // an inset change moves the border box while leaving the content box untouched - a default
+  // content-box observer never fires, `--stack-h` goes stale, and the picker sticks too high with a
+  // strip of schedule above it. Reproduced at 59px of simulated inset: bar 103px, --stack-h 44px.
+  assert.match(c, /ro\.observe\(el, \{ box: 'border-box' \}\)/,
+    'a content-box observer cannot see a safe-area inset change');
   assert.match(c, /return \(\) => ro\.disconnect\(\)/, 'the observer is torn down');
   assert.match(c, /setProperty\(\s*'--stack-h', `\$\{el\.getBoundingClientRect\(\)\.height\}px`\)/);
   assert.doesNotMatch(c, /--stack-h['"]?,\s*['"`]44/, 'never a hardcoded height');

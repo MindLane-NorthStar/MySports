@@ -3158,8 +3158,18 @@ html[data-hdr='collapsed'] .pickrow {
      ground. `--spot-2` is the bar's own ground (rule 16, read from the token block), so the two
      read as one block. */
   background: var(--spot-2);
-  padding: 8px 0;
-  margin: 0;
+  /* FULL-BLEED, because the navbar above it is (prompt 63 stage 2, Joe: "the surround/background
+     color of the picker is the same color as the background of the app below, not ... the navbar").
+     THE TOKEN WAS NEVER WRONG. Sampled at 390, collapsed: inside the navbar #1b1b1b, inside the
+     picker's plate #1b1b1b - identical. What differed was REACH: `.chdr` spans 0-390 and `.pickrow`
+     lived inside `.shell`, which pads by 12px, so it spanned 12-378 and the page's radial ground
+     showed through at #242424 down both edges. Against a navbar with no such strip, that reads as
+     the wrong colour.
+     The margin/padding pair is the standard bleed: the box grows to the viewport and the padding
+     puts its CONTENT back in the column, so the arrows and the pill do not move. */
+  margin-inline: calc(50% - 50vw);
+  padding: 8px calc(50vw - 50%);
+  margin-block: 0;
   /* LINE 3 OF THREE, AND THE ONLY ONE AT FULL WEIGHT: the outer edge of the block the bar and the
      picker make together. `--gold-line` at .55 against the two divisions' .28 - see the token. */
   border-bottom: 1px solid var(--gold-line);
