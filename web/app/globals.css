@@ -3108,7 +3108,24 @@ html[data-hdr='collapsed'] .pickrow {
      puts its CONTENT back in the column, so the arrows and the pill do not move. */
   margin-inline: calc(50% - 50vw);
   padding: 8px calc(50vw - 50%);
-  margin-block: 0;
+  /* THE 16px BELOW IS JOE'S BUFFER (prompt 69, reported twice): "Below the gold line that rests
+     below the picker, the league logo is super tight to the gold line. There's no buffer above the
+     league logo and beneath the gold line." Measured before this: the rule's lower edge and the
+     content's top edge were both at y=100 - zero.
+     16px, MATCHING `SCROLL_GAP` in lib/autoscroll.js, so a landing that scrolls and a page that
+     sits at the top open the same distance under the line. Prompt 68 raised that constant 8 -> 16
+     and proved it could not reach this case: at scroll 0 there is nowhere to scroll up to, and the
+     day/list screenshots at gap 16 and gap 24 came out byte-identical.
+
+     AND IT IS MARGIN, WHICH THE RULE ABOVE FORBIDS FOR THE TOP EDGE - so read why that does not
+     apply here. Prompt 62 made the space ABOVE this row padding rather than margin because "a
+     transparent 8px band between two sticky elements is a letterbox that the schedule scrolls
+     through", and it did: a card's FINAL and its sport stripe were visible between the league row
+     and the picker. That hazard needs BOTH edges pinned. Nothing below this row is sticky, so this
+     band is ordinary flow - it sets where the content starts in the document and then scrolls away
+     under the plate like everything else. Verified at 390 across a 10,000px day: no transparent
+     strip under the plate at any scroll position, checked every 200px. */
+  margin-block: 0 16px;
   /* LINE 3 OF THREE, AND THE ONLY ONE AT FULL WEIGHT: the outer edge of the block the bar and the
      picker make together. `--gold-line` at .55 against the two divisions' .28 - see the token. */
   border-bottom: 1px solid var(--gold-line);
