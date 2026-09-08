@@ -5,11 +5,33 @@ Run from the repo root. Reads CFBD_API_KEY from .env (never printed/written).
 1. GET /teams?year=2026 (one API call) -> artifacts/validation/cfbd_2026_teams.json
    (sanitized: id, school, abbreviation, conference, classification, color,
    alternateColor, logos).
-2. Downloads logos ONLY for teams appearing in the Week 1 and Week 8 fixtures
-   -> assets/logos/{teamId}.png (primary) and {teamId}_dark.png when offered.
+2. Downloads a logo for EVERY team in that response -> assets/logos/{teamId}.png (primary) and
+   {teamId}_dark.png where the provider offers its own dark art.
    Skips files that already exist (idempotent; no re-scraping per §3.9).
+
+THE TWO-WEEK SAMPLE IS GONE, AND IT WAS THE CAUSE OF A VISIBLE DEFECT. This read "downloads logos
+ONLY for teams appearing in the Week 1 and Week 8 fixtures", which is a sample of the season and not
+of the LEAGUE: an FBS team plays one FCS opponent a year, at a date of its own choosing, so a
+two-week window catches a handful of them and misses the rest. 186 of the 684 teams in the response
+had art; East Tennessee State (2193), Howard (47) and Wofford (2747) all sat in the teams file with
+working cdn.collegefootballdata.com URLs and no asset, and rendered as broken images the day they
+appeared on a card. A sample cannot answer "which teams can appear", because the schedule decides
+that later.
+
+THE SKIP-IF-EXISTS IDEMPOTENCE IS UNCHANGED and is what makes the wider net cheap: a second run
+downloads nothing. The only thing that grew is the SET considered, not the work per file.
+
+WHAT IT DOES NOT DO IS PICK A SIZE. `logos[0]` and `logos[1]` are the 500px light and dark variants
+the provider lists first; the smaller CDN sizes are ignored, exactly as before.
+
+AND `logos[1]` IS NOT ALWAYS DARK ART. ESPN serves that URL for every team whether or not a distinct
+dark lockup exists, returning the base bytes where none does - measured 2026-09-07, 449 of 766 files
+written here came back byte-identical to their base. Conditioning is
+`scripts/build_web_marks.py --team-logos`, which since prompt 61 treats byte-identity with the base
+as the ABSENCE of provider art and conditions those, keeping only genuinely distinct art. Run it
+after this; the workflow's push step does it with --make-dark.
 """
-import json, os, re, sys, time, urllib.request, urllib.error
+import argparse, json, os, re, sys, time, urllib.request, urllib.error
 from pathlib import Path
 
 API_BASE = "https://api.collegefootballdata.com"
@@ -32,7 +54,49 @@ def load_dotenv(path: Path) -> None:
         if len(v) >= 2 and v[0] == v[-1] and v[0] in ("'", '"'): v = v[1:-1]
         os.environ.setdefault(k, v)
 
-def main() -> int:
+# WHY THERE IS A RETRY AT ALL, since the first version of the wider fetch did not have one and
+# needed it: asking the CDN for ~900 files back to back gets a share of them reset. The first full
+# run downloaded 451 and lost 461 to `URLError [WinError 10054] An existing connection was forcibly
+# closed by the remote host` - and the same URLs answered 200 immediately afterwards, one at a time.
+# That is throttling, not absence, and without a retry the script's own output invites the reader to
+# "just run it again" several times to converge.
+#
+# A 404 IS NEVER RETRIED. It is the provider saying the art is not there, which three more requests
+# cannot change; retrying it would turn the one genuine sourcing signal into noise and spend the
+# backoff on the files least likely to arrive.
+ATTEMPTS = 3
+BACKOFF = (0.5, 2.0, 5.0)
+
+
+def get(url: str, timeout: int = 30) -> bytes:
+    """Fetch one URL, retrying transient failures. Raises the LAST exception if all attempts fail."""
+    last: Exception | None = None
+    for i in range(ATTEMPTS):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 mysports-assets/0.1"})
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as e:
+            raise            # 404 and every other status: definitive, and reported as such
+        except Exception as e:  # noqa: BLE001 - reset, timeout, DNS: all worth one more try
+            last = e
+            if i < ATTEMPTS - 1:
+                time.sleep(BACKOFF[i])
+    raise last if last else RuntimeError("unreachable")
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    # EVERY TEAM BY DEFAULT. The filter exists because the response is not only Division I: of the
+    # 684 teams in 2026, 138 are FBS and 128 FCS - the two that can appear on an FBS schedule - and
+    # 171 are Division II and 247 Division III, which is 61% of the download for teams a CFBD FBS
+    # schedule will not normally name. Fetching them is cheap and idempotent and rules out a future
+    # exhibition rendering broken, so it is the default; the flag is here so narrowing is one
+    # argument rather than an edit.
+    ap.add_argument("--classification", nargs="+", metavar="C",
+                    help="only fetch these classifications (e.g. fbs fcs). Default: every team.")
+    args = ap.parse_args(argv)
+
     root = find_repo_root(Path.cwd())
     load_dotenv(root / ".env")
     token = os.getenv("CFBD_API_KEY")
@@ -60,21 +124,24 @@ def main() -> int:
     out.write_text(json.dumps(sanitized, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"wrote {out}")
 
-    needed = set()
-    for fx in ["cfbd_2026_week1_fixture.json", "cfbd_2026_week8_fixture.json"]:
-        p = root / "artifacts" / "validation" / fx
-        if not p.exists():
-            print(f"WARNING: {fx} missing; skipping"); continue
-        for g in json.load(open(p, encoding="utf-8"))["games"]:
-            for side in ("home", "away"):
-                if g[side].get("id") is not None: needed.add(g[side]["id"])
-    print(f"teams needing logos: {len(needed)}")
+    # EVERY TEAM IN THE RESPONSE. This used to be the union of the Week 1 and Week 8 fixtures - see
+    # the module docstring for why a two-week sample is the wrong question to ask.
+    wanted = {c.lower() for c in args.classification} if args.classification else None
+    needed = {t["id"] for t in sanitized
+              if t["id"] is not None
+              and (wanted is None or str(t.get("classification") or "").lower() in wanted)}
+    if wanted:
+        print(f"classification filter: {' '.join(sorted(wanted))}")
+    print(f"teams considered: {len(needed)} of {len(sanitized)}")
 
     by_id = {t["id"]: t for t in sanitized}
     logo_dir = root / "assets" / "logos"
     logo_dir.mkdir(parents=True, exist_ok=True)
     ok = missing_meta = no_logo = fail = skipped = 0
-    for tid in sorted(needed):
+    added_bytes = 0
+    gone: list[str] = []          # a 404 is a real sourcing gap: the URL is listed and is not there
+    errored: list[str] = []       # anything else is this run's problem, not the provider's
+    for tid in sorted(needed, key=lambda x: str(x)):
         t = by_id.get(tid)
         if t is None: missing_meta += 1; continue
         logos = t["logos"]
@@ -84,14 +151,38 @@ def main() -> int:
         for url, dest in targets:
             if dest.exists(): skipped += 1; continue
             try:
-                r2 = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 mysports-assets/0.1"})
-                with urllib.request.urlopen(r2, timeout=30) as resp:
-                    dest.write_bytes(resp.read())
-                ok += 1; time.sleep(0.15)
-            except Exception as e:
-                fail += 1; print(f"  FAILED {t['school']} ({tid}): {type(e).__name__}")
-    print(f"logos downloaded: {ok}, already present: {skipped}, failed: {fail}, "
-          f"no-url: {no_logo}, not-in-teams-response: {missing_meta}")
+                body = get(url)
+                dest.write_bytes(body)
+                ok += 1; added_bytes += len(body); time.sleep(0.15)
+            # A 404 IS REPORTED SEPARATELY FROM EVERY OTHER FAILURE, because the two mean opposite
+            # things. A 404 says the provider lists a URL it does not serve - the only genuine
+            # sourcing gap, and nothing a re-run can fix. A timeout or a reset says this machine's
+            # network wobbled, and the next run picks it up for free because the file is still
+            # absent. Collapsing them into one `fail` count is how a transient looks permanent.
+            except urllib.error.HTTPError as e:
+                fail += 1
+                (gone if e.code == 404 else errored).append(f"{t['school']} ({tid}) {dest.name} HTTP {e.code}")
+            except Exception as e:  # noqa: BLE001 - one bad logo must not stop the run
+                fail += 1
+                # THE REASON, NOT JUST THE CLASS. Every failure in the first full run printed as a
+                # bare `URLError`, which named the exception and not the fault; the reason said
+                # `[WinError 10054] An existing connection was forcibly closed by the remote host`
+                # and that is what identified it as throttling rather than a dead URL.
+                why = getattr(e, "reason", None) or e
+                errored.append(f"{t['school']} ({tid}) {dest.name} {type(e).__name__}: {why}")
+    print(f"logos downloaded: {ok} ({added_bytes:,} bytes), already present: {skipped}, "
+          f"failed: {fail}, no-url: {no_logo}, not-in-teams-response: {missing_meta}")
+    if gone:
+        print(f"\n404 - listed by the provider and not served ({len(gone)}). These are the only "
+              f"genuine sourcing gaps; a re-run will not fix them:")
+        for g in gone: print(f"  {g}")
+    if errored:
+        print(f"\ntransient or other failures ({len(errored)}) - re-run to retry, the files are "
+              f"still absent so nothing is re-scraped:")
+        for g in errored: print(f"  {g}")
+    if no_logo:
+        print(f"\n{no_logo} teams list no logo URL at all - the provider has no art for them, "
+              f"which is a different gap from a 404 and equally unfixable here.")
     return 0
 
 if __name__ == "__main__":

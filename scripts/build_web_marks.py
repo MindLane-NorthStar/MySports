@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import colorsys
+import hashlib
 import json
 import shutil
 import statistics
@@ -540,6 +541,10 @@ LOGO_DIR = ROOT / "assets" / "logos"
 DARK_MAX = 256        # the dark variant is a LISTINGS asset (<= 40px on screen); the raw stays 500px
 
 
+def _sha(p: Path) -> str:
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
 def team_dark_variants(force: bool = False) -> dict[str, int]:
     """Ensure every team has a `logos/{id}_dark.png` for charcoal-floating contexts (addendum M12).
 
@@ -547,20 +552,38 @@ def team_dark_variants(force: bool = False) -> dict[str, int]:
       * grid cap endcaps and light tint plates use the RAW `{id}.png`, never lightness-adjusted (v1.3e);
       * a logo FLOATING on charcoal - listings line 1, the odds slot - uses `{id}_dark.png`.
 
-    **A provider's own dark art always wins.** `scripts/fetch_team_assets.py` already saves ESPN's
-    `500-dark` variant as `{id}_dark.png` where ESPN offers one (186 of 496 files today). Those are
-    drawn for dark backgrounds by the club's own designers; overwriting them with a derived
-    approximation would be strictly worse. Only teams with no such file get the conditioned chain
-    (guarded derive, then the 0.5 lightness floor). Idempotent: an existing variant is left alone
-    unless --force.
+    **A provider's own dark art always wins - but the FILE'S EXISTENCE IS NOT EVIDENCE OF IT.**
+
+    This used to say `fetch_team_assets.py` "already saves ESPN's `500-dark` variant as
+    `{id}_dark.png` where ESPN offers one", and skipped every team that had the file. THE PREMISE WAS
+    FALSE for most of them: ESPN serves its `500-dark` URL for every team whether or not a distinct
+    dark lockup exists, and where none does it returns THE SAME BYTES as the base. So a `_dark.png`
+    identical to its base is not provider art - it is the ABSENCE of provider art wearing the
+    filename, and skipping it left a genuinely dark logo sinking into `--panel` #23262B. Measured
+    2026-09-07 over 766 teams: 449 identical, 317 distinct, and 416 of the 449 with the majority of
+    their ink under `floor_l`'s own line.
+
+    BYTE-IDENTITY IS HOW THE ABSENCE IS DETECTED. A dark file whose bytes differ from the base is
+    real provider art, drawn for dark backgrounds by the club's own designers, and still wins -
+    overwriting it with a derived approximation would be strictly worse. Everything else gets the
+    conditioned chain (guarded derive, then the 0.5 lightness floor).
+
+    Idempotent either way: a conditioned variant is a 256px re-render and can never come back
+    byte-identical to its 500px source, so a second run sees it as present and leaves it alone.
+    --force still rebuilds everything.
     """
-    counts = {"present": 0, "generated": 0, "skipped": 0}
+    counts = {"present": 0, "generated": 0, "skipped": 0, "reconditioned": 0}
     bases = sorted(p for p in LOGO_DIR.glob("*.png") if not p.stem.endswith("_dark"))
     for p in bases:
         dark = p.with_name(f"{p.stem}_dark.png")
         if dark.exists() and not force:
-            counts["present"] += 1          # provider art or a variant built by an earlier run
-            continue
+            # IDENTICAL BYTES MEAN NO PROVIDER ART - see the note above. `_sha` rather than a size
+            # compare: two different lockups can share a byte count, and this decides whether a
+            # logo gets conditioned at all.
+            if _sha(dark) != _sha(p):
+                counts["present"] += 1      # real provider dark art, or an earlier conditioned run
+                continue
+            counts["reconditioned"] += 1    # the file exists and is the base; treat it as absent
         try:
             im = Image.open(p).convert("RGBA")
         except Exception as e:  # noqa: BLE001 - one unreadable logo must not stop the build
@@ -594,8 +617,9 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     if args.team_logos:
         c = team_dark_variants(args.force)
-        print(f"team dark variants: {c['generated']} generated, {c['present']} already present "
-              f"(provider art kept), {c['skipped']} unreadable")
+        print(f"team dark variants: {c['generated']} generated ({c['reconditioned']} of them files "
+              f"that existed but were byte-identical to their base), {c['present']} already present "
+              f"(real provider art kept), {c['skipped']} unreadable")
     if args.list:
         for s in slugs():
             kind, _ = RECIPES.get(s, ("png", dark_ready))
