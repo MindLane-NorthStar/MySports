@@ -4,8 +4,36 @@
 //
 // Joe: "Top of the day before games start, games in-progress while games are in-progress." So the
 // app opens on the current day's heading until something is live, and on the earliest live game once
-// something is. It runs on EVERY entry to the view and AGAIN when the app returns from the
-// background - Joe chose the most aggressive trigger knowingly, over the gentler recommendation.
+// something is.
+//
+// ---------------------------------------------------------------------------------------------
+// IT DOES NOT FIRE ON ARRIVAL, AND THAT IS A DELIBERATE REVERSAL (prompt 68, Joe 2026-09-08).
+//
+// Prompt 67 ran it on EVERY entry to the view and AGAIN on every return from the background - the
+// most aggressive of the options, chosen knowingly over the gentler recommendation. It was wrong in
+// the one case nobody pictured: a cold open. Joe reported "when opening the app, the main banner
+// doesn't appear - the app opens with the navbar", because `land()` collapses the header and scrolls
+// the banner off before he has looked at it. His ruling: "Can we tune the auto-scroll to NOT work on
+// first opening of the app?"
+//
+// THE RULE IS STRONGER THAN "SKIP THE FIRST RUN", and the difference is the whole point on the
+// target device. An iOS home-screen PWA usually SURVIVES backgrounding, so "opening the app" is
+// normally a `visibilitychange` on a document that already exists - not a fresh mount. Suppressing
+// only the mount would leave the complaint intact for the most common way Joe opens it. So:
+//
+//   THE SCROLL NEVER FIRES UNTIL THE READER HAS NAVIGATED WITHIN THE APP AT LEAST ONCE IN THIS
+//   DOCUMENT. After that, both triggers behave exactly as prompt 67 left them.
+//
+//   cold open, fresh document                    no - the banner is there and the header is open
+//   background and return, having navigated      no - the view is left exactly as it was
+//   change day / week / sport / scope / view     YES
+//   background and return after any navigation   YES
+//   pull-to-refresh, or iOS evicting the PWA     no - a fresh document is an arrival
+//
+// MODULE SCOPE IS THE CARRIER, and the choice is load-bearing. It survives every re-render and every
+// client-side route change WITHIN one document, and it dies with the document - which is exactly the
+// definition of "a fresh open of the app". A `useRef` would reset on remount; `sessionStorage` would
+// survive a reload and suppress nothing on the fifth row above.
 //
 // IT IS ALSO WHAT MAKES PROMPT 67 STAGE 1 SAFE. The TONIGHT band was removed in the same prompt, and
 // the band's whole job was answering "what is on right now" at a glance. This is that answer, moved
@@ -55,46 +83,17 @@ import { useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 import { collapseHeader } from '../lib/headerstate.js';
+import {
+  SCROLL_GAP,
+  SETTLE_MS,
+  CORRECT_MS,
+  stackBottom,
+  scrollTargetFor,
+  decideScroll,
+} from '../lib/autoscroll.js';
 
-/** Breathing room between the sticky stack and the thing scrolled to. */
-export const SCROLL_GAP = 8;
-
-/** The fallback if `--stack-h` has not been written yet - the bar's collapsed height. */
-const BAR_FALLBACK = 44;
-
-/** After the collapse commits: long enough for the reflow and the `--stack-h` ResizeObserver. */
-const SETTLE_MS = 120;
-
-/** After the smooth scroll: long enough for it to have finished, since Safari has no `scrollend`. */
-const CORRECT_MS = 600;
-
-/**
- * The bottom edge of everything that is stuck to the top of the viewport.
- *
- * Read rather than derived: `.pickrow` sticks AT `--stack-h`, so once the page is scrolled its
- * bottom is exactly the bar plus its own height. Measuring its `getBoundingClientRect().bottom`
- * directly would be circular - that value depends on the scroll position this is being used to
- * compute.
- */
-export function stackBottom(doc = document) {
-  const raw = getComputedStyle(doc.documentElement).getPropertyValue('--stack-h');
-  const bar = Number.parseFloat(raw);
-  const pick = doc.querySelector('.pickrow');
-  return (Number.isFinite(bar) ? bar : BAR_FALLBACK)
-    + (pick ? pick.getBoundingClientRect().height : 0);
-}
-
-/**
- * Where the page should be scrolled to, or null if it should not be scrolled at all.
- *
- * Exported and pure-ish so `web/test/autoscroll.test.mjs` can drive it over a fake document rather
- * than asserting that a browser did something.
- */
-export function scrollTargetFor(doc = document) {
-  const today = doc.querySelector('[data-istoday="true"]');
-  if (!today) return null;                       // a week without today, or a day that is not today
-  return today.querySelector('.mcard[data-live="1"]') || today;
-}
+/** The live entry state. MODULE SCOPE deliberately - see the note at the top of this file. */
+let entryState = { arrivalKey: null, navigated: false };
 
 export default function AutoScroll() {
   const pathname = usePathname();
@@ -144,13 +143,23 @@ export default function AutoScroll() {
       }, SETTLE_MS)));
     };
 
-    // EVERY ENTRY. The effect re-runs on any change to the path or the query, which is what a
-    // change of day, week, sport, scope or view is in this app - there is one route.
-    land();
+    // EVERY ENTRY BUT THE ARRIVAL. The effect re-runs on any change to the path or the query, which
+    // is what a change of day, week, sport, scope or view is in this app - there is one route. React
+    // StrictMode double-invokes this on mount in development; the second run carries the SAME key,
+    // so it is not a navigation and nothing scrolls.
+    const entry = decideScroll(entryState, 'entry', key);
+    entryState = entry.state;
+    if (entry.scroll) land();
 
-    // AND AGAIN FROM THE BACKGROUND. `visibilitychange` rather than `focus`: focus fires when the
-    // reader dismisses a keyboard or returns from a share sheet, which is not returning to the app.
-    const onVisible = () => { if (document.visibilityState === 'visible') land(); };
+    // AND AGAIN FROM THE BACKGROUND, through the same predicate. `visibilitychange` rather than
+    // `focus`: focus fires when the reader dismisses a keyboard or returns from a share sheet, which
+    // is not returning to the app.
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const back = decideScroll(entryState, 'return', null);
+      entryState = back.state;
+      if (back.scroll) land();
+    };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
