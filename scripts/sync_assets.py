@@ -94,9 +94,42 @@ def remote_sha(s3, bucket: str, key: str) -> str | None:
         return None
 
 
+# THE ART HAD NO CACHE POLICY AT ALL, and it cost an hour on 2026-09-08.
+#
+# Joe's phone kept painting the old logos after 9a69810 shipped. The bytes in R2 were right and the
+# same URL in Safari showed the new art, but the app - installed to the home screen - kept the old
+# one until he re-added it. An hour went into ruling out the art, the contrast, the render scale and
+# the CDN. THERE IS NO SERVICE WORKER (no `serviceWorker.register`, no workbox, no sw.js anywhere in
+# web/), so nothing in the app was caching it: these uploads carried `ContentType` and nothing else,
+# and a response with no `Cache-Control` lets a browser pick its own HEURISTIC freshness - commonly a
+# fraction of the object's age, which for a file that has sat in the bucket for days is hours or days.
+# `teamLogoDarkUrl()` (web/lib/config.js:156) is a bare path that never changes when the art does, so
+# nothing ever told a client to look again.
+#
+# WHY max-age=300 AND NOT stale-while-revalidate. SWR lets a client serve the STALE copy while it
+# refetches in the background, so the first load after a change still paints the old art - exactly
+# the symptom this is here to stop, just shorter. Five minutes of free reuse, then a conditional
+# request that costs a 304 on a small PNG, buys correctness on the first look. If request count ever
+# matters more than that, appending `, stale-while-revalidate=604800` is the one-token change.
+#
+# ONLY NEW UPLOADS CARRY IT. Objects already in the bucket keep the headers they were written with,
+# and the push below skips anything whose bytes match, so the fix reaches an object the first time
+# its art changes - or all at once if someone forces a re-upload.
+CACHE_CONTROL = "public, max-age=300"
+
+
+def _extra_args(p: Path) -> dict:
+    """The upload metadata, in ONE place. It was duplicated at two call sites, and that is how both
+    of them came to be missing a cache policy for as long as they were."""
+    return {
+        "ContentType": CONTENT_TYPES.get(p.suffix.lower(), "application/octet-stream"),
+        "CacheControl": CACHE_CONTROL,
+        "Metadata": {"sha256": sha256(p)},
+    }
+
+
 def _put(s3, bucket: str, key: str, p: Path) -> None:
-    s3.upload_file(str(p), bucket, key, ExtraArgs={"ContentType": CONTENT_TYPES.get(p.suffix.lower(), "application/octet-stream"),
-                                                   "Metadata": {"sha256": sha256(p)}})
+    s3.upload_file(str(p), bucket, key, ExtraArgs=_extra_args(p))
 
 
 def special_modes(args) -> int:
@@ -205,8 +238,7 @@ def main(argv: list[str] | None = None) -> int:
         n = 0
         for key in to_push:
             p = local[key]
-            s3.upload_file(str(p), bucket, key, ExtraArgs={"ContentType": CONTENT_TYPES.get(p.suffix.lower(), "application/octet-stream"),
-                                                             "Metadata": {"sha256": sha256(p)}})
+            _put(s3, bucket, key, p)
             n += 1
             if n % 50 == 0:
                 print(f"  pushed {n}/{len(to_push)}")
