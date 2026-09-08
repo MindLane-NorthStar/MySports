@@ -204,5 +204,11 @@ test('a pre-tint value could not have worked - a third of the bands are above th
     const n = parseInt(TABLE[id].band.slice(1), 16);
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255].some((c) => c > ceiling);
   });
-  assert.equal(above.length, 33, `above the ceiling: ${above.length}`);
+  // 33 UNTIL PROMPT 69, WHICH MOVED TWO OF THEM DELIBERATELY. Joe ruled that the Phillies and the
+  // Raptors should take the tinted surface, and the cheapest way to give them it without breaking
+  // capFor()'s no-mixed-cap-levels invariant was to write the 0.72 TINT OF EACH BAND IN as the band:
+  // #e81828 -> #ad1723 and #d91244 -> #a21337. A tint output is by definition at or below the tint
+  // ceiling, so both left this set. The claim this test defends is unchanged - a stored pre-tint
+  // value still cannot express the other 31.
+  assert.equal(above.length, 31, `above the ceiling: ${above.length}`);
 });

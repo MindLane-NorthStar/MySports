@@ -161,10 +161,10 @@
     "mlb-143": {
       "name": "Phillies",
       "sport": "mlb",
-      "band": "#e81828",
-      "ink": "#101214",
-      "ratio": 4.11,
-      "via": "A"
+      "band": "#ad1723",
+      "ink": "#f2f2f0",
+      "ratio": 6.41,
+      "via": "A, then prompt 69: the 0.72 tint of #e81828 written in, ink lifted"
     },
     "mlb-134": {
       "name": "Pirates",
@@ -473,10 +473,10 @@
     "nba-TOR": {
       "name": "Toronto Raptors",
       "sport": "nba",
-      "band": "#d91244",
-      "ink": "#000000",
-      "ratio": 4.12,
-      "via": "A"
+      "band": "#a21337",
+      "ink": "#f2f2f0",
+      "ratio": 6.98,
+      "via": "A, then prompt 69: the 0.72 tint of #d91244 written in, ink lifted"
     },
     "nba-UTA": {
       "name": "Utah Jazz",

@@ -403,6 +403,18 @@ export function capFor(teamId) {
   // Raptors 4.12 -> 2.68, Thunder 4.76 -> 2.98 - and took the Lions to 1.46, the worst block in the
   // app.
   //
+  // TWO OF THOSE FOUR NOW SIT ON THE TINTED SURFACE ON PURPOSE, so read the line above as history
+  // rather than as a live complaint. Prompt 69: Joe saw the Phillies and the Raptors at true grid
+  // size and ruled that both should TAKE the tinted surface and lift the ink off it. That is done in
+  // the DATA, not here - `grid_colors_pro.json` stores an exact hex, so the 0.72 tint of each band
+  // is written in as the band itself (#e81828 -> #ad1723, #d91244 -> #a21337) with a #f2f2f0 ink.
+  //
+  // A `tint: 0.72` FLAG FOR THOSE TWO WOULD HAVE BROKEN THE INVARIANT BELOW. It is what makes the
+  // blanket `tint: 1` safe: no single view mixes cap levels. Two ruled teams at 0.72 would put the
+  // Phillies' block on a darker surface than the rest of an MLB grid. Writing the colour in keeps
+  // every ruled cap flat and gets the same pixels - measured, not assumed: edge_crisp 0.000 -> 0.961
+  // and 0.308 -> 1.000, ink ratio 4.11 -> 6.41 and 4.12 -> 6.98.
+  //
   // STORING A PRE-TINT VALUE INSTEAD CANNOT WORK. `tint()` below computes c*f + 255*(1-f)*0.08, so
   // at f = 0.72 it maps 0-255 onto 5.712-189.312. THIRTY-THREE of the 124 ruled bands have a channel
   // above that ceiling and are not outputs of that function at any input - the Browns' #ff3c00, the
