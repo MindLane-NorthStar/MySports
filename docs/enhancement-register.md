@@ -2734,3 +2734,55 @@ the band and the ink at grid scale, which is a different question, and his eye i
 his own grid. But nineteen blocks whose endcap art the measurement says has stopped reading is worth
 his look before it is called finished — and the fix, if he wants one, is per-team `tint: 0.72` back,
 which trades his exact band for a legible logo on those teams only.
+
+---
+
+## 30. TWO PROBES ARE TRACKED AND EIGHTY-ONE ARE NOT — 2026-09-08, prompt 70
+
+`web/scripts/probes/` holds `s0-gaps.mjs`, `s3-spacing.mjs` and the `landmark.mjs` guard they share.
+`web/qa/tools/` holds 81 more and stays gitignored. **Two tracked files among eighty-three needs a
+stated reason or the next reader reads it as an accident**, so here it is.
+
+**THE DIRECTORY OUTGREW THE RULE THAT IGNORES IT.** `.gitignore` files `web/qa/` under *"generated
+validation/rendering artifacts (regenerable)"*, and `docs/prompts/43-night-run.md:16` records what
+that meant when it was written: `web/qa/` was *"qa-shots output — 25 files at the time of writing"*.
+True then. The hand-written measurement tools arrived afterwards, and they are neither generated nor
+regenerable — nobody can re-derive them from anything.
+
+**THE PRECEDENT WAS ALREADY SET AND ALREADY USED.** §: `geometry.mjs` lives at
+`web/scripts/geometry.mjs` **"rather than `qa/tools/` because `web/qa/` is gitignored"**, and the
+reason given there was that a check meant to replace the tripwire discipline cannot live somewhere a
+clone does not have. That is the same argument, one rung down.
+
+**WHY THESE TWO.** They are the two prompt 69 ran, and the two it fixed: both opened with
+`querySelector('.fband') || querySelector('.today-split')`, and `.fband` was deleted with the TONIGHT
+band in prompt 67. For two prompts the leading selector matched nothing, the `||` swallowed it, and
+both probes went on reporting a "picker to content" gap. **They were right by luck** — `.today-split`
+is the element that measurement wanted anyway — but nothing in the run could distinguish a correct
+fallback from a silent one, and the fixes could not be committed because the files were untracked.
+
+**WHY NOT THE OTHER 81.** A filename search across prompts 55–60, `handoff-status.md`, this register
+and both contracts names none of them; the only doc that names probes is the prompt-50-era
+`docs/hub/` audit. **That search is a floor and not a ceiling, and prompt 70's brief said so
+plainly**: searching docs for `.mjs` names finds probes that got WRITTEN ABOUT, not probes that got
+RUN, and a probe invoked mid-run appears in that run's transcript and nowhere else. So the 81 are not
+proven dead — they are unproven either way, and the honest position is that the two with a
+demonstrated defect were promoted and the rest wait for evidence. **Promote another the day a run
+leans on it, not before, and not in a batch.**
+
+**WHAT PROMOTION COST THEM, which is the part worth copying.** Both were hardcoded to
+`http://localhost:3100`, a port nothing in this repo starts — so neither could be run from a clone
+without editing it first. Being untracked hid a second failure: the file was missing AND the file
+that existed did not run. They now take a base argument defaulting to 3000, which is what
+`npm run dev` serves.
+
+**THE GUARD.** `landmark.mjs` exports one definition, injected into the page with `addInitScript`
+because the lookups happen inside `page.evaluate()` and a module imported on the Node side is not in
+that realm. `window.__landmark(sel)` throws naming the selector; `window.__optional(sel)` is the
+explicit opt-out for things that may legitimately be absent. Verified firing: `.pickrow` resolves,
+`.fband` throws *"probe landmark not found: .fband"*, `__optional('.fband')` returns null, and the
+guard survives a navigation. **A probe that keeps producing numbers after its landmark disappears is
+worse than one that stops**, because the answer still looks like a measurement and gets quoted.
+
+**THE ORIGINALS WERE DELETED, not left behind.** Two copies of a measurement tool drift, and the
+untracked one drifts invisibly, which is the whole defect. `web/qa/tools/` went 83 → 81.

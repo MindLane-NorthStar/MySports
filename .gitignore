@@ -11,12 +11,18 @@ artifacts/
 # regenerable - prompt 69 fixed two of them and could not commit the fixes.
 #
 # THE RULE STILL STANDS, and the remedy is the one this file already names: PROMOTION. A probe that
-# any live prompt or contract depends on belongs in tracked `web/scripts/`, which is where
-# `geometry.mjs` went for exactly this reason (register §: "in scripts/ rather than qa/tools/
-# because web/qa/ is gitignored"). Enumerated 2026-09-08 across prompts 55-60, handoff-status.md,
-# the register and both contracts: NO probe under web/qa/ is named by any of them, so none has been
-# promoted and this stays a blanket ignore. The only doc that names probes is the prompt-50-era
-# docs/hub/ audit. What is under here is output and closed-prompt archaeology.
+# a live run depends on belongs in tracked `web/scripts/`, which is where `geometry.mjs` went for
+# exactly this reason (register: "in scripts/ rather than qa/tools/ because web/qa/ is gitignored").
+#
+# TWO HAVE BEEN PROMOTED, to web/scripts/probes/: s0-gaps.mjs and s3-spacing.mjs, the two prompt 69
+# actually ran and fixed. Their originals were DELETED from web/qa/tools/ rather than left as second
+# copies - an untracked duplicate of a measurement tool drifts invisibly, which is the defect being
+# closed. Register 30 says why those two and not the other 82.
+#
+# The rest stays ignored and that is correct: it is qa-shots output plus closed-prompt archaeology.
+# A filename search across prompts 55-60, handoff-status.md, the register and both contracts named
+# none of it - though that search finds probes WRITTEN ABOUT, not probes RUN, so it is a floor on
+# what deserves promotion and not a ceiling.
 web/qa/
 # the Claude Project mirror: a regenerable copy of docs, named as the Project names them
 handoff/project-mirror/
