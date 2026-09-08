@@ -825,6 +825,37 @@ for (const dev of DEVICES) {
            Math.abs(v.pickTop - v.chdrBottom) < 0.6 && v.stackH === `${v.chdrH}px`,
            `picker top ${v.pickTop} vs bar bottom ${v.chdrBottom}, --stack-h ${v.stackH}`);
   }
+
+  // ---- THE THREE GOLD HAIRLINES, TIERED (prompt 62 stage 3). Joe's ruling from the renderings:
+  // the OUTER edge of the block leads at .55, the divisions inside it stay divisions at .28. All
+  // three are 1px - the renderings drew them at 2px so they would read at that size and said so.
+  await page.goto(`${base}/?day=2026-09-05`, { waitUntil: 'networkidle' });
+  await page.evaluate(() => window.scrollTo(0, 1200));
+  await page.waitForTimeout(600);
+  const lines = () => page.evaluate(() => {
+    const g = (sel) => {
+      const e = document.querySelector(sel);
+      if (!e) return null;
+      const c = getComputedStyle(e);
+      return `${c.borderBottomWidth} ${c.borderBottomColor}`;
+    };
+    return { chdr: g('.chdr'), inner: g('.chdr-inner'), sports: g('.chdr-sports'), pick: g('.pickrow') };
+  });
+  const FAINT = '1px rgba(198, 175, 122, 0.28)';
+  const OUTER = '1px rgba(198, 175, 122, 0.55)';
+  let L = await lines();
+  record('closed: the navbar line is faint and the picker line is the outer edge',
+         L.inner === FAINT && L.pick === OUTER && L.sports === null,
+         `navbar ${L.inner} / picker ${L.pick}`);
+  // `.chdr` itself carries NONE: its border would sit under whatever its last child is, so it could
+  // be the navbar's line or the row's but never both, and Joe asked for both.
+  record('closed: .chdr carries no border of its own', L.chdr.startsWith('0px'), L.chdr);
+  await page.click('.chdr-tile');
+  await page.waitForTimeout(400);
+  L = await lines();
+  record('open: the league row gets the third line, at the same faint weight',
+         L.inner === FAINT && L.sports === FAINT && L.pick === OUTER,
+         `navbar ${L.inner} / row ${L.sports} / picker ${L.pick}`);
   await ctx.close();
 }
 

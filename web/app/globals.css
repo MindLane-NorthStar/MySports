@@ -132,6 +132,12 @@
      §4's 0.55 is the token and is what this file uses, because the eight border/glow literals it
      replaces already ran at 0.25-0.60 and 0.55 keeps them where prompt 25 and 34 tuned them. */
   --gold-line: rgba(198, 175, 122, 0.55);
+  /* THE INTERNAL DIVISION, against --gold-line's OUTER EDGE (prompt 62 stage 3, Joe's ruling from
+     the renderings). Closed, the navbar's line and the picker's sit ~47px apart with only the date
+     between them, and two rules at equal weight read as stripes rather than as boundaries. The
+     outer edge leads at .55; the divisions inside the block stay divisions at .28. One definition,
+     read from here in all three places (rule 16). */
+  --gold-hairline: rgba(198, 175, 122, 0.28);
 
   --live: #7fd1a3;
   --alert: #e8918d;
@@ -3079,7 +3085,6 @@ main > .hubctl:first-child { margin-top: 0; }
   top: 0;
   z-index: 40;
   background: var(--spot-2);
-  border-bottom: 1px solid var(--line-soft);
   padding-top: env(safe-area-inset-top, 0px);
   display: none;
 }
@@ -3155,6 +3160,9 @@ html[data-hdr='collapsed'] .pickrow {
   background: var(--spot-2);
   padding: 8px 0;
   margin: 0;
+  /* LINE 3 OF THREE, AND THE ONLY ONE AT FULL WEIGHT: the outer edge of the block the bar and the
+     picker make together. `--gold-line` at .55 against the two divisions' .28 - see the token. */
+  border-bottom: 1px solid var(--gold-line);
 }
 
 /* THE BANNER GOES AWAY. This is the difference between prompt 58's bar, which only ever appeared
@@ -3196,6 +3204,13 @@ html[data-hdr='collapsed'] .banner {
   padding: 0 12px;
   max-width: 1100px;
   margin: 0 auto;
+  /* LINE 1 OF THREE (prompt 62 stage 3): under the navbar, always.
+     IT MOVED HERE FROM `.chdr`, which is the one place the brief's "a value change on an existing
+     border" was not quite right. `.chdr`'s border sits under whatever its LAST child is - the bar
+     when closed, the league row when open - so it can be the navbar's line or the row's line but
+     never both, and Joe asked for both. One line per element instead: this one under the bar, the
+     row's under the row, and `.chdr` carries none. */
+  border-bottom: 1px solid var(--gold-hairline);
 }
 
 /* THE RUN OF FOUR, pushed to the right of the wordmark. MEASURED with the real font rather than
@@ -3357,6 +3372,10 @@ button.chdr-tile:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* LINE 2 OF THREE: under the league row, and ONLY while it is open. It needs no state selector -
+     the row is conditionally RENDERED rather than hidden (CollapsedHeader.js, for focus order), so
+     an absent row has no border to leave behind. */
+  border-bottom: 1px solid var(--gold-hairline);
 }
 
 /* `.chdr-choice` IS GONE (prompt 60). It was the single-line control the bar shipped with: three
