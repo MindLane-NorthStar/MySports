@@ -45,8 +45,34 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 62's stage-4 commit. Gates: **496 Python tests + 1 skipped**, **451 JS unit
-tests**, smoke **30/30**, qa-shots **88/88**, **`npm run geometry`** all hard stops.
+main, HEAD is prompt 66. **THIS IS THE ONLY PLACE THE GATE FLOORS ARE RECORDED.** `CLAUDE.md`
+carried a second copy and it was wrong four times in one week (prompts 62, 63, 64, and again between
+`9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
+the winner — do not put a number back there, and do not add a third copy anywhere else.
+
+**Measured 2026-09-08 at `201ed07` + prompt 66's stages 2–5:**
+
+| gate | run from | floor |
+|---|---|---|
+| `pytest` | repo root | **511 passed + 1 skipped** (36 subtests) |
+| `npm run test:unit` | `web/` | **473** |
+| `npm run smoke` | `web/` | **33/33** |
+| `node scripts/qa-shots.mjs` | `web/` | **91/91** |
+| `npm run geometry` | `web/` | all hard stops |
+
+They are a floor and may only go up.
+
+**`qa-shots` GOES FLAKY WHEN THE MACHINE IS DIRTY, and it is the gate rather than the app.** Prompt 66
+ran it nine times while stray processes were alive and got 91/91 once, the other eight returning one
+to three failures and never the same set. After killing them it returned **91/91 three times in a
+row.** Every one of them was in the header-interaction
+cluster — `tapping GRID in the navbar keeps the collapse`, `and GRID -> LIST works from the same
+control`, `picking ALL SPORTS in the row puts the WORDS back`, `360: every toggle is 44px` — and each
+failed on a URL that had not changed yet inside a fixed `page.waitForTimeout(300…900)`. Nothing was
+wrong with the header; the wait was shorter than a `next dev` client navigation under load. **Before
+debugging the app, kill every stray `next dev` and every stray chromium** — prompt 66 found FIVE dev
+servers sharing one `.next` and 25 orphaned chromium processes. **The real fix, not yet done: wait on
+the condition (`page.waitForURL`, `expect.poll`) instead of on a duration.**
 
 ### THE SPLIT SHIPPED (prompt 62) — the picker joins the bar
 
@@ -548,11 +574,29 @@ or truncated team name, and **day/week equality**.
 > **`widest` moved and `scrollWidth / widest` held → the standings.
 > The RATIO moved → CODE, and that is the stop.**
 
-Current (2026-09-06, expected to drift): CFB `2026-09-05` 64/15 {240,223,205,136} widest 98.76
-sw 1273 ratio 12.8898 · MLB `2026-09-03` 3/2 {226} widest 84.65 sw 564 ratio 6.6629 · NFL
-`2026-09-13` 17/3 {264,98,73} widest 122.72 sw 1044 ratio 8.5069. **MLB is re-baselined from
-{228}/568.** The `--rail-w` derived check stays a hard stop: change it by N, `scrollWidth` moves by
-exactly N.
+**THE RATIO RULE ABOVE IS WRONG AND PROMPT 66 REPLACED IT.** `pxPerMinute = (widest + 2*CAP +
+NAME_PAD) / blockMinutes` (`gridmodel.js:46`), i.e. `(widest + 182)/blockMinutes`, so `scrollWidth`
+scales with **`widest + 182`** and `scrollWidth / widest` moves whenever `widest` moves — on pure
+standings drift, with no code involved. Use **`scrollWidth / (widest + 182)`**, or equivalently
+`scrollWidth / data-pxpermin`, which is the minutes the day spans.
+
+**Measured 2026-09-08 at `201ed07` (expected to drift):**
+
+| day | sport | blocks | rows | widths | `widest` | scrollWidth | sw/(widest+182) |
+|---|---|---|---|---|---|---|---|
+| `2026-09-05` | cfb | 64 | 15 | {240, 223, 205, 136} | 98.760 | 1273 | 4.5341 |
+| `2026-09-03` | mlb | 3 | 2 | {228} | 86.508 | 567 | 2.1117 |
+| `2026-09-13` | nfl | 17 | 3 | {264, 98, 73} | 122.724 | 1044 | 3.4261 |
+
+**MLB is re-baselined from {226}/564/widest 84.65, and the move was DATA.** Prompt 66 looked for the
+commit and there is none: between `f7fe047` and `7d9938e`, `MobileGrid.js`, `gridmodel.js` and
+`cardGeometry.js` are byte-identical, no grid selector or `--rail-w` changed in `globals.css`, and
+`geometry.mjs`'s MLB case is untouched (`4a301fb` changed only the CFB and NFL week keys). The one
+`format.js` change (`cec928b`) is the listings card's row 2 and never reaches the grid's `widest`.
+The arithmetic closes it: scaling by `(86.508+182)/(84.648+182) = 1.006975` predicts block width
+227.58 → **228 observed** and `scrollWidth` 567.93 → **567 observed**. Records drifted; that is all.
+
+The `--rail-w` derived check stays a hard stop: change it by N, `scrollWidth` moves by exactly N.
 
 **PROMPT 53 — the hub's display architecture corrected, and the studio logos.** Nine commits, from
 `61469b6`:
@@ -813,6 +857,38 @@ cloud workspace. **Never reapply a bare browser UA.**
   `pipeline/db.py:186-192` compiles an empty list to `DO NOTHING`, which with the new constraint
   would silently freeze every book at the first line it ever quoted. That is a quieter failure than
   the violation, and it is why the update list is pinned in the file's own comment.
+
+## THE ART LOOKED STALE AND NOTHING WAS BROKEN — read this first (prompt 66)
+
+**If you ship art and the phone keeps painting the old one, it is the HTTP cache. Five minutes, not
+an hour.** That hour was spent on 2026-09-08 after `9a69810`: the bytes in R2 were correct, the same
+URL in Safari showed the new art, and the installed home-screen app kept the old one until Joe
+re-added it. The art, the contrast, the render scale and the CDN were all ruled out first.
+
+**There is no service worker.** No `serviceWorker.register`, no workbox, no `sw.js` anywhere in
+`web/` — nothing in the app was caching anything. `scripts/sync_assets.py` uploaded with
+`ExtraArgs={"ContentType": ...}` and nothing else, so every object in the bucket answered with **no
+`Cache-Control` at all**, and a response with no policy lets the browser pick its own HEURISTIC
+freshness — commonly a fraction of the object's age, which for a file that has sat there for days is
+hours or days. `teamLogoDarkUrl()` (`web/lib/config.js:156`) is a bare path that never changes when
+the art does, so nothing ever told a client to look again.
+
+**Fixed in prompt 66:** uploads now carry `Cache-Control: public, max-age=300`, set in ONE place
+(`sync_assets.py:_extra_args`) because the two call sites had been duplicating the args, which is how
+both came to be missing it. Five minutes of free reuse, then a conditional request that costs a 304
+on a small PNG. `stale-while-revalidate` was considered and rejected: it lets a client serve the
+STALE copy while refetching, so the first load after a change still paints the old art — the exact
+symptom, just shorter. Append `, stale-while-revalidate=604800` if request count ever matters more.
+
+**ONLY NEW UPLOADS CARRY IT, and this is the part to remember.** A `--push` compares size and sha256
+and SKIPS anything unchanged, so an object already in the bucket keeps the headers it was written
+with. After prompt 66's push, 387 of the 1,532 `logos/` objects carry the policy and **1,145 still
+answer with none.** They get it the first time their art changes — or all at once if someone forces a
+re-upload, which nobody has done. Verify with `head_object`, not by looking at the image.
+
+**Deliberately NOT done, and both are bigger decisions:** a service worker, and cache-busting query
+strings or content-addressed filenames. The second is the real fix for "the URL never changes when
+the art does" and is worth a prompt of its own.
 
 ## Opened by prompt 52
 

@@ -156,15 +156,23 @@ never renumber, even around the retired stub.
 Five, and all five are run **before** the commit, as their own commands:
 
 ```
-pytest                       # from the repo root — 496 pass + 1 skipped
-npm run test:unit            # from web/ — 446
-npm run smoke                # from web/ — 30/30
-node scripts/qa-shots.mjs    # from web/ — 73/73
+pytest                       # from the repo root
+npm run test:unit            # from web/
+npm run smoke                # from web/
+node scripts/qa-shots.mjs    # from web/
 npm run geometry             # from web/ — all hard stops (see below)
 ```
 
-Counts are the floor as of `f7fe047`; they may only go up. Report all five with every change, and
-never read a gate's result from the exit code of a chained command.
+**THE COUNTS LIVE IN `docs/handoff-status.md`, under "Repo state", and NOWHERE ELSE.** Read them
+there before a run and report all five afterwards. They are a floor and may only go up, and never
+read a gate's result from the exit code of a chained command.
+
+**This file used to carry a second copy of them, and it was wrong four times in one week.** Prompt 62
+worked from a brief three prompts stale; prompt 63 found this file stale in the other direction;
+prompt 64 found it claiming qa-shots 73/73 against `handoff-status.md`'s 88/88 and an actual 91; the
+counts moved again between `9a69810` and `5c5f63d`. Nothing fails when two files disagree, so they
+always will. Rule 10 already makes `handoff-status.md` the winner, so it is now the only copy — and
+a number is not put back here "for convenience", because that convenience is the whole defect.
 
 ## The phone-grid geometry check
 
@@ -190,16 +198,23 @@ tripwire that fires on the standings gets ignored, and an ignored tripwire catch
 recorded **with `widest` and the ratio** beside them. `.mgrid-canvas` carries `data-widest`,
 `data-pxpermin` and `data-day` so this is one step:
 
-> **`widest` moved and `scrollWidth / widest` held → that is the standings.
-> The RATIO moved → that is CODE, and that is the stop.**
+**THE RATIO RULE THIS FILE USED TO STATE WAS WRONG, and prompt 66 measured why.** It said
+`scrollWidth / widest` holding means data and the ratio moving means CODE. That test cannot work:
 
-Current figures (2026-09-06, expected to drift):
+```
+pxPerMinute(widest, sport) = (widest + 2*CAP + NAME_PAD) / blockMinutes(sport)   # gridmodel.js:46
+                           = (widest + 182) / blockMinutes(sport)
+```
 
-| day | sport | blocks | rows | widths | `widest` | scrollWidth | ratio |
-|---|---|---|---|---|---|---|---|
-| `2026-09-05` | cfb | 64 | 15 | {240, 223, 205, 136} | 98.76 | 1273 | 12.8898 |
-| `2026-09-03` | mlb | 3 | 2 | {226} | 84.65 | 564 | 6.6629 |
-| `2026-09-13` | nfl | 17 | 3 | {264, 98, 73} | 122.72 | 1044 | 8.5069 |
+`scrollWidth` scales with **`widest + 182`**, not with `widest`, so `scrollWidth / widest` moves
+whenever `widest` moves — by construction, on pure standings drift, with no code involved. It flagged
+the MLB row as CODE in prompt 64 and the cause was the records.
+
+> **The quantity that holds under data drift is `scrollWidth / (widest + 182)`** — equivalently
+> `scrollWidth / data-pxpermin`, which is just the minutes the day spans. THAT moving is the stop.
+
+**The current figures live in `docs/handoff-status.md`, not here** — same reason as the gate counts
+above, and they had drifted into three files saying the same thing.
 
 **The one derived check that stays a hard stop:** when `--rail-w` changes by N, `scrollWidth` must
 change by exactly N. That is what proved prompt 52's rail narrowing did what it intended, and it
