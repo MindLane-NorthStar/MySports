@@ -2357,8 +2357,13 @@ input:focus-visible {
  *
  * DO NOT "FIX" THIS BACK, and do not add invisible padding or an ::after to restore 44px of hit
  * area: that returns ZERO vertical space to the page and defeats the entire instruction, which was
- * to reclaim height. The 44px rule still governs everywhere else - the tiles, the toggles, the
- * picker arrows all keep it. Recorded as an amendment in docs/enhancement-register.md §17.
+ * to reclaim height. Recorded as an amendment in docs/enhancement-register.md §17.
+ *
+ * THE LAST SENTENCE USED TO READ "the 44px rule still governs everywhere else - the tiles, the
+ * toggles, the picker arrows all keep it." IT IS NO LONGER TRUE and is corrected here rather than
+ * left standing: the segmented toggles have been 31px since prompt 51, and prompt 61 brought the
+ * PICKER ARROWS down to 44 x 31 on Joe's ruling. The tiles keep the full 44 x 44. Three exceptions
+ * are recorded in register §18b with their measured areas; this is one of them, not the only one.
  *
  * WIDTH IS UNCHANGED: full width, flush with the tile row beneath it. Only the height moved. */
 .sportbar > .spbtn-bar {
@@ -3003,7 +3008,20 @@ main > .hubctl:first-child { margin-top: 0; }
 .pk-arrow {
   flex: 0 0 auto;
   width: 44px;               /* prompt 25's target, kept */
-  min-height: 44px;
+  /* 31px, NOT 44 (prompt 61 stage 3, Joe's ruling of 2026-09-07). The picker row was 44px BECAUSE
+     OF THE ARROWS: `.pickrow` is `align-items: stretch`, so the arrows' 44 dragged the date pill up
+     with them. Measured at 390 against the shipped stylesheet - row 44, arrow 44, pill stretched to
+     44, PILL MEASURED ALONE 31.39.
+
+     RELAXING THE ARROWS DOES NOT GIVE A 31px ROW EITHER - it gives 31.39, because the pill becomes
+     the tallest thing in it: a 12px font at the inherited 1.45 line-height is a 17.4px line box,
+     plus `.pk-face`'s 6px padding top and bottom and 1px of border each side. A true 28 would need
+     that padding down to 4px, and Joe declined it.
+
+     WIDTH STAYS 44px. The target becomes 44 x 31 = 1,364px2 - the smallest of the three recorded
+     exceptions to the 44px rule (register §18b), and spent on the ruling that the arrows should sit
+     level with the toggles rather than stand 13px above them. */
+  min-height: 31px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));

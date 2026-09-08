@@ -383,20 +383,38 @@ text on gold is not the problem §14 solved.
 selection emphasis Joe's rendering asks for; making the tiles gold-filled would re-break the five
 marks §14 was written to protect.
 
-### 18b. The 44 px tap-target minimum is AMENDED — one entry, two control families
+### 18b. The 44 px tap-target minimum is AMENDED — one entry, THREE control families
 
 Prompt 25 established a 44 px minimum and prompt 34 restored it after WebKit collapsed the tiles on
-Joe's phone. **Joe has since excepted two control families, and they are recorded together here
+Joe's phone. **Joe has since excepted three control families, and they are recorded together here
 rather than as separate notes that would rot apart.**
 
 | control | height | ruled in | width at 390 | target area | vs a 44 × 44 tile |
 |---|---|---|---|---|---|
-| **ALL SPORTS bar** | **24 px** (was 44) | prompt 50 stage 2c | 366 px | ~8,800 px² | **4.5 ×** |
-| **the three toggle rows** | **31 px** (was 44) | prompt 51 stage 1 | ~185 px two-up, ~90 px four-up | ~5,700 / ~2,800 px² | **2.9 × / 1.4 ×** |
+| **ALL SPORTS bar** | **24 px** (was 44) | prompt 50 stage 2c | 366 px | **8,784 px²** | **4.5 ×** |
+| **the three toggle rows** | **31 px** (was 44) | prompt 51 stage 1 | 182 px two-up, ~90 px four-up | **5,642 / ~2,800 px²** | **2.9 × / 1.4 ×** |
+| **the picker arrows** | **31 px** (was 44) | prompt 61 stage 3 | **44 px — width unchanged** | **1,364 px²** | **0.70 ×** |
 
-**Joe's reasoning, on the record: the rule protects SMALL targets, and a wide short control is not
-small.** Every excepted control carries more tappable area than a 44 × 44 square the rule considers
+*(Areas re-measured at 390 in Chromium on 2026-09-07 against the shipped stylesheet; the first two
+rows previously carried rounded estimates. A 44 × 44 tile is 1,936 px²; the league tiles themselves
+measure 40.5 × 44 = 1,782 px², which is what the "vs a tile" column compares against at 1,936.)*
+
+**Joe's reasoning for the first two, on the record: the rule protects SMALL targets, and a wide short
+control is not small.** Both carry more tappable area than a 44 × 44 square the rule considers
 compliant — the tightest case, a four-up toggle segment, still carries 1.4 ×.
+
+**THE PICKER ARROWS ARE THE FIRST EXCEPTION THAT ARGUMENT DOES NOT COVER, and that is why they are
+listed with the number rather than the reasoning borrowed.** At 1,364 px² they are the SMALLEST of
+the three and the only one **below** a compliant tile — 0.70 × — because they are the only excepted
+control that did not gain width in exchange for height. Joe ruled it on 2026-09-07 for a reason
+about the ROW rather than the control: `.pickrow` is `align-items: stretch`, so the arrows' 44 px was
+dragging the date pill up with them and the whole row stood 13 px above the toggles it sits under.
+
+**AND THE ROW DOES NOT REACH 31 EITHER — it lands at 31.39**, measured before and after. Relaxing the
+arrows only promotes the pill to tallest thing: a 12 px font at the inherited 1.45 line-height is a
+17.4 px line box, plus `.pk-face`'s 6 px padding top and bottom and 1 px of border each side. **Joe
+was shown that a true 28 would take that padding down to 4 px, and declined it.** The row went
+44 → 31.39 and `.hubctl` 216 → 203.39; nothing else in the stack moved.
 
 **31 px was chosen over 60 %'s 26 px specifically so the toggle rows stay visibly taller than the
 ALL SPORTS bar.** Joe asked for "about 60% of the vertical size that they are currently"; 60 % of 44

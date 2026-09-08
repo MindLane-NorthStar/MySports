@@ -473,7 +473,19 @@ for (const dev of DEVICES) {
     if (i <= 0) return null;
     return Math.round((frames[i].top - frames[i - 1].top) * 100) / 100;
   });
-  record('the collapse moves NOTHING under the reader', moved === 0, `card moved ${moved}px`);
+  // SUB-PIXEL, NOT ZERO, AND THE LOOSENING IS DELIBERATE (prompt 61 stage 3). This asserted exact
+  // equality with 0 and held while every header box was an integer. Dropping the picker arrows to
+  // 31px made `.hubctl` 203.39 - the pill's own line box is 31.39 - so the height the compensation
+  // removes now carries a fraction, and `window.scrollBy` lands on an integer scroll offset. The
+  // residue is DETERMINISTIC at -0.39px over five runs, scrollY 900 -> 617 against a true delta of
+  // 283.39. That is a third of a device pixel at 2x.
+  //
+  // The guard's job is to catch the ~300px jump, which is what this feature exists to prevent, and
+  // a 1px bound still catches it by two orders of magnitude. The measured value is printed either
+  // way, so a regression from 0.39 to something real is visible in the log rather than only in a
+  // pass/fail bit.
+  record('the collapse moves nothing visible under the reader', Math.abs(moved) < 1,
+         `card moved ${moved}px (sub-pixel residue of the 31.39px picker row)`);
 
   // THE TV IS A REAL TARGET. 44px in both dimensions, measured rather than modelled.
   await page.goto(`${base}/?day=2026-09-05`, { waitUntil: 'networkidle' });
