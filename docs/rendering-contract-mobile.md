@@ -81,6 +81,10 @@
 > widths ({240, 223, 205, 136}, {228}) are unchanged** — those are the parts that would signal a
 > real regression, and if either ever moves it is a regression, not this re-baseline.
 >
+> **THOSE ARE PROMPT 52'S FIGURES, NOT TODAY'S. Do not quote them as current** — MLB has since
+> drifted to **567** with the standings, and `docs/handoff-status.md` is the only place the current
+> row lives. Prompt 68 had 568 quoted at it from a stale copy of exactly this shape.
+>
 > **The gain:** the visible schedule at a 390px viewport goes 295px → 304px, **+9px / +3.1%**
 > (measured against the scroller's 364px client width, not the 390px viewport).
 
@@ -224,6 +228,10 @@ right at zoom 0.6, 1.0 and 2.5.
 > v2.0 amendment under M4). A past measurement is not edited to look right in hindsight; what
 > it says is what was true when M21 shipped, and the block counts and widths it pins are
 > unchanged to this day.
+>
+> **NEITHER NUMBER ON THIS LINE IS CURRENT.** MLB reads **567** today, drifted with the standings.
+> `docs/handoff-status.md` holds the live row and is the only file that should; prompt 68 was handed
+> 568 as a current figure from a copy like this one. Read a scrollWidth from there, never from here.
 
 **Numbering checked before this rule was added**, because v1.4 once shipped two rules both called
 M17: M1 through M20 each appear exactly once in this document, so M21 is genuinely free.

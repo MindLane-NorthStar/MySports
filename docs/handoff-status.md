@@ -50,12 +50,12 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-08, prompt 68 — after the last gate run of the run, not during it:**
+**Measured 2026-09-08, prompt 69 — after the last gate run of the run, not during it:**
 
 | gate | run from | floor |
 |---|---|---|
-| `pytest` | repo root | **511 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **479** |
+| `pytest` | repo root | **514 passed + 1 skipped** (36 subtests) |
+| `npm run test:unit` | `web/` | **483** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **91/91** |
 | `npm run geometry` | `web/` | all hard stops |
@@ -705,11 +705,13 @@ Source: `docs/ux-reference/visual-refinement-handoff-2026-09-06.md` §4. **`data
 — it is `--rail-w` minus a 2px border-right and 6px of padding, and JS cannot read it from the
 stylesheet. 27 of 28 marks land on 600px²; ESPN2 is the one that cannot.
 
-### THE PHONE-GRID TRIPWIRE — RE-BASELINED BY STAGE 5
+### THE PHONE-GRID TRIPWIRE — RE-BASELINED BY STAGE 5 (prompt 52's figures, not today's)
 
 **CFB `2026-09-05` = 64 blocks / {240, 223, 205, 136} / scrollWidth 1273;
 MLB `2026-09-03` = 3 / {228} / 568.** (Was 1282 and 577.) Only scrollWidth moved, by exactly the
-9px the rail lost. **Block counts and block widths did not change and must not** — if either moves,
+9px the rail lost. **MLB HAS SINCE DRIFTED TO 567** with the standings — the live row is in the
+table under "Repo state" above, which is the only current copy. This paragraph is prompt 52's
+record and is left as measured. **Block counts and block widths did not change and must not** — if either moves,
 that is a real regression, not this re-baseline.
 
 ### STAGE 2's MEASUREMENTS — the control stack, verified not rebuilt
