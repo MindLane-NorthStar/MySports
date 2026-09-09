@@ -1684,6 +1684,49 @@ input:focus-visible {
   font-weight: 600;
 }
 
+/* THE WATCH LINKS (prompt 71 stage 4). Joe: "We don't want the same image and message to appear
+   back to back" - the mark now lives IN the link instead of on a list line above it.
+
+   THE ENLARGED ONE OCCUPIES THE SPACE THE TWO LINES USED: the `<li>` was an 18px mark on a 13px
+   line and the `.dlink` a 12px label under it. One link at 46px of stack height replaces both. The
+   rest sit small beneath, because a simulcast supplements the linear broadcast and never replaces
+   it. */
+.dlinks-watch {
+  align-items: center;
+}
+
+.dlink-watch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dlink-watch img {
+  width: auto;
+  object-fit: contain;
+  /* These marks are ALREADY built for a charcoal ground - web/public/marks holds no `_dark`
+     variants because build_web_marks.py's per-network recipe table is what makes each one read
+     here. Nothing to swap; measured on this panel's own ground rather than assumed. */
+}
+
+.dlink-big {
+  padding: 10px 14px;
+}
+
+.dlink-big .dlink-lead {
+  font-size: 13px;
+}
+
+.dlink-watch .dlink-lead {
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+.dlink-watch .dlink-name {
+  color: var(--ink);
+  font-weight: 700;
+}
+
 .dstamp {
   margin-top: 16px;
   color: var(--faint);

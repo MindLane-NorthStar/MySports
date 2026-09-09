@@ -678,11 +678,24 @@ const sheetHTML = (g)=>{
     <div class="sub">${esc(timeOf(g))} ET · ${esc(SPNAME[g.sport]||"MLB")} · ${fin?"Final":"Scheduled"}</div>
     ${p&&(p.a||p.h)?`<h4>Probable starters</h4><div class="factrow"><span>${esc(a.name)}</span><b>${esc(p.a||"TBA")}</b></div><div class="factrow"><span>${esc(h.name)}</span><b>${esc(p.h||"TBA")}</b></div>`:""}
     ${g.odds?`<h4>Betting</h4><div class="factrow"><span>Moneyline</span><b>${esc(g.odds.mla)} / ${esc(g.odds.mlh)}</b></div><div class="factrow"><span>Over/Under</span><b>${esc(g.odds.ou)}</b></div><div class="factrow"><span>Book</span><b>${esc(g.odds.book||"")}</b></div>`:""}
+    ${/* ALL-OR-NOTHING (prompt 71 stage 4, Joe 2026-09-08): "currently the sub card shows 'where to
+         watch' and the network logo, THEN a second line with 'Watch on' links. We don't want the
+         same image and message to appear back to back."
+
+         A game he can watch shows the LINK only - the "How to watch" row goes, including any
+         broadcaster he cannot use: "If a game is on the Orioles TV network and Guardians TV, I don't
+         need to know it's on the Orioles TV network." A game he cannot watch shows the ROW only,
+         with no link to a place that will not play it.
+
+         The app carries two things this mock cannot: a mark inside the link instead of a name, and
+         a DIRECTV link that appears only when an accessible broadcast is LINEAR. This file has one
+         network per game and no delivery_surface, so it shows the shape and not the arithmetic. */""}
+    ${AVAIL.has(g.network) ? `
+    ${w?`<a class="watch" href="${esc(w.url)}" target="_blank" rel="noopener">Watch Live on ${esc(w.label)}</a>`:""}
+    <a class="watch sec" href="https://stream.directv.com/guide" target="_blank" rel="noopener">Watch Live on DIRECTV</a>` : `
     <h4>How to watch</h4>
     <div class="bcastrow"><span class="n">${esc(g.network??"No listing")}</span>
-      <span class="acc ${AVAIL.has(g.network)?"ok":"oom"}">${AVAIL.has(g.network)?"AVAILABLE":"CHECK ACCESS"}</span></div>
-    ${w?`<a class="watch" href="${esc(w.url)}" target="_blank" rel="noopener">Watch on ${esc(w.label)}</a>`:""}
-    <a class="watch sec" href="https://stream.directv.com/guide" target="_blank" rel="noopener">Open DIRECTV Stream guide</a>
+      <span class="acc oom">CHECK ACCESS</span></div>`}
     ${fin&&g.boxscore_url?`<a class="watch sec" href="${esc(g.boxscore_url)}" target="_blank" rel="noopener">Box score</a>`:""}
   </div>`;
 };

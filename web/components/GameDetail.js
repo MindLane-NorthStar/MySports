@@ -32,6 +32,43 @@ const ACCESS_LABEL = {
   unknown: 'Unknown',
 };
 
+/** LINEAR is what DIRECTV can carry. `delivery_surface`, never the service's `type` - see the note
+ *  at the watch section for the 85 rows on which those two disagree. */
+function isLinear(b) {
+  return String(b?.delivery_surface || '').toUpperCase() === 'LINEAR';
+}
+
+/**
+ * One "Watch Live on" link, wearing the service's own mark.
+ *
+ * JOE'S WORDS ARE "Watch Live on", not the "Watch on" this used to render. He wrote it twice.
+ *
+ * `watchUrl()` ALREADY IS THE FALLBACK HE DESCRIBED and needed no change: `WATCH[id] ||
+ * DIRECTV_STREAM` (config.js:301). "If the network has its own streaming path, that will be the link
+ * for the network. If it doesn't then both links go to DIRECTV's path."
+ *
+ * A SERVICE WITH NO MARK KEEPS ITS NAME as the label - `hasMark` already guarded the old list, so
+ * the text fallback is native rather than added here. Of the 33 services that appear on an
+ * accessible row, exactly two have no mark: `cavs-local` and `cbj-local`.
+ */
+function WatchLink({ service, name, href, big }) {
+  // The enlarged mark is not the 30px one scaled: markStyle() takes a stack height and applies the
+  // frozen per-mark ink-area factor, so both sizes are normalised the same way and a wordmark and a
+  // roundel still carry equal visual weight.
+  const m = hasMark(service) ? markStyle(service, big ? 46 : 26) : null;
+  return (
+    <a
+      className={`dlink dlink-watch${big ? ' dlink-big' : ''}`}
+      href={href || watchUrl(service)}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <span className="dlink-lead">Watch Live on</span>
+      {m ? <img src={m.src} height={m.height} alt={name} /> : <span className="dlink-name">{name}</span>}
+    </a>
+  );
+}
+
 export default function GameDetail({ game, standings, generatedAt, onClose }) {
   useEffect(() => {
     function onKey(e) {
@@ -60,6 +97,32 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
   const program = isProgram(game);
   const brand = program ? brandFor(game.brand_key) : null;
   const rows = (game.broadcasts || []).filter((b) => b.active !== false);
+
+  // THE ACCESSIBLE BROADCASTS, IN THE ORDER THE CARD SHOWS THEM (prompt 71 stage 4).
+  //
+  // WHY LINEAR OUTRANKS `is_primary`, measured rather than assumed. `is_primary` behaves exactly as
+  // its name claims - exactly one true row on every one of the 1,781 games in the database (the
+  // 307-row bucket is `game_id: null`, which is programs keyed by `program_id`, not a defect). But
+  // Joe's rule for a simulcast is explicit: "the linear network takes the enlarged slot, streamers
+  // sit small beneath it... they supplement, they never replace." The two disagree on 2 of the 93
+  // accessible simulcasts - `dazn` over `cavs-local` and `espn-plus` over `cbj-local` - and on those
+  // two Joe's words win. `default_sort_order` breaks what is left, as its name claims (populated on
+  // 1,797 of 2,769 rows; an unset one sorts last rather than first).
+  const accessible = rows
+    .filter((b) => b.access_status === 'available')
+    .slice()
+    .sort((a, b) => {
+      if (isLinear(a) !== isLinear(b)) return isLinear(a) ? -1 : 1;
+      if (Boolean(a.is_primary) !== Boolean(b.is_primary)) return a.is_primary ? -1 : 1;
+      return (a.network?.default_sort_order ?? Number.MAX_SAFE_INTEGER)
+           - (b.network?.default_sort_order ?? Number.MAX_SAFE_INTEGER);
+    });
+
+  const boxScore = game.result_status === 'final' && game.boxscore_url ? (
+    <a className="dlink" href={game.boxscore_url} target="_blank" rel="noopener noreferrer">
+      Box score
+    </a>
+  ) : null;
   const odds = (game.odds || [])[0];
   const state = resultLabel(game);
   const score = hasScore(game) ? `${game.away_score} - ${game.home_score}` : null;
@@ -197,52 +260,78 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
           </div>
         ) : null}
 
+        {/* WHERE TO WATCH IS ALL-OR-NOTHING (prompt 71 stage 4, Joe 2026-09-08).
+            "currently the sub card shows 'where to watch' and the network logo, THEN a second line
+            with 'Watch on' links. We don't want the same image and message to appear back to back."
+
+            THE SECTION IS NOT PER ROW. Joe: "If a game is airing on a network/streamer I cannot
+            access as well as ones I CAN access, the 'Where to watch' can still disappear. If a game
+            is on the Orioles TV network and Guardians TV, I don't need to know it's on the Orioles
+            TV network." So one accessible broadcast removes the whole list, INCLUDING the rows he
+            cannot use - once he knows he can watch it, the other broadcaster is noise.
+
+              at least one accessible   ->  the enlarged link(s) only, no <h4>, no <ul>
+              none accessible           ->  the "Where to watch" list only, no links
+
+            LINEAR vs STREAMER IS `delivery_surface`, NOT `networks_services.type`, and that was
+            measured rather than picked. Both discriminate - type is
+            linear_broadcast/linear_cable/streaming/local_tba, surface is LINEAR/STREAMING - but they
+            DISAGREE ON 85 ROWS, all of them `local_tba` services (cavs-local, cbj-local) that are
+            plainly linear and whose type is a placeholder meaning "local broadcaster to be
+            announced". `delivery_surface` also describes THIS airing rather than the service in
+            general, which is the right granularity for a simulcast. */}
         <div className="dsec">
-          <h4>Where to watch</h4>
-          {rows.length ? (
-            <ul>
-              {rows.map((b) => {
-                const m = hasMark(b.service_id) ? markStyle(b.service_id, 30) : null;
-                return (
-                  <li key={`${b.service_id}-${b.feed_side}-${b.delivery_surface}`} className="dbcast">
-                    {m ? <img src={m.src} height={m.height} alt="" /> : null}
-                    <span>{b.network?.canonical_name || b.label || b.service_id}</span>
-                    <span className="dacc" data-a={b.access_status}>
-                      {ACCESS_LABEL[b.access_status] || b.access_status}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="empty" style={{ padding: 0 }}>
-              No broadcast row for this game yet.
-            </p>
-          )}
-          <div className="dlinks">
-            {rows
-              .filter((b) => b.access_status === 'available')
-              .slice(0, 3)
-              .map((b) => (
-                <a
-                  key={b.service_id}
-                  className="dlink"
-                  href={watchUrl(b.service_id)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Watch on {b.network?.canonical_name || b.service_id}
-                </a>
+          {accessible.length ? (
+            <div className="dlinks dlinks-watch">
+              {accessible.map((b, i) => (
+                <WatchLink key={`${b.service_id}-${b.feed_side}-${b.delivery_surface}`}
+                           service={b.service_id}
+                           name={b.network?.canonical_name || b.label || b.service_id}
+                           big={i === 0} />
               ))}
-            <a className="dlink" href={DIRECTV_STREAM} target="_blank" rel="noopener noreferrer">
-              DirecTV Stream
-            </a>
-            {game.result_status === 'final' && game.boxscore_url ? (
-              <a className="dlink" href={game.boxscore_url} target="_blank" rel="noopener noreferrer">
-                Box score
-              </a>
-            ) : null}
-          </div>
+              {/* ONE DIRECTV LINK PER CARD, and only when something accessible is LINEAR.
+                  It was UNCONDITIONAL at this spot and rendered on every game whether or not DIRECTV
+                  carried it - the route cannot tune a channel and only opens the app, so on a
+                  streamer-only game it was an invitation to a dead end. One per card rather than one
+                  per broadcast: a simulcast would otherwise stack three identical DIRECTV links.
+                  Cowork's call; Joe can reverse it with a sentence.
+
+                  IT CAN DOUBLE A DESTINATION, and that is as ruled rather than a bug. Joe: "If the
+                  network has its own streaming path, that will be the link for the network. If it
+                  doesn't then both links go to DIRECTV's path." So a network with no WATCH entry
+                  produces two links to the same URL wearing different marks - the network mark says
+                  whose broadcast it is, the DIRECTV mark says how he gets there. */}
+              {accessible.some(isLinear) ? (
+                <WatchLink service="directv" name="DIRECTV" href={DIRECTV_STREAM} big={false} />
+              ) : null}
+              {boxScore}
+            </div>
+          ) : (
+            <>
+              <h4>Where to watch</h4>
+              {rows.length ? (
+                <ul>
+                  {rows.map((b) => {
+                    const m = hasMark(b.service_id) ? markStyle(b.service_id, 30) : null;
+                    return (
+                      <li key={`${b.service_id}-${b.feed_side}-${b.delivery_surface}`} className="dbcast">
+                        {m ? <img src={m.src} height={m.height} alt="" /> : null}
+                        <span>{b.network?.canonical_name || b.label || b.service_id}</span>
+                        <span className="dacc" data-a={b.access_status}>
+                          {ACCESS_LABEL[b.access_status] || b.access_status}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="empty" style={{ padding: 0 }}>
+                  No broadcast row for this game yet.
+                </p>
+              )}
+              {boxScore ? <div className="dlinks">{boxScore}</div> : null}
+            </>
+          )}
         </div>
 
         {odds ? (
