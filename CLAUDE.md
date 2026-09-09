@@ -233,8 +233,22 @@ pxPerMinute(widest, sport) = (widest + 2*CAP + NAME_PAD) / blockMinutes(sport)  
 whenever `widest` moves — by construction, on pure standings drift, with no code involved. It flagged
 the MLB row as CODE in prompt 64 and the cause was the records.
 
-> **The quantity that holds under data drift is `scrollWidth / (widest + 182)`** — equivalently
-> `scrollWidth / data-pxpermin`, which is just the minutes the day spans. THAT moving is the stop.
+> **The quantity that holds under data drift is the DAY'S SPAN IN MINUTES**, `(scrollWidth − rail) /
+> data-pxpermin`. THAT moving is the stop, and `npm run geometry` asserts it at ±2 minutes.
+
+**`scrollWidth / (widest + 182)` WAS THIS FILE'S ANSWER AND IT IS NOT GOOD ENOUGH (prompt 80).** It is
+better than `scrollWidth / widest`, which moves by construction — but it is still not invariant,
+because `scrollWidth` is an integer and the rail is a constant addend that does not scale with
+`widest`. Measured across the MLB standings drift of 2026-09-09 it moved 2.1117 → 2.1146, and a
+number that moves on pure data is a number that gets waved through. **The span moved 393.04 → 393.75
+over the same drift**, which is rounding, and it has a physical meaning to reason about when it does
+move: a game rescheduled at either end of the day genuinely changes how much time the grid spans, and
+that deserves a look rather than absorption.
+
+**MLB DRIFTED TWICE FOR THE SAME REASON AND THAT IS WHY THIS CHANGED.** `handoff-status.md` recorded
+"227.58 → 228 observed … Records drifted; that is all" for the first, and prompt 80 hit the second.
+A tripwire that cries wolf is worse than none: prompt 74 measured `qa-shots` at 8/9 and recorded it
+as the known flake, and three prompts later a genuine regression landed in exactly that bucket.
 
 **The current figures live in `docs/handoff-status.md`, not here** — same reason as the gate counts
 above, and they had drifted into three files saying the same thing.

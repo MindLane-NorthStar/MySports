@@ -996,7 +996,52 @@ scales with **`widest + 182`** and `scrollWidth / widest` moves whenever `widest
 standings drift, with no code involved. Use **`scrollWidth / (widest + 182)`**, or equivalently
 `scrollWidth / data-pxpermin`, which is the minutes the day spans.
 
-**Measured 2026-09-08 at `201ed07` (expected to drift):**
+### THE TRIPWIRE IS THE DAY'S SPAN NOW, NOT THE WIDTHS (prompt 80)
+
+**MLB DRIFTED A SECOND TIME AND FOR THE SAME REASON**, which is what settled this. On 2026-09-09 it
+went **{228}/567/widest 86.508 → {229}/569/widest 87.084** because `schedule_refresh` ran at 14:55Z
+in the middle of a session and loaded standings — `widest` is measured off the rendered team line
+INCLUDING the record, so a club gaining a digit moves every width on the slate. Hard stops held: 3
+blocks, 2 network rows. **The paragraph below already recorded the first instance in the same words.**
+
+**A TRIPWIRE THAT CRIES WOLF IS WORSE THAN NO TRIPWIRE, and this session paid for exactly that.**
+Prompt 74 measured `qa-shots` at 8/9 on both trees and recorded it as the known flake; three prompts
+later that was false, and prompt 78's genuine regression landed in the bucket the recorded flake had
+dug. A figure that moves whenever a team's record gains a digit trains the reader to wave it through.
+
+**SO THE ASSERTED FIGURE IS NOW THE DAY'S SPAN IN MINUTES**, and `geometry.mjs` hard-stops on it:
+
+> `pxPerMinute = (widest + 2·CAP + NAME_PAD) / blockMinutes(sport)` (gridmodel.js:46-48) and
+> `scrollWidth = rail + pxPerMinute × spanMinutes`, so **`(scrollWidth − rail) / pxPerMinute`** is the
+> span and every `widest` term cancels.
+
+**Measured across the actual drift, which is the only reason to believe it:** MLB 2026-09-03 went
+**393.04 → 393.75 minutes** across the standings load that moved the raw figure by two pixels. The
+residue is `scrollWidth` being an integer, not the span changing. **`sw/(widest+182)` was the
+candidate this file named and it is not good enough** — it moved 0.14% over the same drift, for the
+same rounding reason, and it has no physical meaning to reason about when it does move. Tolerance is
+**2 minutes**, about three times the observed residue and far below what any code change does. A
+genuine schedule change moves it too, and that is correct: a game rescheduled at either end of the
+day really does change how much time the grid spans.
+
+| day | sport | **span (minutes, ASSERTED ±2)** | blocks | rows |
+|---|---|---|---|---|
+| `2026-09-05` | cfb | **1042.4** | 64 | 15 |
+| `2026-09-03` | mlb | **393.4** | 3 | 2 |
+| `2026-09-13` | nfl | **770.1** | 17 | 3 |
+
+**Re-baselined 2026-09-09, prompt 80 — REPORTED, not asserted, and expected to drift:**
+
+| day | sport | blocks | rows | widths | `widest` | scrollWidth | sw/(widest+182) |
+|---|---|---|---|---|---|---|---|
+| `2026-09-05` | cfb | 64 | 15 | {240, 223, 205, 136} | 98.760 | 1273 | 4.5341 |
+| `2026-09-03` | mlb | 3 | 2 | **{229}** | **87.084** | **569** | **2.1146** |
+| `2026-09-13` | nfl | 17 | 3 | {264, 98, 73} | 122.724 | 1044 | 3.4261 |
+
+**The block and network-row counts are unchanged and remain hard stops.** They are code-derived and
+no amount of standings drift touches them.
+
+**The 2026-09-08 measurement at `201ed07`, kept as the first instance of the same mechanism:**
 
 | day | sport | blocks | rows | widths | `widest` | scrollWidth | sw/(widest+182) |
 |---|---|---|---|---|---|---|---|

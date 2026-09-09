@@ -46,6 +46,8 @@ const shape = () => page.evaluate(() => {
     scrollWidth: document.querySelector('.mgrid-scroll').scrollWidth,
     widest: +cv.dataset.widest,
     pxPerMin: +cv.dataset.pxpermin,
+    // The rail is subtracted before the span is computed: `scrollWidth = rail + pxPerMinute * span`.
+    rail: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rail-w')) || 0,
     // OVERFLOW, not height/line-height. `.mname` is a FIXED-HEIGHT box (29.1px) whose line-height
     // moves with the fitted font size, so a ratio test flags names that are perfectly on one line -
     // a first pass called "UT RIO GRANDE VALLEY" wrapped at 1.52x when it is not. scrollHeight vs
@@ -170,6 +172,47 @@ for (const [day, sport, wk] of CASES) {
   hard(inDay.scrollWidth === inWeek.scrollWidth, `${label} - scrollWidth`,
     `${inDay.scrollWidth} vs ${inWeek.scrollWidth}`);
   hard(inDay.widest === inWeek.widest, `${label} - widest`, `${inDay.widest} vs ${inWeek.widest}`);
+}
+
+// ------------------------------- 3b. THE DAY'S SPAN - a hard stop that standings cannot move
+//
+// WHY THIS EXISTS (prompt 80). The recorded MLB figure moved twice for the same reason and neither
+// time was a code change: `{228}/567` -> `{229}/569` on 2026-09-09 because `schedule_refresh` ran
+// mid-session and loaded standings, and handoff-status.md already carried an earlier
+// "227.58 -> 228 observed ... Records drifted; that is all." `widest` is measured off the rendered
+// team line INCLUDING the record, so a club gaining a digit moves every width on the slate.
+//
+// A TRIPWIRE THAT CRIES WOLF IS WORSE THAN NONE, and this session paid for exactly that: prompt 74's
+// qa-shots conclusion was true when measured and false three prompts later, and a genuine regression
+// landed in the bucket the recorded flake had dug. So the figure that drifts stops being the
+// tripwire and something standings cannot touch takes its place.
+//
+// THE QUANTITY IS THE DAY'S SPAN IN MINUTES. `pxPerMinute = (widest + 2*CAP + NAME_PAD) /
+// blockMinutes(sport)` (gridmodel.js:46-48) and `scrollWidth = rail + pxPerMinute * spanMinutes`,
+// so `(scrollWidth - rail) / pxPerMinute` is the span and every `widest` term cancels.
+//
+// MEASURED ACROSS THE ACTUAL DRIFT, which is the only reason to believe it: MLB 2026-09-03 went
+// 393.04 -> 393.75 minutes across the standings load that moved the raw figure by two pixels. The
+// residue is `scrollWidth` being an integer, not the span changing. `sw/(widest+182)` was the
+// candidate handoff-status.md named; it moved 0.14% over the same drift for the same reason - better
+// than `sw/widest`, still not invariant, and with no physical meaning to reason about when it moves.
+//
+// TOLERANCE IS 2 MINUTES: about three times the observed rounding residue, and far below what any
+// code change does - a rail change, a block-width change or a pxPerMinute change moves this by tens
+// or hundreds of minutes. A LEGITIMATE schedule change moves it too, and that is correct: a game
+// rescheduled at either end of the day genuinely changes how much time the grid spans, and that is
+// worth a look rather than absorbing.
+console.log('');
+console.log("THE DAY'S SPAN - hard stop, and standings cannot move it");
+const SPAN_TOLERANCE_MIN = 2;
+const SPANS = { '2026-09-05|cfb': 1042.4, '2026-09-03|mlb': 393.4, '2026-09-13|nfl': 770.1 };
+for (const [d, sport] of [['2026-09-05', 'cfb'], ['2026-09-03', 'mlb'], ['2026-09-13', 'nfl']]) {
+  await go(`/?day=${d}&sport=${sport}&view=grid`);
+  const m = await shape();
+  const span = (m.scrollWidth - m.rail) / m.pxPerMin;
+  const want = SPANS[`${d}|${sport}`];
+  hard(Math.abs(span - want) <= SPAN_TOLERANCE_MIN, `${d} ${sport}: the day spans ${want} minutes`,
+    `${span.toFixed(2)} min (widest ${m.widest.toFixed(2)}, sw ${m.scrollWidth}, rail ${m.rail})`);
 }
 
 // ------------------------------------------------------------------ 4. REPORTED, not asserted
