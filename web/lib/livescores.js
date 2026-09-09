@@ -154,22 +154,51 @@ export function readMlbSchedule(payload) {
 // courtesy to the providers and the thing that keeps a refresh-on-open page from behaving like a
 // poller.
 
+/**
+ * EVERY SOURCE IS ASKED FOR A DAY, and until prompt 78 not one of them was.
+ *
+ * MLB LIVE SCORES HAD NEVER WORKED, and the cause was not the id scheme. Measured 2026-09-09:
+ * `/api/v1/schedule?sportId=1` with no date returned **2026-09-08**, so fifteen rows came back and
+ * none of them joined - the overlay was matching yesterday's games against today's slate. MLB's
+ * schedule endpoint holds its "today" on the previous date well past midnight ET, which is sensible
+ * for a league whose west-coast games finish after it and wrong for anything that means "the day the
+ * reader is looking at".
+ *
+ * THE ID SCHEME WAS NEVER THE PROBLEM, and the record should say so: both sides build
+ * `mlb-<gamePk>` - adapters/mlb.py:350 and readMlbSchedule below - and the strings printed side by
+ * side are the same shape. `mlb-824792` (returned) against `mlb-824226` (ours) is two different
+ * GAMES, not two different schemes.
+ *
+ * THE FIX IS HERE AND NOT IN THE DATA (rule 6, additive over destructive). `games.id` is a primary
+ * key that other tables and the app's own overlay key point at; nothing stored was touched.
+ *
+ * AND IT WAS THE SAME BUG IN ALL FIVE, invisible in four because nothing joined anyway (rule 32).
+ * Measured for 2026-09-09, undated against dated: NFL 16 -> 1 (our one game), CFB 24 -> 0, NBA 1 -> 0,
+ * NHL a gameWeek starting 2026-09-29 -> the week containing the day asked for. Every `returned` is
+ * now a game that could actually join, so `stats.unjoined` means what it says.
+ *
+ * THE DAY IS OPTIONAL, and the undated URL is kept as the fallback rather than deleted: it is what
+ * every existing caller in the tests uses, and "no day given" has an honest answer at each provider.
+ */
+const espnDates = (day) => (day ? `?dates=${String(day).replace(/-/g, '')}` : '');
 const SOURCES = {
-  cfb: { url: () => `https://site.api.espn.com/apis/site/v2/sports/${ESPN_PATH.cfb}/scoreboard`, read: (p) => readEspnScoreboard(p, 'cfb') },
-  nfl: { url: () => `https://site.api.espn.com/apis/site/v2/sports/${ESPN_PATH.nfl}/scoreboard`, read: (p) => readEspnScoreboard(p, 'nfl') },
-  nba: { url: () => `https://site.api.espn.com/apis/site/v2/sports/${ESPN_PATH.nba}/scoreboard`, read: (p) => readEspnScoreboard(p, 'nba') },
-  nhl: { url: () => 'https://api-web.nhle.com/v1/schedule/now', read: readNhlSchedule },
-  mlb: { url: () => 'https://statsapi.mlb.com/api/v1/schedule?sportId=1', read: readMlbSchedule },
+  cfb: { url: (d) => `https://site.api.espn.com/apis/site/v2/sports/${ESPN_PATH.cfb}/scoreboard${espnDates(d)}`, read: (p) => readEspnScoreboard(p, 'cfb') },
+  nfl: { url: (d) => `https://site.api.espn.com/apis/site/v2/sports/${ESPN_PATH.nfl}/scoreboard${espnDates(d)}`, read: (p) => readEspnScoreboard(p, 'nfl') },
+  nba: { url: (d) => `https://site.api.espn.com/apis/site/v2/sports/${ESPN_PATH.nba}/scoreboard${espnDates(d)}`, read: (p) => readEspnScoreboard(p, 'nba') },
+  // The NHL takes the day in the PATH and answers with the week containing it; `now` is the week
+  // containing the provider's own idea of today, which on 2026-09-09 was the week of 2026-09-29.
+  nhl: { url: (d) => (d ? `https://api-web.nhle.com/v1/schedule/${d}` : 'https://api-web.nhle.com/v1/schedule/now'), read: readNhlSchedule },
+  mlb: { url: (d) => `https://statsapi.mlb.com/api/v1/schedule?sportId=1${d ? `&date=${d}` : ''}`, read: readMlbSchedule },
 };
 
 /** One sport. Returns [] on ANY failure, after logging one line. Never throws, never rejects. */
-export async function fetchSport(sport, { fetchImpl = fetch } = {}) {
+export async function fetchSport(sport, { day = null, fetchImpl = fetch } = {}) {
   const src = SOURCES[sport];
   if (!src) return [];
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const res = await fetchImpl(src.url(), {
+    const res = await fetchImpl(src.url(day), {
       signal: controller.signal,
       headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
       next: { revalidate: REVALIDATE_SECONDS },
@@ -223,7 +252,10 @@ export async function overlayForDay(day, games, { today = null, fetchImpl = fetc
     if (!sports.length) return empty;
 
     const known = new Set((games || []).map((g) => String(g.id)));
-    const settled = await Promise.all(sports.map((s) => fetchSport(s, { fetchImpl })));
+    // THE DAY IS PASSED (prompt 78). Without it MLB answered for its own idea of today, which was
+    // yesterday, and fifteen rows joined nothing. `sportsWorthFetching` has already established that
+    // `day === today`, so this asks each provider for exactly the day the reader is looking at.
+    const settled = await Promise.all(sports.map((s) => fetchSport(s, { day, fetchImpl })));
 
     const map = new Map();
     const stats = {};
@@ -250,6 +282,32 @@ export async function overlayForDay(day, games, { today = null, fetchImpl = fetc
  * Merge the overlay onto database rows. The database stays authoritative for everything the overlay
  * does not carry, and a null from the overlay never overwrites a value the database already has.
  */
+/**
+ * THE CONDITION THAT WAS TRUE AND INVISIBLE FOR THE LIFE OF THIS FEATURE (prompt 78).
+ *
+ * A sport that returns rows and joins NONE of them is a broken overlay wearing a working one's
+ * clothes: the fetch succeeded, the parse succeeded, `stats` was populated, no warning was logged,
+ * and every card silently kept the database's score. MLB was in that state from the day live scores
+ * shipped until 2026-09-09, and what surfaced it was Joe asking why a score had not moved.
+ *
+ * `returned > 0 && joined === 0` is the shape. Zero returned is not a fault - a day with no games in
+ * that sport, or a provider outage, which `fetchSport` already logs. A partial join is not a fault
+ * either: ESPN's dated scoreboard can carry a game our slate does not.
+ *
+ * ONE RULE, TWO CALLERS (rule 32): `web/test/livescores.test.mjs` pins it against fixtures, and
+ * `web/scripts/probes/live-join.mjs` runs it against the live providers. The live half is a PROBE
+ * rather than a gate deliberately - it depends on five external hosts, and a gate that goes red for
+ * somebody else's outage is a gate that gets ignored, which is exactly how this survived.
+ *
+ * @param {Record<string, {returned:number, joined:number}>} stats  `overlayForDay`'s own stats
+ * @returns {string[]} the sports that returned rows and joined none of them
+ */
+export function joinFailures(stats) {
+  return Object.entries(stats || {})
+    .filter(([, s]) => (s?.returned || 0) > 0 && (s?.joined || 0) === 0)
+    .map(([sport]) => sport);
+}
+
 export function applyOverlay(games, overlayMap) {
   if (!overlayMap || overlayMap.size === 0) return games || [];
   return (games || []).map((g) => {

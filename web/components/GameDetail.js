@@ -118,9 +118,31 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
            - (b.network?.default_sort_order ?? Number.MAX_SAFE_INTEGER);
     });
 
-  const boxScore = game.result_status === 'final' && game.boxscore_url ? (
+  /**
+   * THE BOX SCORE, LIVE AND FINAL, NEVER BEFORE THE GAME (prompt 78, Joe's ruling 2026-09-09).
+   *
+   * It was `=== 'final'` alone. Joe wants the link while the game is on, which is when a box score
+   * is worth the most - and NOT while it is scheduled, because an empty box score is a dead tap.
+   *
+   * THE LOADER HAD TO MOVE FIRST AND DID (`pipeline/load.py`, same commit). `boxscore_url` was
+   * written only at finalization, so relaxing this gate on its own would have rendered a link that
+   * does nothing in exactly the window it was being added for - measured at 0 of 790 scheduled CFB
+   * rows. `&& game.boxscore_url` therefore still guards it, and it is not belt-and-braces: rows
+   * that were in progress BEFORE that loader change have no URL yet and get no link until the next
+   * refresh writes one. It fills in rather than rendering broken.
+   *
+   * THE LABEL SAYS WHICH IT IS, because the two are different promises: a live box score is
+   * changing under the reader and a final one is a record.
+   *
+   * ONLY A MATCHUP CAN EVER HAVE ONE, and it is worth saying here so the next reader does not go
+   * looking. `boxscore_url` is a column on `games`; the `programs` table has no such column at all,
+   * so all 4,230 programs - every race, fight card, weekly show and studio show - are outside this
+   * by construction rather than by a filter anyone wrote.
+   */
+  const boxLive = game.result_status === 'in_progress';
+  const boxScore = (boxLive || game.result_status === 'final') && game.boxscore_url ? (
     <a className="dlink" href={game.boxscore_url} target="_blank" rel="noopener noreferrer">
-      Box score
+      {boxLive ? 'Live box score' : 'Box score'}
     </a>
   ) : null;
   const odds = (game.odds || [])[0];

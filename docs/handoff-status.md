@@ -50,7 +50,67 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-09, prompt 77 — after the last gate run of the run, not during it.** `test:unit`
+**Measured 2026-09-09, prompt 78 block B — after that block's last gate run, not during it.**
+`test:unit` is 537 → **552**: block B added `web/test/livejoin.test.mjs` (15). The other four gates
+are unchanged.
+
+### MLB LIVE SCORES HAD NEVER WORKED, AND THE ID SCHEME WAS NOT WHY (prompt 78 block B)
+
+`/api/live` reported `mlb: { returned: 15, joined: 0 }` — the fetch succeeded, the parse succeeded,
+`stats` was populated, nothing warned, and every card silently kept the database's score. It had been
+in that state since live scores shipped. **What surfaced it was Joe asking why a score had not
+moved**, which is not a control; `scripts/probes/live-join.mjs` is now the control.
+
+**COWORK'S PROMPT-76 INFERENCE WAS RIGHT ABOUT THE PREMISE AND WRONG ABOUT THE CONCLUSION**, and the
+record should say which. Both sides really do build `mlb-<gamePk>` — `adapters/mlb.py:350` emits
+`f"mlb-{pk}"` and `readMlbSchedule` builds the same. Printed side by side on 2026-09-09:
+
+```
+returned  mlb-824792  mlb-824228  mlb-823414     <- MLB's answer
+ours      mlb-824226  mlb-823172  mlb-823818     <- the 2026-09-09 slate
+```
+
+**Same shape, different GAMES.** `?sportId=1` with no date answers for MLB's own idea of today, which
+was **2026-09-08** — that endpoint holds the previous date well past midnight ET, which is sensible
+for a league whose west-coast games finish after it. Adding `&date=` returned ids matching ours
+exactly. **Join 0/15 → 15/15.**
+
+**IT WAS THE SAME BUG IN ALL FIVE SOURCES, invisible in four because nothing joined anyway** (rule
+32). Undated → dated for 2026-09-09: NFL **16 → 1** (our one game, still joined), CFB 24 → 0, NBA
+1 → 0, NHL a gameWeek starting **2026-09-29** → the week containing the day asked for. Every
+`returned` is now a game that could actually join, so `stats.unjoined` means what it says.
+
+**FIXED IN THE MATCHER, NOT THE DATA** (rule 6). `games.id` is a primary key that other tables and
+the app's own overlay key point at; nothing stored was touched and no DML was run. CFB ids are bare
+numbers (`401858202`) and `espnGameId('cfb', …)` returns bare — checked, not drift.
+
+**THE GUARD IS `joinFailures(stats)`** — `returned > 0 && joined === 0`, the shape that hid for the
+life of the feature. Zero returned is not a fault (no games, or an outage `fetchSport` already logs)
+and a partial join is not either. **One rule, two callers** (rule 32): the unit tests pin it against
+fixtures, and `scripts/probes/live-join.mjs` runs it against the live providers. **The live half is a
+PROBE and not a gate deliberately** — it depends on five external hosts, and a gate that goes red for
+someone else's outage is one that gets ignored, which is exactly how this survived.
+
+### THE BOX SCORE LINK IS WRITTEN WHILE THE GAME IS ON (prompt 78 block B2, Joe 2026-09-09)
+
+`pipeline/load.py`'s `case when … = 'final'` became `in ('final', 'in_progress')` — **widened, not
+dropped**, because the gate's reason is Joe's ruling too: live and final, never scheduled, since a
+box score for a game that has not started is a dead tap. `completed_at` is deliberately NOT widened;
+it is the moment the game ended, and stamping `now()` on a live game would make it look finished.
+
+Measured before the change: **0 of 790 scheduled CFB rows** carried a URL and 0 of 2,822 across the
+unstarted leagues, against **203 of 203 finals** — so relaxing the UI gate alone would have rendered
+a link that does nothing in exactly the window it was being added for. `GameDetail` now shows it for
+both states, labelled **"Live box score"** and **"Box score"**, still guarded on the URL's presence:
+rows that were in progress before this loader change have none until the next refresh writes one.
+
+**Deriving the URL in JS was rejected** — it would put the same per-sport mapping in two languages
+that must agree. `load.py`'s `_BOXSCORE` stays its one owner, and a test forbids those URL shapes
+appearing in the JS. **Only a matchup can ever have one**: `programs` has no such column, so all
+4,230 programs are outside it by construction. The three MLB rows that reverted from final to
+scheduled and kept a URL are stale data, left alone.
+
+**Prompt 77's floors, for the record:** `test:unit`
 is 518 → **537**: prompt 77 added `web/test/livepoll.test.mjs` (19). One existing test was CORRECTED
 rather than added to — `myteamsonce.test.mjs` pinned `flatLabel = null }) {`, which also required
 `flatLabel` to be the LAST parameter of `Listing`, so it failed the moment a prop was added beside
@@ -73,7 +133,7 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 | gate | run from | floor |
 |---|---|---|
 | `pytest` | repo root | **514 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **537** |
+| `npm run test:unit` | `web/` | **552** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **91/91** |
 | `npm run geometry` | `web/` | all hard stops |

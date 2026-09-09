@@ -88,9 +88,28 @@ update games set
   away_score    = coalesce(%s, away_score),
   result_status = coalesce(%s, result_status),
   completed_at  = case when coalesce(%s, result_status) = 'final' then coalesce(completed_at, now()) else completed_at end,
-  boxscore_url  = case when coalesce(%s, result_status) = 'final' then coalesce(boxscore_url, %s) else boxscore_url end
+  boxscore_url  = case when coalesce(%s, result_status) in ('final', 'in_progress') then coalesce(boxscore_url, %s) else boxscore_url end
 where id = %s
 """
+# THE BOX SCORE LINK IS WRITTEN WHILE THE GAME IS ON, NOT ONLY ONCE IT IS OVER (prompt 78, Joe's
+# ruling 2026-09-09). The condition was WIDENED rather than dropped, and the difference is the whole
+# ruling: live and final, never scheduled. A box score for a game that has not started is a dead tap,
+# which is why the gate exists; a box score for a game in progress is the one Joe most wants.
+#
+# MEASURED BEFORE THE CHANGE: 0 of 790 scheduled CFB rows carried a URL and 0 of 2,822 across the
+# leagues whose season has not started, against 203 of 203 finals. So relaxing the UI gate alone
+# would have rendered a link that does nothing in exactly the window it was being added for - which
+# is why prompt 77 stopped at this prerequisite rather than shipping the UI half.
+#
+# `completed_at` ABOVE IS DELIBERATELY NOT WIDENED. It is the moment the game ENDED; a game in
+# progress has not got one, and stamping `now()` on it would make every live game look finished to
+# anything that reads it.
+#
+# THE URL IS DERIVED, NOT PROVIDED - see `boxscore_url()` above, and 203 of 203 stored URLs contain
+# their game's own id, so nothing upstream is being trusted for it. Deriving it in JS instead was
+# considered and rejected in the same ruling: it would put the same per-sport mapping in two
+# languages that must agree, and a rule kept in two places drifts. This function stays its one owner.
+
 
 
 # Probable pitchers are loader-written provider facts too (migration 0008), and null-safe the same way:
