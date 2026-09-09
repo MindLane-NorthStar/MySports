@@ -24,20 +24,20 @@ export function isFavorite(game, ids) {
          ids.has(String(game?.away_team_id ?? game?.away?.id ?? ''));
 }
 
-/**
- * Split a listing into [favourites, everything else], PRESERVING the incoming order inside each group.
+/* `splitFavorites` LIVED HERE AND IS GONE (prompt 82 block D2).
  *
- * That order preservation is the whole point: the rows arrive chronologically, so both groups stay
- * chronological and the day still reads as a timeline - it is a promotion, not a re-sort.
- */
-export function splitFavorites(games, ids) {
-  const rows = Array.isArray(games) ? games : [];
-  if (!ids || ids.size === 0) return { favorites: [], rest: rows };
-  const favorites = [];
-  const rest = [];
-  for (const g of rows) (isFavorite(g, ids) ? favorites : rest).push(g);
-  return { favorites, rest };
-}
+ * It split a listing into [favourites, everything else] so `SportBand` could render the first group
+ * above the second, and its docstring was careful that the split PRESERVED chronological order
+ * inside each group - "a promotion, not a re-sort".
+ *
+ * THAT CARE IS EXACTLY WHY IT HAD TO GO. Preserving order within two groups still hoists one group
+ * out of the day's timeline, and since Joe's 2026-09-09 ruling the timeline carries meaning:
+ * `chronological()` sorts by time, then a studio show, then a favourite at a tie. The page sorted
+ * and the band un-sorted it. The favourite is a MARK on the card now (`fav-row`), not a position.
+ *
+ * DELETED RATHER THAN LEFT EXPORTED WITH NO CALLER - the ruling lib/headerstate.js records for
+ * `resetHeader()`, and the same one prompt 67 applied to `bandstate.js`. `favoriteIds` and
+ * `isFavorite` both stay: the mark needs exactly that predicate. */
 
 /**
  * THE FIVE TEAM-LESS SPORTS, permanently part of MY TEAMS (Joe's ruling, register §18d).
@@ -119,8 +119,9 @@ export function isMine(row, ids) {
 }
 
 /**
- * The MY TEAMS scope, preserving input order - so the rows stay chronological, exactly as
- * `splitFavorites` does and for the same reason.
+ * The MY TEAMS scope, preserving input order - so the rows stay chronological. (It used to say
+ * "exactly as `splitFavorites` does"; that function was retired in prompt 82 and the reason is
+ * recorded where it stood.)
  */
 export function splitMine(rows, ids) {
   const list = Array.isArray(rows) ? rows : [];

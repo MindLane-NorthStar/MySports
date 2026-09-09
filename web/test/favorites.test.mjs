@@ -1,8 +1,12 @@
-// D6: favourites float to the top of their band.
+// THE FAVOURITE MARK, and the file that resolves it.
+//
+// D6 (prompt 20) floated favourites to the top of their band; prompt 82 block D2 retired that float
+// and marks the card instead, because Joe's 2026-09-09 ordering ruling makes position meaningful and
+// a hoist contradicts a list sorted by the clock.
 //
 // The resolution itself is frozen in data/favorites.json - these tests assert the FILE (that the
-// thirteen teams are there as ids, and that the four resolution traps did not bite) and the float
-// behaviour (that promotion never becomes a re-sort).
+// thirteen teams are there as ids, and that the four resolution traps did not bite), the PREDICATE
+// the mark is computed from, and the SORT that replaced the hoist.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { favoriteIds, isFavorite, splitFavorites, chronological } from '../lib/favorites.js';
+import { favoriteIds, isFavorite, chronological } from '../lib/favorites.js';
 import { after, before } from './region.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -68,27 +72,30 @@ test('a game is a favourite when either side is one', () => {
   assert.equal(isFavorite({ home: { id: '194' }, away: { id: '1' } }, ids), true, 'fixture shape too');
 });
 
-test('the float PRESERVES chronological order inside both groups', () => {
-  // This is the property that keeps the day reading as a timeline. It is a promotion, not a re-sort.
+// `splitFavorites` AND ITS THREE TESTS LIVED HERE AND ARE GONE (prompt 82 block D2).
+//
+// They pinned that the hoist preserved chronological order INSIDE each group - "a promotion, not a
+// re-sort". That care is exactly why the hoist had to go: preserving order within two groups still
+// lifts one group out of the day's timeline, and since Joe's 2026-09-09 ruling the timeline carries
+// meaning. THE COVERAGE MOVED rather than disappearing - the property is now "the whole band reads
+// in clock order with a favourite winning only a tie", pinned against `chronological` in the D1
+// block below and in pageorder.test.mjs.
+
+test('a favourite is DISTINGUISHED without being MOVED, which is the whole change', () => {
+  // `isFavorite` survives because the mark needs exactly it; what is gone is the partition that used
+  // the same predicate to reorder the list.
   const g = (id, home) => ({ id, home_team_id: home, away_team_id: 'zzz' });
-  const games = [g('1', 'x'), g('2', 'nfl-5'), g('3', 'y'), g('4', '194'), g('5', 'z')];
-  const { favorites, rest } = splitFavorites(games, ids);
-  assert.deepEqual(favorites.map((x) => x.id), ['2', '4']);
-  assert.deepEqual(rest.map((x) => x.id), ['1', '3', '5']);
+  const day = [g('1', 'x'), g('2', 'nfl-5'), g('3', 'y'), g('4', '194'), g('5', 'z')];
+  assert.deepEqual(day.filter((x) => isFavorite(x, ids)).map((x) => x.id), ['2', '4'],
+    'the same two rows the split used to lift');
+  assert.deepEqual(day.map((x) => x.id), ['1', '2', '3', '4', '5'],
+    'and the list is untouched - marking is not reordering');
 });
 
-test('no favourites on the day means no split and no label', () => {
-  const games = [{ id: '1', home_team_id: 'x', away_team_id: 'y' }];
-  const { favorites, rest } = splitFavorites(games, ids);
-  assert.equal(favorites.length, 0);
-  assert.deepEqual(rest, games);
-});
-
-test('an empty favourites list leaves the listing untouched', () => {
-  const games = [{ id: '1', home_team_id: 'nfl-5' }];
-  const { favorites, rest } = splitFavorites(games, new Set());
-  assert.equal(favorites.length, 0);
-  assert.deepEqual(rest, games);
+test('an empty favourites list marks nothing and changes nothing', () => {
+  const g = (id, home) => ({ id, home_team_id: home, away_team_id: 'zzz' });
+  const day = [g('1', 'nfl-5'), g('2', 'x')];
+  assert.deepEqual(day.filter((x) => isFavorite(x, new Set())).map((x) => x.id), []);
 });
 
 test('the file documents that these are TEAM ids, not game ids', () => {

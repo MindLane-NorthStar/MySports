@@ -27,12 +27,16 @@ const css = readFileSync(join(HERE, '..', 'app', 'globals.css'), 'utf8')
 
 test('8px: card -> card, and the rule that closes the favourites group inside a band', () => {
   assert.match(css, /\.cards\s*\{[^}]*gap:\s*8px/, 'card -> card measured 8');
-  // `.favrule` was RETIRED by prompt 59 - it was 1px of --line-soft on a card gradient and nobody
-  // could see it. The 8px it resolved to survives as the favourites bracket's bottom margin, so the
-  // distance from the favourites to the rest of the band is unchanged; only the invisible hairline
-  // in the middle of it is gone.
-  assert.match(css, /\.favgroup \{[^}]*margin-bottom: 8px;/, 'favourites group -> the rest is still 8');
-  assert.doesNotMatch(css, /\.favrule\{/, 'and the rule itself is gone');
+  // `.favrule` was retired by prompt 59 and `.favgroup` by prompt 82 block D2. The 8px this test
+  // was really about is the step BETWEEN CARDS, and that is `.cards`' own gap - which is where it
+  // always lived. The group's `margin-bottom: 8px` only ever restated it for the one seam below the
+  // floated group, and with no group there is no second seam to keep in step.
+  //
+  // PINNED ON THE SURVIVING RULE, not the deleted one. A favourite card now sits in the ordinary
+  // flow at the ordinary gap, which is exactly what "the mark is not a position" means in pixels.
+  assert.match(css, /\.cards \{[^}]*gap: 8px;/, 'card -> card is the 8px inside-one-group step');
+  assert.doesNotMatch(css, /\.favrule\{/, 'the hairline is gone');
+  assert.doesNotMatch(css, /\.favgroup/, 'and so is the group whose margin used to restate the 8');
 });
 
 test('24px: band -> band, and the two lines at the foot of the page', () => {

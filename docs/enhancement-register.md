@@ -2849,3 +2849,89 @@ checking is worse than one that never checked.** A week containing today now pri
 
 **THE GRID IS OUT OF SCOPE and stays so** — it displays no score today, and adding one is a different
 feature.
+
+---
+
+## 32. THE FLOAT GOES AND THE CARD CARRIES THE MARK — 2026-09-09, prompt 82 block D2
+
+**THIS SUPERSEDES §27a (prompt 59) AND D6 (prompt 20) BEFORE IT.** Both are recorded rather than
+quietly replaced, because the same ground has now been walked three times and the reason it moved
+each time is different.
+
+| prompt | what favourites got | why it changed |
+|---|---|---|
+| 20 (D6) | floated to the top of their band under a faint `YOUR TEAMS` micro-label | — |
+| 27 | that label became the FIRST HEADING on the page | Joe: *"renders in small gray text like an afterthought"* |
+| 59 (§27a) | `.favlabel` + `.favrule` retired; a gold left-rule BRACKET around the floated group | the label was `.band-title` character for character and the rule was imperceptible |
+| **82 (this)** | **the float retired; a gold BORDER on the card** | **the order now carries meaning** |
+
+**WHAT CHANGED IS THE ORDER, NOT THE TASTE, and that is the whole justification.** Joe's ruling of
+2026-09-09 — *"Organize qualifying events by TIME… THEN when events start at the same time,
+prioritize by: Pregame shows, MyTeams, Other events"* — was implemented in `chronological()` at
+prompt 80 (`4e495b8`). `app/page.js` sorts every row through it, and `SportBand` then **split that
+correctly ordered list and rendered one group above the other**. The page sorted and the band
+un-sorted it. A group floating to the top of a list sorted by the clock contradicts the sort, so the
+HOIST is what was wrong; the gesture is fine and survives on the card.
+
+**THE MARK IS A RECOLOURED BORDER AND NOT AN `outline`, WHICH IS WHAT JOE ASKED FOR BY NAME.** His
+words were *"make the gold line a gold OUTLINE of the card"*. The meaning is right and the CSS
+property is taken: `button.mcard:focus-visible` is `outline: 2px solid var(--gold)` with
+`outline-offset: 2px`. **A favourite drawn with `outline` would be the focus ring character for
+character** — every favourite card would look permanently focused and a keyboard or switch user
+would lose their position on exactly the cards Joe cares about most. `.mcard` already carries
+`border: 1px solid var(--line-soft)` with `border-radius: var(--radius)`, so recolouring costs
+nothing and follows the radius for free.
+
+**MEASURED, NOT ASSERTED (rule 34).** `qa-shots` reads the body track off a marked and an unmarked
+card in the same band: **114px against 114px.** That is the number the retired bracket could not
+achieve — prompt 59 measured its 11px inset dropping **10 of 26** name tiers, because `.mcard`'s body
+track is `minmax(0, 1fr)` and an inset comes out of what `fitNameAndRecord` has for a name and a
+record. **That table is kept in `globals.css` beside the new rule**, because it is the reason for the
+shape and deleting a measurement when the element it measured changes is how evidence gets lost.
+
+**THE 2px ESCALATION WAS MEASURED AND DECLINED. Joe ruled 1px on 2026-09-09**, and the reason is
+recorded here because the next reader will otherwise assume it was chosen for subtlety:
+
+> **The weights are what make the two tellable apart.** The focus ring is 2px standing off at
+> `outline-offset: 2px`; the mark is 1px hugging the card edge. At 2px they become two gold lines of
+> EQUAL weight separated only by a gap, which reads as one thick double rule rather than as "focused"
+> and "yours". `mobile__favourite-focus-vs-mark.png` is the shot that settles it. The card's leading
+> edge already carries the team-colour seam and a gold time label, so the heavier frame also starts
+> competing with the content it frames.
+
+The escalation stays a one-line change if it is ever wanted — `box-shadow: 0 0 0 1px var(--gold)`,
+which also costs no layout — but **it is not left in the tree as a commented-out alternative.** A
+rejected option belongs in the record, not in the stylesheet.
+
+**AND THE MARK SURVIVES THE OFF-SERVICE DIM, MEASURED IN PAINTED PIXELS (prompt 83).** This is the
+one combination where it could have vanished: `.offsvc-row` is `opacity: .45; filter: saturate(.7)`,
+and BOTH ARE COMPOSITING EFFECTS — a dimmed favourite still reports `border-color: var(--gold)` from
+`getComputedStyle`, so the DOM test that proved the classes compose proved nothing about whether a
+reader can see it. Rule 13: measured against the local background, with Pillow, on the real case
+(Fresno State, 2026-09-12 — one of the six CFB favourites, off-service that day):
+
+| row | painted border | local card ground | max delta |
+|---|---|---|---|
+| favourite + off-service | rgb(103, 96, 79) | rgb(36, 37, 39) | **67** |
+| favourite, undimmed | rgb(198, 175, 122) | rgb(42, 46, 52) | 156 |
+| unmarked card | rgb(39, 39, 39) | rgb(42, 46, 52) | 13 |
+
+67 is `156 × 0.45`, exactly what the dim predicts, and it is still **five times the contrast of the
+ordinary border it replaces**. It survives legibly and 1px ships unchanged. **The distinction that
+cost this a correction is worth keeping: "the classes compose" and "the reader can see it" are
+different claims, and only the second needs a rendered shot with a measured delta.**
+
+**IT COMPOSES, and that is new.** The other three row-wrapper classes are mutually exclusive by
+`offServiceSummary`'s own if/else; `fav-row` is orthogonal — an off-service game can be a favourite —
+so the dim and the gold border both show. Pinned by a test, because "one silently wins" is the
+failure this shape invites.
+
+**MY TEAMS SUPPRESSES IT**, on the same `!P.isMine` the float used, so there is one vocabulary rather
+than two. Every row there is a favourite, so a border on all of them distinguishes nothing.
+
+**DEAD CODE WENT WITH THE FEATURE**, as prompt 67 did with `FirstBand` and `bandstate.js`:
+`splitFavorites`, the `.favgroup` rule, and the `floatFavorites` prop through `page.js` → `Listing` →
+`SportBand`. **The tests were INVERTED, not deleted** — `pageorder.test.mjs`'s *"a favourite is
+counted in YOUR TEAMS and NOT again in its sport band"* is now *"a favourite STAYS in its sport
+band"*, so a float coming back fails a gate. `favoriteIds` and `isFavorite` both stay; the mark is
+computed from exactly the second one.

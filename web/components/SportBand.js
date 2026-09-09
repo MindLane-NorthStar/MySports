@@ -23,7 +23,7 @@ import MatchupCard from './MatchupCard.js';
 import ProgramCard from './ProgramCard.js';
 import { isProgram } from '../lib/programs.js';
 import { offServiceSummary } from '../lib/offservice.js';
-import { favoriteIds, splitFavorites } from '../lib/favorites.js';
+import { favoriteIds, isFavorite } from '../lib/favorites.js';
 import favoritesDoc from '../../data/favorites.json';
 // D4: the mark table now lives in config.js - the mobile grid header needs the same one.
 import { sportMarkUrl } from '../lib/config.js';
@@ -46,7 +46,7 @@ import { sportMarkUrl } from '../lib/config.js';
 // page-level favourites-section class. `Listing` renders the heading at the outer level in every
 // arrangement now, so nothing passes either prop and both are removed rather than left unset.
 export default function SportBand({ sport, label, games, standings, rankings, showDay = false, onOpen,
-                                    showHeader = true, floatFavorites = true }) {
+                                    showHeader = true, markFavorites = true }) {
   // THE BAND NO LONGER FILTERS AND NO LONGER COUNTS (prompt 50 stage 4). Both moved to the page:
   // one count line at the foot, and the hiding decided once by splitHidden() before these rows are
   // handed down. The band renders what it is given.
@@ -61,22 +61,38 @@ export default function SportBand({ sport, label, games, standings, rankings, sh
 
   const favIds = useMemo(() => favoriteIds(favoritesDoc), []);
 
-  // D6's in-band float, retained for /weeks and /history. On `/` this is switched off and the page
-  // hoists favourites into their own section instead (05 section 11), so `favorites` is empty and
-  // `rest` is everything - one flat list, no marker and no trailing rule.
-  const split = useMemo(() => splitFavorites(games || [], favIds), [games, favIds]);
-  const favorites = floatFavorites ? split.favorites : [];
-  const rest = floatFavorites ? split.rest : (games || []);
+  /**
+   * THE FLOAT IS GONE AND THE CARD CARRIES A MARK INSTEAD (prompt 82 block D2, Joe 2026-09-09).
+   *
+   * WHAT WAS WRONG. `app/page.js` sorts every row through `chronological(rows, favIds)` - time, then
+   * a studio show, then a favourite - and this band then took that correctly ordered list and
+   * SPLIT it, rendering favourites in a `.favgroup` above everything else. The page sorted and the
+   * band un-sorted it. Joe's ruling is that a band reads as a timeline with a favourite winning
+   * only a TIE, so the hoist is what had to go.
+   *
+   * `splitFavorites` WENT WITH IT - see lib/favorites.js. `isFavorite` stays, because the mark
+   * needs exactly that predicate and nothing more.
+   */
+  const favIdSet = markFavorites ? favIds : null;
 
   if (!games?.length) return null;
 
   // The badge is a class on the row WRAPPER and the text lives in globals.css - MatchupCard is
   // locked and nothing here reaches inside it. The buckets are mutually exclusive by the if/else in
   // offServiceSummary, so at most one cue class can ever apply and no card can render both badges.
+  /**
+   * THE FAVOURITE IS A FOURTH WRAPPER CLASS, and it does NOT behave like the other three.
+   *
+   * The first three are MUTUALLY EXCLUSIVE by the if/else in `offServiceSummary`, so at most one can
+   * ever apply. `fav-row` is orthogonal: an off-service game can perfectly well be one of Joe's, and
+   * both cues have to show. They COMPOSE - `.offsvc-row.fav-row` gets the dim and the gold border -
+   * and a test pins that, because "one silently wins" is the failure this shape invites.
+   */
   const rowClass = (g) =>
     [tbdIds.has(g.id) ? 'networktbd-row' : null,
      pendingIds.has(g.id) ? 'pending-row' : null,
-     offIds.has(g.id) ? 'offsvc-row' : null]
+     offIds.has(g.id) ? 'offsvc-row' : null,
+     favIdSet && isFavorite(g, favIdSet) ? 'fav-row' : null]
       .filter(Boolean).join(' ') || undefined;
 
   // v1.7: the WRAPPER is identical for both card types - the off-service dim, the MARKET TBD cue and
@@ -114,7 +130,7 @@ export default function SportBand({ sport, label, games, standings, rankings, sh
   //
   // THE REST OF THIS PATH WAS CHECKED FOR THE SAME ASSUMPTION rather than only the aria-label:
   // `sportMarkUrl(sport)` and the <h2> are both inside `showHeader`, which is false on every flat
-  // render, so neither is reached; `offServiceSummary`, `splitFavorites` and `rowClass` are all
+  // render, so neither is reached; `offServiceSummary` and `rowClass` are both
   // per-row and sport-agnostic; and the card choice is made per row by `isProgram`, never by the
   // band's sport. The aria-label was the only one.
   return (
@@ -140,34 +156,20 @@ export default function SportBand({ sport, label, games, standings, rankings, sh
         </div>
       ) : null}
 
-      {/* A GOLD BRACKET WHERE THE HEADING AND THE RULE USED TO BE (prompt 59, Joe 2026-09-07:
-          "the 'Your Teams' section isn't noticeably separated from the rest of the content below,
-          it leaves the user confused").
+      {/* ONE LIST, IN CLOCK ORDER. The `.favgroup` bracket that stood here is retired (prompt 82
+          block D2) and so is the long note explaining it - a comment describing an element that no
+          longer exists is the stale-note failure this repo keeps paying for.
 
-          TWO THINGS WERE WRONG AND ONLY ONE OF THEM WAS THE ONE HE NAMED.
-          * `.favlabel` was styled as a BAND TITLE, not a marker - 25.5px display, 700, uppercase,
-            .09em, with its own bottom hairline, which is `.band-title` character for character. So
-            a band read COLLEGE FOOTBALL then YOUR TEAMS at equal weight and nothing said where the
-            second heading's scope ended.
-          * `.favrule` was 1px of --line-soft on a card-gradient ground. It is the element whose
-            whole job was to say "your teams end here", and on a phone it was imperceptible. That
-            is the actual cause of the complaint: the group had no visible bottom edge.
+          WHAT IT WAS AND WHY IT WENT. Prompt 59 replaced D6's "YOUR TEAMS" micro-label with a gold
+          left rule after Joe called the old treatment "like an afterthought", and that bracket was
+          right for a list whose order carried no meaning. Joe's 2026-09-09 ordering ruling gives
+          position meaning - time first, then a studio show, then a favourite - and a group floating
+          to the top of a list sorted by the clock contradicts it. The gesture survives as a MARK on
+          the card (`fav-row` above); the HOIST is what was wrong.
 
-          THE BRACKET IS A GESTURE THE APP ALREADY OWNS. `.scopeline` marks the MY TEAMS scope with
-          `border-left: 2px solid var(--gold)`, so a gold left rule already means "this is about
-          your teams" here. Reusing it beats inventing a second vocabulary, and it says what the
-          heading said without competing with the band title.
-
-          AND IT RETIRES THE "Your teams" / "My teams" NAMING INCONSISTENCY, deliberately rather
-          than by accident: the band no longer names the scope at all, so there is no second word
-          for it to disagree with. */}
-      {favorites.length ? (
-        <div className="favgroup">
-          <div className="cards">{favorites.map(row)}</div>
-        </div>
-      ) : null}
-
-      <div className="cards">{rest.map(row)}</div>
+          The gold left rule itself is not lost: `.scopeline` still uses it to mark the MY TEAMS
+          scope, which is where "this is about your teams" is still said once. */}
+      <div className="cards">{(games || []).map(row)}</div>
     </section>
   );
 }

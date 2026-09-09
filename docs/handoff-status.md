@@ -72,6 +72,32 @@ line claims to do.
 | prompt 80 block B | `pytest` | 514 → **515** | the watch-link workflow guard in `tests/test_workflows.py` |
 | prompt 80 block D1 | `test:unit` | 552 → **560** | the eight D1 ordering tests in `favorites.test.mjs` |
 | prompt 82 block F | `test:unit` | 560 → **568** | `web/test/mlbdeeplink.test.mjs` (8) |
+| prompt 82 block D2 | `test:unit` | 568 → **570** | **net +2, and THREE TESTS WERE REMOVED — see the accounting below** |
+| prompt 82 block D2 | `qa-shots` | 91 → **94** | the favourite mark: the gold token, an unmarked card's border, zero layout cost, and the interleaving |
+| prompt 83 block D2 | `qa-shots` | 94 → **96** | the off-service compose: both cues present, neither silently winning |
+
+**D2 REMOVED A FEATURE AND ITS TESTS WENT WITH IT, SAID OUT LOUD** as the exception above requires.
+`splitFavorites` was retired — nothing outside the tests imported it once the float was gone — and
+the three tests that exercised it went too:
+
+| removed from `favorites.test.mjs` | why it could not survive |
+|---|---|
+| *"the float PRESERVES chronological order inside both groups"* | there is no float and no split to preserve anything |
+| *"no favourites on the day means no split and no label"* | there is no split and there was no label after prompt 59 |
+| *"an empty favourites list leaves the listing untouched"* | replaced by *"an empty favourites list marks nothing"*, which is the same property against the mark |
+
+**THE COVERAGE MOVED RATHER THAN DISAPPEARING**, which is the part that matters: the property those
+three protected — a band reads as a timeline — is now pinned against `chronological()` in
+`pageorder.test.mjs` (*"A BAND READS AS A TIMELINE"*) and in `favorites.test.mjs`'s D1 block. The
+file-by-file arithmetic, measured rather than asserted:
+
+| file | before | after | delta |
+|---|---|---|---|
+| `favbracket.test.mjs` | 6 | 9 | **+3** (rewritten against the mark) |
+| `favorites.test.mjs` | 36 | 35 | **−1** (3 removed, 2 added) |
+| `pageorder.test.mjs` | 8 | 8 | 0 (inverted in place) |
+| `rhythm.test.mjs` | 7 | 7 | 0 (repointed at the surviving rule) |
+| **net** | | | **+2** |
 
 Neither prompt-80 movement was written here at the time, and both are legitimate: a floor may only go
 up, and nothing was removed or weakened. The other three gates are unchanged throughout.
@@ -155,9 +181,9 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 | gate | run from | floor |
 |---|---|---|
 | `pytest` | repo root | **515 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **568** |
+| `npm run test:unit` | `web/` | **570** |
 | `npm run smoke` | `web/` | **33/33** |
-| `node scripts/qa-shots.mjs` | `web/` | **91/91** |
+| `node scripts/qa-shots.mjs` | `web/` | **96/96** |
 | `npm run geometry` | `web/` | all hard stops |
 
 They are a floor and may only go up — **with the one exception that a removed feature takes its
@@ -564,7 +590,9 @@ thumb can judge.
 >    the grid near the top edge. A browser says the top 45px is inert but harmless; a thumb is the
 >    only thing that can say whether that is annoying.
 > 2. **MY TEAMS** (§28d) — one chronological list, said once, no sport headings.
-> 3. **The favourites bracket** (§27a) — whether the group reads as separate without a heading.
+> 3. ~~**The favourites bracket** (§27a)~~ — **RETIRED at prompt 82, register §32.** The question
+>    expired rather than being answered: there is no group to read as separate any more. What Joe
+>    checks instead is the gold BORDER on a favourite card, and whether 1px is loud enough.
 > 4. **The program panels** (§27b) — tap a NASCAR race, a UFC card and a studio show.
 >
 > **Prompt 58's collapsed bar is no longer on this list because prompt 60 replaced it.** Judge the
@@ -693,7 +721,26 @@ Tree clean apart from always-untracked `assets/` (and `web/qa/` and `artifacts/`
 
 **Read register §27.**
 
-### THE FAVOURITES GROUP IS A BRACKET, NOT A HEADING
+### SUPERSEDED — THE FLOAT IS GONE AND THE CARD CARRIES A GOLD BORDER (prompt 82, register §32)
+
+**The section below is prompt 59's and is kept as the record of why the BRACKET was right for its
+own moment.** What changed is not taste but ORDER: `chronological()` now sorts time → studio show →
+favourite (prompt 80, `4e495b8`), and `SportBand` was taking that sorted list and splitting it, so
+the page sorted and the band un-sorted it. A group floating to the top of a list ordered by the clock
+contradicts the sort.
+
+**The mark is a recoloured `border`, never an `outline`** — `button.mcard:focus-visible` already is
+`outline: 2px solid var(--gold)`, so an outline would be the focus ring character for character and a
+keyboard user would lose their position. `.mcard` already has a 1px border and a radius, so
+recolouring costs **zero layout: 114px body track marked, 114px unmarked**, measured in `qa-shots`.
+Prompt 59's inset table is kept in `globals.css` beside the new rule because it is the reason for the
+shape.
+
+**Still open for the device:** whether 1px reads loudly enough. `qa-shots` renders
+`mobile__favourite-mark-1px.png` and `-2px.png` so it is a choice from a picture; the escalation is
+one `box-shadow` line and also costs no layout.
+
+### (prompt 59, superseded) THE FAVOURITES GROUP IS A BRACKET, NOT A HEADING
 
 `.favlabel` and `.favrule` are **retired**. The label was `.band-title` character for character, so
 YOUR TEAMS competed with COLLEGE FOOTBALL at equal weight; the rule was 1px of `--line-soft` on a

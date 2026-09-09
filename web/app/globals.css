@@ -2045,57 +2045,62 @@ input:focus-visible {
 .offsvc-row{opacity:.45;filter:saturate(.7)}
 .offsvc-row:hover{opacity:.72}
 
-/* ---- favourites float (D6, prompt 20)
- * Band-level only: the faint label and the hairline that separates Joe's teams from the rest of the
- * day. Neither touches the card, which stays closed under contract v1.6.4. */
-/* YOUR TEAMS IS A HEADING NOW (05 §5, closed). D6 specified this as a faint micro-label separating
- * floated rows INSIDE a band; prompt 27's reorder (05 §11) made it the FIRST HEADING ON THE PAGE.
- * Right treatment for the old job, wrong for the new one - Joe: "renders in small gray text like
- * an afterthought". It now takes the band-header treatment so the page has ONE heading system:
- * the same family, weight, size, letter-spacing and colour as .band-title, and the same bottom
- * hairline .band-head carries. Values are matched to those rules deliberately - if the band header
- * changes, this should change with it.
+/* ---- THE FAVOURITE MARK (prompt 82 block D2, Joe 2026-09-09) ------------------------------------
  *
- * COWORK'S CALL, one token to reverse: --ink rather than gold. Gold would mark it as the personal
- * section, but it would also make the first heading louder than every heading beneath it, and
- * D6's surviving instruction is to avoid decorative treatment here. */
-/* THE FAVOURITES BRACKET (prompt 59, Joe 2026-09-07).
+ * `.favgroup` LIVED HERE AND IS GONE, and so did `.favlabel` and `.favrule` before it. The history
+ * is worth one paragraph because the same ground has now been walked three times: D6 (prompt 20)
+ * gave floated favourites a faint micro-label; prompt 27 made that the first heading on the page and
+ * Joe called it "small gray text like an afterthought"; prompt 59 replaced it with a gold left-rule
+ * BRACKET, which was the right answer for a list whose order carried no meaning.
  *
- * `.favlabel` AND `.favrule` LIVED HERE AND ARE GONE. The label was 25.5px display / 700 /
- * uppercase / .09em with its own bottom hairline - which is `.band-title` character for character,
- * so a band read COLLEGE FOOTBALL then YOUR TEAMS at equal weight and the second heading's scope was
- * ambiguous. The rule was 1px of --line-soft on a card-gradient ground: the one element whose job
- * was to say "your teams end here", and imperceptible on a phone. That was the actual complaint.
+ * WHAT CHANGED IS THE ORDER, NOT THE TASTE. Joe's 2026-09-09 ruling gives position meaning - time
+ * first, then a studio show, then a favourite at a tie - and `chronological()` implements it. A
+ * group floating to the top of a list sorted by the clock contradicts the sort. So the GESTURE
+ * survives as a mark on the card and the HOIST is what went.
  *
- * A BRACKET SAYS BOTH THINGS AT ONCE - where the group starts, where it ends, and whose it is - and
- * it borrows `.scopeline`'s gesture rather than inventing a second one: a gold left rule already
- * means "this is about your teams" in this app.
+ * ---------------------------------------------------------------------------------------------
+ * WHY IT IS A RECOLOURED BORDER AND NOT AN `outline`, WHICH IS WHAT JOE ASKED FOR BY NAME.
  *
- * 4px OF PADDING, NOT `.scopeline`'s 9px, AND THE DIFFERENCE WAS MEASURED. The bracket insets the
- * favourite cards, and `.mcard`'s body track is `minmax(0, 1fr)`, so whatever the inset takes comes
- * out of the space `fitNameAndRecord` has to place a team name and a record. Across 26 favourite
- * cards over seven days:
+ * His words were "make the gold line a gold OUTLINE of the card". The MEANING is right and the CSS
+ * property is already taken: `button.mcard:focus-visible` is `outline: 2px solid var(--gold)` with
+ * `outline-offset: 2px` (this file, the focus block above). A favourite drawn with `outline` would
+ * be that ring character for character - every favourite card would look permanently focused, and
+ * the real focus ring would become invisible on exactly the cards Joe cares about most. A keyboard
+ * or switch user loses their position on the page.
+ *
+ * `.mcard` ALREADY HAS A BORDER - `1px solid var(--line-soft)`, with `border-radius: var(--radius)`.
+ * Recolouring it costs ZERO LAYOUT: no new box, no inset, and nothing taken from the
+ * `minmax(0, 1fr)` body track that `fitNameAndRecord` sizes names against. The radius is followed
+ * for free, and the focus ring still paints OUTSIDE it at `outline-offset: 2px`, so the two remain
+ * distinguishable - 1px gold hugging the card edge versus 2px gold standing 2px off it.
+ *
+ * THE MEASUREMENT THAT DECIDED IT, KEPT because it is the reason this is a border and a future run
+ * would otherwise rediscover it the hard way. The retired bracket INSET the favourite cards, and
+ * whatever an inset takes comes out of the body track. Across 26 favourite cards over seven days:
  *
  *     inset          body     records lost   name tiers dropped
  *     2 + 9 = 11px   103px         0              10 of 26
  *     2 + 4 =  6px   108px         0               0 of 26
  *     2 + 0 =  2px   112px         0               0 of 26
  *
- * No record is ever lost - that was the cost the brief predicted and it does not happen. What DOES
- * happen at 9px is that ten cards drop a name tier (12.5px -> 11px, or 15px -> 12.5px), which is
- * the same harm wearing different clothes and is visible on every one of them. At 4px the bracket
- * costs literally nothing, and the rule is the signal - the padding was only ever comfort.
+ * No record is ever lost. What happens at 9px is that ten of 26 cards drop a name tier (12.5px ->
+ * 11px, or 15px -> 12.5px). A recoloured border spends NONE of that budget, which is the whole
+ * argument: the cost the bracket had to be tuned around does not exist here.
  *
- * `.scopeline` keeps its 9px because it sits ABOVE content rather than beside a width-constrained
- * card, so its inset costs nothing there. Same mark, same colour, two paddings, one reason. */
-.favgroup {
-  border-left: 2px solid var(--gold);
-  padding-left: 4px;
-  /* 8px, the scale's "inside one group" step (prompt 56 §24d) - and the same 8px `.favrule`'s
-     margins resolved to, so the distance from the favourites to the rest of the band is unchanged.
-     What is gone is the 1px of invisible hairline that used to sit in the middle of it. */
-  margin-bottom: 8px;
+ * `.scopeline` KEEPS the gold left rule and keeps its 9px, because it sits ABOVE content rather than
+ * beside a width-constrained card. That is where "this is about your teams" is still said once.
+ *
+ * IT COMPOSES, and that is not decoration. The other three row classes are mutually exclusive by
+ * construction; this one is orthogonal - an off-service game can be a favourite - so the dim and the
+ * gold border both show. `SportBand.js` builds the class list and a test pins the composition. */
+.fav-row > .mcard {
+  border-color: var(--gold);
 }
+/* NO `.pcard` ARM, and that is checked rather than an oversight. `isFavorite` reads `home_team_id` /
+   `away_team_id` (lib/favorites.js), and a PROGRAM carries neither - a race, a fight card and a
+   studio show have no club to be one of Joe's. So `fav-row` can never land on a program row and a
+   `.fav-row > .pcard` selector could never match. Speculative CSS that cannot fire is the kind of
+   thing a later reader trusts as evidence that the case was handled. */
 
 /* ---- R2, prompt 56: THE MY TEAMS SCOPE LINE ---------------------------------------------------
  * `MY TEAMS · 13 CLUBS + RACING + COMBAT SPORTS`, directly below the control stack in the four MY

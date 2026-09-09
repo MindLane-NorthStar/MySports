@@ -32,27 +32,31 @@ import {
    imports `next/navigation`, so nothing defined beside the effect is reachable under `node --test`. */
 
 /**
- * `floatFavorites` - WHY MY TEAMS TURNS IT OFF (prompt 53 stage 6).
+ * `markFavorites` - WHY MY TEAMS TURNS IT OFF (prompt 53 stage 6, carried to the mark in prompt 82).
  *
- * The float tests `isFavorite` (does this row carry one of Joe's thirteen clubs?) while the SCOPE
+ * IT WAS `floatFavorites` AND THE FLOAT IS GONE (block D2). The prop survives because the QUESTION
+ * it answers survives unchanged - should this arrangement distinguish Joe's teams from the rest? -
+ * and the answer is still no under MY TEAMS, for the same reason it always was.
+ *
+ * The mark tests `isFavorite` (does this row carry one of Joe's thirteen clubs?) while the SCOPE
  * tests `isMine` (does this row belong in MY TEAMS at all?). They are deliberately different
  * questions - a race has no team to be one of - and under `scope=mine` that difference surfaces as
  * a tautology:
  *
- *   an NFL or CFB band contains ONLY favourites, so EVERY row floats under a "Your teams" label
- *   with a trailing hairline separating a list from nothing;
- *   a NASCAR band is in scope via TEAMLESS_SPORTS but fails `isFavorite`, so nothing floats and no
- *   label renders at all.
+ *   an NFL or CFB band contains ONLY favourites, so EVERY card would carry a gold border and the
+ *   border would distinguish nothing;
+ *   a NASCAR band is in scope via TEAMLESS_SPORTS but fails `isFavorite`, so nothing would be
+ *   marked at all - one page, some bands entirely gold and others entirely not, for a reason
+ *   invisible to the reader.
  *
- * Measured on 2026-09-05 under MY TEAMS: College Football (4 rows) and MLB (1) both fully labelled,
- * NASCAR, UFC and AEW unlabelled - one page, some bands entirely labelled and others entirely not,
- * for a reason invisible to the reader. Under MY TEAMS the PAGE is the label, so the band-level one
- * is noise. Under ALL GAMES it is exactly the marker it was built to be and is unchanged.
+ * ONE VOCABULARY, NOT TWO. The suppression is the same `!P.isMine` the float used, so a reader who
+ * learns the rule once learns it for both. Under MY TEAMS the PAGE is the marker; under ALL GAMES
+ * the border is exactly the cue it was built to be.
  */
 export default function Listing({ games: serverGames, standingsRows, rankingsRows, day, sport,
                                   generatedAt, showDay = false, grid = false, bands = false,
                                   heading = null, headingClass, nowMinute = null, gridOnly = false,
-                                  floatFavorites = true, flatLabel = null, live = false }) {
+                                  markFavorites = true, flatLabel = null, live = false }) {
   const [open, setOpen] = useState(null);
 
   /**
@@ -262,15 +266,15 @@ export default function Listing({ games: serverGames, standingsRows, rankingsRow
       {dayHeading}
       {gridOnly ? null : bands ? (
         <>
-          {/* D6's in-band float - the hairline and the YOUR TEAMS micro-label inside each sport
-              band. Prompt 50 passed false here because a page-level section was doing that job;
-              that section was retired in prompt 51 stage 4a, so this is the only mechanism now.
-              `floatFavorites` comes from the caller because MY TEAMS has to switch it off - see
-              the note on the prop. */}
+          {/* THE FAVOURITE MARK - a gold border on the card, inside each sport band. It replaced
+              D6's in-band float in prompt 82 block D2: the float hoisted favourites out of the
+              clock order the page had just sorted them into, which contradicts Joe's ordering
+              ruling. `markFavorites` comes from the caller because MY TEAMS has to switch it off -
+              see the note on the prop. */}
           {grouped.map(([s, rows]) => (
             <SportBand key={s} sport={s} label={SPORT_LABEL[s] || s} games={rows}
                        standings={standings} rankings={rankings} showDay={showDay} onOpen={setOpen}
-                       floatFavorites={floatFavorites} />
+                       markFavorites={markFavorites} />
           ))}
         </>
       ) : (
@@ -301,7 +305,7 @@ export default function Listing({ games: serverGames, standingsRows, rankingsRow
         // "your teams", and a section named for the wrong one is worse than one named for none.
         <SportBand sport={sport} label={flatLabel} games={games} standings={standings}
                    rankings={rankings} showDay={showDay} onOpen={setOpen} showHeader={false}
-                   floatFavorites={floatFavorites} />
+                   markFavorites={markFavorites} />
       )}
 
       {/* THE MOBILE GRID IS MOBILE-ONLY. It used to render at every width, so a desktop MLB day whose

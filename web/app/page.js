@@ -448,7 +448,7 @@ export default async function HubPage({ searchParams }) {
                   <Listing games={grouped[d]} standingsRows={standingsRows} rankingsRows={rankingsRows}
                            live={d === today}
                            day={d} heading={shortDay(d)} headingClass="weekday-head"
-                           bands={!P.sport && !P.isMine} sport={P.sport} floatFavorites={!P.isMine}
+                           bands={!P.sport && !P.isMine} sport={P.sport} markFavorites={!P.isMine}
                            flatLabel={P.isMine ? 'My teams' : null}
                            grid={P.isGrid} gridOnly={P.isGrid}
                            nowMinute={d === today ? weekNow : null} />
@@ -700,7 +700,7 @@ export default async function HubPage({ searchParams }) {
                    day={day} sport={P.sport} grid={P.isGrid} bands={!P.isGrid && !P.isMine}
                    gridOnly={P.isGrid} flatLabel={P.isMine ? 'My teams' : null}
                    live={day === today}
-                   nowMinute={nowMinute} floatFavorites={!P.isMine} />
+                   nowMinute={nowMinute} markFavorites={!P.isMine} />
         </div>
       </div>
 

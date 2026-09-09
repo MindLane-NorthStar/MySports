@@ -756,24 +756,118 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
-// -------------------------------------------------- the favourites bracket, ALL GAMES only (p59)
+// ------------------------------------------------ the favourite MARK, ALL GAMES only (prompt 82)
+//
+// It was a BRACKET (`.favgroup`, prompt 59) around a floated group. Block D2 retired the float - it
+// hoisted favourites out of the clock order the page had just sorted them into - and the gesture
+// moved onto the card as a recoloured border. These three assertions moved with it rather than being
+// deleted: marked under ALL GAMES, the gold token and not a new colour, never under MY TEAMS.
 {
   const ctx = await browser.newContext({
     viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
   });
   const page = await ctx.newPage();
   await page.goto(`${base}/?day=2026-09-05`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(450);
-  const allGames = await page.locator('.favgroup').count();
-  record('the favourites bracket marks the group under ALL GAMES', allGames > 0, `${allGames} group(s)`);
-  const border = await page.locator('.favgroup').first()
-    .evaluate((e) => getComputedStyle(e).borderLeftColor);
-  record('the bracket is the gold token, not a new colour', border === 'rgb(198, 175, 122)', border);
-  // MY TEAMS floats nothing, so a band that is entirely favourites has nothing to bracket.
+  await shown(page, '.mcard');
+  const allGames = await page.locator('.fav-row').count();
+  record('the favourite mark appears on cards under ALL GAMES', allGames > 0, `${allGames} card(s)`);
+
+  // THE BORDER IS READ OFF THE CARD, not the wrapper - the wrapper has no border of its own, and
+  // reading the wrapper would return `rgb(0, 0, 0)` and pass a colour test for the wrong reason.
+  const gold = await page.locator('.fav-row > .mcard').first()
+    .evaluate((e) => getComputedStyle(e).borderTopColor);
+  record('the mark is the gold token, not a new colour', gold === 'rgb(198, 175, 122)', gold);
+
+  // AND AN UNMARKED CARD IS STILL THE FAINT LINE. Without this the colour test above passes just as
+  // well if EVERY card went gold, which is the failure MY TEAMS suppression exists to prevent.
+  const plainCount = await page.locator('.cards > div:not(.fav-row) > .mcard').count();
+  const plain = plainCount
+    ? await page.locator('.cards > div:not(.fav-row) > .mcard').first()
+      .evaluate((e) => getComputedStyle(e).borderTopColor)
+    : null;
+  record('an unmarked card keeps the faint border', plainCount > 0 && plain !== 'rgb(198, 175, 122)',
+         `${plainCount} unmarked, border ${plain}`);
+
+  // THE MARK COSTS NO LAYOUT, which is the whole reason it is a recoloured border rather than the
+  // `outline` Joe asked for by name or the inset the retired bracket used. Measured on the body
+  // track `fitNameAndRecord` sizes names against.
+  const tracks = await page.evaluate(() => {
+    const w = (sel) => {
+      const el = document.querySelector(sel);
+      if (!el) return null;
+      return Math.round(getComputedStyle(el).gridTemplateColumns.split(' ')[1].replace('px', '') * 10) / 10;
+    };
+    return { fav: w('.fav-row > .mcard'), plain: w('.cards > div:not(.fav-row) > .mcard') };
+  });
+  record('the mark costs ZERO layout - the body track is identical either way',
+         tracks.fav !== null && tracks.plain !== null && tracks.fav === tracks.plain,
+         `favourite ${tracks.fav}px vs unmarked ${tracks.plain}px`);
+
+  // THE FOCUS RING MUST STILL BE TELLABLE FROM THE MARK. A gold `outline` would have been the ring
+  // character for character; a gold BORDER is 1px hugging the card edge against 2px standing 2px
+  // off it. Shot so Joe can see the two together rather than read that they differ.
+  await page.locator('.fav-row > .mcard').first().evaluate((e) => e.focus());
+  await page.screenshot({ path: join(outDir, 'mobile__favourite-focus-vs-mark.png'), fullPage: false });
+  await page.locator('.fav-row > .mcard').first().evaluate((e) => e.blur());
+
+  // THE 1px READ AND THE 2px READ, SIDE BY SIDE. Joe picks from a picture. The escalation is one
+  // line - `box-shadow: 0 0 0 1px var(--gold)` - and still costs no layout, because a box-shadow
+  // paints outside the border box exactly as an outline does. It is NOT shipped; this only renders
+  // it so the choice is a look rather than a description.
+  await page.screenshot({ path: join(outDir, 'mobile__favourite-mark-1px.png'), fullPage: false });
+  await page.addStyleTag({ content: '.fav-row > .mcard { box-shadow: 0 0 0 1px var(--gold); }' });
+  await page.waitForTimeout(120);
+  await page.screenshot({ path: join(outDir, 'mobile__favourite-mark-2px.png'), fullPage: false });
+
+  // A MIXED BAND, so the ORDERING is visible in an artifact and not only in a test: favourites sit
+  // where the clock puts them, marked, rather than hoisted above the strangers.
+  await page.goto(`${base}/?day=2026-09-05`, { waitUntil: 'networkidle' });
+  await shown(page, '.mcard');
+  const mixed = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.cards > div')];
+    const marks = rows.map((r) => (r.classList.contains('fav-row') ? 'F' : '.'));
+    return { pattern: marks.join(''), interleaved: /\.F|F\./.test(marks.join('')) };
+  });
+  record('favourites are INTERLEAVED, not hoisted - the band reads as a timeline',
+         mixed.interleaved, mixed.pattern.slice(0, 40));
+  await page.screenshot({ path: join(outDir, 'mobile__favourite-mixed-band.png'), fullPage: true });
+
+  // THE MARK UNDER THE OFF-SERVICE DIM - the one combination where it could vanish (prompt 83 1a).
+  //
+  // `.offsvc-row` is `opacity: .45; filter: saturate(.7)`, and BOTH ARE COMPOSITING EFFECTS: a
+  // dimmed favourite still reports `border-color: var(--gold)` from getComputedStyle, so the style
+  // read below proves the classes compose and proves NOTHING about whether a reader can see it.
+  // That distinction cost this run a correction, so the shot is the artifact and the painted figure
+  // is recorded in the register: measured with Pillow on 2026-09-12, the gold border reads
+  // rgb(103, 96, 79) against a card ground of rgb(36, 37, 39) - a max delta of 67, against 156
+  // undimmed and 13 for an ordinary unmarked card's border. It survives at ~5x the contrast of the
+  // border it replaces, which is why 1px was shipped unchanged.
+  await page.goto(`${base}/?day=2026-09-12`, { waitUntil: 'networkidle' });
+  await shown(page, '.mcard');
+  const bothCount = await page.locator('.fav-row.offsvc-row').count();
+  record('a favourite that is ALSO off-service carries both cues', bothCount > 0,
+         `${bothCount} row(s) both marked and dimmed`);
+  if (bothCount) {
+    const el = page.locator('.fav-row.offsvc-row').first();
+    await el.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(200);
+    const both = await el.evaluate((e) => ({
+      dim: getComputedStyle(e).opacity,
+      border: getComputedStyle(e.querySelector('.mcard')).borderTopColor,
+    }));
+    record('the dim and the gold both apply - neither silently wins',
+           both.dim === '0.45' && both.border === 'rgb(198, 175, 122)',
+           `opacity ${both.dim}, border ${both.border}`);
+    await el.screenshot({ path: join(outDir, 'mobile__favourite-offservice.png') });
+  }
+
+  // MY TEAMS marks nothing: every row there is a favourite, so a border on all of them distinguishes
+  // nothing and only adds noise.
   await page.goto(`${base}/?day=2026-09-05&scope=mine`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(450);
-  const mine = await page.locator('.favgroup').count();
-  record('and never appears under MY TEAMS', mine === 0, `${mine} group(s)`);
+  await shown(page, '.mcard');
+  const mine = await page.locator('.fav-row').count();
+  record('and never appears under MY TEAMS', mine === 0, `${mine} marked card(s)`);
+  await page.screenshot({ path: join(outDir, 'mobile__favourite-myteams.png'), fullPage: false });
   await ctx.close();
 }
 
