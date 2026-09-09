@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { favoriteIds, isFavorite, splitFavorites, chronological } from '../lib/favorites.js';
+import { after, before } from './region.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const doc = JSON.parse(readFileSync(join(HERE, '..', '..', 'data', 'favorites.json'), 'utf8'));
@@ -260,7 +261,112 @@ test('a TBD still sorts last, show or not', () => {
 
 test('ALL GAMES goes through the same sort - not a second one', () => {
   const page = readFileSync(new URL('../app/page.js', import.meta.url), 'utf8');
-  assert.match(page, /const scoped = chronological\(P\.isMine \? splitMine\(allRows, favIds\)\.mine : allRows\)/);
+  // `, favIds)` SINCE PROMPT 80 D1 - the sort learned a third term and the ids come from the call
+  // site. What this test is about is unchanged: ONE sort, not a second one for ALL GAMES.
+  assert.match(page, /const scoped = chronological\(P\.isMine \? splitMine\(allRows, favIds\)\.mine : allRows, favIds\)/);
   // and the comment recording it as an open question is gone with the question
   assert.doesNotMatch(page, /ALL GAMES IS UNTOUCHED, deliberately/);
+});
+
+// ---------------------------------------------------------------- D1: time, then show, then favourite
+//
+// JOE'S RULING, 2026-09-09: "Organize qualifying events by TIME, including pregame shows and MyTeams
+// games. THEN when events start at the same time, prioritize by: Pregame shows, MyTeams, Other
+// events." The two tie-breaks are strictly ranked - a studio show beats a favourite game at the same
+// minute - which is his "1) TIME 2) pre/post THEN myteams THEN other events" read literally.
+
+const HERE_D1 = dirname(fileURLToPath(import.meta.url));
+const src = (p) => readFileSync(join(HERE_D1, '..', p), 'utf8');
+
+const ET = (hhmm) => `2026-09-13T${hhmm}:00.000Z`;
+const show = (id, t) => ({ id, program_id: id, start_at: ET(t) });
+const game = (id, t, home, away) => ({ id, canonical_kickoff_at_utc: ET(t), home_team_id: home, away_team_id: away });
+const BROWNS = 'nfl-CLE';
+const PANTHERS = 'nfl-CAR';
+const D1_FAVS = new Set([BROWNS, PANTHERS]);
+
+test("D1: Joe's Sunday NFL example comes out in his order", () => {
+  // Six rows, two favourites, three studio shows, and TWO PAIRS TYING at 12:00 - which is the whole
+  // point of the example. Deliberately shuffled going in, so a pass cannot come from input order.
+  const rows = [
+    game('panthers-bucs', '20:15', 'nfl-TB', PANTHERS),
+    show('cbs-nfl-today', '12:00'),
+    game('browns-steelers', '13:00', 'nfl-PIT', BROWNS),
+    show('fox-nfl-kickoff', '11:00'),
+    show('fnia', '19:00'),
+    show('fox-nfl-sunday', '12:00'),
+  ];
+  const out = chronological(rows, D1_FAVS).map((r) => r.id);
+  // THE FOUR POSITIONS THE COMPARATOR DECIDES. The two 12:00 SHOWS tie on time AND on being shows,
+  // so the comparator returns 0 and their order is the order they arrived in - it is not something
+  // this sort promises, and asserting Joe's listing order for them would be pinning the database's
+  // luck. (The first version of this test did exactly that and failed for that reason.)
+  assert.equal(out[0], 'fox-nfl-kickoff', '11:00, alone');
+  assert.deepEqual(out.slice(1, 3).sort(), ['cbs-nfl-today', 'fox-nfl-sunday'],
+    'both 12:00 SHOWS come next, ahead of the 13:00 game');
+  assert.deepEqual(out.slice(3), ['browns-steelers', 'fnia', 'panthers-bucs'],
+    '13:00, 19:00, 20:15 - in the clock order Joe asked for');
+});
+
+test('D1: at an equal time a STUDIO SHOW beats a favourite game', () => {
+  // The ranking between the two tie-breaks, which is the half that could silently invert.
+  const rows = [game('fav', '12:00', 'x', BROWNS), show('pre', '12:00')];
+  assert.deepEqual(chronological(rows, D1_FAVS).map((r) => r.id), ['pre', 'fav']);
+});
+
+test('D1: at an equal time a FAVOURITE beats a non-favourite game', () => {
+  const rows = [game('other', '12:00', 'x', 'y'), game('fav', '12:00', 'x', BROWNS)];
+  assert.deepEqual(chronological(rows, D1_FAVS).map((r) => r.id), ['fav', 'other']);
+});
+
+test('D1: TIME still outranks both - a later favourite does not jump an earlier stranger', () => {
+  // The failure this whole ordering exists to prevent: a favourites group floating out of the clock.
+  const rows = [game('fav-late', '20:00', 'x', BROWNS), game('other-early', '12:00', 'x', 'y')];
+  assert.deepEqual(chronological(rows, D1_FAVS).map((r) => r.id), ['other-early', 'fav-late']);
+});
+
+test('D1: the term is INERT under MY TEAMS, measured rather than assumed', () => {
+  // Every row is a favourite there, so the comparator returns 0 for every pair and the order is
+  // exactly what it was before this change. Asserted by comparing the two sorts directly rather than
+  // by reasoning about it - "inert" is the assumption most likely to be wrong.
+  const mine = [
+    game('a', '13:00', 'x', BROWNS), show('pre', '13:00'),
+    game('b', '12:00', 'x', PANTHERS), game('c', '20:00', PANTHERS, 'y'),
+  ];
+  assert.deepEqual(chronological(mine, D1_FAVS).map((r) => r.id),
+                   chronological(mine).map((r) => r.id));
+});
+
+test('D1: with no ids at all the sort is byte-for-byte what it was', () => {
+  const rows = [game('g', '12:00', 'x', 'y'), show('p', '12:00'), game('h', '11:00', 'x', 'y')];
+  assert.deepEqual(chronological(rows, null).map((r) => r.id), chronological(rows).map((r) => r.id));
+  assert.deepEqual(chronological(rows, new Set()).map((r) => r.id), chronological(rows).map((r) => r.id));
+});
+
+test('D1: BOTH call sites pass favIds - rule 32', () => {
+  // Prompt 71's brief named day mode only and the week had the same defect. Two call sites, and the
+  // week's is the one that has been forgotten before.
+  // MATCHED TO END OF LINE, not with `[^)]*` - the call contains nested parens
+  // (`splitMine(rows, favIds).mine`), and a paren class stops at the first one, which counted four
+  // "call sites" where there are two.
+  const code = src('app/page.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const calls = code.match(/const scoped = chronological\(.*$/gm) || [];
+  assert.equal(calls.length, 2, `exactly two call sites, got ${calls.length}`);
+  for (const c of calls) assert.match(c, /, favIds\);$/, `${c.trim()} must pass the ids`);
+});
+
+test('D1: the comparator does not restate isProgram or the favourite test', () => {
+  const f = src('lib/favorites.js');
+  assert.match(f, /import \{ isProgram \}/);
+  // COMMENTS STRIPPED FIRST. The note above the tie-break SAYS `row.program_id != null` while
+  // explaining why it is imported rather than restated, so a doesNotMatch over the raw source
+  // matches the prose arguing the opposite - the trap prompt 73 found and prompt 74 swept for.
+  const code = f.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  // `after`/`before` FROM test/region.mjs, never a bare anchored slice - prompt 74's structural
+  // guard caught this the moment it was written, which is exactly what it is for.
+  const fn = after(code, 'export function chronological', 'the comparator');
+  assert.doesNotMatch(before(fn, '\n}', 'the end of the comparator'), /program_id\s*!=|home_team_id/,
+    'both predicates are imported, never copied - they drift the moment there are two');
+  assert.match(fn, /isProgram\(a\)/);
+  assert.match(fn, /isFavorite\(a, favIds\)/);
 });

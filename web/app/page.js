@@ -329,7 +329,9 @@ export default async function HubPage({ searchParams }) {
     // regardless", which was true of the sport ORDER and never of the order WITHIN a band: the
     // concatenation put a day's studio shows after its games there exactly as it did in day mode.
     // Joe's ruling is about when a pregame show appears, and a week is where he reads the weekend.
-    const scoped = chronological(P.isMine ? splitMine(rows, favIds).mine : rows);
+    // `favIds` IS PASSED (prompt 80 D1): time -> studio show -> favourite. Both call sites, because
+    // rule 32 - prompt 71's brief named day mode only and the week had the same defect.
+    const scoped = chronological(P.isMine ? splitMine(rows, favIds).mine : rows, favIds);
     // D4, restored and moved to the page (stage 4a): off-service games are hidden, network-TBD and
     // market-pending never are, and a favourite never is. Decided ONCE for the whole week so the
     // count line at the foot describes every day above it.
@@ -556,7 +558,7 @@ export default async function HubPage({ searchParams }) {
   // games and then its studio shows - which is exactly what Joe saw. The equal-start tie-break that
   // puts a show before its game lives inside `chronological()` for the same reason: both scopes are
   // looking at the same two rows and must not disagree about which comes first.
-  const scoped = chronological(P.isMine ? splitMine(allRows, favIds).mine : allRows);
+  const scoped = chronological(P.isMine ? splitMine(allRows, favIds).mine : allRows, favIds);
   // D4, restored and moved to the page (stage 4a). Decided ONCE here so the bands below render only
   // what is visible and the single count line at the foot describes all of them.
   const { visible: rows, hidden, summary } = splitHidden(scoped, favIds);

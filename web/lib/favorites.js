@@ -168,8 +168,29 @@ export function splitMine(rows, ids) {
  * IT LIVES HERE RATHER THAN AT THE CALL SITE so both scopes get it. MY TEAMS is chronological across
  * every sport and ALL GAMES bands by sport, but they are looking at the same two rows; a tie-break
  * applied to one would have them disagree about which comes first.
+ *
+ * ---------------------------------------------------------------------------------------------
+ * AND A FAVOURITE OUTRANKS A NON-FAVOURITE, THIRD (prompt 80 block D1, Joe 2026-09-09):
+ *
+ *   "Organize qualifying events by TIME, including pregame shows and MyTeams games. THEN when events
+ *    start at the same time, prioritize by: Pregame shows, MyTeams, Other events."
+ *
+ * So the full order is TIME -> STUDIO SHOW -> FAVOURITE -> everything else, and the two tie-breaks
+ * are strictly ranked: a studio show beats a favourite game at the same minute, which is Joe's
+ * "1) TIME 2) pre/post THEN myteams THEN other events" read literally.
+ *
+ * `favIds` IS A PARAMETER RATHER THAN A THING THIS MODULE LOOKS UP, and that is deliberate. Both
+ * call sites in app/page.js already hold it - `favoriteIds(favoritesDoc)` is computed there for the
+ * scope filter - so threading it costs nothing, while importing the document here would give this
+ * module an opinion about WHOSE favourites it is sorting. It is optional, and omitted the sort
+ * behaves exactly as it did before this change.
+ *
+ * `isFavorite` IS IMPORTED, NOT RESTATED, for the same reason `isProgram` is: it reads two id shapes
+ * off a row (`home_team_id` or `home.id`, and the away pair), and a copy of that would drift the
+ * first time a third shape appeared. The comment above `isProgram`'s use says this already; it
+ * applies twice now.
  */
-export function chronological(rows) {
+export function chronological(rows, favIds = null) {
   const at = (r) => {
     const t = Date.parse(r?.canonical_kickoff_at_utc ?? r?.start_at ?? '');
     return Number.isFinite(t) ? t : null;
@@ -181,9 +202,15 @@ export function chronological(rows) {
     if (ta === null) return 1;
     if (tb === null) return -1;
     if (ta !== tb) return ta - tb;
-    // The tie-break. `isProgram` is IMPORTED rather than restated - it is one line
-    // (`programs.js:250`, `row.program_id != null`), and one line is exactly the kind of predicate
-    // that gets copied and then drifts.
-    return (isProgram(a) ? 0 : 1) - (isProgram(b) ? 0 : 1);
+    // TIE-BREAK 1: a studio show first. `isProgram` is IMPORTED rather than restated - it is one
+    // line (`programs.js:250`, `row.program_id != null`), and one line is exactly the kind of
+    // predicate that gets copied and then drifts.
+    const pa = isProgram(a) ? 0 : 1;
+    const pb = isProgram(b) ? 0 : 1;
+    if (pa !== pb) return pa - pb;
+    // TIE-BREAK 2: then a favourite. Inert when no ids are given, and inert under MY TEAMS where
+    // every row is a favourite - measured rather than assumed, see favorites.test.mjs.
+    if (!favIds || favIds.size === 0) return 0;
+    return (isFavorite(a, favIds) ? 0 : 1) - (isFavorite(b, favIds) ? 0 : 1);
   });
 }
