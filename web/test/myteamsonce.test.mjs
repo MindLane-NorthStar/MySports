@@ -102,9 +102,16 @@ test('MY TEAMS does not band, in EITHER mode (rule 32)', () => {
   // WEEK mode - the second place that renders the same thing. It was `bands={!P.sport}`, true under
   // MY TEAMS + ALL SPORTS, so the week regrouped every day into sport bands for the same reason.
   assert.match(page, /bands=\{!P\.sport && !P\.isMine\}/);
-  // and BOTH scope the favourites list through `chronological`, because both build their rows by
-  // concatenating a games read and a programs read.
-  assert.equal((page.match(/chronological\(splitMine\(/g) || []).length, 2);
+  // and BOTH modes pass their rows through `chronological`, because both build them by concatenating
+  // a games read and a programs read.
+  //
+  // THE SHAPE CHANGED IN PROMPT 71 and the assertion follows it rather than being loosened. It used
+  // to count `chronological(splitMine(` twice - MY TEAMS only. Joe asked for pregame shows to sort
+  // at their air time in ALL GAMES too, so both call sites now wrap the whole ternary:
+  // `chronological(P.isMine ? splitMine(...) : rows)`. What is defended is unchanged - each mode
+  // sorts, and neither has a second sort of its own.
+  assert.equal((page.match(/chronological\(P\.isMine \? splitMine\(/g) || []).length, 2);
+  assert.doesNotMatch(page, /chronological\(splitMine\(/, 'no call site sorts only the mine scope');
 });
 
 test('the flat section is named by the CALLER, and there is no blanket fallback', () => {

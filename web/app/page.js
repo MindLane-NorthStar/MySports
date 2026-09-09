@@ -317,8 +317,12 @@ export default async function HubPage({ searchParams }) {
     // `[...games, ...toRows(progs, now)]` - a concatenation of two separately-ordered reads - so it
     // is not in kickoff order and never was. Week mode groups by DAY and then, under MY TEAMS,
     // renders each day FLAT, which is exactly the arrangement that shows the concatenation.
-    // ALL GAMES is untouched: it still bands, and bands regroup by sport regardless.
-    const scoped = P.isMine ? chronological(splitMine(rows, favIds).mine) : rows;
+    // ALL GAMES SORTS HERE TOO SINCE PROMPT 71 (rule 32 - the second place that renders the same
+    // thing). It said "ALL GAMES is untouched: it still bands, and bands regroup by sport
+    // regardless", which was true of the sport ORDER and never of the order WITHIN a band: the
+    // concatenation put a day's studio shows after its games there exactly as it did in day mode.
+    // Joe's ruling is about when a pregame show appears, and a week is where he reads the weekend.
+    const scoped = chronological(P.isMine ? splitMine(rows, favIds).mine : rows);
     // D4, restored and moved to the page (stage 4a): off-service games are hidden, network-TBD and
     // market-pending never are, and a favourite never is. Decided ONCE for the whole week so the
     // count line at the foot describes every day above it.
@@ -504,11 +508,20 @@ export default async function HubPage({ searchParams }) {
   // is the same three-line gap this stage closes below: R4 was honoured in the data layer's
   // intention and discarded by both the sort and the bands.
   const favIds = favoriteIds(favoritesDoc);
-  // ALL GAMES IS UNTOUCHED, deliberately: it keeps `allRows` exactly as it was. Its bands regroup
-  // by sport anyway, so sorting here would change what ships without being asked for - and an NFL
-  // band that lists its pregame show after the game it precedes is a real question, just not this
-  // prompt's. Recorded as open rather than fixed in passing.
-  const scoped = P.isMine ? chronological(splitMine(allRows, favIds).mine) : allRows;
+  // ALL GAMES SORTS TOO, AND THE OPEN ITEM ABOVE IS CLOSED (prompt 71 stage 3). This said "ALL GAMES
+  // IS UNTOUCHED, deliberately... an NFL band that lists its pregame show after the game it precedes
+  // is a real question, just not this prompt's. Recorded as open rather than fixed in passing."
+  // Prompt 60 was right to leave it. Joe asked for it on 2026-09-08 - "please have all pregame shows
+  // render in their respective sport at the time they air. In that window - if the pregame show airs
+  // the same time as a game starts, the pregame show is listed first" - so the question is answered
+  // and the comment that recorded it as open goes with the answer.
+  //
+  // THE SAME `chronological()` MY TEAMS USES, not a second sort. `allRows` is `[...games,
+  // ...programRows]`, a concatenation of two separately-ordered reads, so a sport band rendered its
+  // games and then its studio shows - which is exactly what Joe saw. The equal-start tie-break that
+  // puts a show before its game lives inside `chronological()` for the same reason: both scopes are
+  // looking at the same two rows and must not disagree about which comes first.
+  const scoped = chronological(P.isMine ? splitMine(allRows, favIds).mine : allRows);
   // D4, restored and moved to the page (stage 4a). Decided ONCE here so the bands below render only
   // what is visible and the single count line at the foot describes all of them.
   const { visible: rows, hidden, summary } = splitHidden(scoped, favIds);

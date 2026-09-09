@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { favoriteIds, isFavorite, splitFavorites } from '../lib/favorites.js';
+import { favoriteIds, isFavorite, splitFavorites, chronological } from '../lib/favorites.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const doc = JSON.parse(readFileSync(join(HERE, '..', '..', 'data', 'favorites.json'), 'utf8'));
@@ -210,4 +210,57 @@ test('R2: the line is Joe\u2019s wording, and its club count is derived', () => 
   assert.equal(scopeLine(14), 'MY TEAMS \u00b7 14 CLUBS + RACING + COMBAT SPORTS');
   assert.equal(scopeLine(1), 'MY TEAMS \u00b7 1 CLUB + RACING + COMBAT SPORTS', 'singular');
   assert.equal(scopeLine(0), 'MY TEAMS \u00b7 0 CLUBS + RACING + COMBAT SPORTS');
+});
+
+// ------------------------------------------- pregame shows sort before their game (prompt 71 s3)
+//
+// Joe, 2026-09-08: "please have all pregame shows render in their respective sport at the time they
+// air. In that window - if the pregame show airs the same time as a game starts, the pregame show is
+// listed first."
+//
+// Prompt 60 recorded this as open in app/page.js rather than fixing it in passing, and was right to;
+// Joe has now answered the question. `allRows` is `[...games, ...programRows]`, two separately
+// ordered reads concatenated, so ALL GAMES rendered a band's games and then its studio shows.
+
+test('at an equal start time a studio show sorts BEFORE the game', () => {
+  const game = { id: 'game', canonical_kickoff_at_utc: '2026-09-12T17:00:00Z' };
+  const show = { id: 'show', program_id: 'p1', start_at: '2026-09-12T17:00:00Z' };
+  // BOTH INPUT ORDERS, because a stable sort would otherwise let the database decide it - and decide
+  // it differently on different days, which is what made this look intermittent.
+  assert.deepEqual(chronological([game, show]).map((r) => r.id), ['show', 'game']);
+  assert.deepEqual(chronological([show, game]).map((r) => r.id), ['show', 'game']);
+});
+
+test('the tie-break NEVER outranks the clock', () => {
+  // A show at 4pm does not jump a game at 1pm. The tie-break applies only at an equal instant.
+  const rows = [
+    { id: 'game-1pm', canonical_kickoff_at_utc: '2026-09-12T17:00:00Z' },
+    { id: 'game-4pm', canonical_kickoff_at_utc: '2026-09-12T20:00:00Z' },
+    { id: 'show-12pm', program_id: 'p', start_at: '2026-09-12T16:00:00Z' },
+    { id: 'show-4pm', program_id: 'p', start_at: '2026-09-12T20:00:00Z' },
+  ];
+  assert.deepEqual(chronological(rows).map((r) => r.id),
+                   ['show-12pm', 'game-1pm', 'show-4pm', 'game-4pm']);
+});
+
+test('two shows at one instant keep database order - the tie-break is show-vs-game only', () => {
+  const a = { id: 'a', program_id: 'p', start_at: '2026-09-12T17:00:00Z' };
+  const b = { id: 'b', program_id: 'p', start_at: '2026-09-12T17:00:00Z' };
+  assert.deepEqual(chronological([a, b]).map((r) => r.id), ['a', 'b']);
+  assert.deepEqual(chronological([b, a]).map((r) => r.id), ['b', 'a']);
+});
+
+test('a TBD still sorts last, show or not', () => {
+  const rows = [
+    { id: 'tbd-show', program_id: 'p' },
+    { id: 'game', canonical_kickoff_at_utc: '2026-09-12T17:00:00Z' },
+  ];
+  assert.deepEqual(chronological(rows).map((r) => r.id), ['game', 'tbd-show']);
+});
+
+test('ALL GAMES goes through the same sort - not a second one', () => {
+  const page = readFileSync(new URL('../app/page.js', import.meta.url), 'utf8');
+  assert.match(page, /const scoped = chronological\(P\.isMine \? splitMine\(allRows, favIds\)\.mine : allRows\)/);
+  // and the comment recording it as an open question is gone with the question
+  assert.doesNotMatch(page, /ALL GAMES IS UNTOUCHED, deliberately/);
 });

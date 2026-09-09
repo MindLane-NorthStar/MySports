@@ -8,6 +8,8 @@
 // under plain `node --test`, where a bare JSON import is a hard error.
 
 /** The favourite team ids as one flat Set, from the {teams: {sport: [id...]}} document. */
+import { isProgram } from './programs.js';
+
 export function favoriteIds(doc) {
   const out = new Set();
   for (const ids of Object.values(doc?.teams || {})) {
@@ -155,7 +157,17 @@ export function splitMine(rows, ids) {
  * because a TBD is not "earliest", it is "unknown".
  *
  * STABLE: `Array.prototype.sort` is required to be stable, so rows sharing an instant keep the
- * order the database gave them rather than shuffling between renders.
+ * order the database gave them rather than shuffling between renders - except where the tie-break
+ * below has something to say.
+ *
+ * AT AN EQUAL START TIME A STUDIO SHOW SORTS FIRST (prompt 71 stage 3, Joe 2026-09-08): "if the
+ * pregame show airs the same time as a game starts, the pregame show is listed first." A pregame
+ * show that begins on the hour with the game it precedes is the ordinary case, not an edge one, and
+ * database order decides it otherwise - which means it decides it differently on different days.
+ *
+ * IT LIVES HERE RATHER THAN AT THE CALL SITE so both scopes get it. MY TEAMS is chronological across
+ * every sport and ALL GAMES bands by sport, but they are looking at the same two rows; a tie-break
+ * applied to one would have them disagree about which comes first.
  */
 export function chronological(rows) {
   const at = (r) => {
@@ -168,6 +180,10 @@ export function chronological(rows) {
     if (ta === null && tb === null) return 0;
     if (ta === null) return 1;
     if (tb === null) return -1;
-    return ta - tb;
+    if (ta !== tb) return ta - tb;
+    // The tie-break. `isProgram` is IMPORTED rather than restated - it is one line
+    // (`programs.js:250`, `row.program_id != null`), and one line is exactly the kind of predicate
+    // that gets copied and then drifts.
+    return (isProgram(a) ? 0 : 1) - (isProgram(b) ? 0 : 1);
   });
 }
