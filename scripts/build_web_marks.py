@@ -348,6 +348,19 @@ RECIPES: dict[str, tuple[str, Callable[[Image.Image], Image.Image]]] = {
     # mid-blue backing card - which is what v1.3e forbids. Key the plate off first, then the
     # normal chain sees only the red logo and white wordmark.
     "guardians-tv":     ("png", lambda im: dark_ready(key_plate(im))),
+    # DIRECTV (prompt 72). IDENTITY, like `abc` and `paramount-plus`, and the reason is that this is
+    # THE BRAND'S OWN DARK-BACKGROUND LOCKUP - Joe supplied it after ruling "black text goes white,
+    # the blue streak goes a little lighter", which is precisely what the official dark lockup
+    # already is. Deriving it would be re-deriving a transformation the brand has already made, and
+    # measurably worse on the element that matters: on #101214 the official blue reads 4.19:1 and a
+    # `whiten_dark` derivation of the LIGHT lockup reads 3.64:1. Both clear the 3.0 floor; one does
+    # it with the brand's own values.
+    #
+    # NO `key_plate` HERE, and that is worth saying because `guardians-tv` above is the same SHAPE of
+    # problem. The art supplied to this repo had already had its black plate keyed and been trimmed
+    # (902x304 RGBA, ~70% clear). If a future re-supply arrives as an opaque plate, this becomes
+    # `("png", lambda im: key_plate(im))` and nothing else changes.
+    "directv":          ("png", lambda im: im),
     "mlb-network":      ("png", dark_ready),                          # brand composite
 
     # ---- added 2026-09-06, prompt 55 stage 2. All four supplied by Joe. -----------------------

@@ -24,7 +24,11 @@ const manifest = JSON.parse(readFileSync(join(HERE, '..', 'public/marks/manifest
 
 test('the manifest carries published geometry for every mark, and h is PUBLISH_H', () => {
   // 28 -> 32: prompt 55 stage 2 added nfl-network, tbs, trutv and accnx.
-  assert.equal(manifest.length, 32);
+  // 32 -> 33: prompt 72 added `directv`, the carrier's own dark lockup, so the DIRECTV link on the
+  // detail card wears a mark instead of the word. The count is stated rather than derived on
+  // purpose - a mark appearing or vanishing unnoticed is exactly what this file exists to catch -
+  // so bump it deliberately when the suite grows, and never to make a run go green.
+  assert.equal(manifest.length, 33);
   for (const m of manifest) {
     assert.ok(Number.isInteger(m.w) && m.w > 0, `${m.slug} has a width`);
     // build_web_marks.py PUBLISH_H = 128. Anything else means the published suite is not what the
@@ -45,8 +49,10 @@ test('31 of 32 marks land on the 600px^2 target; the one exception is the widest
     const r = railMark(m.slug);
     if (Math.abs(r.height * r.width - RAIL_TARGET_AREA) > 1) off.push(m.slug);
   }
+  // THE PROPERTY IS THAT ESPN2 IS THE ONLY EXCEPTION, and that is unchanged: prompt 72's `directv`
+  // came onto the 600px^2 target with no code change, the same way HBO Max's stacked lockup did.
   assert.deepEqual(off.sort(), ['espn2']);
-  assert.equal(manifest.length - off.length, 31);
+  assert.equal(manifest.length - off.length, 32);
 });
 
 test('NO mark is drawn wider than the rail content box - the CSS clamp must not bind', () => {

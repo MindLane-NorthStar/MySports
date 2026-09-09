@@ -50,7 +50,8 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-08, prompt 71 — after the last gate run of the run, not during it:**
+**Measured 2026-09-09, prompt 72 — after the last gate run of the run, not during it. Unchanged from
+prompt 71; both counts re-measured rather than carried forward.**
 
 | gate | run from | floor |
 |---|---|---|
