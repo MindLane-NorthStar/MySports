@@ -154,18 +154,22 @@ async function ArchivedGrid({ sport, day }) {
  * an overlay that actually produced rows claims a live time. Silence would be worse than either -
  * a page that shows a score with no provenance invites the reader to assume it is current.
  */
-function DataAsOf({ day, today, overlay, week = false }) {
+function DataAsOf({ day, today, overlay, week = false, weekHasToday = false }) {
   const live = overlay?.fetchedAt && overlay.sports?.length;
   const joined = Object.values(overlay?.stats || {}).reduce((n, s) => n + (s.joined || 0), 0);
   let tail;
-  if (week) {
-    // WEEK MODE HAS NO OVERLAY, AND DELIBERATELY SO (prompt 53 stage 4b). `overlayForDay` is a
-    // per-day fetch and a week is up to ten days, so running it here would be up to ten live calls
-    // on one render. The line still has to appear: a week containing today renders today's games
-    // with database scores, and silence in front of a score invites the reader to assume it is
-    // current - which is the argument this component's own docstring makes.
-    tail = 'no live check — a week view does not check live scores, so today’s are the database’s';
-  } else if (day !== today) {
+  if (week && !weekHasToday) {
+    // A WEEK WITHOUT TODAY CHECKS NOTHING, and costs nothing to check: `sportsWorthFetching` returns
+    // [] for any day that is not today, so no upstream call is made at all.
+    //
+    // PROMPT 53 STAGE 4b IS REVERSED HERE (prompt 77, Joe 2026-09-09) and this line changed with the
+    // behaviour, in the same commit, because a page that SAYS it is not checking while it is checking
+    // is worse than one that never checked. The old text read "a week view does not check live
+    // scores, so today's are the database's" and its reasoning - "up to ten live calls on one
+    // render" - described an implementation nobody had to write: only today's games can be live, so
+    // a week needs exactly one overlay. See the note at the call site.
+    tail = 'no live check — this week does not contain today';
+  } else if (!week && day !== today) {
     tail = 'no live check — this is not today';
   } else if (!overlay?.sports?.length) {
     tail = 'no live check needed — nothing on this day is still to be played';
@@ -275,6 +279,9 @@ export default async function HubPage({ searchParams }) {
     let standingsRows = [];
     let rankingsRows = [];
     let days = [];
+    // Declared beside the others so the ERROR path still has one: a week that failed to load renders
+    // the footnote too, and it must say "no live check" rather than read a field off undefined.
+    let weekOverlay = { map: new Map(), fetchedAt: null, sports: [], stats: {} };
     if (!error && wk) {
       try {
         // v1.7: programs are a SECOND read, not a join - they have no `games` row at all, so one
@@ -327,7 +334,30 @@ export default async function HubPage({ searchParams }) {
     // market-pending never are, and a favourite never is. Decided ONCE for the whole week so the
     // count line at the foot describes every day above it.
     const { visible, hidden, summary } = splitHidden(scoped, favIds);
-    const grouped = byDay(visible, days);
+    let grouped = byDay(visible, days);
+
+    /**
+     * THE WEEK GETS A LIVE OVERLAY, AND THIS REVERSES PROMPT 53 STAGE 4b (prompt 77, Joe 2026-09-09).
+     *
+     * WHAT THE OLD REASONING SAID, and why it described work nobody has to do: "`overlayForDay` is a
+     * per-day fetch and a week is up to ten days, so running it here would be up to ten live calls on
+     * one render." Only TODAY's games can be live - every earlier day is final and every later one has
+     * not started - so a week needs exactly ONE overlay, for today, which is the same call day mode
+     * already makes. Read rather than assumed: `sportsWorthFetching` returns [] unless
+     * `day === today` (livescores.js:202) and `overlayForDay` makes no upstream call at all when that
+     * list is empty, so a week NOT containing today costs nothing whatever.
+     *
+     * IT IS HANDED TODAY'S GROUP, NOT THE WHOLE WEEK, and that is the one thing the old note was
+     * right to worry about. `sportsWorthFetching` walks the games it is given and collects every
+     * sport with a non-final row - so passing all ten days would fetch NHL because a scheduled game
+     * sits on Friday, even with no NHL game on today. Passing `grouped[today]` asks for exactly the
+     * sports playing today, which is byte-for-byte the call day mode makes.
+     */
+    const weekHasToday = Boolean(days.includes(today) && grouped[today]?.length);
+    if (weekHasToday) weekOverlay = await overlayForDay(today, grouped[today], { today });
+    if (weekOverlay.map.size) {
+      grouped = { ...grouped, [today]: applyOverlay(grouped[today], weekOverlay.map) };
+    }
 
     // THE WEEK'S ARCHIVED PC GRIDS, RESOLVED ONCE, UP FRONT (prompt 54 stage 2).
     //
@@ -410,7 +440,11 @@ export default async function HubPage({ searchParams }) {
                       asks for, exactly as day mode did. Working rule 32: a ruling is not
                       implemented until every place that renders the same thing obeys it, and this
                       is the second of the two places. */}
+                  {/* `live` IS PASSED, NEVER GUESSED (prompt 77) - week mode mounts one Listing per
+                      day, so a component that decided for itself would put up to ten pollers on one
+                      page. Exactly one of these is today's, and only that one may poll. */}
                   <Listing games={grouped[d]} standingsRows={standingsRows} rankingsRows={rankingsRows}
+                           live={d === today}
                            day={d} heading={shortDay(d)} headingClass="weekday-head"
                            bands={!P.sport && !P.isMine} sport={P.sport} floatFavorites={!P.isMine}
                            flatLabel={P.isMine ? 'My teams' : null}
@@ -451,7 +485,8 @@ export default async function HubPage({ searchParams }) {
                 does not render, so the card list it used to open cannot reach a grid view. */}
             <PageCount summary={summary} hidden={hidden} standingsRows={standingsRows}
                        rankingsRows={rankingsRows} grid={P.isGrid} />
-            <DataAsOf week />
+            <DataAsOf day={today} today={today} overlay={weekOverlay} week
+                      weekHasToday={weekHasToday} />
           </>
         ) : null}
       </main>
@@ -655,9 +690,14 @@ export default async function HubPage({ searchParams }) {
               MEASURED, 2026-09-06 under MY TEAMS: College Football 7:30 PM printed above MLB
               1:40 PM with no first band on the page at all - so the banding is a SECOND,
               independent cause of the same complaint. Both are gone in this commit. */}
+          {/* `live` IS PASSED, NEVER GUESSED (prompt 77), and it is the same decision the overlay
+              above already made: only today has anything that can go live. A component that read
+              the clock itself would be a second answer to a question the server has settled, and a
+              clock on the client is the hydration trap prompt 42 fell into twice. */}
           <Listing games={rows} standingsRows={standingsRows} rankingsRows={rankingsRows}
                    day={day} sport={P.sport} grid={P.isGrid} bands={!P.isGrid && !P.isMine}
                    gridOnly={P.isGrid} flatLabel={P.isMine ? 'My teams' : null}
+                   live={day === today}
                    nowMinute={nowMinute} floatFavorites={!P.isMine} />
         </div>
       </div>

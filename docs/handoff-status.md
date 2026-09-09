@@ -50,7 +50,19 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-09, prompt 74 — after the last gate run of the run, not during it.** `test:unit`
+**Measured 2026-09-09, prompt 77 — after the last gate run of the run, not during it.** `test:unit`
+is 518 → **537**: prompt 77 added `web/test/livepoll.test.mjs` (19). One existing test was CORRECTED
+rather than added to — `myteamsonce.test.mjs` pinned `flatLabel = null }) {`, which also required
+`flatLabel` to be the LAST parameter of `Listing`, so it failed the moment a prop was added beside
+it on a change that had nothing to do with what it tests. It now asserts the DEFAULT, which is the
+property it was written for. The other four gates are unchanged.
+
+**PROMPTS 75 AND 76 ARE NOT IN THIS REPOSITORY.** Prompt 77's brief said they would have moved these
+floors; `git log` at the time of the run showed HEAD at `392d08b`, prompt 74's commit, with
+`origin/main == HEAD` and a clean tree. The floors below were prompt 74's and were read from THIS
+file, not carried in from the brief — which is the whole reason rule 10 puts them here.
+
+**The 2026-09-09 prompt-74 measurement, for the record:** `test:unit`
 is 494 → **518**, and every one of the 24 is accounted for: prompt 73 added
 `web/test/bannerpin.test.mjs`, prompt 74 moved three of its clearance tests into
 `autoscroll.test.mjs` and added five more there, and added `web/test/region.test.mjs` (9) for the
@@ -61,7 +73,7 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 | gate | run from | floor |
 |---|---|---|
 | `pytest` | repo root | **514 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **518** |
+| `npm run test:unit` | `web/` | **537** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **91/91** |
 | `npm run geometry` | `web/` | all hard stops |
@@ -166,6 +178,61 @@ instead of 47px, and the tail of the PREVIOUS day's card no longer letterboxes b
 exactly −8 from prompt 67's own figures, which was prompt 68's gap increase and nothing else; two
 prompts have moved them since. **AT THE TOP OF THE PAGE THE GAP CANNOT APPLY** — day mode's target
 sits ~100px down with the page already at 0, so there is nowhere to scroll up to.
+
+### THE SCORE UPDATES WITHOUT RE-RENDERING THE PAGE (prompt 77 stage 1, Joe 2026-09-09)
+
+**`router.refresh()` IS RETIRED.** `Listing` re-rendered the WHOLE page on the server every
+`REFRESH_SECONDS` to update three fields; it now fetches `GET /api/live?day=…` and patches the cards
+already on screen. **60 seconds, because that IS `REVALIDATE_SECONDS`** in `lib/livescores.js` — the
+staleness was entirely the client's, since the server's answer was never more than a minute old while
+the phone waited fifteen. `livepoll.test.mjs` asserts the two numbers are EQUAL rather than asserting
+each is 60, so they cannot drift apart with both tests passing. `REFRESH_SECONDS` is deleted, not
+left exported with no reader.
+
+**THE HAZARD, MEASURED (rule 34) — `scripts/probes/live-poll.mjs`, tracked.** A poll that remounted
+`Listing` would re-arm prompt 73's banner pin and re-fire prompt 71's landing every sixty seconds.
+Measured over a full cycle at 390×844 with a fake clock and a stubbed live score:
+
+| | |
+|---|---|
+| cards that went live | **0 → 3** — the patch landed, which is what makes the rest mean anything |
+| scrollY | **201 → 201**, and **one distinct value across 243 sampled frames** |
+| `data-pin` | unchanged, one distinct value across the same frames |
+| `data-hdr`, URL, card count | all unchanged — no navigation, no churn |
+
+**THE FIRST TWO RUNS OF THAT PROBE PASSED EVERY "DID NOT MOVE" CHECK AND PROVED NOTHING**, because
+the fake clock sat outside every visible game's window and the poll never armed. Its own
+*"the patch LANDED"* assertion is what caught it, which is why that assertion is first and why the
+probe now SEARCHES the day's kickoffs for a time that arms the poll rather than computing one — the
+visible slate is decided by the off-service filter in the app and cannot be known from the database.
+
+**Also new:** the poll stops while the app is backgrounded, and returns fetch once on becoming
+visible rather than waiting out the interval.
+
+### THE WEEK CHECKS LIVE SCORES AGAIN — prompt 53 stage 4b REVERSED (prompt 77, Joe 2026-09-09)
+
+Its recorded reason — *"up to ten live calls on one render"* — described an implementation nobody had
+to write: only today's games can be live, so a week needs exactly ONE overlay. **Confirmed by reading
+before it was relied on**, and the reading changed one detail: `sportsWorthFetching` already returns
+`[]` for any day that is not today, so a week was never going to cost ten calls — but it collects
+every sport with a NON-FINAL row and does **not** skip `scheduled`, so handing it the whole week would
+fetch NHL for a scheduled Friday game with no NHL on today. It is handed `grouped[today]`, which makes
+the call byte-for-byte day mode's.
+
+**The footnote changed in the same commit**, because a page that says it is not checking while it is
+checking is worse than one that never checked. Measured on the dev server: a week containing today
+prints *"live scores checked 8:43 AM, 1 game updated"*, identical to day mode; a week without today
+prints *"no live check — this week does not contain today"*.
+
+**Register §31.** The grid is out of scope and stays so.
+
+### THE LIVE OVERLAY JOINS 1 OF 16 TODAY, AND THAT IS NOT PROMPT 77'S DOING
+
+Worth a look by somebody. `/api/live?day=2026-09-09` returns `mlb: {returned: 15, joined: 0}` — the
+MLB source hands back fifteen rows and none of their ids match ours — while NFL joins 1 of 16. **Day
+mode reports exactly the same figure**, so this predates the poll and is not a regression from it;
+`overlay.stats` exists precisely so a drifting id scheme shows up as a number rather than as cards
+that quietly never go live, and it is showing one now.
 
 ### THE BANNER PINS UNTIL THE READER SCROLLS (prompts 73 and 74, Joe's ruling 2026-09-09)
 

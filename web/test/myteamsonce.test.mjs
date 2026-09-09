@@ -117,7 +117,12 @@ test('MY TEAMS does not band, in EITHER mode (rule 32)', () => {
 test('the flat section is named by the CALLER, and there is no blanket fallback', () => {
   const listing = code('components/Listing.js');
   const band = code('components/SportBand.js');
-  assert.match(listing, /flatLabel = null \}\) \{/, 'the prop defaults to null, so no caller changes');
+  // THE PROPERTY IS THE DEFAULT, NOT THE POSITION (corrected in prompt 77). This read
+  // `/flatLabel = null \}\) \{/`, which also required `flatLabel` to be the LAST parameter - so it
+  // failed the moment prompt 77 added `live = false` beside it, on a change that has nothing to do
+  // with what this test is about. What must hold is that the prop defaults to null so no existing
+  // caller has to change; where it sits in the list is not a property of anything.
+  assert.match(listing, /flatLabel = null[,\s}]/, 'the prop defaults to null, so no caller changes');
   assert.match(listing, /<SportBand sport=\{sport\} label=\{flatLabel\}/);
   assert.match(code('app/page.js'), /flatLabel=\{P\.isMine \? 'My teams' : null\}/);
   // NO FALLBACK IN THE BAND. One was written and taken back out: the FIRST BAND reaches this same

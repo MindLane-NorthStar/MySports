@@ -3,27 +3,31 @@
 // Client shell for a page's games: the listings cards, the mobile grid, and the one detail panel they
 // share. The pages themselves stay Server Components - they fetch, this renders and handles taps.
 //
-// M11's near-live refresh lives here too: while any game on the page is inside its window, the route
-// is revalidated every REFRESH_SECONDS. A page with nothing in flight does not poll at all.
+// M11's near-live refresh lives here too: while any game on the page is inside its window, the LIVE
+// OVERLAY is re-fetched every LIVE_POLL_SECONDS and patched into the cards already on screen. A page
+// with nothing in flight does not poll at all.
+//
+// IT USED TO CALL `router.refresh()` (prompt 77 replaced it, Joe's ruling 2026-09-09). That
+// re-rendered the WHOLE page on the server - every query, the standings, the rankings, the programs,
+// the header, the banner - to update three fields. It was also every FIFTEEN minutes against a
+// server cache that expires in sixty seconds, so the staleness Joe saw was entirely the client's.
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import SportBand from './SportBand.js';
 import MobileGrid from './MobileGrid.js';
 import GameDetail from './GameDetail.js';
 import { indexStandings, indexRankings } from '../lib/standings.js';
-import { REFRESH_SECONDS, SPORTS, SPORT_LABEL, sportMarkUrl } from '../lib/config.js';
+import { SPORTS, SPORT_LABEL, sportMarkUrl } from '../lib/config.js';
 import { offServiceSummary } from '../lib/offservice.js';
+import { applyOverlay } from '../lib/livescores.js';
+import {
+  LIVE_POLL_SECONDS, anyInFlight, overlayMapFromRows, shouldFetchLive,
+} from '../lib/livepoll.js';
 
-function anyInFlight(games) {
-  const now = Date.now();
-  return (games || []).some((g) => {
-    if (g.result_status === 'in_progress') return true;
-    if (g.result_status === 'final' || !g.canonical_kickoff_at_utc) return false;
-    const t = new Date(g.canonical_kickoff_at_utc).getTime();
-    return Number.isFinite(t) && now >= t - 15 * 60_000 && now <= t + 4 * 60 * 60_000;
-  });
-}
+/* `anyInFlight` MOVED TO lib/livepoll.js (prompt 77), unchanged including its 15-minutes-before to
+   4-hours-after bracket. The gate was never what this prompt was about - a quiet page must make no
+   request at all, and that was already right. What moved is where it can be tested from: this file
+   imports `next/navigation`, so nothing defined beside the effect is reachable under `node --test`. */
 
 /**
  * `floatFavorites` - WHY MY TEAMS TURNS IT OFF (prompt 53 stage 6).
@@ -43,11 +47,29 @@ function anyInFlight(games) {
  * for a reason invisible to the reader. Under MY TEAMS the PAGE is the label, so the band-level one
  * is noise. Under ALL GAMES it is exactly the marker it was built to be and is unchanged.
  */
-export default function Listing({ games, standingsRows, rankingsRows, day, sport, generatedAt,
-                                  showDay = false, grid = false, bands = false, heading = null,
-                                  headingClass, nowMinute = null, gridOnly = false,
-                                  floatFavorites = true, flatLabel = null }) {
+export default function Listing({ games: serverGames, standingsRows, rankingsRows, day, sport,
+                                  generatedAt, showDay = false, grid = false, bands = false,
+                                  heading = null, headingClass, nowMinute = null, gridOnly = false,
+                                  floatFavorites = true, flatLabel = null, live = false }) {
   const [open, setOpen] = useState(null);
+
+  /**
+   * THE LIVE OVERLAY, PATCHED IN ON THE CLIENT (prompt 77 stage 1).
+   *
+   * THE PROP IS SHADOWED DELIBERATELY, and it is the whole reason this change is small. The server's
+   * list arrives as `serverGames`; everything below this line reads `games`, which is that list with
+   * the newest overlay merged over it. So the eight downstream readers - the band grouping, the
+   * off-service filter, the grid's own list, `showGrid`, the two <SportBand> call sites - are patched
+   * BY CONSTRUCTION rather than by eight renames that a ninth reader could later be added beside.
+   *
+   * THE SERVER STAYS AUTHORITATIVE. `applyOverlay` is livescores.js's own function, not a second copy
+   * of the merge, and it only ever replaces `result_status`, the two scores and the clock/period -
+   * every other field on the card is the database's. A poll that returns nothing leaves the cards
+   * exactly as the server rendered them.
+   */
+  const [liveRows, setLiveRows] = useState(null);
+  const liveMap = useMemo(() => overlayMapFromRows(liveRows), [liveRows]);
+  const games = useMemo(() => applyOverlay(serverGames, liveMap), [serverGames, liveMap]);
 
   /**
    * Close the detail panel AND drop the focus the tap left on the card.
@@ -66,17 +88,62 @@ export default function Listing({ games, standingsRows, rankingsRows, day, sport
     if (el && el instanceof HTMLElement && el.classList.contains('mcard')) el.blur();
     setOpen(null);
   }, []);
-  const router = useRouter();
   const standings = useMemo(() => indexStandings(standingsRows), [standingsRows]);
   // C3: college football's line 2 is a POLL rank, so the card needs the polls as well as the table.
   // Empty for every page with no CFB game on it, which is most of them.
   const rankings = useMemo(() => indexRankings(rankingsRows), [rankingsRows]);
 
+  /**
+   * THE POLL. It fetches the live overlay and patches state; it NEVER navigates and never re-renders
+   * the page on the server.
+   *
+   * WHY THAT DISTINCTION IS LOAD-BEARING, and it is the hazard this stage had to clear. Prompt 73
+   * pins the banner on mount and on navigation, and prompt 71 lands the page on today when the path
+   * or query changes. Both live in `AutoScroll`, which keys its effect on `${pathname}?${params}`.
+   * A `router.refresh()` every sixty seconds would be a fresh server render under a header that
+   * re-pins and a page that re-scrolls - unusable. Setting client state here changes neither the
+   * pathname nor the query, so neither effect re-runs. MEASURED, not reasoned about: see
+   * test/livepoll.test.mjs and the prompt-77 report.
+   *
+   * ONLY TODAY'S LISTING POLLS. `live` is passed from the server (`day === today`), never guessed
+   * here - week mode mounts one Listing PER DAY, so a guess would put up to ten pollers on one page.
+   *
+   * THE GATE IS UNCHANGED: nothing in flight, no interval at all. What is new is `visibilitychange`
+   * - a backgrounded PWA asking every minute is pure waste, and iOS keeps the document alive across
+   * a backgrounding, so without it a phone in a pocket polls all day. Returning to the app fetches
+   * once immediately rather than waiting out the remainder of the interval.
+   */
   useEffect(() => {
-    if (!anyInFlight(games)) return undefined;
-    const id = setInterval(() => router.refresh(), REFRESH_SECONDS * 1000);
-    return () => clearInterval(id);
-  }, [games, router]);
+    if (!live || !anyInFlight(serverGames)) return undefined;
+    let stopped = false;
+    const visible = () => typeof document === 'undefined' || document.visibilityState === 'visible';
+
+    const tick = async () => {
+      if (stopped || !shouldFetchLive({ live, visible: visible(), games: serverGames })) return;
+      try {
+        const res = await fetch(`/api/live?day=${encodeURIComponent(day)}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        // FAIL OPEN, the same contract livescores.js states for itself: a bad answer leaves the
+        // cards showing what the server rendered rather than blanking them.
+        if (!stopped && Array.isArray(data?.rows)) setLiveRows(data.rows);
+      } catch {
+        /* a failed poll is not an error the reader should ever see */
+      }
+    };
+
+    const id = setInterval(tick, LIVE_POLL_SECONDS * 1000);
+    const onVisible = () => { if (visible()) tick(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      stopped = true;
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+    // `serverGames` and NOT `games`: the merged list changes on every successful poll, and depending
+    // on it would tear the interval down and rebuild it each time - a poll that re-arms itself is a
+    // poll whose period is the network's, not the one Joe chose.
+  }, [live, day, serverGames]);
 
   // THE PAGE-LEVEL YOUR TEAMS SECTION IS RETIRED (prompt 51 stage 4a, R4).
   //

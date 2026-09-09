@@ -2786,3 +2786,66 @@ worse than one that stops**, because the answer still looks like a measurement a
 
 **THE ORIGINALS WERE DELETED, not left behind.** Two copies of a measurement tool drift, and the
 untracked one drifts invisibly, which is the whole defect. `web/qa/tools/` went 83 → 81.
+
+---
+
+## 31. THE SCORE POLLS ITSELF, AND THE WEEK CHECKS LIVE AGAIN — 2026-09-09, prompt 77
+
+**§31a — `router.refresh()` IS RETIRED. Joe's ruling, 2026-09-09.**
+
+`components/Listing.js` refreshed the ROUTE every `REFRESH_SECONDS` while anything was in flight — a
+full server re-render, every query, the standings, the rankings, the programs, the header and the
+banner, to update three fields on a handful of cards. It is now a client fetch of the live overlay
+alone (`GET /api/live?day=…`), patched into the cards already on screen.
+
+**THE STALENESS WAS ENTIRELY THE CLIENT'S, and that is what settled the interval.**
+`lib/livescores.js` caches every upstream fetch for 60 seconds, so the server's answer was never more
+than a minute old while the phone waited fifteen. **60 seconds, because it IS the cache**: every
+fetch crosses a cache boundary and returns genuinely new data, and none is wasted. Going below it
+buys nothing without shortening `REVALIDATE_SECONDS` too, which means more calls out to ESPN, the NHL
+and MLB — and livescores.js records one of those 403ing an honest bot on 2026-09-03. The two numbers
+are a pair; `web/test/livepoll.test.mjs` asserts they are EQUAL rather than asserting each is 60,
+because two separate assertions would let them drift apart while both passed.
+
+**THE GATE IS UNCHANGED**: nothing in flight, no interval at all. What is new is that a backgrounded
+app stops polling — iOS keeps the document alive across a backgrounding, so without it a phone in a
+pocket polls all day.
+
+**THE HAZARD, AND IT IS THE REASON THIS NEEDED MEASURING RATHER THAN REASONING (rule 34).** Prompt 73
+pins the banner on mount and on navigation; prompt 71 lands the page on today when the path or query
+changes. Both live in `AutoScroll`, keyed on `${pathname}?${params}`. A `router.refresh()` every sixty
+seconds under those two is a banner that re-pins and a page that re-scrolls every minute — unusable.
+Setting client state changes neither the pathname nor the query, so neither effect re-runs.
+**Measured over a full cycle with a fake clock and a stubbed live score**: three cards went live while
+scrollY held at 201 across 243 sampled frames, `data-pin` never changed, no navigation, no card
+churn. `web/scripts/probes/live-poll.mjs` is that measurement, tracked.
+
+**THE PROP IS SHADOWED, and it is why the change is small.** `Listing` takes `games: serverGames` and
+recomputes `games` as `applyOverlay(serverGames, liveMap)`, so its eight downstream readers are
+patched by construction rather than by eight renames a ninth reader could later be added beside.
+
+**§31b — PROMPT 53 STAGE 4b IS REVERSED: the WEEK checks live scores.** Joe's ruling, 2026-09-09,
+after asking whether week mode would slow the app.
+
+**The recorded reason for switching it off described an implementation nobody had to write.**
+`app/page.js` said *"`overlayForDay` is a per-day fetch and a week is up to ten days, so running it
+here would be up to ten live calls on one render."* But only TODAY's games can be live — every
+earlier day is final and every later one has not started — so a week needs exactly ONE overlay, for
+today, which is the same call day mode already makes.
+
+**CONFIRMED BY READING BEFORE IT WAS RELIED ON**, which the brief asked for and which changed one
+detail: `sportsWorthFetching` returns `[]` unless `day === today` (`livescores.js:202`) and
+`overlayForDay` makes no upstream call when that list is empty — so a week without today was never
+going to cost ten calls. But it collects every sport with a NON-FINAL row from the games it is
+handed, and it does **not** skip `scheduled` — so handing it the whole week would fetch NHL because a
+scheduled game sits on Friday, with no NHL game on today at all. It is therefore handed
+`grouped[today]`, not `rows`, which makes the call byte-for-byte day mode's.
+
+**THE FOOTNOTE CHANGED IN THE SAME COMMIT.** It read *"no live check — a week view does not check
+live scores, so today's are the database's"*, and **a page that says it is not checking while it is
+checking is worse than one that never checked.** A week containing today now prints the same
+"live scores checked HH:MM, N games updated" day mode does; a week without today prints
+*"no live check — this week does not contain today"*.
+
+**THE GRID IS OUT OF SCOPE and stays so** — it displays no score today, and adding one is a different
+feature.

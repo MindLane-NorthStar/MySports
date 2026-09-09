@@ -74,6 +74,16 @@
   gesture is a behaviour over time, and the paragraph above already says what a static mock can do
   about one of those: nothing.
 
+  PROMPT 77 MADE THE SCORE UPDATE ITSELF, AND THIS FILE NEEDS NOTHING - but the reason is narrower
+  than "it shows no live score", so it is written down rather than waved through (rule 23). IT DOES
+  SHOW ONE: `fmtState` below renders `<span class="st live">` for an `in_progress` fixture row, and
+  the score line at the top of that function prints a score for `final` OR `in_progress`. What this
+  file has no version of is the score CHANGING - no interval, no fetch, no poll, nothing that
+  happens over time, which is the same limit the paragraph above states for the scroll behaviours.
+  Prompt 77 changed only where the new numbers come from and how often; the CARD a live game renders
+  is the one drawn below, unchanged, because `applyOverlay` sets exactly the `result_status`,
+  `home_score` and `away_score` this mock already feeds it.
+
   PROMPT 74 CHANGED WHERE THE LANDING STOPS AND THIS FILE STILL NEEDS NOTHING (rule 23, checked
   again rather than carried forward). `stackBottom()` was counting the picker's 31.4px in a state
   where the picker does not stick, so today's block landed 171px down instead of 140. That is a

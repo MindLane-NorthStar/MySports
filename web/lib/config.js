@@ -255,8 +255,17 @@ export function markUrl(slug) {
   return slug ? withAssetVersion(`/marks/${String(slug).toLowerCase()}.png`) : null;
 }
 
-/** Poll interval while games are in flight (addendum M11: near-live 15-minute refresh). */
-export const REFRESH_SECONDS = 900;
+/* `REFRESH_SECONDS = 900` LIVED HERE AND IS GONE (prompt 77, Joe's ruling 2026-09-09).
+ *
+ * It was addendum M11's near-live 15-minute refresh, and its one reader was `components/Listing.js`,
+ * which spent it on `router.refresh()` - a whole server re-render to update three fields. The poll is
+ * now a client fetch of the live overlay alone, and its interval is `LIVE_POLL_SECONDS` in
+ * lib/livepoll.js, deliberately beside the reasoning that fixes it at 60s: that is exactly
+ * `REVALIDATE_SECONDS` in lib/livescores.js, so every fetch crosses a cache boundary and none is
+ * wasted. The two numbers are a pair and the comment that says so belongs next to them.
+ *
+ * DELETED RATHER THAN LEFT AT 900 WITH NO READER. An exported constant nothing imports is a trapdoor
+ * for a future edit to fall through - the same ruling lib/headerstate.js records for `resetHeader()`. */
 
 /** Where a viewer can actually watch a service. Curated; anything unlisted falls back to DirecTV Stream. */
 export const DIRECTV_STREAM = 'https://stream.directv.com';
