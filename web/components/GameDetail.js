@@ -11,7 +11,7 @@
 
 import { useEffect } from 'react';
 import { etTime, longDay, resultLabel, hasScore } from '../lib/format.js';
-import { teamLogoDarkUrl, watchUrl, DIRECTV_STREAM } from '../lib/config.js';
+import { teamLogoDarkUrl, watchUrl, mlbAppUrl, DIRECTV_STREAM } from '../lib/config.js';
 import { markStyle, hasMark } from '../lib/marks.js';
 import { standingLine, standingFor } from '../lib/standings.js';
 import { cardName } from './MatchupCard.js';
@@ -305,10 +305,41 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
         <div className="dsec">
           {accessible.length ? (
             <div className="dlinks dlinks-watch">
+              {/* THE MLB.TV LINK CARRIES A PER-GAME ADDRESS (prompt 81 block F, Joe's tap test
+                  2026-09-09). `mlb.com/tv/g<gamePk>` is claimed in MLB's apple-app-site-association
+                  and Joe confirmed on the device that iOS hands it to the MLB app; the ordinary
+                  `watchUrl()` destination is a web page. `WatchLink` already takes an `href` that
+                  overrides `watchUrl(service)` - it is how the DIRECTV link below is built - so this
+                  is one prop rather than a new component.
+
+                  ONLY `guardians-tv`, and that is an enumeration rather than an assumption (rule 32).
+                  Searched the WATCH map for every value on an mlb.com host: exactly two,
+                  `mlb-network` and this one.
+
+                  WHY `mlb-network` IS EXCLUDED, and the ORDER of these two reasons is deliberate.
+                  THE ONE THAT CARRIES THE RULING: MLB Network is a LINEAR CABLE CHANNEL, not the
+                  per-game MLB.TV product - a deep link to one game is meaningless for a channel that
+                  runs a schedule, whatever any manifest says. That reason depends on nothing outside
+                  this repo and cannot expire.
+                  THE CORROBORATING ONE, AND IT IS A DATED SNAPSHOT: as harvested on 2026-09-07,
+                  `/network` was not among the paths MLB's apple-app-site-association claimed
+                  (`/magiclink`, `/tv/g*`, `/news/*`, `/dailywalkoff`, `/sponsorship/…`,
+                  `/live-stream-games/promotions/*`). MLB can rewrite that file without telling
+                  anyone, so it is evidence rather than the reason - if it ever claims `/network`,
+                  the ruling above still holds and nothing here needs revisiting.
+
+                  If a second MLB-app service ever appears it takes the same treatment, and the
+                  enumeration test fails until it does - mutation-checked by adding a third mlb.com
+                  entry to the map.
+
+                  `mlbAppUrl` RETURNS NULL FOR ANYTHING ELSE, and `href={null}` falls through to
+                  `watchUrl(service)` inside WatchLink - so a Guardians row on a non-MLB id, or any
+                  other service, is byte-for-byte what it was. */}
               {accessible.map((b, i) => (
                 <WatchLink key={`${b.service_id}-${b.feed_side}-${b.delivery_surface}`}
                            service={b.service_id}
                            name={b.network?.canonical_name || b.label || b.service_id}
+                           href={b.service_id === 'guardians-tv' ? mlbAppUrl(game) : null}
                            big={i === 0} />
               ))}
               {/* ONE DIRECTV LINK PER CARD, and only when something accessible is LINEAR.

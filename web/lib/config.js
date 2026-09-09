@@ -334,3 +334,30 @@ export const WATCH = {
 export function watchUrl(serviceId) {
   return WATCH[String(serviceId || '').toLowerCase()] || DIRECTV_STREAM;
 }
+
+/**
+ * THE MLB APP, ON A PER-GAME ADDRESS (prompt 81 block F, Joe's tap test 2026-09-09).
+ *
+ * WHAT THE TAP TEST SETTLED, AND WHAT IT DID NOT. Joe tapped two links from Messages on his iPhone:
+ * `mlb.com/tv/g824791`, a real gamePk, and `mlb.com/tv/g999999999`, a control that cannot resolve to
+ * a game. BOTH opened the MLB app on the Guardians page. So iOS hands `mlb.com/tv/g*` off to the app
+ * - that is settled, it is claimed in MLB's apple-app-site-association, and it is the whole reason
+ * this exists. Whether the app READS the number is NOT settled: the control landed on the same
+ * screen, so a real game's landing is indistinguishable from a fallback to Joe's club. The URL is
+ * the same under either reading, so nothing here depends on which is true.
+ *
+ * THE gamePk IS ALREADY IN THE ROW. `adapters/mlb.py:302` reads `pk = g.get("gamePk")` and `:350`
+ * writes `"id": f"mlb-{pk}"` - both read at those lines rather than taken from a brief, because the
+ * id scheme was asserted once before on reasoning that did not hold even though the scheme did.
+ *
+ * THE REGEX IS THE GUARD, NOT A COMMENT. `adapters/mlb.py:66` mints TEAM ids as `mlb-{id}` too, so
+ * the prefix alone means nothing. A team id has no business reaching a game row, and the anchored
+ * `\d+` costs nothing and removes the question rather than documenting it.
+ *
+ * NULL RATHER THAN A DEFAULT, and no try/catch. A caller that gets null renders the ordinary
+ * `watchUrl()` fallback; a caller that got a swallowed error would render a link to nowhere.
+ */
+export function mlbAppUrl(game) {
+  const m = /^mlb-(\d+)$/.exec(String(game?.id ?? ''));
+  return m ? `https://www.mlb.com/tv/g${m[1]}` : null;
+}

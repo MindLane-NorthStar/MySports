@@ -50,9 +50,31 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-09, prompt 78 block B — after that block's last gate run, not during it.**
-`test:unit` is 537 → **552**: block B added `web/test/livejoin.test.mjs` (15). The other four gates
-are unchanged.
+**Measured 2026-09-09, prompt 82 block F — after that block's last gate run, not during it.**
+
+**THIS TABLE WAS STALE BY TWO ROWS AND THE GAP IS RECORDED RATHER THAN ERASED.** It read
+`514 passed + 1 skipped` and `552` while the tree already sat at 515 + 1 and 560 — **prompt 80's
+committed work moved both and only the geometry section below was updated.** It has already misled:
+prompt 81's brief quoted 514 and 552 out of this table. Rule 30 says the correction lands in the same
+commit as the work it misled, which is why it is here and not deferred to a later block.
+
+**AND A STALE SOLE AUTHORITY IS WORSE THAN A SECOND COPY**, which is the thing worth remembering.
+Prompt 66 deleted the duplicate from `CLAUDE.md` after it was wrong four times in a week, and that
+was right — but the cost is that nobody diffs this table against anything any more, so nothing fails
+when it drifts. The only defence left is writing it after the last gate run of every block, as this
+line claims to do.
+
+**The three movements, in order:**
+
+| when | gate | from → to | what moved it |
+|---|---|---|---|
+| prompt 78 block B | `test:unit` | 537 → 552 | `web/test/livejoin.test.mjs` (15) |
+| prompt 80 block B | `pytest` | 514 → **515** | the watch-link workflow guard in `tests/test_workflows.py` |
+| prompt 80 block D1 | `test:unit` | 552 → **560** | the eight D1 ordering tests in `favorites.test.mjs` |
+| prompt 82 block F | `test:unit` | 560 → **568** | `web/test/mlbdeeplink.test.mjs` (8) |
+
+Neither prompt-80 movement was written here at the time, and both are legitimate: a floor may only go
+up, and nothing was removed or weakened. The other three gates are unchanged throughout.
 
 ### MLB LIVE SCORES HAD NEVER WORKED, AND THE ID SCHEME WAS NOT WHY (prompt 78 block B)
 
@@ -132,8 +154,8 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 
 | gate | run from | floor |
 |---|---|---|
-| `pytest` | repo root | **514 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **552** |
+| `pytest` | repo root | **515 passed + 1 skipped** (36 subtests) |
+| `npm run test:unit` | `web/` | **568** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **91/91** |
 | `npm run geometry` | `web/` | all hard stops |
