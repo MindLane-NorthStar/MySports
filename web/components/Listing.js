@@ -19,9 +19,11 @@ import GameDetail from './GameDetail.js';
 import { indexStandings, indexRankings } from '../lib/standings.js';
 import { SPORTS, SPORT_LABEL, sportMarkUrl } from '../lib/config.js';
 import { offServiceSummary } from '../lib/offservice.js';
-import { applyOverlay } from '../lib/livescores.js';
+// ONE IMPORT, AND NOT FROM lib/livescores.js (prompt 78 block C). That module carries the provider
+// fetching, and importing `applyOverlay` from it dragged all of it into the CLIENT bundle - measured
+// at 88-90/91 on qa-shots against 91/91 without it. `applyOverlay` now lives beside the poll.
 import {
-  LIVE_POLL_SECONDS, anyInFlight, overlayMapFromRows, shouldFetchLive,
+  LIVE_POLL_SECONDS, anyInFlight, applyOverlay, overlayMapFromRows, shouldFetchLive,
 } from '../lib/livepoll.js';
 
 /* `anyInFlight` MOVED TO lib/livepoll.js (prompt 77), unchanged including its 15-minutes-before to
@@ -62,7 +64,7 @@ export default function Listing({ games: serverGames, standingsRows, rankingsRow
    * off-service filter, the grid's own list, `showGrid`, the two <SportBand> call sites - are patched
    * BY CONSTRUCTION rather than by eight renames that a ninth reader could later be added beside.
    *
-   * THE SERVER STAYS AUTHORITATIVE. `applyOverlay` is livescores.js's own function, not a second copy
+   * THE SERVER STAYS AUTHORITATIVE. `applyOverlay` is lib/livepoll.js's one definition, not a copy
    * of the merge, and it only ever replaces `result_status`, the two scores and the clock/period -
    * every other field on the card is the database's. A poll that returns nothing leaves the cards
    * exactly as the server rendered them.

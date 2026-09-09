@@ -308,19 +308,13 @@ export function joinFailures(stats) {
     .map(([sport]) => sport);
 }
 
-export function applyOverlay(games, overlayMap) {
-  if (!overlayMap || overlayMap.size === 0) return games || [];
-  return (games || []).map((g) => {
-    const o = overlayMap.get(String(g.id));
-    if (!o || !o.status) return g;
-    return {
-      ...g,
-      result_status: o.status,
-      home_score: o.homeScore ?? g.home_score,
-      away_score: o.awayScore ?? g.away_score,
-      live_clock: o.clock ?? null,
-      live_period: o.period ?? null,
-      live: true,
-    };
-  });
-}
+/* `applyOverlay` MOVED TO lib/livepoll.js (prompt 78 block C), and the reason is a MEASUREMENT.
+ *
+ * `components/Listing.js` is a CLIENT component and imports it, so importing it from here dragged
+ * this whole module - `SOURCES`, `fetchSport`, the three provider readers, the UA string - into the
+ * browser bundle, where not one line of it can run. In `next dev` that is real: qa-shots went from
+ * 91/91 to 88-90/91 across four runs, every failure a client navigation that had not completed
+ * inside a fixed wait, and reverting ONLY the app files put it back to 91/91 twice. Moved rather
+ * than duplicated (rule 32): livepoll.js holds the one definition and this file re-exports it, so
+ * `page.js` and every existing importer are untouched. */
+export { applyOverlay } from './livepoll.js';

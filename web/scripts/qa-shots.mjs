@@ -49,6 +49,71 @@ function record(label, pass, detail) {
   console.log(`  ${pass ? 'PASS' : 'FAIL'}  ${label}${detail ? `  (${detail})` : ''}`);
 }
 
+/**
+ * WAIT ON THE CONDITION, NEVER ON A DURATION (prompt 79 stage 1).
+ *
+ * `handoff-status.md` has recorded since prompt 66 that this file waits a fixed number of
+ * milliseconds after an action and then asserts, and that the real fix is waiting on the thing that
+ * was supposed to happen. Prompt 78 made the debt come due: a client navigation measured 808, 815,
+ * 862, 878, 961 and 2597 ms against a fixed 900ms wait - over budget on 2 of 6 - and the gate fell
+ * to 1 clean run in 6 while the app was working perfectly.
+ *
+ * THIS IS NOT LOOSENING THE GATE, and the distinction is the whole justification. A fixed duration
+ * ASSERTS NOTHING: it guesses how long the app takes and then reads whatever state it happens to
+ * find. Waiting on the real condition is strictly STRONGER - the assertion that follows now runs
+ * against the state it was written for, on a fast machine and a slow one.
+ *
+ * THE CEILING IS 30 SECONDS AND IT STILL FAILS. That is the point: a condition that never arrives
+ * throws and the run goes red, exactly as it should when the app is genuinely broken. It is an order
+ * of magnitude above the 2597ms worst case measured, so it cannot fire on load alone, and far below
+ * anything a person would sit through.
+ *
+ * WHAT IS DELIBERATELY LEFT AS A DURATION, so the next reader does not "finish the job": the waits
+ * that follow a `goto`, a programmatic scroll or a synthetic pinch, where what is being waited for is
+ * a SETTLE with no observable end - fonts, layout, a scroll that may already be at its target, or a
+ * state that is asserted NOT to change. There is no condition to wait on when the assertion is "this
+ * stayed as it was", and inventing one would be a worse test, not a better one.
+ */
+const COND_TIMEOUT = 30_000;
+
+/** The URL has actually changed. `waitForURL` takes a predicate, so this reads as the assertion. */
+const urlHas = (page, needle) =>
+  page.waitForURL((u) => u.href.includes(needle), { timeout: COND_TIMEOUT });
+const urlLacks = (page, needle) =>
+  page.waitForURL((u) => !u.href.includes(needle), { timeout: COND_TIMEOUT });
+
+/** The header has reached a state. `null` is EXPANDED, which is the absence of the attribute. */
+const hdrIs = (page, state) => page.waitForFunction(
+  (want) => document.documentElement.getAttribute('data-hdr') === want,
+  state, { timeout: COND_TIMEOUT });
+
+/**
+ * `--stack-h` HAS CAUGHT UP WITH THE BAR, which is a later moment than the row existing.
+ *
+ * THE FIRST VERSION OF THIS FIX WAITED FOR `#chdr-sports` AND THAT WAS TOO EARLY. The row is
+ * attached the instant React renders it; `--stack-h` is written afterwards by the ResizeObserver in
+ * components/CollapsedHeader.js. Three runs failed with `bar grew 83px, picker moved 0px` and
+ * `--stack-h 44px` against a 127px bar - the assertion read a value that was correct for the frame
+ * before. The old fixed 350ms happened to straddle both, which is exactly the kind of luck a fixed
+ * duration trades on.
+ *
+ * SO THE CONDITION IS THE ONE THE ASSERTION ACTUALLY DEPENDS ON, not a proxy that usually precedes
+ * it. That is the whole discipline this stage is about, and getting it wrong once is the clearest
+ * possible argument for it.
+ */
+const stackSynced = (page) => page.waitForFunction(() => {
+  const bar = document.querySelector('.chdr');
+  if (!bar) return false;
+  const painted = bar.getBoundingClientRect().height;
+  const declared = parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue('--stack-h'));
+  return Number.isFinite(declared) && Math.abs(declared - painted) < 0.5;
+}, null, { timeout: COND_TIMEOUT });
+
+/** A selector is present, or gone. */
+const shown = (page, sel) => page.waitForSelector(sel, { state: 'attached', timeout: COND_TIMEOUT });
+const gone = (page, sel) => page.waitForSelector(sel, { state: 'detached', timeout: COND_TIMEOUT });
+
 const browser = await chromium.launch();
 
 for (const dev of DEVICES) {
@@ -206,7 +271,7 @@ for (const dev of DEVICES) {
   const block = page.locator('.mblock').first();
   if (await block.count()) {
     await block.click();
-    await page.waitForTimeout(350);
+    await shown(page, '.dpanel');
     const open = await page.locator('.dpanel').count();
     record('M11: tapping a block opens the detail panel', open > 0);
     if (open) await page.screenshot({ path: join(outDir, 'mobile__detail-panel.png'), fullPage: false });
@@ -242,7 +307,7 @@ for (const dev of DEVICES) {
   const card = page.locator('.mcard').first();
   if (await card.count()) {
     await card.click();
-    await page.waitForTimeout(350);
+    await shown(page, '.dpanel');
     const box = await page.locator('.dpanel .dlink', { hasText: 'Box score' }).count();
     record('a final game exposes a box-score link in its panel', box > 0);
     await page.screenshot({ path: join(outDir, 'mobile__detail-final.png'), fullPage: false });
@@ -285,7 +350,7 @@ for (const dev of DEVICES) {
     await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
     // scrolled well past the sentinel, which is where the bar shows
     await page.evaluate(() => window.scrollTo(0, 900));
-    await page.waitForTimeout(450);
+    await hdrIs(page, 'collapsed');   // the sentinel crossing, not a guess at how long it takes
     const n = await page.locator('.chdr').count();
     record(`navbar present in ${name}`, n === 1, `${n} in the DOM`);
   }
@@ -294,13 +359,13 @@ for (const dev of DEVICES) {
   // keep the collapse AND keep the reader where they were.
   await page.goto(`${base}/?day=${DAY}`, { waitUntil: 'networkidle' });
   await page.evaluate(() => window.scrollTo(0, 1200));
-  await page.waitForTimeout(600);
+  await hdrIs(page, 'collapsed');   // the sentinel crossing, not a guess at how long it takes
   const gridTap = await page.evaluate(() => ({
     hdr: document.documentElement.getAttribute('data-hdr'),
     top: document.querySelector('.hubctl') ? null : null,
   }));
   await page.click('.chdr-toggle[data-key="view"]');
-  await page.waitForTimeout(900);
+  await urlHas(page, 'view=grid');
   const afterTap = await page.evaluate(() => ({
     hdr: document.documentElement.getAttribute('data-hdr'),
     bar: document.querySelectorAll('.chdr').length,
@@ -314,7 +379,7 @@ for (const dev of DEVICES) {
          `data-hdr=${afterTap.hdr}, ${afterTap.bar} bar, banner ${afterTap.banner}, ${afterTap.url}`);
   // and back again, which is the half the old one-way door could not do at all
   await page.click('.chdr-toggle[data-key="view"]');
-  await page.waitForTimeout(900);
+  await urlLacks(page, 'view=grid');
   const backToList = await page.evaluate(() => ({
     hdr: document.documentElement.getAttribute('data-hdr'), url: location.search,
     name: document.querySelector('.chdr-toggle[data-key="view"]').getAttribute('aria-label'),
@@ -420,7 +485,7 @@ for (const dev of DEVICES) {
          `data-hdr=${h.attr}, banner ${h.banner}`);
 
   await page.evaluate(() => window.scrollTo(0, 900));
-  await page.waitForTimeout(500);
+  await hdrIs(page, 'collapsed');   // the sentinel crossing, not a guess at how long it takes
   h = await hdr();
   // `stack === 'contents'`, NOT `'none'` (prompt 62 stage 2). Prompt 60's collapse took the whole
   // control stack away with the banner. The split keeps ONE of its five children - the picker - by
@@ -442,7 +507,7 @@ for (const dev of DEVICES) {
   await page.evaluate(() => window.scrollTo(0, 600));
   await page.waitForTimeout(300);
   await page.click('.chdr-wm');
-  await page.waitForTimeout(400);
+  await hdrIs(page, null);
   h = await hdr();
   record('4. tapping MYSPORTS TV EXPANDS and returns to the top',
          h.attr === null && h.y === 0 && h.banner !== 'none',
@@ -450,7 +515,7 @@ for (const dev of DEVICES) {
 
   // ROW 3: a purposeful tap on the television.
   await page.click('.bn-tvtap--mobile');
-  await page.waitForTimeout(400);
+  await hdrIs(page, 'collapsed');
   h = await hdr();
   record('3. tapping the TV on the banner COLLAPSES it', h.attr === 'collapsed' && h.banner === 'none',
          `data-hdr=${h.attr}, banner ${h.banner}`);
@@ -459,7 +524,7 @@ for (const dev of DEVICES) {
   // reader is looking at. Sampled per animation frame so the deliberate scroll and the collapse can
   // be told apart - anything coarser measures both at once and proves nothing.
   await page.click('.chdr-wm');
-  await page.waitForTimeout(400);
+  await hdrIs(page, null);
   const moved = await page.evaluate(async () => {
     const card = () => document.querySelector('#all-today .mcard');
     const frames = [];
@@ -516,7 +581,7 @@ for (const dev of DEVICES) {
     const page = await ctx.newPage();
     await page.goto(`${base}/?day=2026-09-05`, { waitUntil: 'networkidle' });
     await page.evaluate(() => window.scrollTo(0, 900));
-    await page.waitForTimeout(500);
+    await hdrIs(page, 'collapsed');   // the sentinel crossing, not a guess at how long it takes
     const t = await page.evaluate(() => {
       const outs = [...document.querySelectorAll('.chdr-toggle')].map((e) => {
         const r = e.getBoundingClientRect();
@@ -559,7 +624,7 @@ for (const dev of DEVICES) {
   const nameOf = async (path, key) => {
     await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
     await page.evaluate(() => window.scrollTo(0, 900));
-    await page.waitForTimeout(450);
+    await hdrIs(page, 'collapsed');   // the sentinel crossing, not a guess at how long it takes
     return page.locator(`.chdr-toggle[data-key="${key}"]`).getAttribute('aria-label');
   };
   const want = [
@@ -586,10 +651,35 @@ for (const dev of DEVICES) {
     viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
   });
   const page = await ctx.newPage();
+  /**
+   * Get this page into the COLLAPSED state, whatever its length.
+   *
+   * IT USED TO SCROLL A FIXED 900px AND WAIT 450ms, AND ON A SHORT PAGE IT COLLAPSED NOTHING. The
+   * sentinel sits below ~347px of header, and a single-sport day can be shorter than the viewport -
+   * so `scrollTo(0, 900)` saturated below the sentinel, the header stayed EXPANDED, and every
+   * measurement below was then taken on a `.chdr` that is `display: none`. Those return a width of
+   * 0, and `widest = Math.max(widest, 0)` swallows it silently.
+   *
+   * WAITING ON THE CONDITION IS WHAT EXPOSED IT (prompt 79): the fixed wait moved on regardless and
+   * the numbers looked plausible. Scrolling to the END of the document collapses any page tall
+   * enough to; a page too short for that CANNOT collapse by scrolling at all, and the television is
+   * the deliberate route Joe designed for exactly that - so the fallback is a real user action, not
+   * a loosened assertion.
+   */
   const collapse = async (path) => {
     await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
-    await page.evaluate(() => window.scrollTo(0, 900));
-    await page.waitForTimeout(550);
+    const scrolled = await page.evaluate(() => {
+      window.scrollTo(0, document.documentElement.scrollHeight);
+      return window.scrollY;
+    });
+    if (scrolled > 0) {
+      try {
+        await hdrIs(page, 'collapsed');
+        return;
+      } catch { /* short page: the sentinel never left the viewport. Tap the television instead. */ }
+    }
+    await page.click('.bn-tvtap--mobile');
+    await hdrIs(page, 'collapsed');
   };
   const tile = () => page.evaluate(() => {
     const e = document.querySelector('.chdr-tile');
@@ -620,7 +710,8 @@ for (const dev of DEVICES) {
     () => document.querySelector('#all-today .mcard').getBoundingClientRect().top);
   const before = await top();
   await page.click('.chdr-tile');
-  await page.waitForTimeout(350);
+  await shown(page, '#chdr-sports');
+  await stackSynced(page);
   t = await tile();
   const moved = Math.round(((await top()) - before) * 100) / 100;
   const tiles = await page.locator('#chdr-sports .spbtn').count();
@@ -630,7 +721,8 @@ for (const dev of DEVICES) {
   record('the row OVERLAYS rather than pushing the content', moved === 0, `content moved ${moved}px`);
 
   await page.locator('#chdr-sports .spbtn').nth(1).click();
-  await page.waitForTimeout(700);
+  await urlHas(page, 'sport=');
+  await gone(page, '#chdr-sports');
   t = await tile();
   record('picking a league puts its MARK where the words were',
          t.shows === 'mark' && /nfl_dark/.test(t.src || '') && t.row === 0,
@@ -638,9 +730,11 @@ for (const dev of DEVICES) {
 
   // THE ONLY WAY BACK.
   await page.click('.chdr-tile');
-  await page.waitForTimeout(300);
+  await shown(page, '#chdr-sports');
+  await stackSynced(page);
   await page.locator('#chdr-sports .spbtn-all').click();
-  await page.waitForTimeout(700);
+  await urlLacks(page, 'sport=');
+  await gone(page, '#chdr-sports');
   t = await tile();
   record('picking ALL SPORTS in the row puts the WORDS back', t.shows === 'ALL SPORTS' && t.row === 0,
          `${t.shows}, url ${page.url().replace(base, '')}`);
@@ -798,7 +892,7 @@ for (const dev of DEVICES) {
            `${v.pickers} picker(s), .hubctl ${v.hub}, position ${v.pickPos}`);
 
     await page.evaluate(() => window.scrollTo(0, 1200));
-    await page.waitForTimeout(600);
+    await hdrIs(page, 'collapsed');   // the sentinel crossing, not a guess at how long it takes
     v = await read();
     const closedTop = v.pickTop;
     record(`${mode}: collapsed keeps ONE picker, and the stack becomes display:contents`,
@@ -814,7 +908,8 @@ for (const dev of DEVICES) {
     // THE SPLIT: opening the row must PUSH the picker down by the row's own height, not cover it.
     const before = v.chdrH;
     await page.click('.chdr-tile');
-    await page.waitForTimeout(400);
+    await shown(page, '#chdr-sports');
+    await stackSynced(page);
     v = await read();
     const grew = Math.round((v.chdrH - before) * 100) / 100;
     const moved = Math.round((v.pickTop - closedTop) * 100) / 100;
@@ -829,7 +924,7 @@ for (const dev of DEVICES) {
   // ---- THE PLATE REACHES THE EDGES, AND --stack-h SURVIVES AN INSET (prompt 63 stage 2).
   await page.goto(`${base}/?day=2026-09-05`, { waitUntil: 'networkidle' });
   await page.evaluate(() => window.scrollTo(0, 1200));
-  await page.waitForTimeout(600);
+  await hdrIs(page, 'collapsed');   // the sentinel crossing, not a guess at how long it takes
   const plate = await page.evaluate(() => {
     const r = (s) => document.querySelector(s).getBoundingClientRect();
     return {
@@ -871,7 +966,7 @@ for (const dev of DEVICES) {
   // three are 1px - the renderings drew them at 2px so they would read at that size and said so.
   await page.goto(`${base}/?day=2026-09-05`, { waitUntil: 'networkidle' });
   await page.evaluate(() => window.scrollTo(0, 1200));
-  await page.waitForTimeout(600);
+  await hdrIs(page, 'collapsed');   // the sentinel crossing, not a guess at how long it takes
   const lines = () => page.evaluate(() => {
     const g = (sel) => {
       const e = document.querySelector(sel);
@@ -891,7 +986,8 @@ for (const dev of DEVICES) {
   // be the navbar's line or the row's but never both, and Joe asked for both.
   record('closed: .chdr carries no border of its own', L.chdr.startsWith('0px'), L.chdr);
   await page.click('.chdr-tile');
-  await page.waitForTimeout(400);
+  await shown(page, '#chdr-sports');
+  await stackSynced(page);
   L = await lines();
   record('open: the league row gets the third line, at the same faint weight',
          L.inner === FAINT && L.sports === FAINT && L.pick === OUTER,

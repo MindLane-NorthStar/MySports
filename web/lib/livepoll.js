@@ -70,3 +70,31 @@ export function overlayMapFromRows(rows) {
 export function shouldFetchLive({ live, visible, games, now = Date.now() }) {
   return Boolean(live) && Boolean(visible) && anyInFlight(games, now);
 }
+
+/**
+ * Merge an overlay map over a list of games. THE ONE DEFINITION (rule 32).
+ *
+ * IT LIVES IN THE CLIENT-SAFE MODULE, and that is the point rather than an accident of tidying:
+ * `components/Listing.js` needs it, and importing it from lib/livescores.js pulled that module's
+ * provider fetching into the browser bundle for no benefit. See the note left in its place there.
+ *
+ * THE DATABASE STAYS AUTHORITATIVE. Only `result_status`, the two scores and the clock/period are
+ * replaced; every other field on the card is the server's. An empty map returns the SAME array, not
+ * a copy, so a poll that finds nothing costs no re-render.
+ */
+export function applyOverlay(games, overlayMap) {
+  if (!overlayMap || overlayMap.size === 0) return games || [];
+  return (games || []).map((g) => {
+    const o = overlayMap.get(String(g.id));
+    if (!o || !o.status) return g;
+    return {
+      ...g,
+      result_status: o.status,
+      home_score: o.homeScore ?? g.home_score,
+      away_score: o.awayScore ?? g.away_score,
+      live_clock: o.clock ?? null,
+      live_period: o.period ?? null,
+      live: true,
+    };
+  });
+}

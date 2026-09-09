@@ -165,9 +165,18 @@ test('the prop is SHADOWED, so every downstream reader is patched by constructio
   const c = code('components/Listing.js');
   assert.match(c, /export default function Listing\(\{ games: serverGames,/);
   assert.match(c, /const games = useMemo\(\(\) => applyOverlay\(serverGames, liveMap\), \[serverGames, liveMap\]\);/);
-  // and the merge is livescores.js's own, not a second copy of it (rule 32)
-  assert.match(c, /import \{ applyOverlay \} from '\.\.\/lib\/livescores\.js';/);
+  // ONE DEFINITION, AND IT IS IMPORTED FROM THE CLIENT-SAFE MODULE (rule 32, tightened in prompt 78
+  // block C). This asserted the import came from `lib/livescores.js`, which was true and was a
+  // MEASURED mistake: that module carries the provider fetching, and importing it here pulled all of
+  // it into the browser bundle. qa-shots went 88-90/91 across four runs with it and 91/91 twice
+  // without, on the same machine minutes apart. `applyOverlay` moved to livepoll.js and
+  // livescores.js re-exports it, so there is still exactly one definition.
+  assert.match(c, /import \{\s*[^}]*\bapplyOverlay\b[^}]*\} from '\.\.\/lib\/livepoll\.js';/s);
+  assert.doesNotMatch(c, /from '\.\.\/lib\/livescores\.js'/,
+    'a client component must never import the module that fetches from the providers');
   assert.doesNotMatch(c, /function applyOverlay/, 'no forked merge in the component');
+  // and livescores.js still serves its own importers, so page.js is untouched
+  assert.match(src('lib/livescores.js'), /export \{ applyOverlay \} from '\.\/livepoll\.js';/);
 });
 
 test('`live` is PASSED at both call sites, never guessed', () => {

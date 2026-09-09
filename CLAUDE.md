@@ -149,6 +149,29 @@ never renumber, even around the retired stub.
     of those point at this repository; this one's object is the PLATFORM, which no file here is
     authoritative for. Anything phrased "X creates/blocks/prevents Y" is the shape to distrust.
 
+35. **Kill processes by PATH, never by a name match.** Cleanup before a gate run targets the
+    Playwright binaries and nothing else:
+    `Get-Process | Where-Object { $_.Path -like '*ms-playwright*' }`, plus the dev server selected by
+    its command line (`Get-CimInstance Win32_Process -Filter "Name='node.exe'"` filtered on
+    `CommandLine -like '*next*'`). **A `-match 'chrom'` filter closed 23 of Joe's Chrome windows**
+    along with `chrome-native-host` and `iCloudChrome`, because Playwright ships its browser as
+    `chrome.exe` and a substring cannot tell a vendor's copy from the user's. Verify after: a
+    cleanup that reports killing more than the handful of browsers a run started has hit something
+    it did not mean to. **Second time a too-broad match has cost real work**, which is why this is a
+    rule and not a note. **Distinct from 20**, which is about editing a FILE with a bare repeated
+    string replace: same failure of specificity, different blast radius — that one loses text a
+    diff can recover, this one loses work that was never written down.
+
+36. **Never run `next build` while `next dev` is running.** They share `web/.next`, and the build
+    writes into the directory the dev server is serving from: after one such attempt the dev server
+    answered **500** to every request, and three background gate runs and a measurement tool all
+    failed with timeouts that looked like application faults. Stop the dev server, `Remove-Item
+    -Recurse -Force web/.next`, then start whichever one is wanted. **Rule 12 already says a local
+    `next build` cannot succeed here** — the apostrophe in `Joe's Projects` breaks the generated
+    code, verified again in prompt 79 (`throw new Error('File size for Open Graph image "…Joe's
+    Projects\…"'`) — so the only reason to run one is to re-confirm that, and the cost of doing it
+    carelessly is a corrupted `.next` and a run's worth of misattributed failures.
+
 ---
 
 ## Gates
