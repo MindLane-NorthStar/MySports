@@ -127,3 +127,31 @@ def test_cfbd_teams_fetch_is_not_restricted_to_the_week():
     assert 'for s in ("home", "away")}' not in text.split("if args.teams")[1], (
         "a fixture-derived `needed` set is back on the --teams path"
     )
+
+
+def test_watch_link_check_reports_and_never_fails_the_run():
+    """Joe's ruling, 2026-09-09: the nightly WATCH check must not fail the workflow.
+
+    `WATCH` is 34 hand-maintained URLs at 34 external hosts, and those hosts will have transient
+    failures that have nothing to do with this repo. A nightly job that goes red for somebody
+    else's outage gets IGNORED — which is exactly how `guardians-tv` sat on a hard 404 until Joe
+    tapped it. Two independent guards, both asserted here because either alone can be removed by
+    someone who does not know the ruling.
+    """
+    doc = yaml.safe_load((ROOT / ".github" / "workflows" / "schedule_refresh.yml").read_text(encoding="utf-8"))
+    steps = doc["jobs"]["refresh"]["steps"]
+    watch = [s for s in steps if "Watch links" in str(s.get("name", ""))]
+    assert len(watch) == 1, "exactly one watch-link step"
+    assert watch[0].get("continue-on-error") is True, (
+        "the step must not fail the run - Joe's ruling, and the reason the dead link survived"
+    )
+    assert "watch-links.mjs" in watch[0]["run"]
+
+    # AND THE SCRIPT ITSELF EXITS 0 WHATEVER IT FINDS. `continue-on-error` alone would leave a red
+    # X on the step, which is the thing that trains a reader to stop looking.
+    script = (ROOT / "web" / "scripts" / "probes" / "watch-links.mjs").read_text(encoding="utf-8")
+    assert "process.exit(0)" in script
+    assert "process.exit(1)" not in script, "this reports, it does not gate"
+
+    # AND IT IS SURFACED WHERE IT WILL BE SEEN - the run summary page, not a log nobody opens.
+    assert "GITHUB_STEP_SUMMARY" in script

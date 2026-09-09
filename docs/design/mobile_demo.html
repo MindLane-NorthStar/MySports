@@ -693,6 +693,8 @@ function appHTML(variant){
 const sheetHTML = (g)=>{
   const a=team(g,"away"), h=team(g,"home");
   const fin = g.result_status==="final";
+  // PROMPT 78 BLOCK B: the box score is shown live as well as final, and named differently.
+  const live = g.result_status==="in_progress";
   const w = WATCH[g.network] || null;
   const p = PROB[g.id] || PROB[g.pk] || null;
   return `<div class="sheetback" data-close></div>
@@ -725,7 +727,12 @@ const sheetHTML = (g)=>{
     <h4>How to watch</h4>
     <div class="bcastrow"><span class="n">${esc(g.network??"No listing")}</span>
       <span class="acc oom">CHECK ACCESS</span></div>`}
-    ${fin&&g.boxscore_url?`<a class="watch sec" href="${esc(g.boxscore_url)}" target="_blank" rel="noopener">Box score</a>`:""}
+    ${/* PROMPT 78 BLOCK B: live AND final, never scheduled, and the label says which (rule 23 - this
+          file DOES implement the box-score link, so it moves with the app). Joe's ruling: a live box
+          score is the one worth the most, and an empty one before the game is a dead tap. The loader
+          was widened to write `boxscore_url` for an in-progress game in the same change; before it,
+          relaxing this gate alone would have rendered a link that does nothing. */''}
+    ${(fin||live)&&g.boxscore_url?`<a class="watch sec" href="${esc(g.boxscore_url)}" target="_blank" rel="noopener">${live?"Live box score":"Box score"}</a>`:""}
   </div>`;
 };
 

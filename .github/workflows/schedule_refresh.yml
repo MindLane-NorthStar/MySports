@@ -249,6 +249,20 @@ jobs:
         run: python -m pipeline.reconcile --workflow schedule_refresh
       - name: Unit tests (resolver)
         run: python -m unittest tests.test_reconcile
+      - name: Watch links — REPORT ONLY, never fails the run
+        # Joe's ruling, 2026-09-09: this must not fail the workflow. `WATCH` is 34 hand-maintained
+        # URLs at 34 external hosts, and those hosts WILL have transient failures that have nothing to
+        # do with this repo. A nightly job that goes red for somebody else's outage gets ignored —
+        # which is exactly how `guardians-tv` sat on a hard 404 until Joe tapped it.
+        #
+        # BELT AND BRACES: the script exits 0 whatever it finds, AND this carries continue-on-error,
+        # so neither a bad link nor a missing node on the runner can take the refresh down.
+        #
+        # THE REPORT IS SEEN ON THE RUN'S SUMMARY PAGE, not in a log: the script appends a markdown
+        # table to $GITHUB_STEP_SUMMARY, headed with the number of dead links. `ubuntu-latest` ships
+        # Node, so this needs no setup-node step.
+        continue-on-error: true
+        run: node web/scripts/probes/watch-links.mjs
       - name: Archive fixtures + raw payloads (private bucket)
         run: python scripts/sync_assets.py --push-data artifacts/validation --prefix fixtures/$(date -u +%Y-%m-%d)/
       - uses: actions/upload-artifact@v4

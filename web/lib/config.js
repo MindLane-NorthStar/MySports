@@ -283,7 +283,17 @@ export const WATCH = {
   peacock: 'https://www.peacocktv.com/',
   fox: 'https://www.fox.com/live/',
   fs1: 'https://www.fox.com/live/',
-  'the-cw': 'https://www.cwtv.com/shows/cw-live/',
+  /* `/shows/cw-live/` RETURNED 200 AND WAS A 404 (prompt 79). It redirects to
+     `/series/?sorry-page-not-found&show=cw-live` - a not-found page served with a success status,
+     which no status-only check can see. `scripts/probes/watch-links.mjs` caught it on its first run
+     precisely because it reports the FINAL URL after redirects, which is the whole reason that
+     column exists.
+
+     THE CW HAS NO LIVE PAGE THAT RESOLVES. Tested: `/live/` and `/watch-live/` both land on the same
+     not-found page; `/schedule/` is alive but is listings rather than a way to watch. The homepage
+     is alive, is the right property, and carries the network's own live entry points - so it is the
+     honest answer rather than a guess that looks more specific than it is. */
+  'the-cw': 'https://www.cwtv.com/',
   tnt: 'https://www.tntdrama.com/watchtnt',
   tbs: 'https://www.tbs.com/watchtbs',
   trutv: 'https://www.trutv.com/watchtrutv',
@@ -302,7 +312,21 @@ export const WATCH = {
   youtube: 'https://tv.youtube.com/',
   'nfl-network': 'https://www.nfl.com/network/',
   'mlb-network': 'https://www.mlb.com/network',
-  'guardians-tv': 'https://www.mlb.com/guardians/watch',
+  /* IT WAS `/guardians/watch` AND THAT IS A HARD 404 (prompt 78, verified from outside twice - once
+     by hand and once by `scripts/probes/watch-links.mjs`, which exists because of it).
+     `/guardians/schedule/watch` is MLB's official "Where to Watch" page for the club, returns 200,
+     and NAMES DIRECTV CHANNEL 662 ITSELF - which independently corroborates the channel map built on
+     2026-09-08, and is why keeping this entry gives Joe both routes rather than one.
+
+     TWO OTHERS WERE CONSIDERED AND REJECTED, recorded so they are not re-proposed. The
+     `live-stream-games/subscribe/cleguardians` page is live but is a SALES page: Joe already
+     subscribes, and a checkout is a worse failure than a 404 because it looks deliberate.
+     `cleguardians.tv` has a certificate hostname mismatch and cannot be linked at all.
+
+     AND IT IS NOT DELETED. `watchUrl()` is `WATCH[id] || DIRECTV_STREAM`, so removing the entry
+     would fall through to DIRECTV - which was the first recommendation and is wrong now that the
+     MLB page is known useful. */
+  'guardians-tv': 'https://www.mlb.com/guardians/schedule/watch',
   dazn: 'https://www.dazn.com/',
   'wuab-43': 'https://www.fox8.com/',
 };
