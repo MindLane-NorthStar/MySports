@@ -82,7 +82,7 @@
 import { useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
-import { collapseHeader } from '../lib/headerstate.js';
+import { suppressScrollCollapse, releaseScrollCollapse } from '../lib/headerstate.js';
 import {
   SCROLL_GAP,
   SETTLE_MS,
@@ -121,15 +121,18 @@ export default function AutoScroll() {
     const land = () => {
       if (!scrollTargetFor(document)) return;
 
-      // Hazard 1: collapse FIRST, deliberately. Its own scroll compensation is spent before
-      // anything here measures, and the observer's later call is idempotent.
-      collapseHeader();
+      // Hazard 1, ANSWERED DIFFERENTLY SINCE PROMPT 71. This used to call collapseHeader() first and
+      // deliberately, to SPEND the compensation before measuring. Joe: "once you change to week view
+      // it closes the banner since the screen auto scrolls to the current day." So the collapse is
+      // SUPPRESSED for the duration instead - the observer does not fire, so there is no
+      // compensation to spend, and the banner is still there when he scrolls back up.
+      suppressScrollCollapse();
 
-      // Two frames plus a beat: one for React to commit the collapse, one for the reflow, and
-      // SETTLE_MS for the ResizeObserver that maintains `--stack-h`.
+      // Two frames plus a beat: one for React to commit, one for the reflow, and SETTLE_MS for the
+      // ResizeObserver that maintains `--stack-h`.
       requestAnimationFrame(() => requestAnimationFrame(() => later(() => {
         const d = delta();
-        if (d === null || Math.abs(d) <= 1) return;
+        if (d === null || Math.abs(d) <= 1) { releaseScrollCollapse(); return; }
         const reduced = window.matchMedia
           && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         window.scrollBy({ top: d, behavior: reduced ? 'auto' : 'smooth' });
@@ -139,6 +142,8 @@ export default function AutoScroll() {
         later(() => {
           const d2 = delta();
           if (d2 !== null && Math.abs(d2) > 2) window.scrollBy({ top: d2, behavior: 'auto' });
+          // RE-ARM LAST, after the correction has moved the page for the final time.
+          releaseScrollCollapse();
         }, CORRECT_MS);
       }, SETTLE_MS)));
     };
@@ -165,6 +170,9 @@ export default function AutoScroll() {
       document.removeEventListener('visibilitychange', onVisible);
       timers.forEach(window.clearTimeout);
       timers = [];
+      // A landing interrupted by a route change must not leave the collapse suppressed for the life
+      // of the document - that would be a banner that never collapses again.
+      releaseScrollCollapse();
     };
   }, [key]);
 

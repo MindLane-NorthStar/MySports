@@ -100,8 +100,12 @@ test('SCROLL ONLY EVER COLLAPSES - the one-way machine (prompt 60)', () => {
   // two-way binding, and nothing on screen looks wrong when that happens - the header just quietly
   // starts re-expanding at the top again, which is the behaviour he asked to replace.
   const c = code('components/CollapsedHeader.js');
-  assert.match(c, /if \(!entry\.isIntersecting\) collapseHeader\(\)/,
-               'the sentinel may only collapse');
+  // THE GUARD TERM IS PART OF THE CONDITION SINCE PROMPT 71 - `&& !scrollCollapseSuspended()`, so
+  // an auto-scroll landing does not close Joe's banner. The property this test defends is unchanged
+  // and is asserted below: the observer may COLLAPSE and may never expand. What it may be gated on
+  // is not this test's business, or it fails every time a legitimate condition is added.
+  assert.match(c, /if \(!entry\.isIntersecting[\s\S]*?\) collapseHeader\(\)/,
+               'the sentinel may only collapse, and only while not intersecting');
   // SCOPED TO THE CALLBACK, not to the file. A pattern hunting for `else` was tried first and let
   // `if (!entry.isIntersecting) collapseHeader(); else expandHeader();` straight through - the
   // regex was checked against that exact string rather than trusted, which is how it was caught.

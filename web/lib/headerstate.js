@@ -61,6 +61,31 @@ export const HDR_COLLAPSED = 'collapsed';
 let collapsed = false;
 const listeners = new Set();
 
+/**
+ * SCROLL-DRIVEN COLLAPSE, SUSPENDED (prompt 71 stage 2, Joe 2026-09-08).
+ *
+ * "once you change to week view it closes the banner since the screen auto scrolls to the current
+ * day", and he asked whether the header can collapse on MANUAL scroll only. It can.
+ *
+ * `AutoScroll` used to call `collapseHeader()` first and deliberately, to SPEND the compensation
+ * below before it measured anything - letting the observer fire mid-flight lands the reader
+ * somewhere nobody chose. Suppressing the observer for the duration does the same job without
+ * closing the banner: no collapse, so no compensation, so nothing to spend.
+ *
+ * ONLY THE OBSERVER CONSULTS THIS, not `collapseHeader()` itself. The TV button on the banner
+ * (BannerTap.js:44) is a reader saying collapse, and a programmatic scroll is not a reason to ignore
+ * them. Putting the check in `collapseHeader()` would have swallowed that tap for the ~1.5s a
+ * landing takes.
+ */
+let scrollCollapseSuppressed = false;
+
+/** Called by AutoScroll around a programmatic scroll. */
+export function suppressScrollCollapse() { scrollCollapseSuppressed = true; }
+export function releaseScrollCollapse() { scrollCollapseSuppressed = false; }
+
+/** Read by the sentinel observer in CollapsedHeader.js, and by nothing else. */
+export function scrollCollapseSuspended() { return scrollCollapseSuppressed; }
+
 /** `useSyncExternalStore`'s subscribe half. */
 export function subscribeHeader(fn) {
   listeners.add(fn);

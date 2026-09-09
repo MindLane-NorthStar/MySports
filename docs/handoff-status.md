@@ -50,14 +50,12 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-08, prompt 70 — after the last gate run of the run, not during it. Unchanged
-from prompt 69: neither of that run's stages touches app code, and both counts were re-measured
-rather than carried forward.**
+**Measured 2026-09-08, prompt 71 — after the last gate run of the run, not during it:**
 
 | gate | run from | floor |
 |---|---|---|
 | `pytest` | repo root | **514 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **483** |
+| `npm run test:unit` | `web/` | **494** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **91/91** |
 | `npm run geometry` | `web/` | all hard stops |
@@ -90,6 +88,15 @@ raised the gap from 8px to 16px**, sticky stack 92px, so a correct landing is `9
 | an earlier card also live (earliest wins) | 1583 | 108 |
 | week containing today, list | 754 | 108 |
 | week containing today, grid | 596 | 108 |
+
+**THOSE FIGURES ARE PRE-PROMPT-71 AND THE OFFSET MOVED WITH THE HEADER.** Prompt 71 stage 2 stopped
+the landing collapsing the header - Joe: "once you change to week view it closes the banner since the
+screen auto scrolls to the current day" - so at the moment of landing there is no sticky stack to
+clear. `--stack-h` is written from `.chdr`, which is 0px tall while the header is expanded, so
+`stackBottom()` correctly returns the picker's height alone and the target lands ~47px down instead
+of 108. The arithmetic adapted itself; nothing was re-tuned. Re-measured 2026-09-08 at 390×844: week
+view lands at scrollY 1050 with the target at 47, header NOT collapsed and the banner still in the
+document.
 | nothing live, or a week without today | 0 | no scroll |
 
 Every scrollY moved by exactly −8 from prompt 67's figures, which is the gap increase and nothing

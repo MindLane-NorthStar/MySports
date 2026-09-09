@@ -82,7 +82,7 @@ import { SPORT_LABEL } from '../lib/config.js';
 import { useSetParam, SportFilter, chipMarkUrl } from './Filters.js';
 import {
   SENTINEL_ID, subscribeHeader, headerCollapsed, headerCollapsedOnServer,
-  collapseHeader, expandHeader,
+  collapseHeader, expandHeader, scrollCollapseSuspended,
 } from '../lib/headerstate.js';
 
 /**
@@ -143,8 +143,19 @@ export default function CollapsedHeader() {
     // two-way binding, so scrolling back to the top re-expanded the header. The one-way form is
     // not a restriction on the reader; it is what lets a TAP own the other direction without the
     // two inputs ever contradicting each other. Never restore the else.
+    // SUSPENDED DURING A PROGRAMMATIC SCROLL (prompt 71). AutoScroll's landing crosses this
+    // sentinel, and Joe's banner should survive that: "once you change to week view it closes the
+    // banner since the screen auto scrolls to the current day".
+    //
+    // AND THE RE-ARM NEEDS NO USER-SCROLL GATE, BECAUSE THIS IS A CROSSING AND NOT A POSITION. An
+    // IntersectionObserver fires when the intersection STATE CHANGES. The auto-scroll takes the
+    // sentinel from intersecting to not, that one callback is suppressed, and the state then sits at
+    // "not intersecting" - so releasing the flag afterwards produces no callback at all. The next one
+    // comes when the reader scrolls back up (it intersects again) and then down (it leaves), which is
+    // exactly the manual collapse Joe asked to keep. A position check would have re-collapsed
+    // instantly; this does not. Measured, not reasoned - see the prompt-71 report.
     const io = new IntersectionObserver(
-      ([entry]) => { if (!entry.isIntersecting) collapseHeader(); },
+      ([entry]) => { if (!entry.isIntersecting && !scrollCollapseSuspended()) collapseHeader(); },
       { threshold: 0 },
     );
     io.observe(el);
