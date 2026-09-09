@@ -231,6 +231,27 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
                     cs = carriage.get(ab) or {}
                     cert = cs.get("status", "UNANNOUNCED")
                     nick = by_id.get(s["id"], {}).get("nickname") or s.get("team") or ab
+                    # A CONFIRMED CARRIER IS A REAL SERVICE ROW, not a CARRIER TBA plate.
+                    #
+                    # THIS BRANCH DID NOT EXIST UNTIL PROMPT 72, and its absence was the actual bug.
+                    # `adapters/nba.py:_local_row` has had it since decision 7 (the Cavaliers' move to
+                    # DAZN), so the NBA side could retire a placeholder and this one could not: whatever
+                    # `local_rights.json` said, the NHL row was always minted from `label` and always
+                    # came out as the placeholder outlet. Joe reported the Blue Jackets as available on
+                    # Prime Video and the file was updated - and without this, the file would have said
+                    # CONFIRMED while the adapter kept emitting `CBJ LOCAL`, which is the shape of a
+                    # data fix that silently does nothing.
+                    #
+                    # `outlet_access` decides availability from data/access_profile.json rather than
+                    # hardcoding AVAILABLE, which is what the placeholder branch below has to do
+                    # because a carrier nobody has named cannot be looked up.
+                    if cert == "CONFIRMED" and cs.get("outlet"):
+                        media.append(media_row("web" if cs.get("surface") == "web" else "tv", cs["outlet"],
+                                               outlet_access(cs["outlet"], available, unavailable),
+                                               market="local", certainty="CONFIRMED", start_time=start, tbd=tbd,
+                                               source="data/local_rights.json",
+                                               label=cs.get("label") or f"{nick} on {cs['outlet']}"))
+                        continue
                     media.append(media_row("tv", cs.get("label") or f"{ab} LOCAL", "AVAILABLE", market="local", certainty=cert,
                                            start_time=start, tbd=tbd, source="data/local_rights.json",
                                            label=f"{nick} local TV - carrier TBA"))
