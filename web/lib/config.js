@@ -22,6 +22,48 @@ export const ASSET_BASE_URL = (
   process.env.NEXT_PUBLIC_ASSET_BASE_URL || 'https://pub-8373112ac08548d8af79fe58b7c2dcb9.r2.dev/'
 ).replace(/\/*$/, '/');
 
+/**
+ * AN ASSET URL CHANGES WHEN ITS BYTES CHANGE (prompt 71 stage 1).
+ *
+ * THREE FALSE BUG REPORTS CAME FROM ONE CAUSE. The last, 2026-09-08: "the logo updates we made for
+ * rendering on dark did not deploy to all dark screens." They had deployed - private Safari showed
+ * the new art while Joe's installed home-screen PWA served the old.
+ *
+ * `Cache-Control` DID NOT AND COULD NOT FIX IT. Prompts 66, 68 and 70 put `public, max-age=300` on
+ * all 1,613 objects and that is worth having, but a header only tells a client WHEN TO RE-CHECK. A
+ * client holding a copy it cached BEFORE that header existed was never told anything, and has no
+ * reason to ask. Only a different URL reaches it.
+ *
+ * A BUILD-WIDE TOKEN, NOT A PER-FILE HASH, and the reason is drift rather than elegance. A per-file
+ * manifest is the better mechanism on paper - only changed art re-downloads - but it needs a second
+ * record of what the bucket holds, and this repo has a nightly job that changes bucket art WITHOUT a
+ * deploy: `schedule_refresh.yml` runs `sync_assets.py --push --prefix logos/ --make-dark`. A manifest
+ * committed to git goes stale exactly when it matters most, and a stale manifest is the bug we are
+ * fixing wearing a new coat (rule 30). One value resolved from the commit sha has no second copy to
+ * disagree with.
+ *
+ * WHAT IT COSTS: a deploy that changes no art still re-fetches it. ~40 small PNGs a screen, once per
+ * deploy. WHAT IT DOES NOT FIX: art that changes with no deploy behind it. That case is now covered
+ * by the header instead - every object carries max-age=300, so a client re-checks within five
+ * minutes. The two together are complete; neither is alone. The permanent fix for the PWA holding
+ * pre-header copies is this token, once.
+ *
+ * The bucket KEYS do not change, so `scripts/sync_assets.py` is untouched by this.
+ */
+export const ASSET_VERSION = process.env.NEXT_PUBLIC_ASSET_VERSION || 'dev';
+
+/**
+ * Append the version to any asset URL. Applied by EVERY builder below (rule 32) - the R2 ones and
+ * the two that point into `web/public`, which Next serves without fingerprinting.
+ *
+ * Query-aware rather than a bare `?v=`: `gridAssetUrl()` passes legacy ABSOLUTE urls through, and one
+ * of those arriving with a query of its own would otherwise be corrupted into `...?a=b?v=x`.
+ */
+export function withAssetVersion(url) {
+  if (!url) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}v=${ASSET_VERSION}`;
+}
+
 // The sports the filters offer. Order is the order the chips render in.
 //
 // The last four have NO games loaded yet, and that is deliberate (register section 13): the chip
@@ -131,7 +173,7 @@ export const DISPLAY_TIMEZONE = 'America/New_York';
 // abbreviations (nba-CLE), so a URL built from the raw id 404s. Lowercase, always.
 export function teamLogoUrl(teamId) {
   if (!teamId) return null;
-  return `${ASSET_BASE_URL}logos/${String(teamId).toLowerCase()}.png`;
+  return withAssetVersion(`${ASSET_BASE_URL}logos/${String(teamId).toLowerCase()}.png`);
 }
 
 /**
@@ -143,7 +185,8 @@ export function teamLogoUrl(teamId) {
  */
 export function gridAssetUrl(key) {
   if (!key) return null;
-  return /^https?:\/\//i.test(key) ? key : `${ASSET_BASE_URL}${String(key).replace(/^\/+/, '')}`;
+  return withAssetVersion(
+    /^https?:\/\//i.test(key) ? key : `${ASSET_BASE_URL}${String(key).replace(/^\/+/, '')}`);
 }
 
 /**
@@ -156,7 +199,7 @@ export function gridAssetUrl(key) {
  */
 export function teamLogoDarkUrl(teamId) {
   if (!teamId) return null;
-  return `${ASSET_BASE_URL}logos/${String(teamId).toLowerCase()}_dark.png`;
+  return withAssetVersion(`${ASSET_BASE_URL}logos/${String(teamId).toLowerCase()}_dark.png`);
 }
 
 /**
@@ -182,7 +225,7 @@ export function teamLogoDarkUrl(teamId) {
  */
 export function teamLogoCapUrl(teamId) {
   if (!teamId) return null;
-  return `${ASSET_BASE_URL}logos/${String(teamId).toLowerCase()}_cap.png`;
+  return withAssetVersion(`${ASSET_BASE_URL}logos/${String(teamId).toLowerCase()}_cap.png`);
 }
 
 /**
@@ -199,17 +242,17 @@ export const SPORT_MARK = { cfb: 'cfp', nfl: 'nfl', nba: 'nba', nhl: 'nhl', mlb:
 /** The league mark for a sport, or null when that sport has none. */
 export function sportMarkUrl(sport) {
   const slug = SPORT_MARK[sport];
-  return slug ? `/leagues/${slug}_dark.png` : null;
+  return slug ? withAssetVersion(`/leagues/${slug}_dark.png`) : null;
 }
 
 export function networkLogoUrl(slug) {
   if (!slug) return null;
-  return `${ASSET_BASE_URL}network-logos/${String(slug).toLowerCase()}.png`;
+  return withAssetVersion(`${ASSET_BASE_URL}network-logos/${String(slug).toLowerCase()}.png`);
 }
 
 /** The processed marks the app ships itself (web/public/marks), NOT the raw bucket art. */
 export function markUrl(slug) {
-  return slug ? `/marks/${String(slug).toLowerCase()}.png` : null;
+  return slug ? withAssetVersion(`/marks/${String(slug).toLowerCase()}.png`) : null;
 }
 
 /** Poll interval while games are in flight (addendum M11: near-live 15-minute refresh). */

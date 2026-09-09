@@ -330,7 +330,10 @@ test('exactly the 26 teams Joe accepted give up a team-colour ink', () => {
 // other places that file is rendered. So: `logos/{id}_cap.png`, read only by the grid endcap.
 
 test('teamLogoCapUrl names the third file, and lowercases the id like its two siblings', () => {
-  assert.equal(teamLogoCapUrl('MLB-137'), `${ASSET_BASE_URL}logos/mlb-137_cap.png`);
+  // `?v=` since prompt 71 - every asset URL carries the build's asset version. The PATH is what this
+  // test is about, so it is compared without the query.
+  const path = (u) => u.split('?')[0];
+  assert.equal(path(teamLogoCapUrl('MLB-137')), `${ASSET_BASE_URL}logos/mlb-137_cap.png`);
   assert.equal(teamLogoCapUrl('mlb-137'), teamLogoCapUrl('MLB-137'));
   assert.equal(teamLogoCapUrl(null), null);
   assert.equal(teamLogoCapUrl(''), null);
