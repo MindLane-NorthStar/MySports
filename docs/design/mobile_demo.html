@@ -64,9 +64,28 @@
   block appears and pushes the rest down, and whose offset is written from a ResizeObserver every
   frame, is a behaviour over time - which is exactly what a static mock cannot depict.
 
+  AND SINCE PROMPT 73 THE BANNER PINS TOO, WHICH THIS FILE ALSO CANNOT SHOW AND FOR THE SAME REASON
+  (rule 23, checked rather than assumed). Joe, 2026-09-09: "make banner STICKY until the user
+  scrolls, regardless of day/week, All Games/MyTeams, List/Grid, All Sports or League tile." The
+  banner holds the top of the viewport from a landing until the reader's own first scroll, and then
+  becomes ordinary flow content again. It is `position: sticky` and stays IN FLOW, so nothing below
+  it moves when the pin is armed or released - which is exactly why the CARDS below are still, to
+  the pixel, the cards the app renders. A pin that exists only BETWEEN a landing and the next
+  gesture is a behaviour over time, and the paragraph above already says what a static mock can do
+  about one of those: nothing.
+
+  PROMPT 74 CHANGED WHERE THE LANDING STOPS AND THIS FILE STILL NEEDS NOTHING (rule 23, checked
+  again rather than carried forward). `stackBottom()` was counting the picker's 31.4px in a state
+  where the picker does not stick, so today's block landed 171px down instead of 140. That is a
+  SCROLL POSITION, which is the one thing the paragraph above says a fixed-height mock cannot depict
+  - and it moved no card, no chip row and no grid, which are the three things this file IS the
+  authority for. The banner is still 124px and the cards below are still the cards.
+
   ONE NUMBER FROM THE APP IS WORTH CARRYING HERE ANYWAY, because it is about the GRID and the grid
   is in this file's scope: the sticky stack sits over the top 92px of `.mgrid-scroll`, and a touch
-  landing there targets the stack rather than the grid. Measured 2026-09-08 - see the handoff.
+  landing there targets the stack rather than the grid. Measured 2026-09-08 - see the handoff. The
+  pinned banner adds 124px of its own over the grid at 390 while it is up, and it is up for one
+  gesture; that is measured in the handoff too.
 
   AND THIS FILE HAS NO `MY TEAMS` AT ALL, WHICH IS ALSO NOT DRIFT (prompt 60, rule 23). It renders
   one ALL GAMES arrangement, with a `.secthead` per day and league. The app has a scope toggle, and

@@ -24,6 +24,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { region, after } from './region.mjs';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -63,7 +64,7 @@ test('NEITHER picker carries a second name that would override the visible one',
   // This is prompt 25's rule, unchanged: an aria-label would win over the visible text and lose the
   // word to a screen reader, which was the whole point of having a visible name.
   const f = code('components/Filters.js');
-  const dp = f.slice(f.indexOf('export function DatePicker'), f.indexOf('export function SportFilter'));
+  const dp = region(f, 'export function DatePicker', 'export function SportFilter', 'the date picker');
   assert.match(dp, /id="viewing-day"/, 'the input the name points at');
   assert.doesNotMatch(dp, /<label/, 'no second label');
   assert.doesNotMatch(dp, /aria-label=/, 'and no aria-label - aria-labelledby only');
@@ -80,11 +81,17 @@ test('the picker sits BELOW the tiles, in its own row, with an arrow either side
   const page = src('app/page.js');
   // The stack order IS the requirement (prompt 50 stage 2a): toggles, then the sport block, then
   // the picker. Asserted as source order inside the control stack.
-  const ctl = page.slice(page.indexOf('function Controls('));
+  const ctl = after(page, 'function Controls(', 'the control stack');
   const iMode = ctl.indexOf('<ModeToggle');
   const iPair = ctl.indexOf('<ScopeViewToggles');
   const iSport = ctl.indexOf('<SportFilter');
   const iPick = ctl.indexOf('className="pickrow"');
+  // A BARE `indexOf` CHAIN THAT IS SOUND, and the reason is worth writing down because this is
+  // prompt 71's shape and someone will otherwise either "fix" it or copy it (prompt 74).
+  // `iMode >= 0` guards the first; every later one is guarded by the CHAIN, because a missing
+  // anchor is -1 and -1 loses every comparison it appears on the LEFT of. Drop the `>= 0`, or
+  // reverse any of these to `iMode < iPair`, and it becomes the defect. Proved by deleting each of
+  // the four anchors in turn: scripts/probes/test-mutation.mjs fails this file on all four.
   assert.ok(iMode >= 0 && iPair > iMode, 'DAY|WEEK first, then the scope/view pair');
   assert.ok(iSport > iPair, 'then the sport block');
   assert.ok(iPick > iSport, 'and the picker BELOW the tiles - this is the restack');

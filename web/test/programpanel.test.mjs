@@ -17,6 +17,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { region, after } from './region.mjs';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -41,7 +42,10 @@ test('the panel branches on isProgram, and the helpers are IMPORTED not reimplem
 
 test('a program never reaches the two-team head', () => {
   const g = code('components/GameDetail.js');
-  const head = g.slice(g.indexOf('dpanel-head'), g.indexOf('dpanel-close'));
+  // `region()` RATHER THAN A BARE SLICE (prompt 74). With `dpanel-close` gone this was the rest of
+  // the component, and the three assertions below found their targets anywhere in it - so "never
+  // reaches the two-team head" stopped being about the head. Proved by deleting the anchor.
+  const head = region(g, 'dpanel-head', 'dpanel-close', 'the panel head');
   assert.match(head, /\{program \? \(/, 'the program branch comes first');
   // the matchup markup survives untouched on the other arm
   assert.match(head, /teamLogoDarkUrl\(away\?\.id\)/);
@@ -65,7 +69,12 @@ test('a program’s place is location_text, and is not printed twice', () => {
   assert.match(g, /game\.location_text && subtitleFor\(game\) !== String\(game\.location_text\)\.toUpperCase\(\)/,
     'subtitleFor falls back to location_text, so every race would have shown it twice');
   // the neutral-site parenthetical stays a GAME fact - a race has no neutral site to be at
-  const venue = g.slice(g.indexOf('program ?', g.indexOf('dgrid')));
+  // ANCHORED (prompt 74): a missing `dgrid` made the inner indexOf -1, so the outer search started
+  // at 0 and found an EARLIER `program ?` - a different branch entirely, which still contains
+  // `neutral_site` further down, so the test passed while measuring the wrong arm. Proved by
+  // deleting the anchor and running this file.
+  const venue = after(after(g, 'dgrid', "the panel's detail grid"), 'program ?',
+    'the venue row inside the detail grid');
   assert.match(venue, /neutral_site/);
 });
 

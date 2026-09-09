@@ -7,6 +7,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { region } from './region.mjs';
 import { readFileSync } from 'node:fs';
 import { currentWeekKey } from '../lib/weeks.js';
 
@@ -77,7 +78,7 @@ test('the week index must be read with restAll, not rest', () => {
   // a third of the season missing with nothing to show it. This pins the fix at the source, because
   // the symptom is invisible: the page looks fine, it just knows less than the database does.
   const src = readFileSync(new URL('../lib/queries.js', import.meta.url), 'utf8');
-  const fn = src.slice(src.indexOf('export async function weekIndexRows'), src.indexOf('}', src.indexOf('export async function weekIndexRows')));
+  const fn = region(src, 'export async function weekIndexRows', '}', 'the week index read');
   assert.match(fn, /restAll\(/, 'weekIndexRows must page past the 1000-row cap');
   assert.doesNotMatch(fn, /\brest\('games/, 'a bare rest() here truncates once the season loads');
 });

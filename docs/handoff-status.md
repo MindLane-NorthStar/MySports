@@ -50,13 +50,18 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-09, prompt 72 — after the last gate run of the run, not during it. Unchanged from
-prompt 71; both counts re-measured rather than carried forward.**
+**Measured 2026-09-09, prompt 74 — after the last gate run of the run, not during it.** `test:unit`
+is 494 → **518**, and every one of the 24 is accounted for: prompt 73 added
+`web/test/bannerpin.test.mjs`, prompt 74 moved three of its clearance tests into
+`autoscroll.test.mjs` and added five more there, and added `web/test/region.test.mjs` (9) for the
+anchor helper. Two existing tests were REWRITTEN IN PLACE rather than added to — the one prompt 73
+found passing vacuously and the compensation-ordering one prompt 74 found in the same shape.
+Nothing was removed and no test was weakened. The other four gates are unchanged.
 
 | gate | run from | floor |
 |---|---|---|
 | `pytest` | repo root | **514 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **494** |
+| `npm run test:unit` | `web/` | **518** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **91/91** |
 | `npm run geometry` | `web/` | all hard stops |
@@ -90,19 +95,237 @@ raised the gap from 8px to 16px**, sticky stack 92px, so a correct landing is `9
 | week containing today, list | 754 | 108 |
 | week containing today, grid | 596 | 108 |
 
-**THOSE FIGURES ARE PRE-PROMPT-71 AND THE OFFSET MOVED WITH THE HEADER.** Prompt 71 stage 2 stopped
-the landing collapsing the header - Joe: "once you change to week view it closes the banner since the
-screen auto scrolls to the current day" - so at the moment of landing there is no sticky stack to
-clear. `--stack-h` is written from `.chdr`, which is 0px tall while the header is expanded, so
-`stackBottom()` correctly returns the picker's height alone and the target lands ~47px down instead
-of 108. The arithmetic adapted itself; nothing was re-tuned. Re-measured 2026-09-08 at 390×844: week
-view lands at scrollY 1050 with the target at 47, header NOT collapsed and the banner still in the
-document.
-| nothing live, or a week without today | 0 | no scroll |
+**THOSE FIGURES ARE PRE-PROMPT-71 AND THE OFFSET MOVED TWICE SINCE — WITH THE HEADER, AND THEN WITH
+THE BANNER PIN.** Prompt 71 stage 2 stopped the landing collapsing the header — Joe: "once you change
+to week view it closes the banner since the screen auto scrolls to the current day" — so at the
+moment of landing there is no sticky stack to clear. `--stack-h` is written from `.chdr`, which is
+0px tall while the header is expanded, so `stackBottom()` returned the picker's height alone and the
+target landed ~47px down instead of 108. The arithmetic adapted itself; nothing was re-tuned.
 
-Every scrollY moved by exactly −8 from prompt 67's figures, which is the gap increase and nothing
-else. **AT THE TOP OF THE PAGE THE GAP CANNOT APPLY** — day mode's target sits ~100px down with the
-page already at 0, so there is nowhere to scroll up to. See the buffer note below.
+**PROMPT 73 ADDED A THIRD TERM AND PROMPT 74 REMOVED A WRONG ONE.** The banner now pins to the top
+of the viewport until the reader's own first scroll, and `stackBottom()` counts **only what is
+actually stuck** — read from each candidate's computed `position`, never from `data-hdr` or
+`data-pin`. It used to count `.pickrow` unconditionally; the picker only STICKS while the header is
+COLLAPSED, and since prompt 71 every landing happens with the header EXPANDED, so 31.4px was being
+reserved for an obstruction that was not there. Nothing was re-tuned in either change: the
+arithmetic followed the layout both times.
+
+**WHAT IS STUCK, MEASURED IN THE BROWSER at 390 in all four states** — this is the control that
+proves the collapsed path is untouched:
+
+| state | `.chdr` | `.pickrow` | `.banner` | `stackBottom()` | target lands at |
+|---|---|---|---|---|---|
+| expanded + pinned — **every landing since prompt 73** | sticky, `display:none`, 0 | static, 31.4 | sticky, 124 | **124** | **140** |
+| collapsed | sticky, 44 | sticky, 48.4 | none, 0 | **92.4** | **108.4** |
+| collapsed, league row open | sticky, **127** | sticky, 48.4 | none, 0 | **175.4** | 191.4 |
+| expanded + pin released | sticky, 0 | static, 31.4 | relative, 0 | **0** | 16 |
+
+The collapsed row is the 92px stack this file has recorded since prompt 60 and the 108px landing
+from before prompt 71 — unchanged, arrived at from a different direction. With the league row open
+the bar measures 127 and the sum follows it with no arithmetic anywhere.
+
+**140 = 124 + 16, AND THE 16 IS JOE'S OWN BUFFER** — prompt 69's ruling after he reported the league
+logo *"super tight to the gold line"*, the same 16px `html[data-hdr='collapsed'] .pickrow` carries as
+`margin-block`. The 31.4 that prompt 73 reported and left was not a decision anybody made; it was a
+term that outlived the collapse that used to justify it.
+
+**Re-measured 2026-09-09 at 390×844, prompt 74. Each row is reached by an IN-APP navigation**, which
+is what the arrival rule (prompt 68) requires — a `page.goto` is a fresh document and deliberately
+does not scroll, so a harness that navigates with `goto` measures nothing:
+
+| view | scrollY before p73 | after p74 | target top before p73 | after p74 |
+|---|---|---|---|---|
+| week / ALL GAMES / LIST | 1050 | **957** | 47.3 | **140.3** |
+| week / MY TEAMS / LIST | 603 | **510** | 47.1 | **140.1** |
+| week / ALL GAMES / GRID | 892 | **799** | 47.3 | **140.3** |
+| week / MY TEAMS / GRID | 728 | **635** | 47.2 | **140.2** |
+| week / ALL GAMES / LIST / a league tile | 0 | 0 | — | no today in that week, no scroll |
+| day / ALL GAMES / LIST | 144 | 144 | 191.4 | 191.4 |
+| day / ALL GAMES / GRID | 75 | 75 | 260.4 | 260.4 |
+| day / MY TEAMS, either view | 0 | 0 | 367.3 | 367.3 |
+| day / ALL GAMES / LIST / a league tile | 0 | 0 | 443.1 | 443.1 |
+| a week or day without today | 0 | 0 | — | no scroll |
+
+Every week landing moved by **+93 scrollY and +93 target top** against pre-prompt-73: +124 for the
+banner the reader now keeps, −31.4 for the picker that was never in the way.
+
+**THE DAY ROWS DID NOT MOVE, AND THE REASON IS NOT THAT THE PIN MISSED THEM.** A day page is short —
+2026-09-08 is ~988px — so the landing SATURATES against the bottom of the document at scrollY 144
+both before and after. The clearance changed; there was nowhere left to spend it. On a long day it
+moves like the week rows.
+
+**THE BUDGET at 390×844:** pinned banner **124px**; control stack (`.hubctl`, expanded) **203.4px**
+at top 132; first content on a cold open **335.4px** down, leaving 508.6px; room below the pinned
+banner after a landing **720px**. Cards visible there, week / all games / list: **3 whole, 4
+touching**; week / my teams / list **4 whole, 6 touching** — that second one gained a partial card
+from prompt 74's 31px, and the ALL GAMES row did not because an MLB card is ~190px tall. What the
+31px bought in both is the picture: today's heading now sits 16px under the banner's gold rule
+instead of 47px, and the tail of the PREVIOUS day's card no longer letterboxes between them.
+
+**PROMPT 67's TABLE ABOVE IS KEPT AS HISTORY, NOT AS CURRENT.** Its every scrollY had moved by
+exactly −8 from prompt 67's own figures, which was prompt 68's gap increase and nothing else; two
+prompts have moved them since. **AT THE TOP OF THE PAGE THE GAP CANNOT APPLY** — day mode's target
+sits ~100px down with the page already at 0, so there is nowhere to scroll up to.
+
+### THE BANNER PINS UNTIL THE READER SCROLLS (prompts 73 and 74, Joe's ruling 2026-09-09)
+
+> "I think the answer to all of this is to make banner STICKY until the user scrolls, regardless of
+> day/week, All Games/MyTeams, List/Grid, All Sports or League tile."
+
+**PROMPT 71 WAS NOT A REGRESSION AND IS NOT REOPENED.** Measured before this change: week / all games
+/ list lands at scrollY 1050 with `data-hdr` null and the banner still in the document — the collapse
+suppression holds exactly as prompt 71 left it. What defeated it is the landing. `.banner` was
+`position: relative` and first in flow, so at scrollY 1050 its top sat at −1050. Joe: "the banner
+doesn't go anywhere but it's lost atop the screen because the scroll scrolls past the banner in
+total."
+
+**TWO EVENTS AT TWO MOMENTS, and conflating them is the hazard.** RELEASE is the reader's own first
+scroll; COLLAPSE is the sentinel crossing, unchanged. Between them is a stretch with no navbar,
+which is prompt 71's behaviour and which Joe chose over an immediate swap in place having been shown
+both — *"lets try 1."* **REJECTED and recorded: a permanently pinned banner swapped for the navbar in
+place.** It reads better and it is a larger change, because a banner that never travels breaks the
+sentinel, the height arithmetic and the route back to the expanded banner.
+
+**`position: sticky`, NEVER `fixed`, and that is load-bearing.** A sticky element keeps its box in
+the flow, so arming and releasing the pin move nothing: measured at the week landing, releasing the
+pin left today's block at 171.3 and scrollY at 926, both unchanged. A fixed banner would leave 124px
+of empty ground behind it and would break the sentinel, the compensation and the re-expand.
+
+**WHAT THE RELEASE IS KEYED ON.** The document's own `scroll` event — not `wheel`/`touchmove`, and
+not a flag. Two reasons, and the second decided it: a scroll event covers every way a page moves,
+and a horizontal PAN inside `.mgrid-scroll` is a touchmove and is *not* the reader scrolling the
+page. **The auto-scroll cannot trip it because the listener does not EXIST while a landing is in
+flight** — `land()` takes a `done` callback and installs it one animation frame after its last
+correction. A flag could not close that hole: `scrollBy` moves the offset synchronously and delivers
+its `scroll` event a frame later, after `releaseScrollCollapse()` on the next line has already run.
+**A programmatic `window.scrollTo` from a script DOES release it**, which is right — in the app the
+only programmatic scrolls are the landing (guarded) and `expandHeader()`'s trip to the top (where a
+released pin is invisible).
+
+**IT DOES NOT FEED `--stack-h`, HAS NO CUSTOM PROPERTY OF ITS OWN, AND SINCE PROMPT 74 PUBLISHES NO
+HEIGHT EITHER.** `--stack-h` is the offset `.pickrow` sticks at, and the picker only sticks while the
+header is COLLAPSED — where the banner is `display: none`. Folding the banner in would push the
+picker down by a banner nobody can see, and that state is reachable (tap the television before
+scrolling). A companion property no stylesheet reads would be a second copy of a height that can go
+stale. Prompt 73 answered that with a `pinnedBannerHeight()` export; prompt 74 deleted it, because
+`stackBottom()` now asks each of the three candidate boxes what its `position` RESOLVED to and
+measures the ones that are held. One predicate covers `.chdr`, `.pickrow` and `.banner` — which is
+what fixed the picker term, and no single attribute could have: `.chdr` and `.pickrow` are switched
+by `data-hdr` and `.banner` by `data-pin`. A hidden box answers itself (a `display: none` element
+measures 0), and the desktop banner's 229px is carried with no breakpoint written down.
+
+**`--stack-h` IS NO LONGER READ BY THE LANDING AT ALL, and losing it is a gain.** It is written from
+`.chdr`'s box by a ResizeObserver, so reading it gave exactly what measuring `.chdr` gives — while
+its `BAR_FALLBACK` could have contributed a whole 44px bar in a state where the bar is not on the
+screen, and reading it made the landing depend on an observer having run. The property is untouched
+and still does its one job.
+
+**THE MATRIX, all ten combinations at 390×844, each reached by an in-app navigation.** Every one
+landed with the banner pinned at top 0 and `data-hdr` null. The four week landings moved by exactly
+−124 scrollY; the day landings saturate against a short document (see the landing table above).
+
+**THE BUDGET Joe asked for, at 390×844:**
+
+| | |
+|---|---|
+| pinned banner | **124px** |
+| control stack (`.hubctl`, expanded) | **203.4px**, top at 132 |
+| first content on a cold open | **335.4px** down — 508.6px left for content |
+| room below the pinned banner after a landing | **720px** |
+| cards visible there, week / all games / list | **3 whole, 4 touching** (was 3 whole / 5 touching in 844px) |
+
+So the pin costs about one partial card, not the feature. The auto-scroll and the banner are not
+fighting.
+
+**HAZARD CHECKS, measured rather than reasoned:**
+
+* **No letterbox.** 247 scroll positions across four views — day/list 59 over 9,631px, day/grid 19
+  over 3,673px, week/list 117 over 18,314px, week/grid 52 over 8,586px. At every one the banner held
+  top 0, `elementFromPoint` at its top, middle and foot all resolved inside it, and **its own pixels
+  were byte-identical to the first position** — nothing behind it shows through. There is structurally
+  no gap to open: while pinned and expanded the banner is the ONLY stuck element, and `.pickrow` only
+  sticks in the collapsed state where the banner is hidden.
+* **The grid is untouched.** `npm run geometry` all hard stops, CFB 2026-09-05 64 / {240, 223, 205,
+  136} / 1273 and MLB 2026-09-03 3 / {228} / 567 — the tripwire figures unmoved. `.banner` is a
+  sibling of `.shell` and never an ancestor of `<main>`, and `position: sticky` establishes no
+  containing block for descendants, so it cannot reach `.mrail-cell`'s chain.
+* **A horizontal pan inside the grid does not release the pin** (scrollLeft 0 → 200, pin still armed).
+
+**RULE 23: `docs/design/mobile_demo.html` NEEDS NO CHANGE, and it says so itself** — "This page
+models no scroll behaviour at all - each phone frame is a fixed-height mock." A pin that exists only
+between a landing and the next gesture is a behaviour over time, which is precisely what that
+declaration excludes; and the file's own scope is the card, the chip row and the grid's construction,
+none of which moved. The note recording that was extended in the same commit rather than left to be
+re-derived.
+
+### TESTS THAT PASS ON −1 — THE SWEEP (prompt 74)
+
+**ONE TEST WAS PASSING VACUOUSLY, PROMPT 73 FOUND IT BY READING THE FILE, AND READING IS NOT A
+CONTROL.** `autoscroll.test.mjs`'s "the header is collapsed BEFORE anything is measured" asserted
+`c.indexOf('collapseHeader();') < c.indexOf(...)`. Prompt 71 deleted that call, so `indexOf` returned
+−1, and −1 is less than any index — the assertion held for the one reason it existed to rule out. Its
+guard was worse: `c.indexOf('collapseHeader()')` matched the string inside the COMMENT explaining the
+deletion. **Prompt 71's green gate was partly hollow and nothing could have said so.**
+
+**`web/scripts/probes/test-mutation.mjs` IS THE CONTROL, and it is tracked** — the same ruling as
+prompt 70's promotion of the two spacing probes, and the same ruling as `landmark.mjs` beside it: a
+tool that answers after its landmark disappears is worse than one that stops. It asks two questions:
+
+* **is the anchor currently absent, or present only inside a comment?** A text scan. **0 of 39.**
+* **would the assertion still PASS if the anchor went absent?** It copies `lib`, `app`, `components`,
+  `scripts` and `test` to a scratch directory, deletes the anchor from the copy, and runs the test.
+  **41 anchors swept, SIX survived** — two in `collapsedheader.test.mjs`, two in `emptyday.test.mjs`,
+  two in `programpanel.test.mjs`. All six were the REGION shape rather than prompt 71's ordering
+  shape: a slice whose START anchor vanishes becomes one character and every `doesNotMatch` over it
+  passes; one whose END anchor vanishes becomes the rest of the file, so "inside the panel head"
+  silently becomes "somewhere in this component". Neither fails. Both stop being the test that was
+  written.
+
+**`--selfcheck` RECONSTRUCTS PROMPT 71'S DEFECT AND REQUIRES THE TOOL TO FIND BOTH HALVES**, because
+a clean result from a query nobody can see is not evidence (rule 31). It also requires the tool to
+ignore a human label passed to a helper and to ignore the LOCAL `at()` fixture builder that
+`myteamsonce.test.mjs` and `primewindow.test.mjs` each define — seven fixture timestamps were reported
+as source anchors before that was fixed, which is why the shared helper is named `anchorAt`.
+
+**THE BARE `indexOf` USES THAT REMAIN ARE SOUND, and each was checked rather than converted for
+tidiness.** Every one carries an explicit guard — `assert.ok(i > 0, ...)`, `i > -1`, `i !== -1` in a
+loop condition — or is an ordering CHAIN in which −1 always lands on the left of the comparison and
+therefore loses it (`pagehead.test.mjs`'s four-way stack order is the example, and it now carries a
+comment saying why, because reversing any one of those comparisons would turn it into the defect).
+The mutation sweep is what says so: deleting each of those anchors fails its file.
+
+**THE FIX IS `web/test/region.mjs`, AND ALL SEVENTEEN SLICE SITES USE IT.** `region()`, `after()`,
+`before()` and `anchorAt()` THROW when an anchor is missing, with `landmark.mjs`'s own wording. Six
+were unsound and eleven more were sound only by luck of what the following assertion happened to
+match; converting all seventeen removes the shape rather than the instances, and
+`region.test.mjs`'s last test fails on any new bare anchored slice anywhere in the suite (rule 32 —
+enumerate the renderers, do not sample one).
+
+**THE SEARCHES RUN, named because a clean result from a query nobody can see is not evidence
+(rule 31):**
+
+| search | scope | result |
+|---|---|---|
+| `indexOf` / `lastIndexOf` | `web/test/` | 41 anchors — the sweep above |
+| `.search(` | `web/test/` | **none** |
+| `.match(` used as a value | `web/test/` | 20 sites, **all sound** — either `x.match(...)[0]`, which throws a TypeError on `null` when the pattern misses, or `(x.match(...) \|\| []).length` compared to a count, which goes to 0 and fails |
+| `.find(` | `tests/*.py` | **none** — this is the −1 returner and Python does not use it here |
+| `.index(` | `tests/*.py` | 3 sites in `test_program_card_svg.py`, **sound by language**: `str.index` raises `ValueError` rather than returning −1, so the ordering assertions on lines 123–124 cannot hold on absence |
+
+**The Python side cannot have this defect at all**, and that is a property of the language rather
+than of the tests: the only position-returning search in `tests/` throws.
+
+**AND ONE MORE OF PROMPT 71'S OWN SHAPE was found in the sweep and hardened**:
+`collapsedheader.test.mjs`'s compensation-ordering test read
+`before < paint && paint < after` with `before = body.indexOf('const before')`. Renaming `const
+before` would have made it −1 and the assertion would have held. It was saved only by a neighbouring
+`assert.match` happening to require the same string — a neighbour, not a guard. It now uses
+`anchorAt`, which throws before the comparison can happen.
+
+**A NAME COLLISION CAME OUT OF IT.** The helper was `at()` for one iteration; two test files already
+define a local `at(sport, time)` fixture builder, and `test/collapsedheader.test.mjs` had a local
+`const after` that shadowed the imported `after` for its whole block — a `ReferenceError`, which is
+how it was caught. The locals there are `iBefore`/`iAfter` now and the helper is `anchorAt`.
 
 **`qa-shots` GOES FLAKY WHEN THE MACHINE IS DIRTY, and it is the gate rather than the app.** Prompt 66
 ran it nine times while stray processes were alive and got 91/91 once, the other eight returning one
@@ -115,6 +338,30 @@ wrong with the header; the wait was shorter than a `next dev` client navigation 
 debugging the app, kill every stray `next dev` and every stray chromium** — prompt 66 found FIVE dev
 servers sharing one `.next` and 25 orphaned chromium processes. **The real fix, not yet done: wait on
 the condition (`page.waitForURL`, `expect.poll`) instead of on a duration.**
+
+**PROMPTS 73 AND 74 MEASURED IT PROPERLY, WITH MATCHED SAMPLES, AND THE ANSWER IS THAT THE BANNER
+PIN DOES NOT TOUCH IT.** This mattered more than a flake usually would: the pin RE-ARMS ON EVERY
+NAVIGATION, and one of prompt 73's two failures printed `?day=2026-09-05` — a URL that had not
+changed — which is a navigation-timing symptom and therefore a plausible mechanism rather than an
+established one.
+
+Prompt 73 ran nine on its own tree and four on the pre-change tree, and 7/9 against 4/4 is not a
+difference that can be called at those counts. Prompt 74 ran the pre-change tree to the SAME COUNT,
+on the same clean machine, one series after the other with nothing else using the browser:
+
+| tree | runs | 91/91 | 90/91 |
+|---|---|---|---|
+| **finished (prompts 73 + 74)** | 9 | **8** | 1 — *and GRID -> LIST works from the same control* |
+| **pre-change (`ccaa9a8`)** | 9 | **8** | 1 — *tapping GRID in the navbar keeps the collapse* |
+
+**Identical, and the pre-change failure printed `?day=2026-09-05` too** — the same assertion cluster,
+the same "the URL had not changed yet" symptom, on a tree with no pin in it at all. That is the
+control the mechanism needed, and it clears the pin.
+
+**The owed fix is still owed**, and it is the same one it has been since prompt 66: wait on the
+condition (`page.waitForURL`, `expect.poll`), not on a fixed duration. Until then a single 90/91 in
+that cluster is the gate, not the app — but re-run it before believing that, because *"it is the
+known flake"* is exactly the sentence that hides a real one.
 
 ### THE SPLIT SHIPPED (prompt 62) — the picker joins the bar
 

@@ -10,6 +10,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { region } from './region.mjs';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -42,7 +43,7 @@ test('the detail panel matches, and its venue block survives a missing venue too
 
 test('the parenthetical is quieter than the venue and never truncates', () => {
   const css = src('app/globals.css');
-  const rule = css.slice(css.indexOf('.mnet-neutral {'), css.indexOf('}', css.indexOf('.mnet-neutral {')));
+  const rule = region(css, '.mnet-neutral {', '}', 'the neutral-site parenthetical rule');
   assert.match(rule, /font-size: 11px/, 'one step under .mnet-text 12px');
   assert.match(rule, /font-style: italic/);
   assert.match(rule, /font-weight: 400/, 'regular - not the venue treatment');
@@ -52,7 +53,7 @@ test('the parenthetical is quieter than the venue and never truncates', () => {
 
 test('.mnet stays a block - flex cost every card 2.9px', () => {
   const css = src('app/globals.css');
-  const rule = css.slice(css.indexOf('\n.mnet {'), css.indexOf('}', css.indexOf('\n.mnet {')));
+  const rule = region(css, '\n.mnet {', '}', 'the base network rule');
   assert.doesNotMatch(rule, /display: flex/,
     'a flex item takes its own content height and loses the block line-height leading');
 });

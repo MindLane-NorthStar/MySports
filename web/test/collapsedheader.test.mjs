@@ -9,6 +9,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { anchorAt, after, region } from './region.mjs';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -80,11 +81,16 @@ test('the sentinel sits after the control stack, and OUTSIDE it (prompt 60)', ()
   //                      lib/headerstate.js measures. A display:none sentinel has no rect, the
   //                      compensation silently becomes zero, and the page jumps ~300px.
   const page = code('app/page.js');
-  const stackEnd = page.indexOf('</div>', page.indexOf('<div className="pickrow">'));
-  const sentinel = page.indexOf('<div id={SENTINEL_ID}');
+  // ANCHORED WITH `at()`, WHICH THROWS ON A MISS (prompt 74). This read
+  // `page.indexOf('</div>', page.indexOf('<div className="pickrow">'))`, and a missing `.pickrow`
+  // makes the inner call -1, which makes the outer one search from 0 and land on the FIRST closing
+  // div in the file - so `sentinel > stackEnd` stayed true with the control stack's last row gone.
+  // Proved by deleting the anchor and running this file: it passed.
+  const stackEnd = page.indexOf('</div>', anchorAt(page, '<div className="pickrow">', 'the picker row ends the control stack'));
+  const sentinel = anchorAt(page, '<div id={SENTINEL_ID}', 'the collapse sentinel');
   assert.ok(sentinel > stackEnd, 'the sentinel follows the control stack');
   // and it is a sibling of `.hubctl`, not a child: the stack's closing tag comes first.
-  const hubctl = page.indexOf('<div className="hubctl">');
+  const hubctl = anchorAt(page, '<div className="hubctl">', 'the control stack');
   const closes = page.lastIndexOf('</div>', sentinel);
   assert.ok(hubctl > 0 && closes > hubctl && closes < sentinel,
             'the sentinel is outside .hubctl, so the collapse cannot hide it');
@@ -110,7 +116,7 @@ test('SCROLL ONLY EVER COLLAPSES - the one-way machine (prompt 60)', () => {
   // `if (!entry.isIntersecting) collapseHeader(); else expandHeader();` straight through - the
   // regex was checked against that exact string rather than trusted, which is how it was caught.
   // The property is simply that NOTHING inside the observer expands.
-  const cb = c.slice(c.indexOf('new IntersectionObserver('), c.indexOf('io.observe(el)'));
+  const cb = region(c, 'new IntersectionObserver(', 'io.observe(el)', 'the sentinel observer');
   assert.ok(cb.length > 20, 'the observer callback was located');
   assert.doesNotMatch(cb, /expandHeader/, 'no branch may take the observer back to expanded');
   // EXPANSION IS MANUAL AND HAS EXACTLY ONE CALLER: the wordmark button.
@@ -134,11 +140,20 @@ test('the collapse compensates the scroll, measured against the sentinel', () =>
   assert.match(m, /const before = sentinelTop\(\);[\s\S]{0,200}window\.scrollBy\(0, after - before\)/,
                'measure, apply, measure, scroll by the difference');
   // and the attribute write sits BETWEEN the two measurements, which is what makes it exact.
-  const body = m.slice(m.indexOf('export function collapseHeader'));
-  const before = body.indexOf('const before');
-  const paint = body.indexOf('paint(true)');
-  const after = body.indexOf('const after');
-  assert.ok(before < paint && paint < after, 'the layout change happens between the measurements');
+  //
+  // `anchorAt`, NOT `indexOf` (prompt 74). Written with `indexOf` this was PROMPT 71'S SHAPE: with
+  // `const before` renamed, `before` is -1, `-1 < paint` holds, and the assertion passes having
+  // proved nothing. It was saved only by the `assert.match` above happening to require the same
+  // string - a neighbour, not a guard. `anchorAt` throws before the comparison can happen.
+  //
+  // The locals are `iBefore`/`iAfter` because `after` is the imported helper on the line above them,
+  // and a `const after` in this scope shadows it for the WHOLE block, including the line that runs
+  // before the declaration. That is a ReferenceError, and it is how this was caught.
+  const body = after(m, 'export function collapseHeader', 'the collapse and its compensation');
+  const iBefore = anchorAt(body, 'const before', 'the first sentinel measurement');
+  const paint = anchorAt(body, 'paint(true)', 'the attribute write');
+  const iAfter = anchorAt(body, 'const after', 'the second sentinel measurement');
+  assert.ok(iBefore < paint && paint < iAfter, 'the layout change happens between the measurements');
 });
 
 test('the navbar renders in EVERY view - the grid exclusion is lifted', () => {
@@ -207,7 +222,12 @@ test('the header has NO transition, and that is a consequence rather than an omi
   // true - but if one is ever added back it must obey the same rule, so the check is that either
   // there is none, or every property in it is on the safe list.
   const css = src('app/globals.css');
-  const guard = css.slice(css.indexOf('@media (prefers-reduced-motion: no-preference)'));
+  // `after()` RATHER THAN A BARE SLICE (prompt 74). `css.slice(css.indexOf(...))` on a missing
+  // media query is `slice(-1)` - one character - and the `doesNotMatch` in the else branch below
+  // then passes over a single character. The whole reduced-motion guard evaporated if that query
+  // were ever renamed. Proved by deleting it and running this file: it passed.
+  const guard = after(css, '@media (prefers-reduced-motion: no-preference)',
+    'the reduced-motion block every animation in this app lives inside');
   const m = guard.match(/\.chdr \{\s*transition: ([^;]+);/);
   if (m) {
     for (const prop of m[1].split(',').map((x) => x.trim().split(/\s+/)[0])) {

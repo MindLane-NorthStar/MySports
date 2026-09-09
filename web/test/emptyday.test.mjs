@@ -13,6 +13,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { region, after, before } from './region.mjs';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -46,8 +47,10 @@ test('R8: no answer, a broken answer or a failed lookup all fall back to a line 
 
 test('R8: the lookup is BOUNDED - ordered, limit 1, never an unbounded select (rule 19)', () => {
   const q = code('lib/queries.js');
-  const fn = q.slice(q.indexOf('export async function nearestLoadedDay'));
-  const body = fn.slice(0, fn.indexOf('\n}\n') + 3);
+  // `after()` THROWS ON A MISS (prompt 74). A bare `slice(indexOf(...))` on a renamed function is
+  // `slice(-1)` - one character - and every assertion below then runs over nothing.
+  const fn = after(q, 'export async function nearestLoadedDay', 'the bounded lookup');
+  const body = before(fn, '\n}\n', 'the closing brace of the lookup') + '\n}\n';
   const calls = body.match(/`games\?[^`]+`/g) || [];
   assert.equal(calls.length, 2, 'exactly two: forward, then the backward fallback');
   for (const c of calls) {
@@ -72,8 +75,11 @@ test('R8: the CALL SITE runs only on an empty ALL GAMES day, and cannot throw th
 
 test('R8: the six hardcoded dates are gone, and the per-sport lines are NOT touched', () => {
   const page = src('app/page.js');
-  const empty = page.slice(page.indexOf('Nothing on this viewing day{P.sport'));
-  const stanza = empty.slice(0, empty.indexOf('</p>'));
+  // `region()` RATHER THAN TWO BARE SLICES (prompt 74). With the opening anchor gone the stanza was
+  // the empty string and the six-date loop below passed over nothing; with `</p>` gone it was the
+  // rest of the file, so a test that said "inside the empty-day stanza" was quietly asserting
+  // something about all of page.js. Both proved by deleting the anchor and running this file.
+  const stanza = region(page, 'Nothing on this viewing day{P.sport', '</p>', 'the empty-day stanza');
   for (const d of ['2026-09-03', '2026-09-04', '2026-09-05', '2026-09-13', '2026-10-01', '2026-10-28']) {
     assert.ok(!stanza.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').includes(d),
       `${d} is no longer offered as a place to go`);

@@ -78,11 +78,20 @@
 //
 // 3. prefers-reduced-motion. A smooth scroll is motion. Honoured, the same way headerstate.js's
 //    expand does it - an instant jump is never the wrong answer for a reader who asked for less.
+//
+// 4. THE PINNED BANNER (prompt 73). Suppressing the collapse was only half of Joe's banner: the
+//    landing then scrolled straight past it, ~1050px in week mode, and "the banner doesn't go
+//    anywhere but it's lost atop the screen". `lib/bannerpin.js` pins it until the reader's own
+//    first scroll, and this file owns two halves of that - it ARMS the pin on every entry, and it
+//    tells the pin when the landing is over so the release listener is not installed until nothing
+//    this file does can trip it. The banner's height is a third term in `stackBottom()`, or today's
+//    block would land behind the very banner the pin exists to keep on the screen.
 
 import { useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 import { suppressScrollCollapse, releaseScrollCollapse } from '../lib/headerstate.js';
+import { armBannerPin, installPinRelease } from '../lib/bannerpin.js';
 import {
   SCROLL_GAP,
   SETTLE_MS,
@@ -118,8 +127,13 @@ export default function AutoScroll() {
       return el ? el.getBoundingClientRect().top - stackBottom() - SCROLL_GAP : null;
     };
 
-    const land = () => {
-      if (!scrollTargetFor(document)) return;
+    // `done` IS HOW THE BANNER PIN LEARNS THE LANDING IS OVER (prompt 73), and it is a callback
+    // rather than a flag on purpose: lib/bannerpin.js's release listener is not INSTALLED until this
+    // runs, so no scroll this function causes can reach it. See that file for why a flag cannot
+    // close the hole - `scrollBy` moves the offset synchronously and delivers its `scroll` event a
+    // frame later, after any flag on the line below would already be down.
+    const land = (done) => {
+      if (!scrollTargetFor(document)) { done(); return; }
 
       // Hazard 1, ANSWERED DIFFERENTLY SINCE PROMPT 71. This used to call collapseHeader() first and
       // deliberately, to SPEND the compensation before measuring. Joe: "once you change to week view
@@ -132,7 +146,7 @@ export default function AutoScroll() {
       // ResizeObserver that maintains `--stack-h`.
       requestAnimationFrame(() => requestAnimationFrame(() => later(() => {
         const d = delta();
-        if (d === null || Math.abs(d) <= 1) { releaseScrollCollapse(); return; }
+        if (d === null || Math.abs(d) <= 1) { releaseScrollCollapse(); done(); return; }
         const reduced = window.matchMedia
           && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         window.scrollBy({ top: d, behavior: reduced ? 'auto' : 'smooth' });
@@ -144,9 +158,29 @@ export default function AutoScroll() {
           if (d2 !== null && Math.abs(d2) > 2) window.scrollBy({ top: d2, behavior: 'auto' });
           // RE-ARM LAST, after the correction has moved the page for the final time.
           releaseScrollCollapse();
+          // AND THE PIN'S LISTENER ONE FRAME LATER STILL. The correction above wrote the scroll
+          // offset synchronously, but its `scroll` event is dispatched at the next rendering
+          // opportunity - and the HTML spec runs the scroll steps BEFORE the animation-frame
+          // callbacks of that same frame, so a single rAF is the first moment at which the
+          // landing's own last event is guaranteed to have been delivered and missed.
+          requestAnimationFrame(done);
         }, CORRECT_MS);
       }, SETTLE_MS)));
     };
+
+    // THE PIN IS ARMED ON EVERY ENTRY, INCLUDING THE ARRIVAL (prompt 73), and the difference from
+    // the rule below is the point. The SCROLL is suppressed on a cold open; the PIN is not, because
+    // "make banner sticky until the user scrolls" is true of a page nobody has scrolled yet.
+    //
+    // AND IT RE-ARMS ON EVERY NAVIGATION, not only on the mount. Joe's ruling names the four
+    // toggles - day/week, All Games/My Teams, List/Grid, All Sports or a league tile - and each of
+    // them is a navigation that may land the reader a thousand pixels down. Arming once at mount
+    // would hold the banner for the FIRST such switch and lose it for every later one, which is the
+    // same complaint one journey further along.
+    armBannerPin();
+    let stopRelease = null;
+    const listen = () => { if (!stopRelease) stopRelease = installPinRelease(window); };
+    const rearm = () => { if (stopRelease) { stopRelease(); stopRelease = null; } armBannerPin(); };
 
     // EVERY ENTRY BUT THE ARRIVAL. The effect re-runs on any change to the path or the query, which
     // is what a change of day, week, sport, scope or view is in this app - there is one route. React
@@ -154,7 +188,9 @@ export default function AutoScroll() {
     // so it is not a navigation and nothing scrolls.
     const entry = decideScroll(entryState, 'entry', key);
     entryState = entry.state;
-    if (entry.scroll) land();
+    // WITH A LANDING, `land` INSTALLS THE RELEASE ITSELF once it has finished moving the page.
+    // Without one there is nothing to wait for, so the reader's very next scroll releases the pin.
+    if (entry.scroll) land(listen); else listen();
 
     // AND AGAIN FROM THE BACKGROUND, through the same predicate. `visibilitychange` rather than
     // `focus`: focus fires when the reader dismisses a keyboard or returns from a share sheet, which
@@ -163,7 +199,10 @@ export default function AutoScroll() {
       if (document.visibilityState !== 'visible') return;
       const back = decideScroll(entryState, 'return', null);
       entryState = back.state;
-      if (back.scroll) land();
+      // A RETURN THAT SCROLLS RE-ARMS THE PIN, for the same reason a navigation does: it is another
+      // landing, and the banner has to survive it. A return that does NOT scroll leaves the pin
+      // exactly as the reader left it.
+      if (back.scroll) { rearm(); land(listen); }
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
@@ -173,6 +212,9 @@ export default function AutoScroll() {
       // A landing interrupted by a route change must not leave the collapse suppressed for the life
       // of the document - that would be a banner that never collapses again.
       releaseScrollCollapse();
+      // The listener goes with it. The next effect run arms the pin again and installs a new one, so
+      // there is never more than one and never one belonging to a route the reader has left.
+      if (stopRelease) { stopRelease(); stopRelease = null; }
     };
   }, [key]);
 

@@ -3174,6 +3174,41 @@ html[data-hdr='collapsed'] .pickrow {
   border-bottom: 1px solid var(--gold-line);
 }
 
+/* ---- THE BANNER PINS UNTIL THE READER SCROLLS (prompt 73, Joe's ruling 2026-09-09) -------------
+ *
+ * "make banner STICKY until the user scrolls, regardless of day/week, All Games/MyTeams, List/Grid,
+ * All Sports or League tile."
+ *
+ * WHAT IT FIXES IS THE LANDING, NOT THE COLLAPSE. Prompt 71 stopped the auto-scroll closing the
+ * header and that holds; what defeated it is that the landing moves the page ~1050px in week mode
+ * and a `position: relative` banner goes off the top with everything else. Measured before this
+ * change at 390: `data-hdr` null, banner top -1050. Not collapsed - scrolled past.
+ *
+ * `sticky`, NEVER `fixed`, AND IT IS LOAD-BEARING. A sticky element keeps its box in the flow, so
+ * arming and releasing the pin move NOTHING: the sentinel stays where it was, `collapseHeader()`'s
+ * compensation measures the same delta, `--stack-h` is untouched, and the route back to the expanded
+ * banner still works. A fixed banner would leave 124px of empty ground behind it and break all four.
+ *
+ * ONE ATTRIBUTE ON <html>, matching `data-hdr` above - `lib/bannerpin.js` owns both halves of the
+ * name so this stylesheet and that module cannot drift. The two never overlap in practice: the rule
+ * below hides the banner outright once the header is collapsed, so an armed pin on a collapsed
+ * header has nothing to act on.
+ *
+ * z-index 40, THE SAME LAYER AS `.chdr`, because it is the same layer - the thing holding the top of
+ * the viewport. They are mutually exclusive, so there is nothing for the tie to resolve. It sits
+ * above the grid's sticky rail (3) and the now-line (2), and below the detail panel's scrim (50),
+ * which has to cover it.
+ *
+ * IT CANNOT REACH THE GRID'S RAIL. `.banner` is a sibling of `.shell` and never an ancestor of
+ * `<main>`, and in any case `position: sticky` establishes no containing block for descendants -
+ * only transform, filter, perspective, backdrop-filter, will-change and contain do, which is what
+ * `.mrail-cell` above says and what prompt 30 fixed. */
+html[data-pin='banner'] .banner {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
 /* THE BANNER GOES AWAY. This is the difference between prompt 58's bar, which only ever appeared
  * OVER content that had already scrolled past, and Joe's navbar, which REPLACES the header: "The
  * navbar would take the place of the banner once a user scrolls past the banner, and [it] would

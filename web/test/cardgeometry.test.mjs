@@ -5,6 +5,7 @@
 // this whole stage exists to prevent, an `auto` track quietly sizing itself per card.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { before } from './region.mjs';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -29,7 +30,7 @@ function portraitBlock() {
   return CSS.slice(start, j);
 }
 const PORTRAIT = portraitBlock();
-const BASE = CSS.slice(0, CSS.indexOf('@media (max-width: 560px)'));
+const BASE = before(CSS, '@media (max-width: 560px)', 'the rules outside the phone breakpoint');
 
 /** Source with comments removed - same reason as the CSS: these files NAME the things they removed. */
 function code(...parts) {

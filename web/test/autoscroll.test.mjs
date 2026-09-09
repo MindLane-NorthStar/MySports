@@ -19,7 +19,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { decideScroll, scrollTargetFor, SCROLL_GAP } from '../lib/autoscroll.js';
+import {
+  decideScroll, scrollTargetFor, stackBottom, heldHeight, SCROLL_GAP, TOP_STACK,
+} from '../lib/autoscroll.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const src = (p) => readFileSync(join(HERE, '..', p), 'utf8');
@@ -94,14 +96,32 @@ test('both anchors are written on the SERVER, so no clock reaches the client', (
   assert.match(card, /data-live=\{live\}/);
 });
 
-test('the header is collapsed BEFORE anything is measured', () => {
-  // The order is the whole defence against headerstate.js's scroll compensation fighting this.
-  const c = src('components/AutoScroll.js');
-  const collapse = c.indexOf('collapseHeader()');
-  const measure = c.indexOf('getBoundingClientRect');
-  assert.ok(collapse > 0 && measure > 0);
-  assert.ok(c.indexOf('collapseHeader();') < c.indexOf('requestAnimationFrame'),
-    'collapse must happen before the measuring frame is scheduled');
+test('the collapse is SUPPRESSED before anything is measured, and is never called', () => {
+  // THIS TEST WAS PASSING VACUOUSLY AND PROMPT 73 FOUND IT. It read
+  //
+  //     assert.ok(c.indexOf('collapseHeader();') < c.indexOf('requestAnimationFrame'), ...)
+  //
+  // and prompt 71 had deleted that call - so `indexOf` returned -1, -1 is less than any real index,
+  // and the assertion held for the one reason it was written to rule out. The first line was worse:
+  // `c.indexOf('collapseHeader()')` found the string inside the COMMENT explaining the deletion, so
+  // even the guard on it being present passed off prose.
+  //
+  // What the order actually has to be now is the same shape with the opposite call: the suppression
+  // has to be in force before the measuring frame is scheduled, or the observer fires mid-flight,
+  // spends headerstate.js's compensation, and lands the reader somewhere nobody chose.
+  const code = src('components/AutoScroll.js')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const suppress = code.indexOf('suppressScrollCollapse();');
+  const frame = code.indexOf('requestAnimationFrame');
+  assert.ok(suppress > 0, 'the landing suppresses the scroll-driven collapse');
+  assert.ok(frame > 0 && suppress < frame, 'and does it before the measuring frame is scheduled');
+  assert.ok(code.indexOf('getBoundingClientRect') > 0);
+  // AND THE COLLAPSE IS NOT CALLED AT ALL. Prompt 71's whole ruling: "once you change to week view
+  // it closes the banner since the screen auto scrolls to the current day." Restoring the call is
+  // the regression to catch, and comments are stripped so the note explaining the deletion cannot
+  // be mistaken for the call.
+  assert.doesNotMatch(code, /collapseHeader\s*\(/,
+    'the landing must never collapse the header - prompt 71, and prompt 73 depends on it');
 });
 
 test('reduced motion is honoured', () => {
@@ -110,21 +130,118 @@ test('reduced motion is honoured', () => {
   assert.match(c, /behavior: reduced \? 'auto' : 'smooth'/);
 });
 
-test('the offset clears BOTH sticky elements, not just the bar', () => {
-  // `.chdr` sticks at 0 and `.pickrow` sticks under it at var(--stack-h). Clearing only the first
-  // parks the target behind the picker - measured at 56px against a 92px stack before this was
-  // fixed.
-  //
-  // THE INVARIANT IS THAT THE GAP IS ADDED TO stackBottom(), NOT WHAT THE GAP IS. It went 8 -> 16 in
-  // prompt 68 because 8px seated a league logo hard under the gold rule; it may move again, and this
-  // reads the constant rather than restating it so that a change of taste does not fail a structural
-  // test. What must not change is the two terms it is added to.
+/**
+ * A document whose three candidate boxes each have a `position` and a height.
+ *
+ * The whole of what `stackBottom()` reads, and nothing else - so the real function runs over it
+ * rather than a copy of it. `defaultView.getComputedStyle` is the shape a browser actually presents.
+ */
+function stackDoc({ chdr, pickrow, banner } = {}) {
+  const mk = (spec) => (spec ? {
+    __pos: spec.position,
+    getBoundingClientRect: () => ({ height: spec.height }),
+  } : null);
+  const els = { '.chdr': mk(chdr), '.pickrow': mk(pickrow), '.banner': mk(banner) };
+  const doc = {
+    querySelector: (sel) => (sel in els ? els[sel] : null),
+    defaultView: { getComputedStyle: (el) => ({ position: el.__pos }) },
+  };
+  return doc;
+}
+
+// THE FOUR REAL STATES, measured in the browser at 390 and pinned here as arithmetic. The header is
+// expanded or collapsed and the banner is pinned or released; every landing since prompt 71 happens
+// in the first of those and every one since prompt 73 happens with the pin armed.
+//
+//   .chdr      sticky always, `display: none` while expanded -> a zero-high box
+//   .pickrow   sticky ONLY under html[data-hdr='collapsed']; static in the expanded stack
+//   .banner    sticky ONLY under html[data-pin='banner']; relative otherwise, none when collapsed
+//
+// EVERY HEIGHT BELOW IS A BROWSER READING at 390, not a plausible number: expanded/pinned gives
+// stackBottom 124 and a target at 140, collapsed gives 92.4 and 108.4 - and that second figure is
+// the 92px stack this repo has recorded since prompt 60 and the 108px landing from before prompt 71,
+// which is the control proving the collapsed path is untouched. With the league row open the bar
+// measures 127 and the sum follows it to 175.4 with no arithmetic anywhere.
+const EXPANDED_PINNED = { chdr: { position: 'sticky', height: 0 },
+                          pickrow: { position: 'static', height: 31.4 },
+                          banner: { position: 'sticky', height: 124 } };
+const EXPANDED_LOOSE = { ...EXPANDED_PINNED, banner: { position: 'relative', height: 124 } };
+const COLLAPSED = { chdr: { position: 'sticky', height: 44 },
+                    pickrow: { position: 'sticky', height: 48.4 },
+                    banner: { position: 'relative', height: 0 } };
+
+test('the clearance counts what is STUCK, not what exists', () => {
+  // PROMPT 74's FIX, and it is a correctness fix rather than a taste change. `stackBottom()` counted
+  // `.pickrow` unconditionally - but the picker only STICKS while the header is collapsed, and since
+  // prompt 71 every landing happens with the header EXPANDED. So the clearance reserved 31.4px for an
+  // obstruction that was not there, and prompt 73's pinned banner turned that reservation into 47px
+  // of the PREVIOUS day's card showing between the banner's gold rule and today's heading.
+  assert.equal(stackBottom(stackDoc(EXPANDED_PINNED)), 124,
+    'expanded and pinned: the banner alone holds the top edge');
+  assert.equal(stackBottom(stackDoc(EXPANDED_LOOSE)), 0,
+    'expanded and released: nothing is stuck, so nothing is cleared');
+  assert.equal(stackBottom(stackDoc(COLLAPSED)), 92.4,
+    'collapsed: the bar and the picker, and the banner is not on the screen');
+});
+
+test("124 + SCROLL_GAP is the landing, and the 16 is Joe's own buffer", () => {
+  // 140, not 171.4. The 16px is prompt 69's ruling after he reported the league logo "super tight to
+  // the gold line" - the same 16px `html[data-hdr='collapsed'] .pickrow` carries as margin-block, so
+  // a landing that scrolls and a page that sits at the top open the same distance under the rule.
+  assert.equal(stackBottom(stackDoc(EXPANDED_PINNED)) + SCROLL_GAP, 140);
+  assert.equal(SCROLL_GAP, 16, 'prompt 68 set the landing gap to the 16px heading-to-content step');
+});
+
+test('stuck-ness is read off the computed position, never off data-hdr or data-pin', () => {
+  // A rule written as "if expanded, skip the picker" is wrong the first time a third state exists,
+  // and there are already six: two header states x two pin states, times an open or closed league
+  // row. Asking the element what it RESOLVED to asks the only authority there is - and no single
+  // attribute could answer for all three anyway, since `.chdr` and `.pickrow` are switched by
+  // `data-hdr` and `.banner` by `data-pin`.
+  const lib = src('lib/autoscroll.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.doesNotMatch(lib, /data-hdr/, 'the clearance never reads the header attribute');
+  assert.doesNotMatch(lib, /data-pin/, 'nor the pin attribute');
+  assert.match(lib, /getComputedStyle\(el\)\.position/);
+  assert.deepEqual(TOP_STACK, ['.chdr', '.pickrow', '.banner'],
+    'three candidates, in the order they stack');
+});
+
+test('a hidden box answers itself, so no second display check is needed', () => {
+  // `.chdr` is `position: sticky` unconditionally and `display: none` while the header is expanded;
+  // `.banner` is hidden outright while it is collapsed. Both report a zero-high rect, so the sum is
+  // right without anything having to remember to zero them.
+  const doc = stackDoc(EXPANDED_PINNED);
+  assert.equal(heldHeight(doc, '.chdr'), 0, 'sticky but display:none contributes nothing');
+  assert.equal(heldHeight(doc, '.banner'), 124);
+});
+
+test('an element that is not sticky contributes nothing however tall it is', () => {
+  const doc = stackDoc(EXPANDED_PINNED);
+  assert.equal(heldHeight(doc, '.pickrow'), 0, 'static, 31.4px tall, and not in the way');
+});
+
+test('a missing element is 0 rather than a throw', () => {
+  const doc = stackDoc({ ...EXPANDED_PINNED, pickrow: null });
+  assert.equal(heldHeight(doc, '.pickrow'), 0);
+  assert.equal(stackBottom(doc), 124, 'and the sum is unaffected');
+});
+
+test('`--stack-h` IS NO LONGER READ BY THE LANDING, and that is deliberate', () => {
+  // It is written from `.chdr`'s box by a ResizeObserver, so reading it gave exactly what measuring
+  // `.chdr` gives - while its BAR_FALLBACK could contribute a whole 44px bar in a state where the bar
+  // is not on the screen, and reading it made the landing depend on an observer having run. The
+  // property itself is untouched and still does its one job: the offset `.pickrow` sticks at.
   const lib = src('lib/autoscroll.js');
-  assert.match(lib, /--stack-h/);
-  assert.match(lib, /querySelector\('\.pickrow'\)/);
+  assert.doesNotMatch(lib.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, ''),
+    /--stack-h|BAR_FALLBACK/, 'neither the property nor its fallback survives in code');
+  // and it is still what the PICKER sticks at, which is the job it was written for
+  assert.match(src('app/globals.css'), /top: var\(--stack-h, 44px\);/);
+  assert.match(src('components/CollapsedHeader.js'), /setProperty\(\s*'--stack-h'/);
+});
+
+test('the landing subtracts the clearance and the gap, in that order', () => {
   assert.match(src('components/AutoScroll.js'),
     /getBoundingClientRect\(\)\.top - stackBottom\(\) - SCROLL_GAP/);
-  assert.equal(SCROLL_GAP, 16, 'prompt 68 set the landing gap to the 16px heading-to-content step');
 });
 
 // ------------------------------------------------------- the arrival rule (prompt 68, Joe's ruling)
@@ -202,8 +319,11 @@ test('BOTH triggers go through the one predicate - the handler is the easy half 
   const c = src('components/AutoScroll.js');
   assert.match(c, /const entry = decideScroll\(entryState, 'entry', key\)/);
   assert.match(c, /const back = decideScroll\(entryState, 'return', null\)/);
-  assert.match(c, /if \(entry\.scroll\) land\(\)/);
-  assert.match(c, /if \(back\.scroll\) land\(\)/);
+  // `land` TAKES A CALLBACK SINCE PROMPT 73 - it tells lib/bannerpin.js when the landing is over -
+  // so the shape is `land(listen)` rather than `land()`. What this test is about is unchanged: both
+  // triggers go through the one predicate, and the handler is the easy half to forget.
+  assert.match(c, /if \(entry\.scroll\) land\(listen\); else listen\(\);/);
+  assert.match(c, /if \(back\.scroll\) \{ rearm\(\); land\(listen\); \}/);
 });
 
 test('the entry state is MODULE scope, not a ref and not sessionStorage', () => {
