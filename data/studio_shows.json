@@ -2,10 +2,6 @@
   "_about": "The studio-show REGISTRY: one entry per show docs/research/studio-shows.md verified with a 2026 slot. pipeline/load_studio_shows.py reads this, upserts `studio_shows`, and generates one `studio_show` program per air date. SCOPE is register section 7 Q4: pregame and postgame BOOKENDS on the game's network - no halftime, no daily talk. A studio show never gets a chip (section 9); it renders under the sport it covers.",
   "_not_loaded": [
     {
-      "show": "Sunday NFL Countdown",
-      "why": "named in the run's brief, but docs/research/studio-shows.md section 1 - the 'Verified 2026 slots' list - does NOT carry it. No weekday, no start, no duration, no network. The brief's own rule is 'Nothing not in the doc', so it is not loaded. It arrives the day the doc or an ESPN release states its slot."
-    },
-    {
       "show": "Prime Video TNF pregame",
       "why": "the doc gives 'Thu ~7:00 PM ET' - with the tilde - and marks the 2026 roster UNVERIFIED. An approximate start is not a slot; a program placed on the grid at a guessed minute is a broadcast fact this run does not invent."
     },
@@ -71,6 +67,24 @@
       "on_site": true,
       "source_url": "https://www.foxsports.com/presspass",
       "source_note": "docs/research/studio-shows.md section 1: Sat 10:00 AM ET, two hours, FOX (FS1 simulcast some weeks), on the road. Three-hour specials at 9:00 select weeks come from the schedule release, not the slot - and no such release is machine-readable, see _findings."
+    },
+    {
+      "show_key": "sundaynflcountdown",
+      "title": "Sunday NFL Countdown",
+      "sport": "nfl",
+      "network_key": "ESPN",
+      "simulcast": null,
+      "brand_key": "nflcountdown",
+      "bookend": "pre",
+      "weekday": 6,
+      "slot_start_et": "10:00",
+      "duration_min": 180,
+      "anchor_rule": null,
+      "active_from": "2026-09-13",
+      "active_to": "2027-01-03",
+      "on_site": false,
+      "source_url": "https://espnpressroom.com/press-release/espn-unveils-sunday-monday-nfl-coverage-for-super-bowl-lxi-season/",
+      "source_note": "ESPN Press Room, 2026 Super Bowl LXI season release, read 2026-09-10: 'Sunday NFL Countdown (10 a.m.-1 p.m., ESPN)', season debut Sunday, Sept. 13. A STATED three-hour window, so duration_min is a fact rather than a default."
     },
     {
       "show_key": "foxnflkickoff",

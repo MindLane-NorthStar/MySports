@@ -324,7 +324,7 @@ below is closed against what shipped; what remains is named, not implied.
 |---|---|---|
 | **§7 Q2 — motorsport, race only** | NASCAR 98 (prompt 47) and **IndyCar 18** (`5bca121`), races only, no practice or qualifying | the 98 NASCAR rows are **four hours early** — see below |
 | **§7 Q3 — purchasable excluded** | AEW PPVs and the HBO Max "Zero Hour" pre-show are not loaded (`3ec3231`) | nothing |
-| **§7 Q4 — studio shows, bookends only** | 7 shows, **111 instances** (`83dea25`) | four shows the brief named have no verified slot in the doc and are recorded in `data/studio_shows.json` `_not_loaded` |
+| **§7 Q4 — studio shows, bookends only** | 7 shows, **111 instances** (`83dea25`) | four shows the brief named have no verified slot in the doc and are recorded in `data/studio_shows.json` `_not_loaded` — **three since prompt 86, which registered Sunday NFL Countdown from ESPN's release (§35)** |
 | **§7 Q5 / §17 amendment 1 — crews** | GameDay's crew is an **ESPN announcement**, nine seats, each citing the release — stronger than the hand-curation the amendment permits | **Big Noon's seats are `TBA`**: FOX Press Pass is now verified fetch-clean but CONTENT-EMPTY (JS-rendered), so no seat is filled from memory |
 | **§7 Q7 — WWE scope, NXT dropped** | Raw 17, SmackDown 16, 3 PLEs (`1d21442`). NXT's slot is in the same Premier Shows block and is dropped, with the drop reported | the wwe.com dual ESPN/Netflix listing on Oct 10 and Nov 28 — ESPN Unlimited only is loaded |
 | **§8 — SNME on Peacock** | Sunday Night's Main Event, Sept 6, Atlanta, **Peacock** | nothing |
@@ -3194,3 +3194,37 @@ what you check *after* you know which thing you are looking at.
 memory is not evidence, and its object is the PLATFORM. This one's object is the ELEMENT: the claim
 "X is what you are seeing" is a hypothesis about which DOM node paints the pixels a person pointed
 at, and it is checkable in one image.
+
+---
+
+## 35. SUNDAY NFL COUNTDOWN, AND WHAT THE SAME RELEASE SAYS ABOUT ITS MONDAY SIBLING — 2026-09-10, prompt 86
+
+### 35a. Countdown is registered, standalone
+
+ESPN Press Room, *"ESPN unveils Sunday & Monday NFL coverage for Super Bowl LXI season"*, published
+2026-08-19 and read 2026-09-10
+(<https://espnpressroom.com/press-release/espn-unveils-sunday-monday-nfl-coverage-for-super-bowl-lxi-season/>):
+*"Sunday NFL Countdown (10 a.m.–1 p.m., ESPN)"*, season debut Sunday, Sept. 13. That closes the source
+gap §7 Q4's row above recorded, and `sundaynflcountdown` is the registry's eighth show.
+
+**It has no anchor, on purpose.** The window is STATED, and ESPN does carry the occasional Sunday NFL
+game; an `ANCHORS` entry would let the bookend rule cut a published 10 a.m.–1 p.m. window down to that
+game's kickoff. Null `anchor_rule` is 0013's own word for this case.
+
+**It lists above the FOX and CBS pregame shows**, because it starts an hour before any of them.
+Joe's ruling, 2026-09-10: time-first wins and `chronological()` is not touched — no network or
+show-rank tie-break.
+
+### 35b. Two things the same release contradicts in the tree — RECORDED, NOT CHANGED
+
+- **`mnfcountdown.simulcast` is `null`.** The release: Monday Night Countdown *"for the first time,
+  will be available on NFL Network this season."*
+- **`mnfcountdown.duration_min` is `null`.** The release: *"the two-hour Monday Night Football
+  pregame show (6–8 p.m., ESPN)"*.
+
+Both are real, and prompt 86 left both alone: the bookend rule already produces a correct Monday
+Night Countdown from the type default and its anchor, and a changed duration plus a new simulcast row
+are behaviour changes nobody asked for. **They are here so the next reader finds them instead of
+rediscovering them.** The same release names **NFL Primetime** (Chris Berman, Sundays 7:30 p.m. on
+the ESPN App); it is a highlights show on an app, not a bookend on a game's network, so §7 Q4's scope
+excludes it.

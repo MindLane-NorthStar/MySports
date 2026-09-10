@@ -989,6 +989,12 @@ for (const dev of DEVICES) {
 
     await page.evaluate(() => window.scrollTo(0, 1200));
     await hdrIs(page, 'collapsed');   // the sentinel crossing, not a guess at how long it takes
+    // AND `--stack-h` HAS CAUGHT UP WITH IT (prompt 86). `data-hdr` flips first; the offset is
+    // written by the ResizeObserver a frame later, so a read on the flip can still see the EXPANDED
+    // value, 0px, and the picker parked at the top. Measured: 1 run in 8 read picker 0 / --stack-h
+    // 0px on the flip and 44 / 44 two frames later, and 2 of 3 gate runs failed exactly here on an
+    // unmodified tree. The same race `stackSynced` was written for, one read earlier.
+    await stackSynced(page);
     v = await read();
     const closedTop = v.pickTop;
     record(`${mode}: collapsed keeps ONE picker, and the stack becomes display:contents`,

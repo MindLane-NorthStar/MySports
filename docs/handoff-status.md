@@ -50,9 +50,26 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-09, prompt 84 — after that block's last gate run, not during it.**
+**Measured 2026-09-10, prompt 86 block A — after that block's last gate run, not during it.**
 
-**THIS TABLE WAS STALE BY TWO ROWS AND THE GAP IS RECORDED RATHER THAN ERASED.** It read
+**IT WAS STALE BY TWO ROWS AGAIN, AND BY THE SAME MECHANISM.** Prompt 86 opened by running all five
+gates on the unmodified tree at `dcf6281`: `pytest` **521 passed + 1 skipped**, `test:unit` 570,
+`smoke` 33/33, `qa-shots` **108/108**, geometry all hard stops. The movements table below agreed with
+every figure; the floor table did not — it still read **515 + 1** and **96/96**. Prompt 83 block E
+(`TheDesktopBannerIsTranscribed`, +6 pytest) and prompt 84 (the banner read off the served DOM, +12
+qa-shots) each added a movements row and neither touched the floor row. **A block that adds a
+movement row edits the floor row in the same keystroke** — that is the whole fix, and it is cheaper
+than any tooling.
+
+**QA-SHOTS FAILED 106/108 ON TWO OF THE FIRST THREE RUNS OF THE UNMODIFIED TREE**, on *"week: the
+picker sits flush under the bar"* (picker top 0 vs bar bottom 44) and the push check that reads from
+it. It was the harness, measured rather than assumed: `data-hdr` flips to `collapsed` a frame before
+the ResizeObserver rewrites `--stack-h`, so a read on the flip can still see the EXPANDED value, 0px.
+A probe caught it 1 run in 8 (picker 0 / `--stack-h` 0px on the flip, 44 / 44 two frames later). The
+read now waits on `stackSynced` — the condition `qa-shots.mjs` already used for the SECOND read for
+exactly this reason — and three consecutive runs read 108/108. No assertion changed.
+
+**THE PROMPT-84 TABLE WAS STALE BY TWO ROWS TOO, AND THAT GAP IS RECORDED RATHER THAN ERASED.** It read
 `514 passed + 1 skipped` and `552` while the tree already sat at 515 + 1 and 560 — **prompt 80's
 committed work moved both and only the geometry section below was updated.** It has already misled:
 prompt 81's brief quoted 514 and 552 out of this table. Rule 30 says the correction lands in the same
@@ -77,6 +94,7 @@ line claims to do.
 | prompt 83 block D2 | `qa-shots` | 94 → **96** | the off-service compose: both cues present, neither silently winning |
 | prompt 83 block E | `pytest` | 515 → **521** | `TheDesktopBannerIsTranscribed` in `tests/test_banner_generator.py` (6) — the desktop banner had NO guard at all |
 | prompt 84 | `qa-shots` | 96 → **108** | the banner READ OFF THE SERVED DOM, 6 checks × 2 breakpoints — the layer rule 24 says the other guards are not |
+| prompt 86 block A | `pytest` | 521 → **527** | Sunday NFL Countdown in `tests/test_studio_shows.py` (6); two existing tests there were rewritten in place, not removed — the one that pinned Countdown INSIDE `_not_loaded`, and the anchor-rule test, which now requires prose and query to agree in both directions so a standalone show is representable |
 
 **QA-SHOTS' EXIT CODE WAS DECORATIVE UNTIL THIS COMMIT, AND EVERY `NODE EXIT=0` ABOVE IS AFFECTED.**
 The runner ended in `process.exit(0)` unconditionally: a failing assertion went into
@@ -233,10 +251,10 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 
 | gate | run from | floor |
 |---|---|---|
-| `pytest` | repo root | **515 passed + 1 skipped** (36 subtests) |
+| `pytest` | repo root | **527 passed + 1 skipped** (36 subtests) |
 | `npm run test:unit` | `web/` | **570** |
 | `npm run smoke` | `web/` | **33/33** |
-| `node scripts/qa-shots.mjs` | `web/` | **96/96** |
+| `node scripts/qa-shots.mjs` | `web/` | **108/108** |
 | `npm run geometry` | `web/` | all hard stops |
 
 They are a floor and may only go up — **with the one exception that a removed feature takes its
@@ -2117,6 +2135,10 @@ fully accounted for:
   pregame, the Netflix pregames and the NASCAR pre/post shows. None has a verified 2026 slot in
   `docs/research/studio-shows.md` §1, and the brief's own rule is *"Nothing not in the doc"*. Each is
   recorded in `data/studio_shows.json` with its reason.
+  **THREE AS OF PROMPT 86 (2026-09-10): Sunday NFL Countdown is registered.** ESPN's Super Bowl LXI
+  season release (2026-08-19) states *"Sunday NFL Countdown (10 a.m.–1 p.m., ESPN)"*, §1 now carries
+  it, and it is `sundaynflcountdown` in the registry — **standalone** (null `anchor_rule`, no
+  `ANCHORS` entry), so no game can shorten the published window.
 - **The archived desktop grid is still game-only.** `draw_program_card()` and a `--programs` input
   exist and are tested, but the daily `render_all` job writes no programs file beside the validation
   fixture, so nothing feeds it. The drawing is ready; the feed is not built.
@@ -2136,7 +2158,8 @@ fully accounted for:
   NASCAR and IndyCar share one Racing chip and the ALL bar is a full-width row. The shipped
   `SPORT_FILTERS` already matched §16 and was left alone.
 - **`docs/research/studio-shows.md` §1 does not carry Sunday NFL Countdown**, which the brief lists
-  among the shows to load.
+  among the shows to load. *(True when written; closed by prompt 86, which added the line from ESPN's
+  release — see the not-loaded list above.)*
 - **The ESPN Press Room GameDay page has no weekly Date/Site/Game table.** Its one table is a
   historical January bowl table; the weekly site is prose inside each week's own release.
 

@@ -796,10 +796,13 @@ every week's site, so a week without a recorded release has none.
 
 ### Not loaded, and why
 
-Four shows the brief names have **no verified 2026 slot** in `docs/research/studio-shows.md` §1, and
+Three shows the brief names have **no verified 2026 slot** in `docs/research/studio-shows.md` §1, and
 the brief's own rule is *"Nothing not in the doc"*:
 
-- **Sunday NFL Countdown** — absent from the doc's "Verified 2026 slots" list entirely.
+- ~~**Sunday NFL Countdown** — absent from the doc's "Verified 2026 slots" list entirely.~~
+  **Registered by prompt 86 (2026-09-10)** as `sundaynflcountdown`: ESPN's release states Sun 10 a.m.–1
+  p.m. ET on ESPN, §1 now carries it, and it is the first STANDALONE show — `anchor_rule` null, which
+  is 0013's own word for "renders at its slot on its own row".
 - **Prime Video TNF pregame** — the doc gives "Thu **~**7:00 PM ET", with the tilde. An approximate
   start is not a slot.
 - **Netflix NFL pregames** — one dated game and "pregame format [UNVERIFIED]".

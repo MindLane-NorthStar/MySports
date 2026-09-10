@@ -52,15 +52,15 @@ def test_every_registered_show_has_a_complete_slot():
 
 
 def test_the_shows_the_brief_named_but_the_doc_did_not_verify_are_recorded_not_dropped():
-    """The brief lists Sunday NFL Countdown, the Prime TNF pregame, the Netflix pregames and the
-    NASCAR pre/post shows. `docs/research/studio-shows.md` §1's "Verified 2026 slots" carries no
-    usable slot for any of them, and the brief's own rule is "Nothing not in the doc"."""
+    """The brief lists the Prime TNF pregame, the Netflix pregames and the NASCAR pre/post shows.
+    `docs/research/studio-shows.md` §1's "Verified 2026 slots" carries no usable slot for any of
+    them, and the brief's own rule is "Nothing not in the doc".
+
+    SUNDAY NFL COUNTDOWN WAS THE FOURTH AND IS NO LONGER HERE (prompt 86): ESPN's release stated its
+    slot and §1 now carries it, so it moved to `shows` - pinned by the Countdown tests below."""
     doc = registry()
-    keys = {s["show_key"] for s in doc["shows"]}
-    assert "nflcountdown" not in keys
     named = " ".join(n["show"] for n in doc["_not_loaded"])
-    for missing in ("Sunday NFL Countdown", "Prime Video TNF pregame", "Netflix NFL pregames",
-                    "NASCAR RaceDay"):
+    for missing in ("Prime Video TNF pregame", "Netflix NFL pregames", "NASCAR RaceDay"):
         assert missing in named, missing
     for n in doc["_not_loaded"]:
         assert len(n["why"]) > 40, "a drop needs a reason, not a shrug"
@@ -73,11 +73,73 @@ def test_the_two_fox_shows_are_two_cards_not_one():
     assert {"foxnflkickoff", "foxnflsunday"} <= keys
 
 
-def test_every_registered_show_has_an_anchor_rule_that_resolves():
-    """A rule in prose that nothing implements is a rule nobody applies."""
+def test_every_anchor_rule_resolves_and_every_query_has_its_rule():
+    """A rule in prose that nothing implements is a rule nobody applies - and a query with no prose
+    is one nobody can read. So the two agree in BOTH directions.
+
+    A NULL RULE IS THE SCHEMA'S OWN WORD FOR A STANDALONE SHOW (0013: "Null = standalone, and the
+    show renders at its slot on its own row"). Until prompt 86 every show had an anchor, so this test
+    required one; Sunday NFL Countdown is the first standalone show, and a null rule with no ANCHORS
+    entry is the only shape it may take."""
+    shows = registry()["shows"]
+    for s in shows:
+        if s["anchor_rule"] is None:
+            assert s["show_key"] not in ANCHORS, "%s is standalone but has a query" % s["show_key"]
+        else:
+            assert s["anchor_rule"], s["show_key"]
+            assert s["show_key"] in ANCHORS, "%s has prose but no query" % s["show_key"]
+    assert set(ANCHORS) <= {s["show_key"] for s in shows}, "a query for a show nobody registered"
+
+
+# --------------------------------------------------------------------------- Sunday NFL Countdown
+#
+# PROMPT 86. The slot is ESPN's own: "Sunday NFL Countdown (10 a.m.-1 p.m., ESPN)", season debut
+# Sunday, Sept. 13 - the Super Bowl LXI season release, read 2026-09-10.
+def _countdown():
+    return next(s for s in registry()["shows"] if s["show_key"] == "sundaynflcountdown")
+
+
+def test_sunday_nfl_countdown_is_registered_and_no_longer_held_out():
+    doc = registry()
+    assert "sundaynflcountdown" in {s["show_key"] for s in doc["shows"]}
+    assert not any("Sunday NFL Countdown" in n["show"] for n in doc["_not_loaded"])
+    assert len(doc["shows"]) == 8
+
+
+def test_countdown_airs_on_sundays_from_sept_13_at_ten_for_three_hours():
+    """ISO weekday 6 is Sunday (0013: "0=Monday .. 6=Sunday"), and `date.weekday()` agrees. The
+    first air date is pinned too, because a wrong weekday still yields weekly dates - just the wrong
+    ones - and "every date is the same weekday" would pass for any weekday at all."""
+    show = _countdown()
+    days = list(air_dates(show, date(2026, 9, 1), date(2027, 1, 31)))
+    assert days[0] == date(2026, 9, 13), "the season debut"
+    assert all(d.weekday() == 6 for d in days), "Sundays only"
+    assert days[-1] == date(2027, 1, 3)
+    assert show["slot_start_et"] == "10:00"
+    assert show["duration_min"] == 180, "a STATED window, not the type default"
+
+
+def test_countdown_is_standalone_so_no_game_can_shorten_a_published_window():
+    """ESPN does carry the occasional Sunday NFL game. An ANCHORS entry would let the bookend rule
+    cut the 10 a.m.-1 p.m. window ESPN published down to that game's kickoff."""
+    assert _countdown()["anchor_rule"] is None
+    assert "sundaynflcountdown" not in ANCHORS
+
+
+def test_every_studio_brand_resolves_to_art_that_is_on_disk():
+    """THE GUARD THAT WOULD HAVE CAUGHT A BRAND KEY POINTING AT NOTHING. The show key is
+    `sundaynflcountdown` and the brand key is `nflcountdown` - the name the art, the manifest entry
+    and the derived colour all hang off. An unknown key does not fail anywhere else: the app falls
+    back to a neutral brand and the card silently loses its mark."""
+    with open(ROOT / "data" / "brands.json", encoding="utf-8") as fh:
+        brands = json.load(fh)["brands"]
     for s in registry()["shows"]:
-        assert s["anchor_rule"], s["show_key"]
-        assert s["show_key"] in ANCHORS, "%s has prose but no query" % s["show_key"]
+        brand = brands.get(s["brand_key"])
+        assert brand, "%s: brand_key %r is not in data/brands.json" % (s["show_key"], s["brand_key"])
+        assert brand.get("mark_dark"), s["show_key"]
+        art = ROOT / "web" / "public" / brand["mark_dark"].lstrip("/")
+        assert art.is_file(), "%s: %s is not on disk" % (s["show_key"], art)
+    assert _countdown()["brand_key"] == "nflcountdown"
 
 
 def test_the_source_findings_are_recorded_in_the_file_itself():
@@ -215,6 +277,39 @@ def test_the_network_is_the_shows_own_and_the_simulcast_is_secondary(rows):
         if s.get("simulcast"):
             assert r["broadcasts"][1]["service_id"] == s["simulcast"]
             assert r["broadcasts"][1]["is_primary"] is False
+
+
+def test_countdown_rows_start_at_ten_et_run_three_hours_and_carry_no_anchor_note(rows):
+    """The generated rows, not just the registry: 10:00 ET on both sides of the DST change (EDT in
+    September, EST after Nov 1), the stated 180 minutes with its provenance, ESPN, and NO "no anchor"
+    note - that note means "this show has an anchor rule and the slate had no game for it", which is
+    not Countdown's state."""
+    from zoneinfo import ZoneInfo
+    from datetime import datetime
+    got, notes = rows
+    cd = [r for r in got if r["_studio"]["show_key"] == "sundaynflcountdown"]
+    assert cd[0]["_studio"]["air_date"] == "2026-09-13"
+    for r in cd:
+        start = datetime.fromisoformat(r["start_at"].replace("Z", "+00:00")).astimezone(
+            ZoneInfo("America/New_York"))
+        assert (start.weekday(), start.hour, start.minute) == (6, 10, 0), r["start_at"]
+        assert r["expected_duration_min"] == 180
+        assert r["_provenance"]["duration"] == "data/studio_shows.json"
+        assert r["broadcasts"][0]["service_id"] == "ESPN" and len(r["broadcasts"]) == 1
+        assert r["brand_key"] == "nflcountdown"
+    assert not any("sundaynflcountdown" in n for n in notes)
+
+
+def test_the_registry_row_labels_countdowns_slot_as_sunday():
+    """`load_registry` writes `default_slot` from a weekday index into a Mon..Sun list - the label a
+    human reads in the table. Pinned on the emitted statement, so an off-by-one there shows up."""
+    from pipeline.db import DB
+    from pipeline.load_studio_shows import load_registry
+    db = DB(str(ROOT / "artifacts" / "sql" / "_studio_registry_test.sql"))
+    assert load_registry(db, registry()) == 8
+    stmt = next(s for s in db.emitted if "'sundaynflcountdown'" in s)
+    assert "'Sun 10:00 ET'" in stmt
+    assert "'espn'" in stmt, "the network FK is the slug"
 
 
 def test_every_row_is_citable(rows):
