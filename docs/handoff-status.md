@@ -56,9 +56,9 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-10, prompt 87 block A — after that block's last gate run, not during it.** No count
-moved in block A (documents only, plus geometry's 2026-09-13 span re-pinned 770.1 → 830.4 for Countdown);
-the table below is unchanged from prompt 86 block C.
+**Measured 2026-09-10, prompt 87 block B — after that block's last gate run, not during it.** Block A
+moved no count (documents, plus geometry's 2026-09-13 span re-pinned 770.1 → 830.4 for Countdown); block
+B moved `pytest` 531 → 543.
 
 **IT WAS STALE BY TWO ROWS AGAIN, AND BY THE SAME MECHANISM.** Prompt 86 opened by running all five
 gates on the unmodified tree at `dcf6281`: `pytest` **521 passed + 1 skipped**, `test:unit` 570,
@@ -107,6 +107,7 @@ line claims to do.
 | prompt 86 block B | `test:unit` | 570 → **582** | `web/test/gamelink.test.mjs` (12) runs the label rule. Four `livejoin.test.mjs` B2 tests were REWRITTEN IN PLACE, not removed — they pinned prompt 78's live-and-final gate, which Joe replaced |
 | prompt 86 block C | `test:unit` | 582 → **593** | `web/test/stickytimes.test.mjs` (10) and the `--pick-h` test in `collapsedheader.test.mjs` (1). Two tests REWRITTEN IN PLACE — the scroll-listener guard and `split.test.mjs`'s second-picker guard; see the Block C section below |
 | prompt 86 block C | `qa-shots` | 108 → **113** | the pinned time row, measured: axis top vs `--stack-h + --pick-h`, the noon gridline and the NOON label over the lanes' noon gridline after a 200px pan, M4 in the live DOM, and the day's last label on screen at full pan |
+| prompt 87 block B | `pytest` | 531 → **543** | `tests/test_game_url_backfill.py` (12): migration 0019's own SQL expression EXECUTED (SQLite, with Postgres's `strpos` shimmed) against `boxscore_url()` for every sport and id shape, incl. cfb's whole-id asymmetry and a two-hyphen MLB id |
 
 **QA-SHOTS' EXIT CODE WAS DECORATIVE UNTIL THIS COMMIT, AND EVERY `NODE EXIT=0` ABOVE IS AFFECTED.**
 The runner ended in `process.exit(0)` unconditionally: a failing assertion went into
@@ -157,6 +158,19 @@ protect nothing.
 
 Neither prompt-80 movement was written here at the time, and both are legitimate: a floor may only go
 up, and nothing was removed or weakened. The other three gates are unchanged throughout.
+
+### EVERY GAME GETS ITS LINK — MIGRATION 0019, WRITTEN AND NOT APPLIED (prompt 87 block B, 2026-09-10)
+
+`db/migrations/0019_backfill_game_urls.sql` fills `boxscore_url` for every game that has none, deriving
+it exactly as `pipeline/load.py`'s `boxscore_url()` does — the link needs no fetch, only the sport and
+the id, so coverage was patchy only because `SCORES_SQL` runs for fetched games. **Measured before it
+was written: 3,527 games without a link** (cfb 704, mlb 15, nba 1,206, nfl 258, nhl 1,344). Guarded
+`where boxscore_url is null`, so nothing stored is touched. **The SQL restates the per-sport mapping,
+which prompt 78 ruled against, so it is pinned**: `tests/test_game_url_backfill.py` executes the
+migration's own expression and compares it with `boxscore_url()`; a changed template in either
+place fails it (mutation-checked, and the cfb asymmetry is caught only by the hyphenated-cfb case,
+which is why it is there). **Applied only on Joe's named approval (rule 14)**, after the push. It
+fixes the LINK only; the Thursday/Monday NFL refresh hole is `docs/queue.md` item 1.
 
 ### THE RECORD IS SPLIT, THE QUEUE IS FILED, THE STALE NOTES ARE CORRECTED (prompt 87 block A, 2026-09-10)
 
@@ -293,7 +307,7 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 
 | gate | run from | floor |
 |---|---|---|
-| `pytest` | repo root | **531 passed + 1 skipped** (36 subtests) |
+| `pytest` | repo root | **543 passed + 1 skipped** (36 subtests) |
 | `npm run test:unit` | `web/` | **593** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **113/113** |
