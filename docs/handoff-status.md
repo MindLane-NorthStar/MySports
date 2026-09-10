@@ -172,7 +172,7 @@ value bottom 509.22, left edge 199 on the right column; 560px — 534.00–568.0
 the empty third track, so even at 560 it is two columns). Contract: `rendering-contract.md` §12 v1.7.1
 and Addendum M11's v2.2 amendment; `docs/design/mobile_demo.html` moved with it (rule 23).
 
-### EVERY GAME GETS ITS LINK — MIGRATION 0019, WRITTEN AND NOT APPLIED (prompt 87 block B, 2026-09-10)
+### EVERY GAME GETS ITS LINK — MIGRATION 0019, APPLIED (prompt 87 block B, 2026-09-10)
 
 `db/migrations/0019_backfill_game_urls.sql` fills `boxscore_url` for every game that has none, deriving
 it exactly as `pipeline/load.py`'s `boxscore_url()` does — the link needs no fetch, only the sport and
@@ -184,6 +184,11 @@ migration's own expression and compares it with `boxscore_url()`; a changed temp
 place fails it (mutation-checked, and the cfb asymmetry is caught only by the hyphenated-cfb case,
 which is why it is there). **Applied only on Joe's named approval (rule 14)**, after the push. It
 fixes the LINK only; the Thursday/Monday NFL refresh hole is `docs/queue.md` item 1.
+
+**APPLIED 2026-09-10 20:21 UTC on Joe's named approval.** 3,527 rows written — exactly the
+migration transaction's rows — and **0 games are left without a link, 3,953 of 3,953**. The 426
+links stored before re-fingerprint identically, and no link differs from the derived expression.
+The migration's header carries the before/after record.
 
 ### THE RECORD IS SPLIT, THE QUEUE IS FILED, THE STALE NOTES ARE CORRECTED (prompt 87 block A, 2026-09-10)
 

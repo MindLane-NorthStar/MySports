@@ -32,8 +32,9 @@ the loader never writes their score while they are on. The client-side live over
 (`web/lib/livescores.js`) masks some of it on the day, but the stored row is stale.
 
 **The real question is a design call, not a two-date patch:** whether NFL should get the rolling
-7-day window NBA and MLB already have (`schedule_refresh.yml:62-71`). Block B of prompt 87 backfills
-the missing LINKS; it does not fix this.
+7-day window NBA and MLB already have (`schedule_refresh.yml:62-71`). Block B of prompt 87 backfilled
+the missing LINKS — migration 0019, applied 2026-09-10, so both games above now have one — and it does
+not fix this: they still carry whatever kickoff and status the last full load wrote.
 
 **Size.** Small to change, medium to verify: one workflow step, plus a dispatched run to confirm the
 adapter's date handling (rule 5: run the workflow, never re-run; rule 28: `tests/test_workflows.py`

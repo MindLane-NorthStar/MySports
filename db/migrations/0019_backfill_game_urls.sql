@@ -1,7 +1,22 @@
 -- 0019 — every game gets its game link, not only the ones the nightly happened to fetch.
 --
 -- ============================================================================================
--- PREPARED 2026-09-10, prompt 87 block B. NOT YET APPLIED.
+-- APPLIED 2026-09-10 at 20:21:23 UTC, through the Supabase connector (`apply_migration`, history
+-- version 20260910202123 `backfill_game_urls`), on Joe Lull's explicit named approval ("Apply 0019").
+-- Applied FROM this file; the SQL below is byte-for-byte what ran - only this header was edited after.
+--
+-- Rule 27 checked first: no workflow in progress, the day's last refresh finished ~17:25 UTC.
+-- SELECT-and-paste immediately before: 3,527 without a link (cfb 704, mlb 15, nba 1,206, nfl 258,
+-- nhl 1,344), 426 already linked, and those 426 fingerprinted: md5 of id=url in id order,
+-- 80711cfbf3404e8c48761f684972dd21.
+-- MEASURED AFTER: 0 games without a link, 3,953 of 3,953 linked. The migration's transaction (xmin
+-- 11551) wrote EXACTLY 3,527 rows; the 426 rows outside it re-fingerprint to the same md5, so no
+-- stored link changed; and 0 of 3,953 links differ from the derived expression. Five new links
+-- spot-checked, 200 each - including Thursday's nfl-401872657 and Monday's nfl-401872931, and
+-- nhl-2026020001, which nhl.com redirects to that game's own page.
+-- (The connector does not return RAISE NOTICE output, so the before/after SELECTs are the record.)
+--
+-- PREPARED 2026-09-10, prompt 87 block B.
 --
 -- WORKING RULE 14: a write through the Supabase connector needs Joe's approval BY NAME for this
 -- operation, SELECT-and-paste first, rule 27's schedule check, and this file applied FROM the repo
