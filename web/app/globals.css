@@ -1028,7 +1028,16 @@ input:focus-visible {
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   background: var(--panel);
+  /* CLIP, NOT HIDDEN (prompt 86 block C) - and the difference is the whole of the pinned time row.
+     Both clip the content to the rounded corners, which is all this was ever for. But `hidden` makes
+     this box a SCROLL CONTAINER, and a sticky descendant resolves against its nearest scroll
+     container - so `.mgrid-axis`, hoisted out of `.mgrid-scroll` precisely to escape that trap,
+     would have landed in the same one a level up and pinned to a box that never scrolls. `clip` is
+     not a scroll container (CSS Overflow 3), so the axis resolves against the page. Measured, not
+     recalled (rule 34): see block C's report for the before/after offsets. `hidden` stays as the
+     line above for any engine without `clip`, where the row simply does not pin. */
   overflow: hidden;
+  overflow: clip;
   /* STAGE 8. The 20px BELOW is gone; the neighbour owns that gap now, which is what lets one grid
      per day in a week stack at the 24px section step instead of 20 + 14 + 21 = 55.
      The 14px ABOVE stays: with the control stack's own 8px padding it makes picker -> grid 22px,
@@ -1108,7 +1117,12 @@ input:focus-visible {
    ZOOM LEVEL. That last part is only true while nothing between this element and .mgrid-scroll
    carries a transform: a transformed ancestor would become its containing block and the rail would
    resolve against the scaled content instead of the scrollport, which is exactly the bug prompt 30
-   fixed. Do not add one. */
+   fixed. Do not add one.
+   THE AXIS CORNER LEFT THE SCROLLER IN PROMPT 86 BLOCK C. `.mgrid-axis-rail` still shares this rule,
+   and outside the scroller its `left: 0` has nothing to scroll against - it simply sits at the axis's
+   left edge. What it still needs from here is the ground, the rule and z-index 3: the corner is a
+   positioned box ABOVE the translated `.mgrid-axis-track`, which is what keeps the labels from
+   sliding over it when the grid is panned. */
 .mrail-cell,
 .mgrid-axis-rail {
   position: sticky;
@@ -1208,14 +1222,66 @@ input:focus-visible {
      is backwards. height stays 26px; border-box absorbs the extra pixel. */
   border-bottom: 2px solid var(--line-grid);
   height: 26px;
+  /* PROMPT 86 BLOCK C: the axis is OUTSIDE `.mgrid-scroll` now and its track is translated by
+     MobileGrid to follow the scroller's scrollLeft. Without the clip, the translated track spills
+     past the grid's left edge; without the ground, a pinned strip lets the blocks scroll visibly
+     through it (`body` is a radial gradient, and `.pickrow`'s first build had exactly that defect).
+     `--panel` is the grid's own ground (rule 16), so the row reads as part of the grid, stuck or not. */
+  overflow: hidden;
+  background: var(--panel);
+  /* The scroller's own value: the browser keeps vertical page scroll and horizontal panning, and
+     does not page-zoom, so a pinch or a sideways swipe on the row reaches MobileGrid's handlers the
+     way it reaches them on the columns below. */
+  touch-action: pan-x pan-y;
 }
 
+/* 0 0 auto, NOT 1 1 auto: inside the canvas the track sat in a box exactly its own width, so shrink
+   never applied; out here the axis is only as wide as the grid, and a shrinkable track would be
+   squeezed to fit it. Positions would survive (every tick is absolutely placed) but the track's width
+   would stop meaning `scale.width`. */
 .mgrid-axis-track {
   position: relative;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
 }
 
-.maxis-label {
+/* THE AXIS'S REACH inside the canvas (prompt 86 block C) - see MobileGrid.js. Zero height and
+   invisible, but laid out exactly like the axis it copies (the corner's width, a track of
+   `scale.width`, `.maxis-reach-label` sharing `.maxis-label`'s rule), so the last label's overhang still counts
+   toward the scroller's scrollWidth and a full pan still reaches it. `visibility` removes the paint
+   and not the layout, which is the property this needs; `pointer-events` keeps it out of every tap. */
+.mgrid-axis-reach {
+  display: flex;
+  height: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.mgrid-axis-reach-rail {
+  flex: 0 0 auto;
+  width: var(--rail-w);
+}
+.mgrid-axis-reach-track {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+/* THE TIME ROW PINS UNDER THE PICKER (prompt 86 block C, Joe's Route A). Under the bar (40) and the
+   picker (30), and flush beneath the picker's border box: `--stack-h` is the bar's rendered height and
+   `--pick-h` the picker's, both written by ResizeObservers in components/CollapsedHeader.js.
+   SCOPED TO COLLAPSED for `.pickrow`'s reason: expanded, `.chdr` is `display: none` and out of flow,
+   and scroll only ever collapses the header (lib/headerstate.js), so a reader scrolling the grid is
+   always here. The horizontal sync is NOT scoped - it runs in both states. */
+html[data-hdr='collapsed'] .mgrid-axis {
+  position: sticky;
+  top: calc(var(--stack-h, 44px) + var(--pick-h, 0px));
+  z-index: 20;
+}
+
+/* `.maxis-reach-label` is the axis's invisible reach inside the canvas (prompt 86 block C). It shares
+   every metric here so its overhang is the real label's to the pixel, and it has its OWN class so a
+   `.maxis-label` query still means a label a reader can see - with the shared class, qa-shots' M5
+   count read 12 where the screen shows 6. */
+.maxis-label,
+.maxis-reach-label {
   position: absolute;
   top: 4px;
   font-family: var(--display);

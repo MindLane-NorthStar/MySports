@@ -205,6 +205,45 @@ export default function CollapsedHeader() {
     return () => ro.disconnect();
   }, []);
 
+  /**
+   * `--pick-h` - THE PICKER'S REAL RENDERED HEIGHT, FOR THE TIME ROW'S STICKY OFFSET (prompt 86
+   * block C). The grid's axis pins at `--stack-h + --pick-h`, flush under the picker, so it needs
+   * the picker's height the way the picker needs the bar's.
+   *
+   * ITS OWN OBSERVER, NOT A SECOND TARGET ON THE ONE ABOVE: one observer per element, so each
+   * callback writes exactly one property and neither can go stale because of the other.
+   *
+   * BOUNDING RECT AND BORDER-BOX, for the reason the note above records: a content-box observer on
+   * `.chdr` missed an inset change and parked the picker 59px too high. `.pickrow`'s height changes
+   * with its PADDING when the header collapses (8px top and bottom), which moves the border box and
+   * not the content box - the same shape.
+   *
+   * THE PICKER IS NOT THIS COMPONENT'S NODE. `.chdr` is rendered here, in the layout, and lives as
+   * long as it does; `.pickrow` is rendered by app/page.js, so a navigation that remounts the page
+   * would leave an observer holding a detached element. So every callback checks the node is still
+   * connected and, if not, finds the new one and observes that instead - a removed element's box
+   * goes to zero, which is itself a resize, so the observer is woken by exactly the event it needs.
+   */
+  useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    let el = document.querySelector('.pickrow');
+    if (!el) return undefined;
+    const root = document.documentElement;
+    const ro = new ResizeObserver(() => {
+      if (!el.isConnected) {
+        ro.unobserve(el);
+        const next = document.querySelector('.pickrow');
+        if (!next) return;
+        el = next;
+        ro.observe(el, { box: 'border-box' });
+      }
+      root.style.setProperty('--pick-h', `${el.getBoundingClientRect().height}px`);
+    });
+    root.style.setProperty('--pick-h', `${el.getBoundingClientRect().height}px`);
+    ro.observe(el, { box: 'border-box' });
+    return () => ro.disconnect();
+  }, []);
+
   // THE TILE ROW CLOSES WITH THE BAR. Expanding restores the full control stack, which contains
   // the same eight tiles; leaving this open would render the row twice, once in a bar nobody can
   // see.

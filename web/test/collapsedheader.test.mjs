@@ -23,12 +23,41 @@ test('the trigger is an IntersectionObserver on a sentinel, and NOT a scroll lis
   assert.match(c, /new IntersectionObserver\(/);
   assert.match(c, /io\.observe\(el\)/);
   assert.match(c, /return \(\) => io\.disconnect\(\)/, 'the observer is torn down');
-  // A scroll handler fires every frame and this app has never had one. Assert that across the
-  // WHOLE app, not just this file - the point is the property, not this component's discipline.
+  // A scroll handler fires every frame, and the PAGE has never had one. Assert that across the app,
+  // not just this file - the point is the property, not this component's discipline.
   for (const f of ['components/CollapsedHeader.js', 'app/layout.js', 'components/Listing.js',
-                   'components/Filters.js', 'components/MobileGrid.js']) {
+                   'components/Filters.js']) {
     assert.doesNotMatch(code(f), /addEventListener\(\s*['"]scroll['"]/, `${f} adds a scroll listener`);
   }
+  // REWRITTEN IN PLACE BY PROMPT 86 BLOCK C, NOT RELAXED. Prompt 58's ruling was that the HEADER is
+  // triggered by an observer and never a scroll handler, and this test widened that to "this app has
+  // never had one". Joe's Route A for the pinned time row then chose, explicitly, a passive scroll
+  // listener on the GRID'S OWN horizontal scroller to keep the hoisted axis in step. So MobileGrid
+  // may carry exactly that one - on the element, passive, one write per frame - and still no
+  // listener on the window or the document. stickytimes.test.mjs pins its body.
+  const g = code('components/MobileGrid.js');
+  const listeners = g.match(/addEventListener\(\s*['"]scroll['"][^)]*\)/g) || [];
+  assert.deepEqual(listeners, ["addEventListener('scroll', onScroll, { passive: true })"],
+    'MobileGrid: exactly one scroll listener, and it is passive');
+  assert.match(g, /el\.addEventListener\('scroll', onScroll/, 'on the scroller element');
+  assert.doesNotMatch(g, /(window|document)\.addEventListener\(\s*['"]scroll['"]/, 'never on the page');
+});
+
+test('--pick-h is written from the picker\'s BOUNDING RECT, by its own border-box observer', () => {
+  // PROMPT 86 BLOCK C: the time row pins at --stack-h + --pick-h. The bounding rect and border-box
+  // for the reason the --stack-h observer records - a content-box observer went stale on an inset
+  // change and parked the picker 59px too high. `.pickrow`'s height changes with its padding.
+  const c = code('components/CollapsedHeader.js');
+  const effect = region(c, "let el = document.querySelector('.pickrow');", 'return () => ro.disconnect();',
+    'the --pick-h effect');
+  assert.match(effect, /setProperty\('--pick-h', `\$\{el\.getBoundingClientRect\(\)\.height\}px`\)/);
+  assert.doesNotMatch(effect, /contentRect|contentBoxSize/, 'never the content box');
+  assert.match(effect, /ro\.observe\(el, \{ box: 'border-box' \}\)/);
+  assert.match(effect, /if \(!el\.isConnected\)/, 'a replaced picker is re-found rather than left stale');
+  // ONE OBSERVER PER ELEMENT: the .chdr observer does not also watch the picker
+  const stackEffect = region(c, "const el = document.querySelector('.chdr');", 'return () => ro.disconnect();',
+    'the --stack-h effect');
+  assert.doesNotMatch(stackEffect, /pickrow|--pick-h/);
 });
 
 test('the server renders the EXPANDED state, which is what makes hydration safe', () => {

@@ -50,7 +50,7 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-10, prompt 86 block B — after that block's last gate run, not during it.**
+**Measured 2026-09-10, prompt 86 block C — after that block's last gate run, not during it.**
 
 **IT WAS STALE BY TWO ROWS AGAIN, AND BY THE SAME MECHANISM.** Prompt 86 opened by running all five
 gates on the unmodified tree at `dcf6281`: `pytest` **521 passed + 1 skipped**, `test:unit` 570,
@@ -97,6 +97,8 @@ line claims to do.
 | prompt 86 block A | `pytest` | 521 → **527** | Sunday NFL Countdown in `tests/test_studio_shows.py` (6); two existing tests there were rewritten in place, not removed — the one that pinned Countdown INSIDE `_not_loaded`, and the anchor-rule test, which now requires prose and query to agree in both directions so a standalone show is representable |
 | prompt 86 block B | `pytest` | 527 → **531** | `tests/test_scores.py`: the cfb whole-id branch pinned against a hyphenated id, no ESPN template a box-score page, and `ScoresWrite` (2) — the write has no state gate and keeps `coalesce`, and the call site passes one value per placeholder. The three ESPN template assertions were UPDATED in place to `/game/` |
 | prompt 86 block B | `test:unit` | 570 → **582** | `web/test/gamelink.test.mjs` (12) runs the label rule. Four `livejoin.test.mjs` B2 tests were REWRITTEN IN PLACE, not removed — they pinned prompt 78's live-and-final gate, which Joe replaced |
+| prompt 86 block C | `test:unit` | 582 → **593** | `web/test/stickytimes.test.mjs` (10) and the `--pick-h` test in `collapsedheader.test.mjs` (1). Two tests REWRITTEN IN PLACE — the scroll-listener guard and `split.test.mjs`'s second-picker guard; see the Block C section below |
+| prompt 86 block C | `qa-shots` | 108 → **113** | the pinned time row, measured: axis top vs `--stack-h + --pick-h`, the noon gridline and the NOON label over the lanes' noon gridline after a 200px pan, M4 in the live DOM, and the day's last label on screen at full pan |
 
 **QA-SHOTS' EXIT CODE WAS DECORATIVE UNTIL THIS COMMIT, AND EVERY `NODE EXIT=0` ABOVE IS AFFECTED.**
 The runner ended in `process.exit(0)` unconditionally: a failing assertion went into
@@ -147,6 +149,36 @@ protect nothing.
 
 Neither prompt-80 movement was written here at the time, and both are legitimate: a floor may only go
 up, and nothing was removed or weakened. The other three gates are unchanged throughout.
+
+### THE TIME ROW LOCKS UNDER THE PICKER (prompt 86 block C, Joe's Route A, 2026-09-10)
+
+The phone grid's hour row now pins beneath the collapsed bar and picker on a downward scroll and
+stays over its own columns at every pan and zoom. **Measured at 390×844, CFB 2026-09-05, scrollY
+530, panned 200px:** axis top **92.39** = `--stack-h` 44 + `--pick-h` 48.39; the axis's noon
+gridline **82.44** on the lanes' noon gridline **82.44**; the NOON label at **80.44**, which is its own
+`translateX(-2px)` and nothing else. `mobile__axis-pinned.png` in each qa-shots run is the picture.
+
+**THREE THINGS THE BRIEF DID NOT ANTICIPATE, ALL FOUND BY MEASUREMENT OR BY A GATE:**
+
+- **`.mgrid`'s `overflow: hidden` was the same trap one level up.** `hidden` is a scroll container,
+  so the hoisted sticky row pinned to `.mgrid` and never moved: forced back to `hidden`, the axis sat
+  at **−306.22**, off the screen. It is `overflow: clip` now (with `hidden` as the fallback line).
+- **The hoist cost the row its gestures.** qa-shots' *"the same pinch 60px lower"* landed on the new
+  28px strip and did nothing. The pinch handlers now listen on the row too, and a one-finger swipe on
+  the row pans the scroller (measured: a 170px swipe → scrollLeft 170, row and columns still aligned).
+  No momentum on that one strip.
+- **The hoist cost the last hour label its reach, and geometry's day-span stop caught it.** The
+  last label's text overhangs the canvas edge (CFB "2AM" 26.56px, MLB "10PM" 13.17px) and that
+  overhang had counted toward `scrollWidth` — 1273 → 1248 and 568 → 556 without it, and at full pan
+  the label sat just off screen. An invisible, zero-height copy of the labels stays in the canvas as
+  `.mgrid-axis-reach`; scrollWidth is back to 1273 / 568 / 1044 and **the spans were NOT re-pinned**.
+
+**TWO EXISTING TESTS WERE REWRITTEN IN PLACE.** `collapsedheader.test.mjs` forbade any scroll listener
+in `MobileGrid.js` — prompt 58's ruling was about the HEADER trigger, and Route A chose one passive
+listener on the grid's own scroller, so exactly that one is now allowed and the page stays
+listener-free. `split.test.mjs` forbade the word `pickrow` in `CollapsedHeader.js`; its message is
+"must not render a second picker", and the header now MEASURES the picker, so it forbids rendering
+one instead.
 
 ### A COWORK CORRECTION: THE STALE-RENDER FINDING READ A LABEL, NOT THE THING (prompt 84)
 
@@ -264,9 +296,9 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 | gate | run from | floor |
 |---|---|---|
 | `pytest` | repo root | **531 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **582** |
+| `npm run test:unit` | `web/` | **593** |
 | `npm run smoke` | `web/` | **33/33** |
-| `node scripts/qa-shots.mjs` | `web/` | **108/108** |
+| `node scripts/qa-shots.mjs` | `web/` | **113/113** |
 | `npm run geometry` | `web/` | all hard stops |
 
 They are a floor and may only go up — **with the one exception that a removed feature takes its

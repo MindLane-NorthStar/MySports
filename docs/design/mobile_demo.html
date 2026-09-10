@@ -336,7 +336,15 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .mcard .seam{position:absolute; left:0; right:0; bottom:0; height:3px}
 
 /* ---------- mobile-optimized grid: airing windows only ---------- */
-.mgwrap{margin:0 12px 14px; border:1px solid var(--line-soft); border-radius:6px; background:#141414; overflow-x:auto; -webkit-overflow-scrolling:touch}
+/* PROMPT 86 BLOCK C (rule 23 - this file draws the grid's time row, so it moves with the app): the
+   row leaves the scroller and PINS at the top of the frame on a downward scroll, kept over its
+   columns by a translate that follows the scroller (boot() below). The box, border and corners moved
+   from .mgwrap to .mgshell, which clips with `clip` rather than `hidden` - hidden would make it a
+   scroll container and the sticky row would pin to it instead of to the frame. The app pins under
+   its collapsed bar and picker; this frame has no sticky chrome, so the row pins at 0. */
+.mgshell{margin:0 12px 14px; border:1px solid var(--line-soft); border-radius:6px; background:#141414; overflow:hidden; overflow:clip}
+.mgaxisrow{position:sticky; top:0; z-index:6; overflow:hidden; background:#141414}
+.mgwrap{overflow-x:auto; -webkit-overflow-scrolling:touch}
 .mgcanvas{position:relative; font-family:var(--body)}
 /* B2: the axis rule and the between-network rule both stepped up, so the reference keeps showing
    what the app ships. Joe asked for the lines between networks to be more distinguishable; at
@@ -667,10 +675,10 @@ function buildMobileGrid(style){
       const od=g.odds?`<span class="od">O/U ${esc(g.odds.ou)}${w>=150?` · ${esc(g.odds.fav)}`:""}</span>`:"";
       return `<span class="mgblk" style="left:${l.toFixed(0)}px;width:${w.toFixed(0)}px">${cap(a,"away")}${band(a,"away")}${band(h,"home")}${cap(h,"home")}<span class="mgseamline" style="background:linear-gradient(90deg,${surfaceOf(a)},${surfaceOf(h)})"></span><span class="mgtray"><span>${esc(timeOf(g))}</span>${od}</span></span>`;}).join("");
     return `<div class="mgrow"><span class="mglab">${lab}</span>${blocks}</div>`;}).join("");
-  return `<div class="mgwrap"><div class="mgcanvas" style="width:${W}px">
-    <div class="mgaxis">${ticks}</div>
+  return `<div class="mgshell"><div class="mgaxisrow"><div class="mgaxis" style="width:${W}px">${ticks}</div></div>
+    <div class="mgwrap"><div class="mgcanvas" style="width:${W}px">
     ${rhtml}${seams}
-  </div></div>
+  </div></div></div>
   <p class="mgnote">Illustrative gap-day slate (subset of tonight's real games). Only airing windows render; ${MG_GAP}+ min dead stretches ${style==="cut"?"are cut at the dashed seam":"compress to the hatched sliver"}. Empty channel rows dropped.</p>`;
 }
 
@@ -767,6 +775,12 @@ function boot(el, variant){
   GRIDSTYLE = variant==="A" ? "cut" : "sliver";
   el.innerHTML=appHTML(variant);
   fitNames(el);
+  // PROMPT 86 BLOCK C: the pinned time row follows its scroller - MobileGrid.js's axis sync, one
+  // passive listener, one write per frame, the transform on the row and on nothing else.
+  $$(".mgshell",el).forEach(sh=>{
+    const w=$(".mgwrap",sh), a=$(".mgaxis",sh); let f=0;
+    w.addEventListener("scroll",()=>{ if(!f) f=requestAnimationFrame(()=>{ f=0; a.style.transform=`translateX(${-w.scrollLeft}px)`; }); },{passive:true});
+  });
 }
 
 /**

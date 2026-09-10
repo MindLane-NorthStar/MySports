@@ -239,11 +239,16 @@ export default function MobileGrid({ games, sport, day, standings, onOpen, nowMi
   // transformed ancestor, so it holds the left edge natively at every level.
   const [zoom, setZoom] = useState(1);
   const scrollRef = useRef(null);
+  const axisRef = useRef(null);
   const pinch = useRef(null);
 
+  // THE PINCH LISTENS ON THE TIME ROW TOO (prompt 86 block C). The axis used to live inside the
+  // scroller and took its gestures for free; hoisted out to pin under the picker, it became a 28px
+  // strip that ignored them - qa-shots' "the same pinch 60px lower works normally" landed on it and
+  // failed. Same handlers, second element: a pinch is a pinch wherever the two fingers start.
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return undefined;
+    const targets = [scrollRef.current, axisRef.current].filter(Boolean);
+    if (!targets.length) return undefined;
     const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
     function onStart(e) {
       if (e.touches.length === 2) pinch.current = { d: dist(e.touches), z: zoom };
@@ -258,15 +263,49 @@ export default function MobileGrid({ games, sport, day, standings, onOpen, nowMi
     function onEnd() {
       pinch.current = null;
     }
-    el.addEventListener('touchstart', onStart, { passive: true });
-    el.addEventListener('touchmove', onMove, { passive: false });
-    el.addEventListener('touchend', onEnd);
+    for (const el of targets) {
+      el.addEventListener('touchstart', onStart, { passive: true });
+      el.addEventListener('touchmove', onMove, { passive: false });
+      el.addEventListener('touchend', onEnd);
+    }
     return () => {
-      el.removeEventListener('touchstart', onStart);
-      el.removeEventListener('touchmove', onMove);
-      el.removeEventListener('touchend', onEnd);
+      for (const el of targets) {
+        el.removeEventListener('touchstart', onStart);
+        el.removeEventListener('touchmove', onMove);
+        el.removeEventListener('touchend', onEnd);
+      }
     };
   }, [zoom]);
+
+  // AND A SWIPE ON THE TIME ROW STILL PANS THE GRID. Inside the scroller that was native; outside it,
+  // one finger dragging across the row moves the scroller by the same distance, and the scroll it
+  // causes is what the axis sync (below) follows - so the row and the columns cannot part company.
+  // No momentum on this one strip, which native panning had; the columns below keep theirs. Passive:
+  // it never cancels anything, and `touch-action` on the row leaves vertical page scroll to the
+  // browser.
+  useEffect(() => {
+    const axis = axisRef.current;
+    const el = scrollRef.current;
+    if (!axis || !el) return undefined;
+    let drag = null;
+    function onStart(e) {
+      drag = e.touches.length === 1 ? { x: e.touches[0].clientX, left: el.scrollLeft } : null;
+    }
+    function onMove(e) {
+      if (drag && e.touches.length === 1) el.scrollLeft = drag.left - (e.touches[0].clientX - drag.x);
+    }
+    function onEnd() {
+      drag = null;
+    }
+    axis.addEventListener('touchstart', onStart, { passive: true });
+    axis.addEventListener('touchmove', onMove, { passive: true });
+    axis.addEventListener('touchend', onEnd);
+    return () => {
+      axis.removeEventListener('touchstart', onStart);
+      axis.removeEventListener('touchmove', onMove);
+      axis.removeEventListener('touchend', onEnd);
+    };
+  }, [model.rows.length]);
 
   const { rows, ticks, cuts, tbd, netTbd, kickTbd } = model;
 
@@ -278,6 +317,49 @@ export default function MobileGrid({ games, sport, day, standings, onOpen, nowMi
     () => makeScale(model.segments, model.pxPerMin * zoom, SEAM_PX),
     [model.segments, model.pxPerMin, zoom],
   );
+  /**
+   * THE TIME ROW TRAVELS WITH THE COLUMNS FROM OUTSIDE THE SCROLLER (prompt 86 block C, Route A).
+   *
+   * The axis was hoisted out of `.mgrid-scroll` so it can pin under the picker on a downward scroll:
+   * a box with non-visible overflow on EITHER axis is a scroll container in BOTH, so a sticky `top`
+   * inside the scroller resolved against a box that never scrolls vertically, and did nothing.
+   * Outside it, the axis no longer pans natively - so this puts it back in step.
+   *
+   * THE TRANSFORM GOES ON THE TRACK AND NOTHING ELSE. M4: nothing between `.mrail-cell` and
+   * `.mgrid-scroll` may carry a transform, because a transformed ancestor becomes the rail's
+   * containing block and the rail slides (prompt 30). The track is no longer an ancestor of the
+   * rail - the rail lives in `.mgrid-row`, inside the scroller - and stickytimes.test.mjs pins that.
+   *
+   * WRITTEN STRAIGHT TO THE NODE, never through React state: state would re-render the whole grid on
+   * every scroll frame. COALESCED to one write per frame - scroll events fire before animation
+   * frames in the same rendering update, so the write lands in the frame the scroll does. PASSIVE,
+   * because it never cancels anything. Re-run when the scale changes, so a pinch-zoom (which moves
+   * scrollLeft by clamping) cannot leave the strip behind.
+   *
+   * THE ONE SCROLL LISTENER IN THIS APP, deliberately - collapsedheader.test.mjs allows exactly this
+   * one, on this element, and still forbids any on the page.
+   */
+  const trackRef = useRef(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    const track = trackRef.current;
+    if (!el || !track) return undefined;
+    let frame = 0;
+    const sync = () => {
+      frame = 0;
+      track.style.transform = `translateX(${-el.scrollLeft}px)`;
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(sync);
+    };
+    sync();
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [scale, rows.length]);
+
   const blockH = BLOCK_H * SCALE;
   const trayH = TRAY_H * SCALE;
   const laneH = blockH + trayH + LANE_GAP * SCALE;
@@ -335,6 +417,38 @@ export default function MobileGrid({ games, sport, day, standings, onOpen, nowMi
         </nav>
       ) : null}
 
+      {/* M5: hour-only gold shorthand labels. Gridlines stay on :15.
+          HOISTED OUT OF THE SCROLLER (prompt 86 block C) so it can pin under the picker on a
+          downward scroll; its horizontal position is kept in step by the effect on `trackRef`.
+          `data-minute` is diagnostic, like the canvas's data-*: it lets qa-shots find the SAME
+          minute here and in the lanes and compare the two by number. */}
+      <div className="mgrid-axis" ref={axisRef}>
+        <div className="mgrid-axis-rail" />
+        <div className="mgrid-axis-track" ref={trackRef} style={{ width: scale.width }}>
+          {ticks.lines.map((l) => (
+            <div
+              key={`al-${l.minute}`}
+              className="mgrid-line"
+              data-hour={l.hour ? 'true' : 'false'}
+              data-minute={l.minute}
+              style={{ left: scale.toX(l.minute) }}
+            />
+          ))}
+          {ticks.labels.map((l) => (
+            <span key={`ax-${l.minute}`} className="maxis-label" data-minute={l.minute}
+                  style={{ left: scale.toX(l.minute) }}>
+              {l.text}
+            </span>
+          ))}
+          {/* The now marker's segment through the time row. It used to cross the axis for free,
+              because the axis was inside the canvas it spans; out here it is drawn once more at the
+              same minute, so the gold hairline still runs unbroken from the labels to the last row. */}
+          {nowMinute !== null && Number.isFinite(nowMinute) ? (
+            <div className="mnow" aria-hidden="true" style={{ left: scale.toX(nowMinute) }} />
+          ) : null}
+        </div>
+      </div>
+
       <div className="mgrid-scroll" ref={scrollRef}>
         {/* No transform. The width below is the real, laid-out width at this zoom. */}
         <div
@@ -353,20 +467,21 @@ export default function MobileGrid({ games, sport, day, standings, onOpen, nowMi
           data-widest={model.widest.toFixed(3)}
           data-pxpermin={model.pxPerMin.toFixed(6)}
         >
-          {/* M5: hour-only gold shorthand labels. Gridlines stay on :15. */}
-          <div className="mgrid-axis">
-            <div className="mgrid-axis-rail" />
-            <div className="mgrid-axis-track" style={{ width: scale.width }}>
-              {ticks.lines.map((l) => (
-                <div
-                  key={`al-${l.minute}`}
-                  className="mgrid-line"
-                  data-hour={l.hour ? 'true' : 'false'}
-                  style={{ left: scale.toX(l.minute) }}
-                />
-              ))}
+          {/* THE AXIS'S REACH, LEFT BEHIND ON PURPOSE (prompt 86 block C). An hour label on the last
+              minute of the day starts AT the canvas's right edge and its text runs past it - CFB
+              2026-09-05's "2AM" by 26.56px, MLB 2026-09-03's "10PM" by 13.17. While the axis lived
+              in here, that overhang was part of the scroller's scrollable overflow, so a full pan
+              right brought the last label into view. Hoisted out, it was not: scrollWidth fell 1273
+              -> 1248 and 568 -> 556, geometry's day-span stop caught it, and at full pan the last
+              label sat just past the right edge, unseen.
+              So the SAME labels are laid out here once more - invisible, zero-height, inert - and
+              reach exactly as far as they always did. Not `.mgrid-axis`, and nothing here is synced
+              or transformed: it is extent, not a second time row. */}
+          <div className="mgrid-axis-reach" aria-hidden="true">
+            <div className="mgrid-axis-reach-rail" />
+            <div className="mgrid-axis-reach-track" style={{ width: scale.width }}>
               {ticks.labels.map((l) => (
-                <span key={`ax-${l.minute}`} className="maxis-label" style={{ left: scale.toX(l.minute) }}>
+                <span key={`rx-${l.minute}`} className="maxis-reach-label" style={{ left: scale.toX(l.minute) }}>
                   {l.text}
                 </span>
               ))}
@@ -422,6 +537,7 @@ export default function MobileGrid({ games, sport, day, standings, onOpen, nowMi
                     key={`gl-${row.id}-${l.minute}`}
                     className="mgrid-line"
                     data-hour={l.hour ? 'true' : 'false'}
+                    data-minute={l.minute}
                     style={{ left: scale.toX(l.minute) }}
                   />
                 ))}

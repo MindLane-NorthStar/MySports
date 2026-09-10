@@ -950,6 +950,105 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
+// ------------------------------------------------ THE TIME ROW LOCKS UNDER THE PICKER (prompt 86 block C)
+//
+// The axis was hoisted out of `.mgrid-scroll` so it can pin under the picker, and a transform on its
+// track keeps it over the columns. A screenshot shows the row is pinned; ONLY THE MEASUREMENT shows
+// the times still sit over their own columns - a strip one frame behind, or not synced at all, looks
+// pinned and reads wrong. So both are measured, at a KNOWN vertical scroll and a KNOWN pan.
+{
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+  });
+  const page = await ctx.newPage();
+  const PAN = 200;
+  await page.goto(`${base}/?day=2026-09-05&sport=cfb&view=grid`, { waitUntil: 'networkidle' });
+  await shown(page, '.mgrid-axis');
+  const scrollTo = await page.evaluate(() =>
+    Math.round(document.querySelector('.mgrid').getBoundingClientRect().top + window.scrollY + 400));
+  await page.evaluate((y) => window.scrollTo(0, y), scrollTo);
+  await hdrIs(page, 'collapsed');
+  await stackSynced(page);
+  await page.waitForFunction(() => {                       // --pick-h has caught up with the picker
+    const d = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--pick-h'));
+    return Number.isFinite(d) && Math.abs(d - document.querySelector('.pickrow').getBoundingClientRect().height) < 0.5;
+  }, null, { timeout: COND_TIMEOUT });
+  await page.locator('.mgrid-scroll').evaluate((el, x) => { el.scrollLeft = x; }, PAN);
+  // the sync writes on the next animation frame; wait for THAT, not for a duration
+  await page.waitForFunction((x) => {
+    const t = getComputedStyle(document.querySelector('.mgrid-axis-track')).transform;
+    return document.querySelector('.mgrid-scroll').scrollLeft === x && t !== 'none'
+      && Math.abs(new DOMMatrix(t).m41 + x) < 0.5;
+  }, PAN, { timeout: COND_TIMEOUT }).catch(() => {});   // a missing sync is the FAILURE below, not a timeout
+  const m = await page.evaluate(() => {
+    const L = (e) => (e ? Math.round(e.getBoundingClientRect().left * 100) / 100 : null);
+    const root = getComputedStyle(document.documentElement);
+    const axis = document.querySelector('.mgrid-axis');
+    const label = document.querySelector('.maxis-label[data-minute="720"]');
+    const rail = document.querySelector('.mrail-cell');
+    const scroller = document.querySelector('.mgrid-scroll');
+    const transformed = [];
+    for (let n = rail.parentElement; n && n !== scroller; n = n.parentElement) {
+      if (getComputedStyle(n).transform !== 'none') transformed.push(n.className);
+    }
+    return {
+      scrollY: Math.round(window.scrollY),
+      pan: scroller.scrollLeft,
+      axisTop: Math.round(axis.getBoundingClientRect().top * 100) / 100,
+      stackH: parseFloat(root.getPropertyValue('--stack-h')),
+      pickH: parseFloat(root.getPropertyValue('--pick-h')),
+      labelText: label?.textContent,
+      labelLeft: L(label),
+      labelShift: label ? new DOMMatrix(getComputedStyle(label).transform).m41 : null,
+      axisNoon: L(document.querySelector('.mgrid-axis-track .mgrid-line[data-minute="720"]')),
+      laneNoon: L(document.querySelector('.mgrid-lanes .mgrid-line[data-minute="720"]')),
+      axisInScroller: Boolean(axis.closest('.mgrid-scroll')),
+      transformed,
+      railDelta: Math.round((rail.getBoundingClientRect().left - scroller.getBoundingClientRect().left) * 100) / 100,
+    };
+  });
+  const want = Math.round((m.stackH + m.pickH) * 100) / 100;
+  record(`M5 pinned: the time row sits flush under the picker (scrollY ${m.scrollY}, pan ${m.pan})`,
+         Math.abs(m.axisTop - want) < 0.5,
+         `axis top ${m.axisTop} vs --stack-h ${m.stackH} + --pick-h ${m.pickH} = ${want}`);
+  record(`M5 pinned: the axis's noon gridline sits on the lanes' noon gridline (pan ${m.pan})`,
+         m.axisNoon !== null && m.laneNoon !== null && Math.abs(m.axisNoon - m.laneNoon) < 0.5,
+         `axis ${m.axisNoon} vs lanes ${m.laneNoon}`);
+  // THE LABEL'S LEFT EDGE IS 2px LEFT OF ITS LINE BY DESIGN - `.maxis-label` carries
+  // `transform: translateX(-2px)`, an optical offset older than this block. It is READ from the
+  // computed style and taken back out, never typed in here, so the label's ANCHOR is what is compared.
+  record(`M5 pinned: the ${m.labelText} label sits over its own column (pan ${m.pan})`,
+         m.labelText === 'NOON' && Math.abs((m.labelLeft - m.labelShift) - m.laneNoon) < 0.5,
+         `label left ${m.labelLeft} (own offset ${m.labelShift}px) vs lanes' noon gridline ${m.laneNoon}`);
+  record('M4: the axis is outside the scroller and the rail has no transformed ancestor',
+         !m.axisInScroller && m.transformed.length === 0 && Math.abs(m.railDelta) < 1.5,
+         `axis in scroller ${m.axisInScroller}, transformed ${JSON.stringify(m.transformed)}, rail delta ${m.railDelta}px`);
+  await page.screenshot({ path: join(outDir, 'mobile__axis-pinned.png'), fullPage: false });
+
+  // THE LAST HOUR IS STILL REACHABLE. CFB 2026-09-05 ends on 2AM, whose label starts at the
+  // canvas's right edge and runs 26.56px past it. Hoisted out, that overhang stopped counting toward
+  // scrollWidth and a full pan left the label just past the screen - geometry's day-span stop is
+  // what caught it. Pan fully right and the label must sit wholly inside the visible axis.
+  await page.locator('.mgrid-scroll').evaluate((el) => { el.scrollLeft = el.scrollWidth; });
+  await page.waitForFunction(() => {
+    const el = document.querySelector('.mgrid-scroll');
+    const t = getComputedStyle(document.querySelector('.mgrid-axis-track')).transform;
+    return t !== 'none' && Math.abs(new DOMMatrix(t).m41 + el.scrollLeft) < 0.5;
+  }, null, { timeout: COND_TIMEOUT }).catch(() => {});
+  const end = await page.evaluate(() => {
+    const labels = [...document.querySelectorAll('.mgrid-axis-track .maxis-label')];
+    const last = labels[labels.length - 1].getBoundingClientRect();
+    const axis = document.querySelector('.mgrid-axis').getBoundingClientRect();
+    const corner = document.querySelector('.mgrid-axis-rail').getBoundingClientRect();
+    return { text: labels[labels.length - 1].textContent, left: +last.left.toFixed(2), right: +last.right.toFixed(2),
+             axisRight: +axis.right.toFixed(2), cornerRight: +corner.right.toFixed(2) };
+  });
+  record(`M5 pinned: at full pan the day's last label (${end.text}) is wholly on screen`,
+         end.left >= end.cornerRight && end.right <= end.axisRight + 0.5,
+         `label ${end.left}..${end.right} inside ${end.cornerRight}..${end.axisRight}`);
+  await ctx.close();
+}
+
 // ------------------------------------------------ THE SPLIT (prompt 62 stage 2)
 //
 // Joe's ruling: the league row opens BETWEEN the navbar and the picker and pushes the picker and the

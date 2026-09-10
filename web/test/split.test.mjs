@@ -55,7 +55,10 @@ test('there is exactly ONE picker in the source, and it is not moved or portalle
   // The three rejected routes, each pinned as an absence so nobody quietly reintroduces one.
   assert.doesNotMatch(page, /createPortal/, 'no portal - it would drop the picker from the SSR html');
   const hdr = code('components/CollapsedHeader.js');
-  assert.doesNotMatch(hdr, /pickrow|DayPicker|WeekPicker/,
+  // NARROWED IN PLACE BY PROMPT 86 BLOCK C to what the message says it guards: RENDERING a picker.
+  // It forbade the bare word `pickrow`, and the header now MEASURES the one picker - a
+  // ResizeObserver writing --pick-h reads `.pickrow` by selector - which renders nothing.
+  assert.doesNotMatch(hdr, /className="pickrow"|<DayPicker|<WeekPicker/,
     'the header must not render a second picker');
 });
 

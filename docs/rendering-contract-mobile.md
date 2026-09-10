@@ -1,5 +1,10 @@
 # Mobile Grid Addendum — v2.1 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04 · per-team cap surface and art, candidate D, 2026-09-04)
 
+> **v2.2 (2026-09-10, prompt 86 block C).** **M5 IS AMENDED** — the axis leaves `.mgrid-scroll` and
+> pins under the control stack when the header is collapsed, kept over its columns by a transform
+> on its track. M4's rule is untouched and now asserted in a test: the track is not an ancestor of
+> the rail. The frozen geometry does not move — the axis was never part of `scrollWidth`'s span.
+>
 > **v1.7 (2026-09-05).** M19 and M20 below add the program block and the now marker. Nothing M1–M18 says changes.
 >
 > **v1.8 (2026-09-06, prompt 50).** **M21** below removes the grid's own header. Nothing M1–M20 says
@@ -89,6 +94,37 @@
 > (measured against the scroller's 364px client width, not the 390px viewport).
 
 **M5. Axis labels — hour-only shorthand, Style B, MOBILE ONLY.** Labels only on the hour: Noon, 1pm … 11pm, Midnight, 1am. Style B: Barlow Condensed 700 ~17px design, gold **#C6AF7A** (was #F0C850; prompt 52 stage 3 moved `--gold` to the metallic family, handoff §4 — the labels read the token and moved with it), UPPERCASE (NOON · 1PM), letter-spacing 1.2. Gridlines and block placement keep :15 granularity; exact kickoffs stay in card trays. PC/archival keeps v1.2 block-start/end labels.
+
+> **v2.2 AMENDMENT (2026-09-10, prompt 86 block C, Joe's Route A). THE AXIS PINS UNDER THE PICKER.**
+>
+> **What this section assumed.** The labels and their gridlines lived in a row at the top of
+> `.mgrid-canvas`, inside `.mgrid-scroll`, and panned with the columns natively. Scrolled down a long
+> grid, the row went off the top of the screen with everything else, and the reader was left
+> reading kickoffs off columns with no times above them.
+>
+> **What is now true.** The row is rendered immediately BEFORE `.mgrid-scroll`, not inside it, and
+> with the header collapsed it is `position: sticky` at `--stack-h + --pick-h` — flush under the
+> picker, beneath it and the bar (z 20 under 30 and 40), on the grid's own `--panel` ground. Its
+> track carries `translateX(-scrollLeft)`, written straight to the node by one passive scroll
+> listener coalesced to a frame, so it stays over its columns at every pan and zoom. Expanded, it
+> sits where it always did. The now marker (M20) draws its segment through the row as well, and the
+> row takes the grid's pinch and a one-finger swipe pans the grid, as it did inside the scroller.
+>
+> **Why it could not be one CSS line.** A box with non-visible overflow on EITHER axis is a scroll
+> container in BOTH, so a sticky `top` inside `.mgrid-scroll` (`overflow-x: auto`) resolves against a
+> box that never scrolls vertically. The same trap sat one level up: `.mgrid`'s `overflow: hidden`,
+> there for the rounded corners, is a scroll container too, and is now `overflow: clip`, which is not.
+> **Measured, at 390×844 on CFB 2026-09-05, scrollY 530, panned 200px:** axis top **92.39** against
+> `--stack-h` 44 + `--pick-h` 48.39 = **92.39**; with `.mgrid` forced back to `hidden` the same axis
+> sat at **−306.22**, off the screen. The axis's noon gridline **82.44** against the lanes' noon
+> gridline **82.44**; the NOON label's left edge **80.44**, which is its own `translateX(-2px)` optical
+> offset from that line and nothing else.
+>
+> **M4 still holds, and is now asserted rather than argued.** The new transform is on
+> `.mgrid-axis-track`, which is no longer an ancestor of `.mrail-cell` — the rail lives in
+> `.mgrid-row` inside the scroller. `web/test/stickytimes.test.mjs` pins the source relationship and
+> qa-shots walks the live DOM from the rail to the scroller and finds no transform (rail delta 0px).
+> **PC is untouched** — this grid is phone-only, and PC keeps v1.2 labels.
 
 **M6. Pinch-to-zoom.** Enabled, clamped to [0.6, 2.5]; rail pinned per M4. Zoom stretches the TIME axis through layout rather than magnifying the painted canvas, so block widths and axis ticks grow while the rail, the lane heights and the type stay put. Two consequences, both accepted: the dashed cut seam (M3) is a fixed marker and does not stretch, and `scrollWidth` now tracks the canvas at every level - which also closed the ~418px of dead scroll past the end at zoom 0.6 that prompt 25 measured.
 
