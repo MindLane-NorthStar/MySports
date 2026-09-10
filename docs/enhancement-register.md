@@ -3237,8 +3237,8 @@ Joe's ruling, 2026-09-10: **one link, one destination per sport, and the label f
 `/boxscore/_/gameId/{n}` the loader used to store does not; MLB's Gameday and the NHL's GameCenter
 pages always did, and their templates are unchanged. So `pipeline/load.py` writes the link in every
 state (the never-overwrite `coalesce` stays), `web/lib/gamelink.js` picks the label, and migration
-0018 rewrites the rows already stored in the old form — **prepared, applied only on Joe's named
-approval** (rule 14).
+0018 rewrote the rows already stored in the old form — **applied 2026-09-10 on Joe's named
+approval** (rule 14): 99 rows, 0 left in the old form.
 
 **THE NAMING DEBT, RECORDED AS A FOLLOW-UP.** `games.boxscore_url` now holds a *preview* URL before
 kickoff, so its name is imprecise. It was deliberately not renamed in the same block: the rename

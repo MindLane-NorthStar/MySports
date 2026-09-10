@@ -252,8 +252,9 @@ someone else's outage is one that gets ignored, which is exactly how this surviv
 > from `/boxscore/_/gameId/` to `/game/_/gameId/`, a page that is a preview before kickoff, so the
 > "dead tap" that justified refusing scheduled games is gone and the state gate went with it;
 > `coalesce` (never overwrite) and the UI's guard on a stored URL both stayed. The labels live in
-> `web/lib/gamelink.js`. **Migration 0018 rewrites the stored old-form rows and is PREPARED, NOT
-> APPLIED** — 99 rows on 2026-09-10 (cfb 98, nfl 1), waiting on Joe's named approval (rule 14).
+> `web/lib/gamelink.js`. **Migration 0018 rewrote the stored old-form rows — APPLIED 2026-09-10
+> 16:45 UTC on Joe's named approval** (rule 14): 99 rows (cfb 98, nfl 1) moved to `/game/`, 0 left
+> in the old form, mlb's 138 untouched. The before/after counts are in the migration's header.
 > Register §35c records the column's naming debt.
 
 `pipeline/load.py`'s `case when … = 'final'` became `in ('final', 'in_progress')` — **widened, not

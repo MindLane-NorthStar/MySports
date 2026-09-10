@@ -1,7 +1,19 @@
 -- 0018 — stored ESPN game links move from the box-score page to the game page.
 --
 -- ============================================================================================
--- PREPARED 2026-09-10, prompt 86 block B. NOT YET APPLIED.
+-- APPLIED 2026-09-10 at 16:45:15 UTC, through the Supabase connector (`apply_migration`, history
+-- version 20260910164515 `game_url_templates`), on Joe Lull's explicit named approval ("Apply 0018").
+-- Applied FROM this file; the SQL below is byte-for-byte what ran - only this header was edited after.
+--
+-- Rule 27 checked first: no workflow in progress, the day's schedule_refresh finished 15:06 UTC.
+-- SELECT-and-paste immediately before: 99 rows in the old form (cfb 98, nfl 1), mlb 138, nhl 0.
+-- MEASURED AFTER, the same SELECT: 0 rows in the old /boxscore/ form, 99 in the /game/ form
+-- (cfb 98, nfl 1), mlb's 138 untouched, no stored URL outside the three known hosts. Two rewritten
+-- links spot-checked: espn.com/nfl/game/_/gameId/401872656 and
+-- espn.com/college-football/game/_/gameId/401856634 both answer 200 with no redirect.
+-- (The connector does not return RAISE NOTICE output, so the before/after SELECT is the record.)
+--
+-- PREPARED 2026-09-10, prompt 86 block B.
 --
 -- It is applied AFTER the loader change that makes it necessary is committed and pushed, so the
 -- nightly refresh has stopped writing the old form before the stored rows are rewritten. The window
