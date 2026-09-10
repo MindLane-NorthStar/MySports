@@ -225,17 +225,21 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
                 ) : null}
               </div>
             ) : null}
-            {score ? (
-              <div>
-                <span>{state}</span>
-                {score}
-              </div>
-            ) : (
-              <div>
-                <span>Status</span>
-                {state || 'Scheduled'}
-              </div>
-            )}
+          </div>
+          {/* THE STATUS AND THE GAME LINK SHARE A ROW (prompt 87 block C, Joe's Option A, 2026-09-10).
+              Status left, link right, TWO EXPLICIT COLUMNS AT EVERY WIDTH. It used to be the last
+              cell of `.dgrid`, whose column count comes from the width (`auto-fit, minmax(130px,
+              1fr)`: two at phone width, three inside the 560px panel) and whose venue cell is
+              conditional - so a link appended to that grid would land in the right corner only in
+              the case Joe photographed and in the wrong one in the other two. Lifted out, it cannot.
+              NO LINK, NO PLACEHOLDER: the right slot is simply empty - every program, and every game
+              the loader has not reached. */}
+          <div className="dstatusrow">
+            <div className="dstatus">
+              <span className="dstatus-label">{score ? state : 'Status'}</span>
+              <span className="dstatus-value">{score || state || 'Scheduled'}</span>
+            </div>
+            {boxScore}
           </div>
         </div>
 
@@ -356,7 +360,6 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
               {accessible.some(isLinear) ? (
                 <WatchLink service="directv" name="DIRECTV" href={DIRECTV_STREAM} big={false} />
               ) : null}
-              {boxScore}
             </div>
           ) : (
             <>
@@ -381,7 +384,6 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
                   No broadcast row for this game yet.
                 </p>
               )}
-              {boxScore ? <div className="dlinks">{boxScore}</div> : null}
             </>
           )}
         </div>
@@ -420,9 +422,6 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
 
         <p className="dstamp">
           Watch links are best effort - they open the service, not this game.
-          {/* ...which is still true of the watch links and is NOT true of the game link, which is
-              per-game by construction - so when one renders, the sentence says so (prompt 86). */}
-          {link ? ` ${link.label} opens this game's own page.` : ''}
           {generatedAt ? ` Data as of ${generatedAt}.` : ''}
         </p>
       </div>

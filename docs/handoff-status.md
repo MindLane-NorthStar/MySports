@@ -56,9 +56,9 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-10, prompt 87 block B — after that block's last gate run, not during it.** Block A
+**Measured 2026-09-10, prompt 87 block C — after that block's last gate run, not during it.** Block A
 moved no count (documents, plus geometry's 2026-09-13 span re-pinned 770.1 → 830.4 for Countdown); block
-B moved `pytest` 531 → 543.
+B moved `pytest` 531 → 543; block C moved `test:unit` 593 → 596 and `qa-shots` 113 → 121.
 
 **IT WAS STALE BY TWO ROWS AGAIN, AND BY THE SAME MECHANISM.** Prompt 86 opened by running all five
 gates on the unmodified tree at `dcf6281`: `pytest` **521 passed + 1 skipped**, `test:unit` 570,
@@ -108,6 +108,8 @@ line claims to do.
 | prompt 86 block C | `test:unit` | 582 → **593** | `web/test/stickytimes.test.mjs` (10) and the `--pick-h` test in `collapsedheader.test.mjs` (1). Two tests REWRITTEN IN PLACE — the scroll-listener guard and `split.test.mjs`'s second-picker guard; see the Block C section below |
 | prompt 86 block C | `qa-shots` | 108 → **113** | the pinned time row, measured: axis top vs `--stack-h + --pick-h`, the noon gridline and the NOON label over the lanes' noon gridline after a 200px pan, M4 in the live DOM, and the day's last label on screen at full pan |
 | prompt 87 block B | `pytest` | 531 → **543** | `tests/test_game_url_backfill.py` (12): migration 0019's own SQL expression EXECUTED (SQLite, with Postgres's `strpos` shimmed) against `boxscore_url()` for every sport and id shape, incl. cfb's whole-id asymmetry and a two-hyphen MLB id |
+| prompt 87 block C | `test:unit` | 593 → **596** | three status-row tests in `gamelink.test.mjs` (the link is a child of the status row and of no links row; the row renders with an empty right slot; two explicit columns with the link stretched). Two tests REWRITTEN IN PLACE: `gamelink`'s footer test (the clause is now forbidden, not required) and `livejoin`'s render-site test (one site, not two) |
+| prompt 87 block C | `qa-shots` | 113 → **121** | the status row measured at 390 AND 560px: the link spans label top to value bottom, sits in the right column and in no links row, the closing line says nothing about it, and a program's row renders with its right slot empty — 4 checks × 2 widths |
 
 **QA-SHOTS' EXIT CODE WAS DECORATIVE UNTIL THIS COMMIT, AND EVERY `NODE EXIT=0` ABOVE IS AFFECTED.**
 The runner ended in `process.exit(0)` unconditionally: a failing assertion went into
@@ -158,6 +160,17 @@ protect nothing.
 
 Neither prompt-80 movement was written here at the time, and both are legitimate: a floor may only go
 up, and nothing was removed or weakened. The other three gates are unchanged throughout.
+
+### THE GAME LINK SITS BESIDE THE STATUS (prompt 87 block C, Joe's Option A, 2026-09-10)
+
+The detail panel's Status/score left `.dgrid` for its own two-column row, `.dstatusrow`: Status left,
+the game link right at the status pair's full height, at every width. The link no longer renders in
+either link row, and the closing line's sentence about it is DELETED (Joe: *"we don't need a sentence
+describing any of the three"*). **Measured:** 390px — link 475.16–509.22 against label top 475.16 and
+value bottom 509.22, left edge 199 on the right column; 560px — 534.00–568.06 against 534.00 and
+568.06, left edge 284, which is also the Venue column's (with two cells, `.dgrid`'s `auto-fit` collapses
+the empty third track, so even at 560 it is two columns). Contract: `rendering-contract.md` §12 v1.7.1
+and Addendum M11's v2.2 amendment; `docs/design/mobile_demo.html` moved with it (rule 23).
 
 ### EVERY GAME GETS ITS LINK — MIGRATION 0019, WRITTEN AND NOT APPLIED (prompt 87 block B, 2026-09-10)
 
@@ -308,9 +321,9 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 | gate | run from | floor |
 |---|---|---|
 | `pytest` | repo root | **543 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **593** |
+| `npm run test:unit` | `web/` | **596** |
 | `npm run smoke` | `web/` | **33/33** |
-| `node scripts/qa-shots.mjs` | `web/` | **113/113** |
+| `node scripts/qa-shots.mjs` | `web/` | **121/121** |
 | `npm run geometry` | `web/` | all hard stops |
 
 They are a floor and may only go up — **with the one exception that a removed feature takes its

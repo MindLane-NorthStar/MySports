@@ -424,6 +424,12 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .watch.sec{background:none; border:1px solid var(--gold-dim); color:var(--gold)}
 .sheet .factrow{display:flex; justify-content:space-between; font-size:13px; padding:4px 2px; color:var(--dim)}
 .sheet .factrow b{color:var(--ink); font-weight:600}
+/* PROMPT 87 BLOCK C (rule 23): the status and the game link share a row - Status left, link right,
+   two explicit columns, the link as tall as the status pair (the app's .dstatusrow). */
+.sheet .statusrow{display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:stretch; margin:0 0 12px}
+.sheet .statusrow .k{display:block; font-size:10.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--faint)}
+.sheet .statusrow b{display:block; color:var(--ink); font-weight:600; font-size:13px}
+.sheet .statusrow .watch{margin-top:0; display:flex; align-items:center; justify-content:center}
 .hidden{display:none}
 .footer{color:var(--faint); font-size:11px; text-align:center; padding:14px}
 </style>
@@ -714,7 +720,8 @@ const sheetHTML = (g)=>{
       <span style="text-align:center">${h.logo?`<img src="${h.logo}" alt="">`:""}<span class="nm">${esc(h.name)}</span></span>
     </div>
     ${fin?`<div class="score" style="display:flex;justify-content:center;gap:18px;font-family:var(--disp);font-weight:700;font-size:34px"><span>${g.away_score}</span><span style="color:var(--faint)">–</span><span>${g.home_score}</span></div>`:""}
-    <div class="sub">${esc(timeOf(g))} ET · ${esc(SPNAME[g.sport]||"MLB")} · ${fin?"Final":"Scheduled"}</div>
+    <div class="sub">${esc(timeOf(g))} ET · ${esc(SPNAME[g.sport]||"MLB")}</div>
+    <div class="statusrow"><div class="st"><span class="k">${fin?"Final":"Status"}</span><b>${fin?`${g.away_score} - ${g.home_score}`:live?"In progress":"Scheduled"}</b></div>${g.boxscore_url?`<a class="watch sec" href="${esc(g.boxscore_url)}" target="_blank" rel="noopener">${live?"Live box score":fin?"Box score":"Preview"}</a>`:""}</div>
     ${p&&(p.a||p.h)?`<h4>Probable starters</h4><div class="factrow"><span>${esc(a.name)}</span><b>${esc(p.a||"TBA")}</b></div><div class="factrow"><span>${esc(h.name)}</span><b>${esc(p.h||"TBA")}</b></div>`:""}
     ${g.odds?`<h4>Betting</h4><div class="factrow"><span>Moneyline</span><b>${esc(g.odds.mla)} / ${esc(g.odds.mlh)}</b></div><div class="factrow"><span>Over/Under</span><b>${esc(g.odds.ou)}</b></div><div class="factrow"><span>Book</span><b>${esc(g.odds.book||"")}</b></div>`:""}
     ${/* ALL-OR-NOTHING (prompt 71 stage 4, Joe 2026-09-08): "currently the sub card shows 'where to
@@ -735,12 +742,10 @@ const sheetHTML = (g)=>{
     <h4>How to watch</h4>
     <div class="bcastrow"><span class="n">${esc(g.network??"No listing")}</span>
       <span class="acc oom">CHECK ACCESS</span></div>`}
-    ${/* PROMPT 86 BLOCK B (rule 23 - this file implements the game link, so it moves with the app):
-          ONE link in every state, and the label follows the state - Preview, Live box score, Box
-          score (web/lib/gamelink.js). Prompt 78 showed it live and final only, because the stored
-          URL was ESPN's box-score page and an empty one before the game is a dead tap; the loader now
-          stores ESPN's GAME page, which is a preview before kickoff. The guard on a stored URL stays. */''}
-    ${g.boxscore_url?`<a class="watch sec" href="${esc(g.boxscore_url)}" target="_blank" rel="noopener">${live?"Live box score":fin?"Box score":"Preview"}</a>`:""}
+    ${/* THE GAME LINK IS NOT DOWN HERE ANY MORE (prompt 87 block C, rule 23). Prompt 86 made it one
+          link in every state, labelled from the state (web/lib/gamelink.js); prompt 87 moved it into
+          the status row under the header, Status left and link right, the way the app's panel does.
+          No link, no placeholder - the right slot is empty. */''}
   </div>`;
 };
 

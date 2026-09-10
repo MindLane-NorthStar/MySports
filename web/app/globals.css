@@ -1733,6 +1733,43 @@ html[data-hdr='collapsed'] .mgrid-axis {
   text-transform: uppercase;
 }
 
+/* THE STATUS ROW (prompt 87 block C, Joe's Option A). Status on the left, the game link on the right,
+   in two EXPLICIT columns at every width - not `.dgrid`'s auto-fit, whose column count follows the
+   width. Same 8px gap as `.dgrid`, so at phone width (where `.dgrid` resolves to two columns) the link
+   sits exactly on the right-hand column above it. The label and value keep `.dgrid`'s type. */
+.dstatusrow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: stretch;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.dstatusrow .dstatus-label {
+  display: block;
+  color: var(--faint);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dstatusrow .dstatus-value {
+  display: block;
+}
+
+/* THE LINK FILLS THE STATUS PAIR'S FULL HEIGHT - label top to value bottom - and centres its word.
+   `.dlink`'s border, radius, gold and weight are untouched; only the box changes. `stretch` (the
+   row's default above, restated here) is what lets a wrapped "Live box score" GROW the button rather
+   than clip it. */
+.dstatusrow .dlink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  text-align: center;
+}
+
 .dlinks {
   display: flex;
   flex-wrap: wrap;

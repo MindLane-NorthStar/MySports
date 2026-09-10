@@ -154,14 +154,15 @@ test('completed_at is deliberately NOT widened with it', () => {
   assert.match(load, /completed_at\s+= case when coalesce\(%s, result_status\) = 'final'/);
 });
 
-test('the panel draws the link in both branches, and the URL guard stayed', () => {
-  // REWRITTEN IN PLACE BY PROMPT 86: the labels moved into lib/gamelink.js, where
-  // gamelink.test.mjs RUNS them. What this still pins is the panel side - both render sites, and
-  // that the guard on the stored URL survived the state gate's removal.
+test('the panel draws the link ONCE, beside the status, and the URL guard stayed', () => {
+  // REWRITTEN IN PLACE TWICE. Prompt 86 moved the labels into lib/gamelink.js, where
+  // gamelink.test.mjs RUNS them; prompt 87 block C moved the link out of BOTH link rows (inside the
+  // watch links, and its own `.dlinks` under "Where to watch") into the status row, per Joe's
+  // Option A. What this pins is the panel side: one render site, and the guard on the stored URL.
   const g = src('components/GameDetail.js');
   assert.match(g, /const boxScore = link \? \(/);
-  assert.match(g, /<div className="dlinks dlinks-watch">[\s\S]*?\{boxScore\}/, 'inside the watch links');
-  assert.match(g, /\{boxScore \? <div className="dlinks">\{boxScore\}<\/div> : null\}/, 'and on its own');
+  assert.equal((g.match(/\{boxScore\}/g) || []).length, 1, 'one render site');
+  assert.doesNotMatch(g, /\{boxScore \? <div className="dlinks">/, 'not on its own row any more');
   const lib = src('lib/gamelink.js');
   assert.match(lib, /!row\.boxscore_url\) return null;/, 'no stored URL, no link');
 });

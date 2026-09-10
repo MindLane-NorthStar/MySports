@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { gameLink, GAME_LINK_LABEL, PREVIEW_LABEL } from '../lib/gamelink.js';
+import { region } from './region.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const src = (p) => readFileSync(join(HERE, '..', p), 'utf8');
@@ -87,12 +88,47 @@ test('GameDetail draws what gameLink returns, and learned no label of its own', 
   }
 });
 
-test('the footer no longer tells a reader the game link opens the service', () => {
-  // "Watch links are best effort - they open the service, not this game" stays: it is still true of
-  // the watch links. It is false of the game link, so a clause says so when one renders.
+test('the footer keeps its watch-link sentence and says NOTHING about the game link', () => {
+  // REWRITTEN IN PLACE BY PROMPT 87 BLOCK C. Prompt 86 added "<label> opens this game's own page."
+  // after the watch-link sentence; Joe, 2026-09-10: "we don't need a sentence describing any of the
+  // three." The first sentence stays - it is still true of the watch links - and the second is gone
+  // with no rewording in its place.
   const g = src('components/GameDetail.js');
   assert.match(g, /Watch links are best effort - they open the service, not this game\./);
-  assert.match(g, /\{link \? ` \$\{link\.label\} opens this game's own page\.` : ''\}/);
+  const stamp = region(g, '<p className="dstamp">', '</p>', 'the closing paragraph');
+  assert.doesNotMatch(stamp, /own page|link\.label|Preview|box score/i, 'no sentence about the game link');
+});
+
+// ------------------------------------------------------------------------------- the status row
+test('the link is a child of the STATUS ROW, and of no links row, in both branches', () => {
+  // Joe's Option A: Status left, link right, two explicit columns. It used to render inside
+  // `.dlinks-watch` when something was accessible and in its own `.dlinks` when nothing was.
+  const g = code('components/GameDetail.js');
+  const row = region(g, '<div className="dstatusrow">', '</div>\n        </div>', 'the status row');
+  assert.match(row, /<div className="dstatus">[\s\S]*<\/div>\s*\{boxScore\}/, 'the link follows the status cell');
+  assert.equal((g.match(/\{boxScore\}/g) || []).length, 1, 'and renders nowhere else');
+  const watch = region(g, '<div className="dlinks dlinks-watch">', '</div>', 'the watch links');
+  assert.doesNotMatch(watch, /boxScore/, 'not in the accessible branch');
+  assert.doesNotMatch(g, /className="dlinks">\{?boxScore/, 'not in the not-accessible branch');
+});
+
+test('the status row renders whether or not there is a link - no placeholder in the empty slot', () => {
+  const g = code('components/GameDetail.js');
+  // unconditional: the row is not wrapped in a link check, and nothing stands in for a missing link
+  assert.doesNotMatch(g, /\{(link|boxScore) \? \(?\s*<div className="dstatusrow">/);
+  const row = region(g, '<div className="dstatusrow">', '</div>\n        </div>', 'the status row');
+  assert.doesNotMatch(row, /: <span|: <div|placeholder/i, 'the right slot is simply empty');
+});
+
+test('the status row is two explicit columns and the link stretches to its height', () => {
+  const css = src('app/globals.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const row = region(css, '.dstatusrow {', '}', 'the row rule');
+  assert.match(row, /grid-template-columns: 1fr 1fr;/, 'two explicit columns, not auto-fit');
+  assert.match(row, /align-items: stretch;/);
+  const link = region(css, '.dstatusrow .dlink {', '}', 'the link rule');
+  assert.match(link, /align-self: stretch;/);
+  assert.match(link, /justify-content: center;/);
+  assert.doesNotMatch(link, /border|color|font-weight|border-radius/, ".dlink's own look is kept, not restated");
 });
 
 test('no copy implies the game link streams anything', () => {

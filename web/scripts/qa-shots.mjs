@@ -319,6 +319,60 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
+// ------------------------------------------ THE GAME LINK SITS BESIDE THE STATUS (prompt 87 block C)
+//
+// Joe's Option A: Status left, link right, two explicit columns, the link as tall as the status pair.
+// MEASURED at phone width AND at 560px - the panel's own maximum, where `.dgrid` takes a third column
+// and a link appended to it would have landed in the wrong corner. And the closing paragraph says
+// nothing about the link: "we don't need a sentence describing any of the three."
+for (const width of [390, 560]) {
+  const ctx = await browser.newContext({ viewport: { width, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  const readRow = () => page.evaluate(() => {
+    const r = (e) => (e ? e.getBoundingClientRect() : null);
+    const row = document.querySelector('.dpanel .dstatusrow');
+    const label = row?.querySelector('.dstatus-label');
+    const value = row?.querySelector('.dstatus-value');
+    const link = row?.querySelector('a.dlink');
+    const round = (x) => (x == null ? null : Math.round(x * 100) / 100);
+    return {
+      row: Boolean(row),
+      children: row ? row.children.length : 0,
+      labelTop: round(r(label)?.top), valueBottom: round(r(value)?.bottom),
+      linkTop: round(r(link)?.top), linkBottom: round(r(link)?.bottom), linkText: link?.textContent || null,
+      linkLeft: round(r(link)?.left), rowMid: row ? round(r(row).left + r(row).width / 2) : null,
+      linksInLinkRows: document.querySelectorAll('.dpanel .dlinks a.dlink:not(.dlink-watch)').length,
+      stamp: document.querySelector('.dpanel .dstamp')?.textContent || '',
+    };
+  });
+  // a final with a stored link - the MLB slate smoke pins as 12 finals, every one carrying one
+  await page.goto(`${base}/?day=2026-08-31&sport=mlb`, { waitUntil: 'networkidle' });
+  await page.locator('.mcard').first().click();
+  await shown(page, '.dpanel .dstatusrow');
+  const g = await readRow();
+  record(`status row (${width}px): the ${g.linkText} link spans the status pair, label top to value bottom`,
+         g.linkTop !== null && Math.abs(g.linkTop - g.labelTop) < 0.6 && Math.abs(g.linkBottom - g.valueBottom) < 0.6,
+         `link ${g.linkTop}..${g.linkBottom} vs label top ${g.labelTop}, value bottom ${g.valueBottom}`);
+  record(`status row (${width}px): the link is in the RIGHT column and in no links row`,
+         g.linkLeft !== null && g.linkLeft >= g.rowMid - 0.6 && g.linksInLinkRows === 0,
+         `link left ${g.linkLeft} vs row middle ${g.rowMid}, ${g.linksInLinkRows} in a links row`);
+  record(`status row (${width}px): the closing line says nothing about the game link`,
+         /Watch links are best effort/.test(g.stamp) && !/preview|box score|own page/i.test(g.stamp),
+         JSON.stringify(g.stamp.slice(0, 90)));
+  await page.screenshot({ path: join(outDir, `mobile__detail-statusrow-${width}.png`), fullPage: false });
+
+  // a program has no link at all: the row renders, the right slot is empty, nothing stands in for it
+  await page.keyboard.press('Escape');
+  await page.goto(`${base}/?day=2026-09-13`, { waitUntil: 'networkidle' });
+  await page.locator('.mcard', { hasText: 'SUNDAY NFL COUNTDOWN' }).first().click();
+  await shown(page, '.dpanel .dstatusrow');
+  const p = await readRow();
+  record(`status row (${width}px): a program's row renders with its right slot EMPTY`,
+         p.row && p.children === 1 && p.linkText === null,
+         `${p.children} child(ren), link ${JSON.stringify(p.linkText)}`);
+  await ctx.close();
+}
+
 // ------------------------------------------ the navbar renders in EVERY view (prompt 58, lifted)
 //
 // IT USED TO BE ABSENT FROM THE DOM IN ALL FOUR GRID VIEWS, and this block asserted that. The
