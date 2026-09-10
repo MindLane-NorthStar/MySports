@@ -3,7 +3,7 @@
 // WHAT THIS COVERS AND WHAT IT DOES NOT. That a poll actually moves nothing on screen is a BROWSER
 // fact and is measured in one: `scripts/probes/live-poll.mjs` installs a fake clock, stubs the route
 // with a live score, runs a full 60-second cycle and samples scrollY and the pin per frame. Those
-// figures are in the prompt-77 report and in handoff-status.md.
+// figures are in the prompt-77 report and in handoff-archive.md (moved there by prompt 87).
 //
 // What is pinned HERE is the MECHANISM that makes the measurement come out that way, because that is
 // the half a later edit can quietly undo:

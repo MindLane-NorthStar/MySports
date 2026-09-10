@@ -2,7 +2,7 @@
 //
 // WHAT THIS COVERS AND WHAT IT DOES NOT. The scrolling itself is a browser behaviour and is measured
 // in the browser: four scenarios, the landing position of each, and that the grid's own horizontal
-// scroll is not disturbed. Those numbers are in the prompt-67 report and in handoff-status.md. What
+// scroll is not disturbed. Those numbers are in the prompt-67 report and in handoff-archive.md (moved out of handoff-status.md by prompt 87). What
 // is testable here without a browser is the DECISION - which element the page should land on - and
 // that is the half most likely to be broken by a later edit, because it is one expression standing
 // in for four view combinations.

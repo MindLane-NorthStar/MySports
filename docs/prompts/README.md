@@ -11,6 +11,11 @@ only in the Project or under gitignored `artifacts/`; prompt 52 stage 8 filed it
 were filed from `Claude outputs\` afterwards; prompts 53-60 filed themselves. **62 files are here, covering 01-60. 39 and 42 are missing,
 and they are not going to be found** — see "The two gaps" below.
 
+**UPDATED 2026-09-10 BY PROMPT 87: 91 briefs, covering 01–87, and 39 and 42 are still the only
+missing numbers.** The count above was a timestamp twice over: prompt 81 had filed itself without the
+count moving, and 61–80 and 82–87 were never filed at all. Prompt 87 copied those 28 files from
+`Claude outputs\` (see Provenance), and **86 carries three** — see "Duplicate numbers".
+
 That is the failure prompt 47 hit from the other side — the events & shows research lived only in the
 Project, and a run that needed it could not read it — and the Project has already lost a session once
 (`claude/session-reconstruction-2026-09-03.md`). This directory is the fix.
@@ -29,8 +34,9 @@ with `-superseded` in the name.
 
 ## What is here
 
-Fifty-one briefs, `NN-slug.md`. Numbers in **bold** carry two files each or are otherwise not what
-the number alone suggests; everything else is one brief, one file.
+Ninety-one briefs, `NN-slug.md` (this line said fifty-one until prompt 87). Numbers in **bold** carry
+more than one file or are otherwise not what the number alone suggests; everything else is one brief,
+one file.
 
 | # | file |
 |---|---|
@@ -98,6 +104,35 @@ the number alone suggests; everything else is one brief, one file.
 | 58 | `58-collapsing-header.md` |
 | 59 | `59-favourites-bracket-and-two-harvests.md` |
 | 60 | `60-navbar-and-my-teams.md` |
+| 61 | `61-split-header-and-unshipped-logo-art.md` |
+| 62 | `62-the-split-on-the-proven-route.md` |
+| 63 | `63-wordmark-picker-plate-spread-finals.md` |
+| 64 | `64-pro-logo-rulings.md` |
+| 65 | `65-pro-grid-card-colours.md` |
+| 66 | `66-college-logo-rulings-record-faults.md` |
+| 67 | `67-tonight-band-goes-week-scrolls-to-now.md` |
+| 68 | `68-opens-on-the-banner-landing-buffer.md` |
+| 69 | `69-the-buffer-endcap-rulings-two-holes.md` |
+| 70 | `70-two-open-items-from-69.md` |
+| 71 | `71-cache-busting-banner-pregame-order-watch-links.md` |
+| 72 | `72-local-rsn-data-text-rendering-audit.md` |
+| 73 | `73-banner-stays-until-the-scroll.md` |
+| 74 | `74-three-amendments-to-73.md` |
+| **75** | `75-one-chronological-run-favourite-marker.md` — *no commit carries it; see below* |
+| **76** | `76-dead-guardians-link-checker-mlb-game-specific.md` — *no commit carries it; see below* |
+| 77 | `77-scores-without-rerender-live-box-score.md` |
+| 78 | `78-four-blocks-mlb-id-drift-watch-links-list-order.md` |
+| 79 | `79-owed-gate-fix-clean-bundle-c-and-d.md` |
+| 80 | `80-push-banked-tripwire-block-d-icon-v8.md` |
+| 81 | `81-mlbtv-deeplink-favourite-mark-icon-v8-banner.md` |
+| 82 | `82-close-f-push-then-d2.md` |
+| 83 | `83-close-d2-then-block-e.md` |
+| 84 | `84-block-e-render-proof.md` |
+| 85 | `85-commit-e.md` |
+| **86** | `86-countdown-gamelink-stickytimes.md` — *the first issue; RAN for Block A, which it built and stopped before committing* |
+| **86** | `86-rev-b-countdown-push-gamelink-stickytimes-superseded.md` — *not pasted into the session that ran 86* |
+| **86** | `86-rev-c-selfcommit-countdown-gamelink-stickytimes.md` — *what RAN for A′, B and C* |
+| 87 | `87-closeout-backfill-preview.md` — *filed by the run it describes* |
 
 ## What is NOT here — the two gaps
 
@@ -114,7 +149,8 @@ a gap and a placeholder is not.
 
 ## Duplicate numbers
 
-Three numbers carry two files each, and they are three different situations:
+Four numbers carry more than one file — 23, 26 and 43 two each, 86 three — and each is a different
+situation (86 added by prompt 87):
 
 - **23** — two versions of one brief, ninety minutes apart on 2026-09-03. The later
   (`23-season-weeks-overlap.md`, 08:57) states a superset of the earlier's objective: *"season load,
@@ -131,6 +167,20 @@ Three numbers carry two files each, and they are three different situations:
   shelved and never ran** — its objective reappears as prompt 46's *"the unattended night run
   (rebuilt 2026-09-05)"*. Cowork's copy of that file is named `43-night-run-shelved.md`; the repo
   keeps the shorter name and this line carries the fact instead.
+- **86** — **three revisions of one brief, and two of them ran** (prompt 87 filing). The first issue
+  (`86-countdown-gamelink-stickytimes.md`) was pasted into Claude Code and its Block A was built and
+  gated, then stopped for approval as that brief required. **Rev. B** said it superseded the first and
+  was itself superseded by **rev. C**; it was never pasted into the session that ran prompt 86, hence
+  `-superseded`. Rev. C (`86-rev-c-selfcommit-countdown-gamelink-stickytimes.md`) is what ran for
+  Block A′ (committing A as `1b458a0`), Block B (`a24f7af`) and Block C (`f08d7dc`).
+
+## 75 and 76 — filed, and no commit carries them
+
+Both briefs exist and are filed verbatim. **`docs/handoff-status.md` records that neither reached the
+repository**: prompt 77's run found HEAD at `392d08b`, prompt 74's commit, with a clean tree. Their
+objectives reappear later — the chronological band and the favourite mark in prompts 80 and 82, the
+dead Guardians link and the MLB game-specific question in prompts 78 and 81. That is a reading of the
+briefs' titles against later ones, not a record anybody wrote at the time.
 
 ## Provenance
 
@@ -141,6 +191,7 @@ Three numbers carry two files each, and they are three different situations:
 | 19–23, 40, 43, 44 | `Claude outputs\` on the laptop |
 | 41 | `artifacts/cap-study/` (gitignored) |
 | 45–49 | `Claude outputs\prompt NN - ….md` |
+| 61–80, 82–87 | `Claude outputs\prompt-NN[-slug].md` — filed by prompt 87 with `shutil.copyfile`, **28 of 28 byte-identical by `sha256`**, zero collisions, all LF. `81` was already here and is byte-identical to its `Claude outputs\` copy |
 
 The fifteen filed by prompt 49 were copied with `shutil.copyfile` and verified byte-identical to
 their sources by `sha256`. The 36 filed by prompt 50 were extracted from

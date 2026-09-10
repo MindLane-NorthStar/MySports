@@ -6,7 +6,7 @@
 // WHAT THIS COVERS AND WHAT IT DOES NOT. The pinning itself is a browser behaviour and was measured
 // in one - ten view combinations, the landing figure for each, 247 scroll positions across four
 // views with the banner's own pixels identical at every one, and the release under a real wheel.
-// Those numbers are in the prompt-73 report and in handoff-status.md. What is testable here without
+// Those numbers are in the prompt-73 report and in handoff-archive.md (moved there by prompt 87). What is testable here without
 // a browser is the WIRING, and it is the half a later edit is most likely to break silently:
 //
 //   * the attribute the stylesheet reads and the attribute the module writes are the same one;

@@ -21,7 +21,21 @@
 > opened on the Guardians" would have read as success. It is the same reason the live-poll probe
 > asserts that its patch LANDED before it asserts that nothing moved.
 
-## The open follow-up — the in-app tap
+## The in-app tap — RUN 2026-09-10, AND IT CLOSED THE QUESTION
+
+> **RESULT, 2026-09-10 — Joe tapped the MLB.TV link from INSIDE the installed MySports TV app, and
+> the MLB app opened.** So a `target="_blank"` link from the standalone home-screen web app DOES hand
+> off to a claimed app: `target="_blank"` on `WatchLink` (`web/components/GameDetail.js:64`) does not
+> suppress the universal link, and it stays as it is. **Block F is closed.**
+>
+> **What this does and does not settle.** It proves the PWA's link path can reach an app when the
+> destination's domain claims the path — which is what makes other deep links (ESPN's
+> `/*/game/_/gameId/*`, see `universal-links-aasa-2026-09-07.md`) worth building. It does not explain
+> the DIRECTV links that opened Safari; the likelier reading now is that those URLs are not claimed by
+> the DIRECTV app, which is a question about DIRECTV's association file, not about `target`. The
+> section below is kept as the record of what was expected before the tap.
+
+## The follow-up as it was written before the tap
 
 Joe reported that DIRECTV links tapped **from inside MySports TV** opened Safari, while these MLB
 links tapped from Messages opened the MLB app. There is a plausible explanation — a `target="_blank"`

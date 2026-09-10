@@ -202,10 +202,18 @@ for (const [day, sport, wk] of CASES) {
 // or hundreds of minutes. A LEGITIMATE schedule change moves it too, and that is correct: a game
 // rescheduled at either end of the day genuinely changes how much time the grid spans, and that is
 // worth a look rather than absorbing.
+//
+// AND IT DID ITS JOB ON 2026-09-13 NFL (prompt 87 step 0). Prompt 86 registered Sunday NFL Countdown,
+// 10:00-13:00 ET on ESPN, and the 2026-09-10 refresh loaded it - so the day starts at 10:00, not at
+// FOX NFL Kickoff's 11:00. Gate reading 770.11 -> 830.38; measured off the canvas's FRACTIONAL width
+// it is 770.0 -> 829.998 - exactly the 60 minutes Countdown adds at the front, the +0.27 being
+// scrollWidth rounding 1120.516 up to 1121. The first label moved 11AM -> 10AM, the last stayed 11PM,
+// and the one new row is ESPN (18 blocks, 4 rows; day/week equality held). Re-pinned to the MEASURED
+// gate reading, the way the other two are.
 console.log('');
 console.log("THE DAY'S SPAN - hard stop, and standings cannot move it");
 const SPAN_TOLERANCE_MIN = 2;
-const SPANS = { '2026-09-05|cfb': 1042.4, '2026-09-03|mlb': 393.4, '2026-09-13|nfl': 770.1 };
+const SPANS = { '2026-09-05|cfb': 1042.4, '2026-09-03|mlb': 393.4, '2026-09-13|nfl': 830.4 };
 for (const [d, sport] of [['2026-09-05', 'cfb'], ['2026-09-03', 'mlb'], ['2026-09-13', 'nfl']]) {
   await go(`/?day=${d}&sport=${sport}&view=grid`);
   const m = await shape();
