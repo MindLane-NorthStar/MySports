@@ -3228,3 +3228,27 @@ are behaviour changes nobody asked for. **They are here so the next reader finds
 rediscovering them.** The same release names **NFL Primetime** (Chris Berman, Sundays 7:30 p.m. on
 the ESPN App); it is a highlights show on an app, not a bookend on a game's network, so §7 Q4's scope
 excludes it.
+
+### 35c. The game link — one destination, three labels, and a column whose name is now imprecise (block B)
+
+Joe's ruling, 2026-09-10: **one link, one destination per sport, and the label follows the state** —
+*Preview* before the game, *Live box score* during it, *Box score* after. ESPN's
+`/{league}/game/_/gameId/{n}` resolves preview → gamecast → recap on its own, where the
+`/boxscore/_/gameId/{n}` the loader used to store does not; MLB's Gameday and the NHL's GameCenter
+pages always did, and their templates are unchanged. So `pipeline/load.py` writes the link in every
+state (the never-overwrite `coalesce` stays), `web/lib/gamelink.js` picks the label, and migration
+0018 rewrites the rows already stored in the old form — **prepared, applied only on Joe's named
+approval** (rule 14).
+
+**THE NAMING DEBT, RECORDED AS A FOLLOW-UP.** `games.boxscore_url` now holds a *preview* URL before
+kickoff, so its name is imprecise. It was deliberately not renamed in the same block: the rename
+reaches `web/lib/queries.js:25`, the PostgREST select list, `web/scripts/smoke.mjs` and every test
+that names the field, and a block that changes a template, a write gate AND a column name has three
+candidate causes when something fails. A name like `game_url` is the obvious target; it is its own
+migration, its own select-list change and its own gate run.
+
+**Programs get nothing, by construction** — `programs` has no such column, and `gameLink()` refuses a
+program row outright as well. Adding one is its own piece of work.
+
+**No streaming claim.** ESPN's app-site-association carries no general `/watch` claim; this link opens
+a game page, and nothing in its copy may say otherwise.

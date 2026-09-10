@@ -50,7 +50,7 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-10, prompt 86 block A — after that block's last gate run, not during it.**
+**Measured 2026-09-10, prompt 86 block B — after that block's last gate run, not during it.**
 
 **IT WAS STALE BY TWO ROWS AGAIN, AND BY THE SAME MECHANISM.** Prompt 86 opened by running all five
 gates on the unmodified tree at `dcf6281`: `pytest` **521 passed + 1 skipped**, `test:unit` 570,
@@ -95,6 +95,8 @@ line claims to do.
 | prompt 83 block E | `pytest` | 515 → **521** | `TheDesktopBannerIsTranscribed` in `tests/test_banner_generator.py` (6) — the desktop banner had NO guard at all |
 | prompt 84 | `qa-shots` | 96 → **108** | the banner READ OFF THE SERVED DOM, 6 checks × 2 breakpoints — the layer rule 24 says the other guards are not |
 | prompt 86 block A | `pytest` | 521 → **527** | Sunday NFL Countdown in `tests/test_studio_shows.py` (6); two existing tests there were rewritten in place, not removed — the one that pinned Countdown INSIDE `_not_loaded`, and the anchor-rule test, which now requires prose and query to agree in both directions so a standalone show is representable |
+| prompt 86 block B | `pytest` | 527 → **531** | `tests/test_scores.py`: the cfb whole-id branch pinned against a hyphenated id, no ESPN template a box-score page, and `ScoresWrite` (2) — the write has no state gate and keeps `coalesce`, and the call site passes one value per placeholder. The three ESPN template assertions were UPDATED in place to `/game/` |
+| prompt 86 block B | `test:unit` | 570 → **582** | `web/test/gamelink.test.mjs` (12) runs the label rule. Four `livejoin.test.mjs` B2 tests were REWRITTEN IN PLACE, not removed — they pinned prompt 78's live-and-final gate, which Joe replaced |
 
 **QA-SHOTS' EXIT CODE WAS DECORATIVE UNTIL THIS COMMIT, AND EVERY `NODE EXIT=0` ABOVE IS AFFECTED.**
 The runner ended in `process.exit(0)` unconditionally: a failing assertion went into
@@ -212,6 +214,16 @@ someone else's outage is one that gets ignored, which is exactly how this surviv
 
 ### THE BOX SCORE LINK IS WRITTEN WHILE THE GAME IS ON (prompt 78 block B2, Joe 2026-09-09)
 
+> **SUPERSEDED 2026-09-10 BY PROMPT 86 BLOCK B — the section below is the record of why the gate
+> existed, not the current behaviour.** Joe's new ruling: one link, one destination per sport, and
+> the label follows the state — *Preview*, *Live box score*, *Box score*. The ESPN templates moved
+> from `/boxscore/_/gameId/` to `/game/_/gameId/`, a page that is a preview before kickoff, so the
+> "dead tap" that justified refusing scheduled games is gone and the state gate went with it;
+> `coalesce` (never overwrite) and the UI's guard on a stored URL both stayed. The labels live in
+> `web/lib/gamelink.js`. **Migration 0018 rewrites the stored old-form rows and is PREPARED, NOT
+> APPLIED** — 99 rows on 2026-09-10 (cfb 98, nfl 1), waiting on Joe's named approval (rule 14).
+> Register §35c records the column's naming debt.
+
 `pipeline/load.py`'s `case when … = 'final'` became `in ('final', 'in_progress')` — **widened, not
 dropped**, because the gate's reason is Joe's ruling too: live and final, never scheduled, since a
 box score for a game that has not started is a dead tap. `completed_at` is deliberately NOT widened;
@@ -251,8 +263,8 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 
 | gate | run from | floor |
 |---|---|---|
-| `pytest` | repo root | **527 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **570** |
+| `pytest` | repo root | **531 passed + 1 skipped** (36 subtests) |
+| `npm run test:unit` | `web/` | **582** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **108/108** |
 | `npm run geometry` | `web/` | all hard stops |

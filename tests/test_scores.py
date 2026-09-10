@@ -5,8 +5,10 @@
 
 Two guarantees are load-bearing here and both are cheap to break:
 
-1. `boxscore_url` is computed ONCE, at the first load that sees result_status 'final', and never
-   overwritten (pipeline/load.py SCORES_SQL). A wrong template is therefore permanent for that game.
+1. `boxscore_url` is computed ONCE, at the first load that sees the game - in ANY state since prompt
+   86; it was 'final' only, then final-and-live from prompt 78 - and never overwritten
+   (pipeline/load.py SCORES_SQL). A wrong template is therefore permanent for that game, which is
+   why migration 0018 had to rewrite the stored `/boxscore/` rows rather than wait for the loader.
 2. An unrecognized provider status maps to NULL, never to 'final' - a wrong 'final' freezes
    completed_at and boxscore_url on a game that has not been played.
 
@@ -72,18 +74,38 @@ def espn_comp(state, name, completed, home="0", away="0"):
 
 # --------------------------------------------------------------------------- boxscore templates
 class BoxscoreTemplates(unittest.TestCase):
+    """PROMPT 86: the three ESPN sports point at ESPN's GAME page, which resolves preview ->
+    gamecast -> recap on its own; `/boxscore/` did not. nhl and mlb are unchanged byte for byte."""
+
     def test_cfb_id_is_used_as_is(self):
         # cfb ids are bare CFBD/ESPN numerics with no sport prefix - splitting on '-' would be wrong
         self.assertEqual(boxscore_url("cfb", "401628319"),
-                         "https://www.espn.com/college-football/boxscore/_/gameId/401628319")
+                         "https://www.espn.com/college-football/game/_/gameId/401628319")
+
+    def test_the_cfb_branch_passes_the_WHOLE_id_and_every_other_sport_the_tail(self):
+        """THE ASYMMETRY IS EASY TO BREAK WHILE EDITING THE MAP ABOVE IT. `boxscore_url` passes the
+        whole id for cfb and the post-hyphen tail for everything else. A hyphenated id makes the two
+        branches disagree visibly - no real cfb id has one, which is exactly why a test must."""
+        self.assertEqual(boxscore_url("cfb", "cfb-401628319"),
+                         "https://www.espn.com/college-football/game/_/gameId/cfb-401628319")
+        self.assertEqual(boxscore_url("nfl", "cfb-401628319"),
+                         "https://www.espn.com/nfl/game/_/gameId/401628319")
 
     def test_espn_leagues_strip_the_sport_prefix(self):
         self.assertEqual(boxscore_url("nfl", "nfl-401772510"),
-                         "https://www.espn.com/nfl/boxscore/_/gameId/401772510")
+                         "https://www.espn.com/nfl/game/_/gameId/401772510")
         self.assertEqual(boxscore_url("nba", "nba-401810245"),
-                         "https://www.espn.com/nba/boxscore/_/gameId/401810245")
+                         "https://www.espn.com/nba/game/_/gameId/401810245")
+
+    def test_no_espn_template_is_a_box_score_page_any_more(self):
+        from pipeline.load import _BOXSCORE
+        for sport in ("cfb", "nfl", "nba"):
+            self.assertIn("/game/_/gameId/{n}", _BOXSCORE[sport], sport)
+            self.assertNotIn("/boxscore/", _BOXSCORE[sport], sport)
 
     def test_league_native_hosts_for_nhl_and_mlb(self):
+        # UNCHANGED BY PROMPT 86, and pinned as exact strings so an edit to the ESPN rows above that
+        # strays into these two fails here.
         self.assertEqual(boxscore_url("nhl", "nhl-2026020123"), "https://www.nhl.com/gamecenter/2026020123")
         self.assertEqual(boxscore_url("mlb", "mlb-778123"), "https://www.mlb.com/gameday/778123")
 
@@ -100,6 +122,29 @@ class BoxscoreTemplates(unittest.TestCase):
             url = boxscore_url(sport, f"{sport}-12345" if sport != "cfb" else "12345")
             self.assertTrue(url.startswith("https://"), sport)
             self.assertTrue(url.endswith("12345"), sport)
+
+
+class ScoresWrite(unittest.TestCase):
+    """The statement that stores the link, read from the module rather than restated."""
+
+    def test_the_link_is_written_in_every_state_and_never_overwritten(self):
+        from pipeline.load import SCORES_SQL
+        self.assertIn("boxscore_url  = coalesce(boxscore_url, %s)", SCORES_SQL)
+        self.assertNotIn("in ('final', 'in_progress')", SCORES_SQL, "the state gate is gone")
+        self.assertNotRegex(SCORES_SQL, r"boxscore_url\s*=\s*%s", "never an unconditional overwrite")
+
+    def test_the_call_site_passes_exactly_one_value_per_placeholder(self):
+        """REMOVING THE STATE GATE REMOVED A PLACEHOLDER, and the call site had to lose an argument
+        with it. psycopg would raise on the mismatch - but only against a live database, and the
+        --emit-sql path inlines positionally and would silently shift every value by one. So the two
+        are counted here, from the source."""
+        import ast
+        from pipeline.load import SCORES_SQL
+        tree = ast.parse((ROOT / "pipeline" / "load.py").read_text(encoding="utf-8"))
+        calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and n.args
+                 and isinstance(n.args[0], ast.Name) and n.args[0].id == "SCORES_SQL"]
+        self.assertEqual(len(calls), 1, "one call site")
+        self.assertEqual(len(calls[0].args[1].elts), SCORES_SQL.count("%s"))
 
 
 # --------------------------------------------------------------------------- ESPN (nfl / cfb shape)

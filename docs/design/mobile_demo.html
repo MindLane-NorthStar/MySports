@@ -727,12 +727,12 @@ const sheetHTML = (g)=>{
     <h4>How to watch</h4>
     <div class="bcastrow"><span class="n">${esc(g.network??"No listing")}</span>
       <span class="acc oom">CHECK ACCESS</span></div>`}
-    ${/* PROMPT 78 BLOCK B: live AND final, never scheduled, and the label says which (rule 23 - this
-          file DOES implement the box-score link, so it moves with the app). Joe's ruling: a live box
-          score is the one worth the most, and an empty one before the game is a dead tap. The loader
-          was widened to write `boxscore_url` for an in-progress game in the same change; before it,
-          relaxing this gate alone would have rendered a link that does nothing. */''}
-    ${(fin||live)&&g.boxscore_url?`<a class="watch sec" href="${esc(g.boxscore_url)}" target="_blank" rel="noopener">${live?"Live box score":"Box score"}</a>`:""}
+    ${/* PROMPT 86 BLOCK B (rule 23 - this file implements the game link, so it moves with the app):
+          ONE link in every state, and the label follows the state - Preview, Live box score, Box
+          score (web/lib/gamelink.js). Prompt 78 showed it live and final only, because the stored
+          URL was ESPN's box-score page and an empty one before the game is a dead tap; the loader now
+          stores ESPN's GAME page, which is a preview before kickoff. The guard on a stored URL stays. */''}
+    ${g.boxscore_url?`<a class="watch sec" href="${esc(g.boxscore_url)}" target="_blank" rel="noopener">${live?"Live box score":fin?"Box score":"Preview"}</a>`:""}
   </div>`;
 };
 

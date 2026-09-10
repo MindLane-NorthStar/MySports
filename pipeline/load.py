@@ -61,19 +61,24 @@ def viewing_day(dt_utc: datetime, cutover_hour: int = 3):
 ZERO_COUNTS = {"games": 0, "broadcasts": 0, "odds": 0, "records": 0, "records_on_game": 0,
                "probables": 0, "observations": 0, "observations_seen": 0, "observations_closed": 0,
                "team_refs": 0, "venues": 0, "programs": 0}
-# Joe 2026-09-01: ESPN box scores for cfb/nfl/nba (our ids ARE ESPN ids), league-native for nhl/mlb.
-# Raw URLs are never displayed - the completed event card is the click target.
+# ONE GAME PAGE PER SPORT, and it follows the game's state on its own (prompt 86, Joe 2026-09-10).
+# ESPN's GAME page for cfb/nfl/nba (our ids ARE ESPN ids) - `/game/_/gameId/{n}` resolves preview ->
+# gamecast -> recap, where the `/boxscore/_/gameId/{n}` these used to be does not. League-native for
+# nhl/mlb, whose gamecenter and gameday pages already did the same and are unchanged. The app labels
+# the link from the state (Preview / Live box score / Box score); the URL does not change with it.
+# Raw URLs are never displayed.
 _BOXSCORE = {
-    "cfb": "https://www.espn.com/college-football/boxscore/_/gameId/{n}",
-    "nfl": "https://www.espn.com/nfl/boxscore/_/gameId/{n}",
-    "nba": "https://www.espn.com/nba/boxscore/_/gameId/{n}",
+    "cfb": "https://www.espn.com/college-football/game/_/gameId/{n}",
+    "nfl": "https://www.espn.com/nfl/game/_/gameId/{n}",
+    "nba": "https://www.espn.com/nba/game/_/gameId/{n}",
     "nhl": "https://www.nhl.com/gamecenter/{n}",
     "mlb": "https://www.mlb.com/gameday/{n}",
 }
 
 
 def boxscore_url(sport: str, game_id: str) -> str | None:
-    """Computed once, at the first load that sees result_status 'final'; never overwritten."""
+    """The game's own page. Written at the first load that sees the game, in any state; never
+    overwritten (SCORES_SQL's coalesce). The column keeps its prompt-7 name - register §35c."""
     tmpl = _BOXSCORE.get(sport)
     if not tmpl:
         return None
@@ -88,25 +93,29 @@ update games set
   away_score    = coalesce(%s, away_score),
   result_status = coalesce(%s, result_status),
   completed_at  = case when coalesce(%s, result_status) = 'final' then coalesce(completed_at, now()) else completed_at end,
-  boxscore_url  = case when coalesce(%s, result_status) in ('final', 'in_progress') then coalesce(boxscore_url, %s) else boxscore_url end
+  boxscore_url  = coalesce(boxscore_url, %s)
 where id = %s
 """
-# THE BOX SCORE LINK IS WRITTEN WHILE THE GAME IS ON, NOT ONLY ONCE IT IS OVER (prompt 78, Joe's
-# ruling 2026-09-09). The condition was WIDENED rather than dropped, and the difference is the whole
-# ruling: live and final, never scheduled. A box score for a game that has not started is a dead tap,
-# which is why the gate exists; a box score for a game in progress is the one Joe most wants.
+# THE GAME LINK IS WRITTEN IN EVERY STATE NOW (prompt 86, Joe's ruling 2026-09-10): one link, one
+# destination per sport, and the app's label follows the state - Preview, then Live box score, then
+# Box score. THE STATE GATE IS GONE AND THE NEVER-OVERWRITE IS NOT. `coalesce` is what makes the write
+# idempotent and keeps a row that already has a URL from being rewritten on every refresh; it is not
+# belt-and-braces, and it is why migration 0018 exists - rows stored in the old `/boxscore/` form
+# are never corrected by this statement.
 #
-# MEASURED BEFORE THE CHANGE: 0 of 790 scheduled CFB rows carried a URL and 0 of 2,822 across the
-# leagues whose season has not started, against 203 of 203 finals. So relaxing the UI gate alone
-# would have rendered a link that does nothing in exactly the window it was being added for - which
-# is why prompt 77 stopped at this prerequisite rather than shipping the UI half.
+# THE HISTORY, because the gate was right when it was written. Prompt 78 (2026-09-09) widened it from
+# final to final-and-live and refused scheduled: `/boxscore/` for a game that has not started is a
+# dead tap, and 0 of 790 scheduled CFB rows carried a URL. What removed the reason for the gate is
+# the DESTINATION, not a change of mind about dead taps - ESPN's `/game/` page is a preview before
+# kickoff, and mlb.com/gameday and nhl.com/gamecenter always were.
 #
 # `completed_at` ABOVE IS DELIBERATELY NOT WIDENED. It is the moment the game ENDED; a game in
 # progress has not got one, and stamping `now()` on it would make every live game look finished to
 # anything that reads it.
 #
-# THE URL IS DERIVED, NOT PROVIDED - see `boxscore_url()` above, and 203 of 203 stored URLs contain
-# their game's own id, so nothing upstream is being trusted for it. Deriving it in JS instead was
+# THE URL IS DERIVED, NOT PROVIDED - see `boxscore_url()` above; at prompt 78 (2026-09-09) 203 of
+# 203 stored URLs contained their game's own id - a dated count, not a standing one - so nothing
+# upstream is being trusted for it. Deriving it in JS instead was
 # considered and rejected in the same ruling: it would put the same per-sport mapping in two
 # languages that must agree, and a rule kept in two places drifts. This function stays its one owner.
 
@@ -204,7 +213,7 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
         if _st is not None and not isinstance(_st, str):   # an adapter sending the wrong type must not
             print(f"  warn: {gid} status is {type(_st).__name__}, not str - result_status left null")
             _st = None                                      # poison the score write (coalesce needs text)
-        db.run(SCORES_SQL, (g.get("homeScore"), g.get("awayScore"), _st, _st, _st,
+        db.run(SCORES_SQL, (g.get("homeScore"), g.get("awayScore"), _st, _st,
                             boxscore_url(sport, gid), gid), tag="games.result")
         pr = g.get("probables")
         if isinstance(pr, dict):

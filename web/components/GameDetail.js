@@ -15,6 +15,7 @@ import { teamLogoDarkUrl, watchUrl, mlbAppUrl, DIRECTV_STREAM } from '../lib/con
 import { markStyle, hasMark } from '../lib/marks.js';
 import { standingLine, standingFor } from '../lib/standings.js';
 import { cardName } from './MatchupCard.js';
+import { gameLink } from '../lib/gamelink.js';
 import {
   ENDCAP_GRADIENT, brandFor, isProgram, subtitleFor, tintToWhite, titleFor,
 } from '../lib/programs.js';
@@ -119,30 +120,28 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
     });
 
   /**
-   * THE BOX SCORE, LIVE AND FINAL, NEVER BEFORE THE GAME (prompt 78, Joe's ruling 2026-09-09).
+   * THE GAME LINK: ONE LINK, AND ITS LABEL FOLLOWS THE STATE (prompt 86, Joe's ruling 2026-09-10).
    *
-   * It was `=== 'final'` alone. Joe wants the link while the game is on, which is when a box score
-   * is worth the most - and NOT while it is scheduled, because an empty box score is a dead tap.
+   * Preview before the game, Live box score during it, Box score after - one destination per sport
+   * that follows the state by itself, so only the words change. `lib/gamelink.js` holds the rule so
+   * the JS gate can run it; this only draws it.
    *
-   * THE LOADER HAD TO MOVE FIRST AND DID (`pipeline/load.py`, same commit). `boxscore_url` was
-   * written only at finalization, so relaxing this gate on its own would have rendered a link that
-   * does nothing in exactly the window it was being added for - measured at 0 of 790 scheduled CFB
-   * rows. `&& game.boxscore_url` therefore still guards it, and it is not belt-and-braces: rows
-   * that were in progress BEFORE that loader change have no URL yet and get no link until the next
-   * refresh writes one. It fills in rather than rendering broken.
+   * THE STATE GATE ON RENDERING IS GONE; THE URL GUARD IS NOT. Prompt 78 showed it live and final
+   * and never before the game, because the stored URL was a `/boxscore/` page and an empty box score
+   * is a dead tap. The loader now writes ESPN's `/game/` page, which is a preview before kickoff, in
+   * every state. Rows written before that change and not yet refreshed still have no URL, and
+   * `gameLink` returns null for them - it fills in rather than rendering broken.
    *
-   * THE LABEL SAYS WHICH IT IS, because the two are different promises: a live box score is
-   * changing under the reader and a final one is a record.
+   * ONLY A MATCHUP CAN EVER HAVE ONE. `boxscore_url` is a column on `games`; the `programs` table
+   * has no such column, so all 4,230 programs are outside this by construction - and `gameLink`
+   * refuses a program row outright as well.
    *
-   * ONLY A MATCHUP CAN EVER HAVE ONE, and it is worth saying here so the next reader does not go
-   * looking. `boxscore_url` is a column on `games`; the `programs` table has no such column at all,
-   * so all 4,230 programs - every race, fight card, weekly show and studio show - are outside this
-   * by construction rather than by a filter anyone wrote.
+   * IT OPENS A GAME PAGE, NOT A STREAM. Nothing in the label may imply otherwise.
    */
-  const boxLive = game.result_status === 'in_progress';
-  const boxScore = (boxLive || game.result_status === 'final') && game.boxscore_url ? (
-    <a className="dlink" href={game.boxscore_url} target="_blank" rel="noopener noreferrer">
-      {boxLive ? 'Live box score' : 'Box score'}
+  const link = gameLink(game);
+  const boxScore = link ? (
+    <a className="dlink" href={link.href} target="_blank" rel="noopener noreferrer">
+      {link.label}
     </a>
   ) : null;
   const odds = (game.odds || [])[0];
@@ -421,6 +420,9 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
 
         <p className="dstamp">
           Watch links are best effort - they open the service, not this game.
+          {/* ...which is still true of the watch links and is NOT true of the game link, which is
+              per-game by construction - so when one renders, the sentence says so (prompt 86). */}
+          {link ? ` ${link.label} opens this game's own page.` : ''}
           {generatedAt ? ` Data as of ${generatedAt}.` : ''}
         </p>
       </div>

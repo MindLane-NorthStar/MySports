@@ -126,18 +126,25 @@ test('the join is measured end to end over a fake provider', async () => {
   assert.equal(good.map.size, 1);
 });
 
-// ---------------------------------------------------------------- B2: the box score while it is on
-test('the loader writes the box score URL for a game IN PROGRESS as well as final', () => {
+// ---------------------------------------------------------------- B2: the game link, every state
+//
+// REWRITTEN IN PLACE BY PROMPT 86, NOT REMOVED. These two pinned prompt 78's ruling - live and
+// final, never scheduled, because `/boxscore/` for an unstarted game is a dead tap. Joe replaced it on
+// 2026-09-10: the stored URL is now the game's own page, which is a preview before kickoff, so the
+// state gate went and the never-overwrite stayed. Each test still guards the half of the old ruling
+// that survives.
+test('the loader writes the game link in EVERY state now, never only live and final', () => {
   const load = src('../pipeline/load.py');
-  assert.match(load, /boxscore_url\s+= case when coalesce\(%s, result_status\) in \('final', 'in_progress'\)/);
+  assert.match(load, /boxscore_url\s+= coalesce\(boxscore_url, %s\)\s*\n/);
+  assert.doesNotMatch(load, /boxscore_url\s+= case when coalesce\(%s, result_status\) in/, 'the state gate is gone');
 });
 
-test('the condition was WIDENED, not dropped - never for a scheduled game', () => {
-  // Joe's ruling is live and final. A box score for a game that has not started is a dead tap, which
-  // is the reason the gate exists at all.
+test('the state gate went and the NEVER-OVERWRITE did not', () => {
+  // `coalesce` keeps a stored URL from being rewritten on every refresh. Widening it into a plain
+  // assignment would make the write non-idempotent - and would silently do migration 0018's job for
+  // new templates while hiding that it had.
   const load = src('../pipeline/load.py');
-  assert.doesNotMatch(load, /boxscore_url\s+= coalesce\(boxscore_url, %s\)\s*\n/, 'not unconditional');
-  assert.match(load, /else boxscore_url end/, 'and it still preserves what is already stored');
+  assert.doesNotMatch(load, /boxscore_url\s+= %s/, 'never an unconditional assignment');
 });
 
 test('completed_at is deliberately NOT widened with it', () => {
@@ -147,22 +154,27 @@ test('completed_at is deliberately NOT widened with it', () => {
   assert.match(load, /completed_at\s+= case when coalesce\(%s, result_status\) = 'final'/);
 });
 
-test('the panel shows it live and final, labelled differently, and never before the game', () => {
+test('the panel draws the link in both branches, and the URL guard stayed', () => {
+  // REWRITTEN IN PLACE BY PROMPT 86: the labels moved into lib/gamelink.js, where
+  // gamelink.test.mjs RUNS them. What this still pins is the panel side - both render sites, and
+  // that the guard on the stored URL survived the state gate's removal.
   const g = src('components/GameDetail.js');
-  assert.match(g, /const boxLive = game\.result_status === 'in_progress';/);
-  assert.match(g, /\(boxLive \|\| game\.result_status === 'final'\) && game\.boxscore_url/);
-  assert.match(g, /\{boxLive \? 'Live box score' : 'Box score'\}/);
-  // the URL guard stays: rows that were in progress before the loader change have none yet
-  assert.match(g, /&& game\.boxscore_url \?/);
+  assert.match(g, /const boxScore = link \? \(/);
+  assert.match(g, /<div className="dlinks dlinks-watch">[\s\S]*?\{boxScore\}/, 'inside the watch links');
+  assert.match(g, /\{boxScore \? <div className="dlinks">\{boxScore\}<\/div> : null\}/, 'and on its own');
+  const lib = src('lib/gamelink.js');
+  assert.match(lib, /!row\.boxscore_url\) return null;/, 'no stored URL, no link');
 });
 
 test('the URL mapping has ONE owner, in Python', () => {
   // Deriving it in JS was considered and rejected in the same ruling: it would put the same
   // per-sport mapping in two languages that must agree, and a rule kept in two places drifts.
+  // Prompt 86 added ESPN's `/game/` shape to the forbidden list and gamelink.js to the files.
   const load = src('../pipeline/load.py');
   assert.match(load, /_BOXSCORE = \{/);
-  for (const f of ['components/GameDetail.js', 'lib/config.js', 'lib/livescores.js']) {
-    assert.doesNotMatch(src(f), /espn\.com\/[a-z-]*\/boxscore|mlb\.com\/gameday|nhl\.com\/gamecenter/,
-      `${f} must not learn a second copy of the box score URL shapes`);
+  for (const f of ['components/GameDetail.js', 'lib/config.js', 'lib/livescores.js', 'lib/gamelink.js']) {
+    assert.doesNotMatch(src(f),
+      /espn\.com\/[a-z-]*\/(boxscore|game)\/_\/gameId|mlb\.com\/gameday|nhl\.com\/gamecenter/,
+      `${f} must not learn a second copy of the game URL shapes`);
   }
 });
