@@ -15,11 +15,19 @@
 // stage coordinates instead, the rect can grow and the paint cannot move. The conversion arithmetic
 // is artifacts/qa/2026-09-05-banner-seam/gradient-convert.py.
 //
-// THE GLOWS' OUTER STOPS ARE LEFT AS DESIGNED (0.021 / 0.028, not 0). They make the ellipse
-// boundary a faint hard edge, which overflow:visible exposes in the band as a 3.4/255 line above
-// the stage. Fading them to zero removes it, and was measured: it also repaints the annulus between
-// the 82% and 100% rings, changing 10.6% of the visible stage by up to 6/255. That is a far bigger
-// change to the artwork than the artifact is worth, so the tails stay.
+// THE GLOWS' OUTER STOPS NOW RE-TAPER TO ZERO, and this paragraph used to say the opposite.
+// Prompt 45 kept the hard tails (0.021 / 0.028) because zeroing them outright repaints the whole
+// annulus between the 82% and 100% rings - measured then at 10.6% of the visible stage by up to
+// 6/255, a bigger change to the artwork than the artifact was worth. Joe saw the artifact anyway
+// and overrode that in conversation on 2026-09-09: the edge reads as a faint rounded outline
+// around the television, which is not a thing the design has.
+//
+// WHAT SHIPPED IS NEITHER OPTION. A stop at 95% sitting exactly ON the current 82->100 line, then
+// zero at 100%, so only the last 5% of each radius moves and every existing stop is untouched.
+// Measured at the mobile breakpoint over the stage ground: the edge removed is a step of 3.0/255
+// (outer) and 4.1/255 (inner); the re-taper changes 3.16% of the visible stage by at most
+// 3.53/255. Zeroing outright would have changed 11.38%, which reproduces prompt 45's 10.6% and is
+// why the re-taper was chosen over it.
 //
 export default function BannerMobileV2() {
   return (
@@ -27,10 +35,10 @@ export default function BannerMobileV2() {
     <title id="bnTitle">MySports TV. Every game. Every channel. One place.</title>
     <defs>
     <linearGradient id="bnBg" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="135"><stop offset="0" stopColor="#272727"/><stop offset=".45" stopColor="#232323"/><stop offset="1" stopColor="#1A1A1A"/></linearGradient>
-    <radialGradient id="bnGlow0" gradientUnits="userSpaceOnUse" cx="346" cy="75" r="138" gradientTransform="translate(346,75) scale(1,0.73913043478260869565) translate(-346,-75)"><stop offset="0%" stopColor="rgb(255,170,60)" stopOpacity="0.32"/><stop offset="45.3%" stopColor="rgb(255,170,60)" stopOpacity="0.176"/><stop offset="82%" stopColor="rgb(255,170,60)" stopOpacity="0.058"/><stop offset="100%" stopColor="rgb(255,170,60)" stopOpacity="0.021"/></radialGradient>
-    <radialGradient id="bnGlow1" gradientUnits="userSpaceOnUse" cx="334" cy="77" r="66" gradientTransform="translate(334,77) scale(1,0.84848484848484848485) translate(-334,-77)"><stop offset="0%" stopColor="rgb(255,170,60)" stopOpacity="0.42"/><stop offset="45.3%" stopColor="rgb(255,170,60)" stopOpacity="0.231"/><stop offset="82%" stopColor="rgb(255,170,60)" stopOpacity="0.076"/><stop offset="100%" stopColor="rgb(255,170,60)" stopOpacity="0.028"/></radialGradient>
+    <radialGradient id="bnGlow0" gradientUnits="userSpaceOnUse" cx="346" cy="75" r="138" gradientTransform="translate(346,75) scale(1,0.73913043478260869565) translate(-346,-75)"><stop offset="0%" stopColor="rgb(255,170,60)" stopOpacity="0.32"/><stop offset="45.3%" stopColor="rgb(255,170,60)" stopOpacity="0.176"/><stop offset="82%" stopColor="rgb(255,170,60)" stopOpacity="0.058"/><stop offset="95%" stopColor="rgb(255,170,60)" stopOpacity="0.0313"/><stop offset="100%" stopColor="rgb(255,170,60)" stopOpacity="0"/></radialGradient>
+    <radialGradient id="bnGlow1" gradientUnits="userSpaceOnUse" cx="334" cy="77" r="66" gradientTransform="translate(334,77) scale(1,0.84848484848484848485) translate(-334,-77)"><stop offset="0%" stopColor="rgb(255,170,60)" stopOpacity="0.42"/><stop offset="45.3%" stopColor="rgb(255,170,60)" stopOpacity="0.231"/><stop offset="82%" stopColor="rgb(255,170,60)" stopOpacity="0.076"/><stop offset="95%" stopColor="rgb(255,170,60)" stopOpacity="0.0413"/><stop offset="100%" stopColor="rgb(255,170,60)" stopOpacity="0"/></radialGradient>
     <linearGradient id="bnGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#E0D1A5"/><stop offset=".42" stopColor="#C6AF7A"/><stop offset=".7" stopColor="#B39A69"/><stop offset="1" stopColor="#8C7650"/></linearGradient>
-    <filter id="bnTitleGlow" x="-20%" y="-100%" width="140%" height="300%"><feGaussianBlur stdDeviation="10"/></filter>
+    <filter id="bnTitleHalo" x="-25%" y="-140%" width="150%" height="380%" colorInterpolationFilters="sRGB"><feGaussianBlur in="SourceAlpha" stdDeviation="7.9" result="w"/><feComponentTransfer in="w" result="wide"><feFuncA type="linear" slope="1.9"/></feComponentTransfer><feGaussianBlur in="SourceAlpha" stdDeviation="2.5" result="t"/><feComponentTransfer in="t" result="tight"><feFuncA type="linear" slope="2.7"/></feComponentTransfer><feMerge><feMergeNode in="wide"/><feMergeNode in="tight"/></feMerge></filter>
     <filter id="bnMark" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="0" stdDeviation="1.2" floodColor="#ffffff" floodOpacity=".22" result="halo"/><feDropShadow in="halo" dx="0" dy="2" stdDeviation="1.2" floodColor="#000000" floodOpacity=".55"/></filter>
     <filter id="bnTv" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="6" stdDeviation="4" floodColor="#000000" floodOpacity=".65" result="s"/><feDropShadow in="s" dx="0" dy="0" stdDeviation="6" floodColor="rgb(255,150,40)" floodOpacity=".28"/></filter>
     <linearGradient id="bnSheenGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#FFFFFF" stopOpacity="0"/><stop offset=".5" stopColor="#FFFFFF" stopOpacity=".5"/><stop offset="1" stopColor="#FFFFFF" stopOpacity="0"/></linearGradient>
@@ -38,7 +46,7 @@ export default function BannerMobileV2() {
     <rect x="0" y="-90" width="428" height="225" fill="url(#bnBg)"/>
     <ellipse cx="346" cy="75" rx="138" ry="102" fill="url(#bnGlow0)"/>
     <ellipse cx="334" cy="77" rx="66" ry="56" fill="url(#bnGlow1)"/>
-    <image href="/banner/tv-cutout.png" x="306.04" y="43.1" width="55.93" height="58.8" preserveAspectRatio="xMidYMid meet" filter="url(#bnTv)"/>
+    <image href="/banner/tv-cutout-dark.png" x="306.04" y="43.1" width="55.93" height="58.8" preserveAspectRatio="xMidYMid meet" filter="url(#bnTv)"/>
     <image href="/banner/nbc.png" x="15.99" y="52" width="19.23" height="19" preserveAspectRatio="xMidYMid meet" filter="url(#bnMark)"/>
     <image href="/banner/fox.png" x="49.95" y="55.7" width="27.11" height="11.5" preserveAspectRatio="xMidYMid meet" filter="url(#bnMark)"/>
     <image href="/banner/espn.png" x="91.86" y="55.7" width="46.28" height="11.5" preserveAspectRatio="xMidYMid meet" filter="url(#bnMark)"/>
@@ -62,7 +70,7 @@ export default function BannerMobileV2() {
     <image href="/banner/nba.png" x="271.83" y="93" width="12.35" height="28" preserveAspectRatio="xMidYMid meet" filter="url(#bnMark)"/>
     <image href="/banner/wwe.png" x="378.87" y="96" width="24.27" height="22" preserveAspectRatio="xMidYMid meet" filter="url(#bnMark)"/>
     <image href="/banner/nascar.png" x="298.02" y="119" width="71.95" height="12" preserveAspectRatio="xMidYMid meet" filter="url(#bnMark)"/>
-    <text x="14" y="29.88" fontFamily="'Barlow Condensed', 'Barlow Condensed Fallback', Impact, sans-serif" fontWeight="700" fontSize="36" letterSpacing="1.62" fill="#C6AF7A" opacity=".55" filter="url(#bnTitleGlow)">MYSPORTS TV</text>
+    <text x="14" y="29.88" fontFamily="'Barlow Condensed', 'Barlow Condensed Fallback', Impact, sans-serif" fontWeight="700" fontSize="36" letterSpacing="1.62" fill="#000000" filter="url(#bnTitleHalo)">MYSPORTS TV</text>
     <text x="14" y="29.88" fontFamily="'Barlow Condensed', 'Barlow Condensed Fallback', Impact, sans-serif" fontWeight="700" fontSize="36" letterSpacing="1.62" fill="url(#bnGold)">MYSPORTS TV</text>
     <mask id="bnSheenMask"><text x="14" y="29.88" fontFamily="'Barlow Condensed', 'Barlow Condensed Fallback', Impact, sans-serif" fontWeight="700" fontSize="36" letterSpacing="1.62" fill="#fff">MYSPORTS TV</text></mask>
     <g mask="url(#bnSheenMask)"><rect className="bn-sheen" x="-140" y="-8" width="130" height="46" fill="url(#bnSheenGrad)"/></g>

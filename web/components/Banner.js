@@ -1,10 +1,15 @@
 // The home-page banner: banner v2, one finished SVG per breakpoint.
 //
 // Server component on purpose. Both components are plain functions with no props, no state and no
-// imports of their own - every coordinate is baked into the JSX, generated from
-// web/lib/banner-mobile-v2.json and web/lib/banner-desktop-v2.json. Those JSON files ship as
-// DOCUMENTATION of the same values; nothing reads them at build time. If the design moves, the JSON
-// changes and the component is regenerated from it - coordinates are never hand-edited here.
+// imports of their own - every coordinate is baked into the JSX. Neither JSON is read at build time
+// or at run time; they are the design's record, and the components are the artefact.
+//
+// THE TWO BREAKPOINTS ARE NOT MAINTAINED THE SAME WAY, and this paragraph used to say they were.
+// It said both were "regenerated from" their JSON. Only the phone is: `scripts/build_banner_mobile.py`
+// writes BannerMobileV2.jsx, `--check` fails on drift and `tests/test_banner_generator.py` is the
+// gate. THERE IS NO DESKTOP GENERATOR - BannerDesktopV2.jsx is hand-written and transcribed from its
+// JSON, and its own header now says so. Rule 33 exists because this comment claimed a tool for four
+// days that the repo did not contain; prompt 81 block E is the second time it misled a run.
 //
 // WHY BOTH ARE MOUNTED AT ONCE. CSS chooses which one paints (`.bn-pc`/`.bn-mobile`, swapped at
 // 700px); both stay in the DOM. SVG ids are document-global, so a shared id could let the hidden

@@ -46,8 +46,12 @@
           0.058
         ],
         [
+          "95%",
+          0.0313
+        ],
+        [
           "100%",
-          0.021
+          0
         ]
       ]
     },
@@ -71,8 +75,12 @@
           0.076
         ],
         [
+          "95%",
+          0.0413
+        ],
+        [
           "100%",
-          0.028
+          0
         ]
       ]
     }
@@ -102,10 +110,26 @@
         "#8C7650"
       ]
     ],
-    "glow": {
-      "fill": "#C6AF7A",
-      "blur_std_dev": 10,
-      "opacity": 0.55
+    "halo": {
+      "fill": "#000000",
+      "cap_height_ratio": 0.72,
+      "cap_height": 25.92,
+      "wide": {
+        "std_dev": 7.9,
+        "std_dev_over_cap": 0.306,
+        "alpha_slope": 1.9
+      },
+      "tight": {
+        "std_dev": 2.5,
+        "std_dev_over_cap": 0.097,
+        "alpha_slope": 2.7
+      },
+      "region": {
+        "x": "-25%",
+        "y": "-140%",
+        "width": "150%",
+        "height": "380%"
+      }
     },
     "sheen": {
       "band_w": 130,
@@ -127,7 +151,7 @@
     "fill": "#A4AAB2"
   },
   "tv": {
-    "file": "tv-cutout.png",
+    "file": "tv-cutout-dark.png",
     "x": 306.04,
     "y": 43.1,
     "w": 55.93,
@@ -345,7 +369,7 @@
   "filters": {
     "mark": "white halo (dx0 dy0 sd1.2 .22) then black drop (dx0 dy2 sd1.2 .55)",
     "tv": "black drop (dx0 dy6 sd4 .65) + warm halo (dx0 dy0 sd6 rgb(255,150,40) .28)",
-    "title_glow": "feGaussianBlur sd10 on a #C6AF7A copy at opacity .55",
+    "title_halo": "two-pass dark halo under the wordmark, matching the app icon: a #000000 copy through feGaussianBlur sd7.9 with feFuncA slope 1.9, merged over the same copy through sd2.5 with slope 2.7. The radii are 0.306 and 0.097 of cap height (0.72 x fontSize 36 = 25.92). Replaced a gold #C6AF7A glow at sd10 opacity .55 (prompt 81 block E2).",
     "svg": {
       "mark": {
         "region": {
@@ -398,7 +422,7 @@
     "date": "2026-09-04",
     "what": "The ground rect is drawn from y=-90 instead of y=0 and the root <svg> is overflow:visible, so the artwork paints the iOS safe-area band above the stage instead of leaving it to .banner's CSS gradient. That boundary was the seam Joe reported: 8.7/255 under the wordmark, 10.7 under the TV, 3.1 on neutral ground. Measured after: 2.0 worst.",
     "gradients": "bnBg, bnGlow0 and bnGlow1 were objectBoundingBox (the default), so growing a shape would have stretched its gradient with it. All three are gradientUnits=userSpaceOnUse now, pinned to stage coordinates; the two radial ones carry the box aspect as a gradientTransform. Arithmetic: artifacts/qa/2026-09-05-banner-seam/gradient-convert.py.",
-    "unchanged": "Every mark, image, text and filter coordinate below is exactly as generated, and the glow ellipses are NOT extended - see BannerMobileV2.jsx for why their outer stops keep their tails. The 0-155 stage region measured 8 of 597060 pixels different by 1/255 at 428 CSS px / DPR 3, which is Chromium's gradient rasteriser, not a geometry change.",
+    "unchanged": "Every mark, image, text and filter coordinate below is exactly as generated, and the glow ellipses are NOT extended - the seam fix moved the ground rect, never the ellipses. The 0-155 stage region measured 8 of 597060 pixels different by 1/255 at 428 CSS px / DPR 3, which is Chromium's gradient rasteriser, not a geometry change. THE SECOND HALF OF THIS NOTE USED TO read \"see BannerMobileV2.jsx for why their outer stops keep their tails\", and prompt 81 block E4 re-tapered those tails to zero at Joe's direction. The ellipse GEOMETRY is still untouched, which is what this key is about; only the last 5% of each gradient radius changed.",
     "rect": {
       "x": 0,
       "y": -90,

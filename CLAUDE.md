@@ -69,6 +69,15 @@ never renumber, even around the retired stub.
     and Next interpolates it into a single-quoted string. Ruling: do nothing. Never set
     `experimental.useWasmBinary`. Standing caution: that apostrophe will keep breaking any tooling
     that interpolates paths into quoted strings.
+    **AND IT REACHES `next dev` THROUGH ONE ROUTE: never request `/manifest.webmanifest`.**
+    `next-metadata-route-loader` emits `throw new Error('Default export is missing in "<abs path>"')`
+    — a single-quoted string with `Joe's` inside it — so that module can never parse here. It is not
+    compiled until something asks for it, and then the failure is **cached in the module graph and
+    every page 500s**, because the manifest `<link>` is part of the document. Prompt 83 block E lost a
+    gate run to it: qa-shots died on `.mrail-cell` with a 30s timeout that read exactly like an app
+    fault, one curl after the icons were swapped, and the icons were not the cause. Recovery is
+    rule 36's: kill the dev server by path, `rm -rf web/.next`, restart. **Vercel is unaffected** — it
+    builds at `/vercel/path0`, which has no apostrophe.
 13. A numeric threshold is measured against the **local background**, never a global corner sample.
 14. **Database writes go through the Supabase connector, and only through it.** There is still no
     direct Postgres connection and no writer credential in the repo, in `.env`, or in any prompt —

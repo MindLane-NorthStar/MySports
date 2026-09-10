@@ -46,8 +46,12 @@
      0.058
     ],
     [
+     "95%",
+     0.0313
+    ],
+    [
      "100%",
-     0.021
+     0
     ]
    ]
   },
@@ -71,8 +75,12 @@
      0.076
     ],
     [
+     "95%",
+     0.0413
+    ],
+    [
      "100%",
-     0.028
+     0
     ]
    ]
   }
@@ -102,10 +110,26 @@
     "#8C7650"
    ]
   ],
-  "glow": {
-   "fill": "#C6AF7A",
-   "blur_std_dev": 10.0,
-   "opacity": 0.55
+  "halo": {
+   "fill": "#000000",
+   "cap_height_ratio": 0.72,
+   "cap_height": 39.6,
+   "wide": {
+    "std_dev": 12.1,
+    "std_dev_over_cap": 0.306,
+    "alpha_slope": 1.9
+   },
+   "tight": {
+    "std_dev": 3.8,
+    "std_dev_over_cap": 0.097,
+    "alpha_slope": 2.7
+   },
+   "region": {
+    "x": "-25%",
+    "y": "-140%",
+    "width": "150%",
+    "height": "380%"
+   }
   }
  },
  "tagline": {
@@ -118,7 +142,7 @@
   "fill": "#A4AAB2"
  },
  "tv": {
-  "file": "tv-cutout.png",
+  "file": "tv-cutout-dark.png",
   "x": 1165.06,
   "y": 50.5,
   "w": 99.87,
@@ -381,7 +405,7 @@
  "filters": {
   "mark": "white halo (dx0 dy0 sd1.2 .22) then black drop (dx0 dy2 sd1.2 .55)",
   "tv": "black drop (dx0 dy6 sd4 .65) + warm halo (dx0 dy0 sd6 rgb(255,150,40) .28)",
-  "title_glow": "feGaussianBlur sd10.0 on a #C6AF7A copy at opacity .55"
+  "title_halo": "two-pass dark halo under the wordmark, matching the app icon: a #000000 copy through feGaussianBlur sd12.1 with feFuncA slope 1.9, merged over the same copy through sd3.8 with slope 2.7. The radii are 0.306 and 0.097 of cap height (0.72 x fontSize 55 = 39.6). Replaced a gold #C6AF7A glow at sd10 opacity .55 (prompt 81 block E2)."
  },
  "_gold": "Metallic gold family, prompt 52 stage 4. Mapped from docs/ux-reference/visual-refinement-handoff-2026-09-06.md §4: #FBE59A->#E0D1A5 highlight, #F2CD62->#C6AF7A primary, #E4B646->#B39A69 mid, #D2A038->#8C7650 deep, and the wordmark's blurred glow copy #F3CC5A->#C6AF7A. The rgb(255,170,60) ambient ellipses and the rgb(255,150,40) TV halo are NOT the wordmark - they are §7's charcoal-spotlight background, which §7 says to retain. GEOMETRY IS UNTOUCHED: artboard, type size, letter-spacing and every coordinate are byte-identical. Colour only."
 }

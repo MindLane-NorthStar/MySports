@@ -50,7 +50,7 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-09, prompt 82 block F — after that block's last gate run, not during it.**
+**Measured 2026-09-09, prompt 84 — after that block's last gate run, not during it.**
 
 **THIS TABLE WAS STALE BY TWO ROWS AND THE GAP IS RECORDED RATHER THAN ERASED.** It read
 `514 passed + 1 skipped` and `552` while the tree already sat at 515 + 1 and 560 — **prompt 80's
@@ -75,6 +75,22 @@ line claims to do.
 | prompt 82 block D2 | `test:unit` | 568 → **570** | **net +2, and THREE TESTS WERE REMOVED — see the accounting below** |
 | prompt 82 block D2 | `qa-shots` | 91 → **94** | the favourite mark: the gold token, an unmarked card's border, zero layout cost, and the interleaving |
 | prompt 83 block D2 | `qa-shots` | 94 → **96** | the off-service compose: both cues present, neither silently winning |
+| prompt 83 block E | `pytest` | 515 → **521** | `TheDesktopBannerIsTranscribed` in `tests/test_banner_generator.py` (6) — the desktop banner had NO guard at all |
+| prompt 84 | `qa-shots` | 96 → **108** | the banner READ OFF THE SERVED DOM, 6 checks × 2 breakpoints — the layer rule 24 says the other guards are not |
+
+**QA-SHOTS' EXIT CODE WAS DECORATIVE UNTIL THIS COMMIT, AND EVERY `NODE EXIT=0` ABOVE IS AFFECTED.**
+The runner ended in `process.exit(0)` unconditionally: a failing assertion went into
+`assertions.json` and printed `FAILURES - n/m`, and the process still exited 0. So for that gate,
+**rule 26's two deciders were one** — the parsed counts were the whole signal and the exit code
+carried no information at all.
+
+**No past result is invalidated.** 91/91, 94/94 and 96/96 were all read from the printed counts,
+which were and are correct. What was wrong was the confidence attached to them: prompt 83 reported
+`NODE EXIT=0` as if it corroborated 96/96, and it corroborated nothing. It is also exactly what let
+`| tail -4` hide a `TimeoutError` in that same block — with no real exit code to lose, losing it to a
+pipe cost nothing extra, and the mistake was invisible.
+
+`process.exit(failed === 0 ? 0 : 1)` from prompt 84 onward, so the two deciders are two.
 
 **D2 REMOVED A FEATURE AND ITS TESTS WENT WITH IT, SAID OUT LOUD** as the exception above requires.
 `splitFavorites` was retired — nothing outside the tests imported it once the float was gone — and
@@ -99,8 +115,45 @@ file-by-file arithmetic, measured rather than asserted:
 | `rhythm.test.mjs` | 7 | 7 | 0 (repointed at the surviving rule) |
 | **net** | | | **+2** |
 
+**BLOCK E ADDED A GUARD WHERE THERE HAD NEVER BEEN ONE.** `tests/test_banner_generator.py` has
+pinned the MOBILE banner byte-for-byte since prompt 57, because a program writes that file and the
+test can re-run it. `BannerDesktopV2.jsx` had nothing — no generator, no `--check`, and a header
+telling the next reader to "regenerate from the JSON", which is a tool this repo does not contain
+(rule 33). Block E had to hand-edit it, so the six new tests pin every value that gets transcribed:
+the cutout filename, both gradient stop lists, the whole halo filter, the halo fill, the cap-height
+arithmetic on BOTH breakpoints, and the header no longer claiming the generator. The 23 mark
+coordinates are deliberately NOT pinned — they came out of prompt 42 and restating them here would
+protect nothing.
+
 Neither prompt-80 movement was written here at the time, and both are legitimate: a floor may only go
 up, and nothing was removed or weakened. The other three gates are unchanged throughout.
+
+### A COWORK CORRECTION: THE STALE-RENDER FINDING READ A LABEL, NOT THE THING (prompt 84)
+
+Prompt 84 opened by asserting Block E's render was stale, on the evidence that
+`web/qa/p83final/mobile__today-all.png` was byte-identical to `web/qa/p83/`'s (sha256
+`df1656e4f93d77b5`). **It was the wrong file.** `p83final` was written at **19:38:58**; the first
+banner source edit landed at **19:54:38**. It is block **D2**'s run, and it is identical to `p83`
+because at that moment the banner genuinely had not been touched — the correct result under a
+misleading name.
+
+**THE MTIME WAS IN COWORK'S OWN TOOL OUTPUT AND WENT UNCOMPARED** against the edit time. The run was
+identified from a DIRECTORY NAME and an assertion count instead — which is reading a label rather
+than checking the thing, the failure this repo has rules 30, 31, 33 and 34 about. The live artifact
+said the opposite and was one `getpixel` away: the TV screen reads mean rgb(30, 30, 35) at a
+per-pixel channel spread of **5.7**, against p83's rgb(127, 113, 116) at **103.0**.
+
+**THE RECOMMENDATION UNDERNEATH IT WAS SOUND AND IS WHY THE BLOCK WAS WORTH RUNNING.** Every banner
+guard really was Python reading JSX as text (rule 24), five gates really did go green with nothing
+watching the served page, and the fix — `web/scripts/lib/bannerdom.mjs`, twelve runtime assertions,
+and `probes/banner-mutation.mjs` breaking each one to prove it is a guard — exists because of it.
+**But a right recommendation reached through a wrong measurement is still a wrong measurement**, and
+the next one may not land as well.
+
+**TWO THINGS CHANGED, NOT ONE.** The naming: a snapshot directory is named for the BLOCK from now
+on, never the prompt — `p83final` holding a mid-prompt run is what made the mislabel available. And
+the habit: an artifact's identity is settled by its mtime against the edit it is supposed to contain,
+which is one comparison and was already on screen.
 
 ### MLB LIVE SCORES HAD NEVER WORKED, AND THE ID SCHEME WAS NOT WHY (prompt 78 block B)
 

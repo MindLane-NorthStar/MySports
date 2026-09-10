@@ -66,11 +66,19 @@ HEADER = """// MySports TV — home banner v2, PHONE breakpoint. GENERATED from 
 // stage coordinates instead, the rect can grow and the paint cannot move. The conversion arithmetic
 // is artifacts/qa/2026-09-05-banner-seam/gradient-convert.py.
 //
-// THE GLOWS' OUTER STOPS ARE LEFT AS DESIGNED (0.021 / 0.028, not 0). They make the ellipse
-// boundary a faint hard edge, which overflow:visible exposes in the band as a 3.4/255 line above
-// the stage. Fading them to zero removes it, and was measured: it also repaints the annulus between
-// the 82% and 100% rings, changing 10.6% of the visible stage by up to 6/255. That is a far bigger
-// change to the artwork than the artifact is worth, so the tails stay.
+// THE GLOWS' OUTER STOPS NOW RE-TAPER TO ZERO, and this paragraph used to say the opposite.
+// Prompt 45 kept the hard tails (0.021 / 0.028) because zeroing them outright repaints the whole
+// annulus between the 82% and 100% rings - measured then at 10.6% of the visible stage by up to
+// 6/255, a bigger change to the artwork than the artifact was worth. Joe saw the artifact anyway
+// and overrode that in conversation on 2026-09-09: the edge reads as a faint rounded outline
+// around the television, which is not a thing the design has.
+//
+// WHAT SHIPPED IS NEITHER OPTION. A stop at 95% sitting exactly ON the current 82->100 line, then
+// zero at 100%, so only the last 5% of each radius moves and every existing stop is untouched.
+// Measured at the mobile breakpoint over the stage ground: the edge removed is a step of 3.0/255
+// (outer) and 4.1/255 (inner); the re-taper changes 3.16% of the visible stage by at most
+// 3.53/255. Zeroing outright would have changed 11.38%, which reproduces prompt 45's 10.6% and is
+// why the re-taper was chosen over it.
 //"""
 
 
@@ -125,8 +133,23 @@ def build(d: dict) -> str:
     L.append(f'    <linearGradient id="bnGold" x1="0" y1="0" x2="0" y2="1">'
              f'{_stops(title["fill_gradient_top_to_bottom"])}'
              f'</linearGradient>')
-    L.append(f'    <filter id="bnTitleGlow" x="-20%" y="-100%" width="140%" height="300%">'
-             f'<feGaussianBlur stdDeviation="{n(title["glow"]["blur_std_dev"])}"/></filter>')
+    # THE TITLE HALO IS DARK, NOT GOLD (prompt 81 block E2, Joe 2026-09-09). Both banners painted a
+    # gold glow behind gold type, which reads as a wash rather than as separation. The app icon has
+    # always used a dark two-pass halo and this is the banner matching it: a wide soft pass for
+    # weight, a tight pass for the edge, each steepened by an feFuncA slope so the alpha climbs
+    # faster than a Gaussian tail would. THE RADII ARE RATIOS OF CAP HEIGHT, not of font size, which
+    # is what keeps the two breakpoints the same halo at different sizes - the JSON carries the ratio
+    # AND the product, so nothing is recomputed here and the two cannot disagree silently.
+    hl, hr = title["halo"], title["halo"]["region"]
+    L.append(f'    <filter id="bnTitleHalo" x="{hr["x"]}" y="{hr["y"]}" width="{hr["width"]}"'
+             f' height="{hr["height"]}" colorInterpolationFilters="sRGB">'
+             f'<feGaussianBlur in="SourceAlpha" stdDeviation="{n(hl["wide"]["std_dev"])}" result="w"/>'
+             f'<feComponentTransfer in="w" result="wide">'
+             f'<feFuncA type="linear" slope="{n(hl["wide"]["alpha_slope"])}"/></feComponentTransfer>'
+             f'<feGaussianBlur in="SourceAlpha" stdDeviation="{n(hl["tight"]["std_dev"])}" result="t"/>'
+             f'<feComponentTransfer in="t" result="tight">'
+             f'<feFuncA type="linear" slope="{n(hl["tight"]["alpha_slope"])}"/></feComponentTransfer>'
+             f'<feMerge><feMergeNode in="wide"/><feMergeNode in="tight"/></feMerge></filter>')
     m, r = filt["mark"], filt["mark"]["region"]
     L.append(f'    <filter id="bnMark" x="{r["x"]}" y="{r["y"]}" width="{r["width"]}" height="{r["height"]}">'
              f'<feDropShadow dx="{n(m["halo"]["dx"])}" dy="{n(m["halo"]["dy"])}" stdDeviation="{n(m["halo"]["stdDeviation"])}"'
@@ -157,8 +180,9 @@ def build(d: dict) -> str:
                  f' height="{n(mk["h"])}" preserveAspectRatio="xMidYMid meet" filter="url(#bnMark)"/>')
     ttl = (f'x="{n(title["x"])}" y="{n(title["baseline_y"])}" fontFamily="{FONT}" fontWeight="700"'
            f' fontSize="{n(title["font_size"])}" letterSpacing="{n(title["letter_spacing_px"])}"')
-    L.append(f'    <text {ttl} fill="{title["glow"]["fill"]}" opacity="{str(title["glow"]["opacity"]).lstrip("0")}"'
-             f' filter="url(#bnTitleGlow)">{title["text"]}</text>')
+    # No `opacity` on this pass: the halo's weight is the feFuncA slopes, and a second dimmer on top
+    # would make the same fact adjustable from two places.
+    L.append(f'    <text {ttl} fill="{hl["fill"]}" filter="url(#bnTitleHalo)">{title["text"]}</text>')
     L.append(f'    <text {ttl} fill="url(#bnGold)">{title["text"]}</text>')
     # THE SHEEN (prompt 57 stage 7). A highlight band inside a mask cut to the wordmark itself, so
     # what travels is a FILL and never a layout box - nothing here can reflow the page. It is inert

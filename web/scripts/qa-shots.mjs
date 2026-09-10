@@ -13,6 +13,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
 
+import { readBanner, bannerChecks } from './lib/bannerdom.mjs';
+
 const outDir = process.argv[2] || 'qa';
 const base = (process.argv[3] || 'http://localhost:3000').replace(/\/+$/, '');
 mkdirSync(outDir, { recursive: true });
@@ -1089,9 +1091,37 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
+// ------------------------------------------- THE BANNER, READ OFF THE SERVED DOM (prompt 84, rule 24)
+//
+// PROMPT 81 BLOCK E CHANGED THE BANNER THREE WAYS AND PINNED NONE OF THEM AT RUNTIME. Every guard
+// it shipped with lives in `tests/test_banner_generator.py` - Python, reading JSX as text. Rule 24
+// is exactly that: a fact established on the Python side is no evidence the JS runtime agrees, and
+// the runtime path has to be pinned. The two guards prove different things and both are wanted -
+// that file proves the generator writes what the JSON says, this proves the browser receives it.
+// Block E's own gate run went green at 96/96 with nobody having checked the second.
+//
+// The reader and the predicates live in `scripts/lib/bannerdom.mjs` so that
+// `scripts/probes/banner-mutation.mjs` can attack THESE checks rather than a second copy of them.
+for (const dev of DEVICES) {
+  const ctx = await browser.newContext(dev);
+  const page = await ctx.newPage();
+  await page.goto(`${base}/?day=2026-09-03`, { waitUntil: 'networkidle' });
+  const b = await readBanner(page, dev.key);
+  for (const c of bannerChecks(b, dev.key)) record(c.label, c.pass, c.detail);
+  await ctx.close();
+}
+
 await browser.close();
 writeFileSync(join(outDir, 'assertions.json'), JSON.stringify(results, null, 2) + '\n', 'utf8');
 const failed = results.filter((r) => !r.pass).length;
 console.log(`\n${failed === 0 ? 'OK' : 'FAILURES'} - ${results.length - failed}/${results.length} assertions passed`);
 console.log(`shots + assertions.json -> ${outDir}`);
-process.exit(0);
+// THIS USED TO BE `process.exit(0)` UNCONDITIONALLY, and prompt 84 is why it is not.
+//
+// Rule 26 says the runner's exit code AND its parsed counts decide a gate. This runner had no exit
+// code to read: it exited 0 with failures sitting in `assertions.json` and `FAILURES - n/m` on
+// stdout. So the printed line was the only signal, and in prompt 83 that line was read through
+// `| tail -4`, which reported TAIL's status - 0 - over a node process that had died on a
+// TimeoutError. A gate that cannot fail its own exit code leaves that mistake available to every
+// run that follows.
+process.exit(failed === 0 ? 0 : 1);

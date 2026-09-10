@@ -2935,3 +2935,262 @@ than two. Every row there is a favourite, so a border on all of them distinguish
 counted in YOUR TEAMS and NOT again in its sport band"* is now *"a favourite STAYS in its sport
 band"*, so a float coming back fails a gate. `favoriteIds` and `isFavorite` both stay; the mark is
 computed from exactly the second one.
+
+---
+
+## 33. THE ICON IS v8, THE SET IS OFF, AND THE GLOW STOPS AT ZERO — 2026-09-09, prompt 81 block E
+
+**§33a — icon v8 replaces v7 at all five sizes.** `assets/brand/icon-v8/` already held every
+destination at exactly the size it had to be — 1024, 512, 192, 180, 48, all RGB — so nothing was
+resized and nothing should be. Each destination's pixel size was re-measured before it was
+overwritten, because a silent downscale is the one mistake here that ships a degraded icon and looks
+like nothing at all. v7 was retired to `app-icon-mysports-tv-v7-retired.png` beside the existing
+`-v5-retired` and `-v6A-rejected`, with a plain `mv`: **`assets/` is untracked in its entirety**, and
+`git mv` on an untracked path is a fatal error rather than a warning.
+
+`web/app/manifest.js` was read and left alone — its two entries already name `/icon-192.png` and
+`/icon-512.png` at the sizes those files still are.
+
+**JOE'S PHONE MAY SHOW v7 AFTER A GREEN DEPLOY, AND THAT IS NOT A FAILURE.** An installed PWA caches
+its icon, and the asset-version token that fixed the logo cache does not reach these files at all —
+`web/public/icon-*.png` and `web/app/icon.png` are named by the manifest and by iOS, not built by
+`config.js`. This session has already spent three false bug reports on exactly that confusion.
+
+**§33b — the television is the blacked-out cutout.** `tv.file` in both JSONs is now
+`tv-cutout-dark.png`, and **no coordinate moved**, which is provable rather than assumed: the two
+files are both 1110×1167 RGBA and their **alpha channels are byte-identical**
+(`ImageChops.difference(...).getbbox()` is `None`), so the silhouette every `x`/`y`/`w`/`h` was fitted
+to is unchanged. The RGB difference is confined to `(107, 411)–(722, 911)`, which is the screen going
+black and nothing else. **The alpha bounding box alone would have proved nothing** — both images are
+opaque to all four edges, so that test returns the full frame either way.
+
+`web/public/banner/tv-cutout.png` stays tracked and becomes unreferenced. That is the way back if Joe
+wants the lit screen.
+
+**§33c — the title halo is dark, matching the icon.** Both banners painted a **gold** glow behind
+gold type, which reads as a wash rather than as separation; the app icon has always used a dark
+two-pass halo. The glow is replaced by a wide pass at `0.306 × cap height` with an `feFuncA` slope of
+1.9 and a tight pass at `0.097 × cap height` at slope 2.7, over a `#000000` copy of the wordmark —
+7.9/2.5 on the phone (cap 25.92), 12.1/3.8 on the desktop (cap 39.6).
+
+**THE RADII ARE RATIOS OF CAP HEIGHT, NOT OF FONT SIZE**, which is what keeps the two breakpoints the
+same halo at two sizes. Both the ratio and the product live in the JSON so the generator computes
+neither, and a test checks the arithmetic rather than trusting two copies of one fact.
+
+**THE JSON's OWN PARAMETERS MOVED WITH IT, and the prompt only asked for the prose.** `title.glow`
+held `{fill: #C6AF7A, blur_std_dev: 10, opacity: .55}` and the generator read all three. Leaving a key
+named `glow` holding the gold glow's numbers, beside a generator that emits a black halo, is the same
+defect the prompt correctly catches in `filters.title_glow`'s description — one layer down, in the
+data. It is `title.halo` now, and `filters.title_glow` is `filters.title_halo`.
+
+**§33d — the glow tails re-taper to zero, reversing prompt 45.** The two warm radial glows ended at
+alpha 0.021 and 0.028 rather than 0, so the fill stopped abruptly at the ellipse boundary and
+`overflow: visible` exposed the step in the band. Removing it is worth having and the change stands.
+
+> **THIS WAS NOT THE OUTLINE JOE REPORTED, and §34g is the correction.** He said *"a faint rounded
+> outline around the TV"*, this block read that as the glow tails, and the two are different objects
+> 98px apart. What he saw is `.bn-tvtap::after`, the television button's resting affordance from
+> prompt 60. **It is still on screen and it is deliberately still on screen** — Joe's ruling,
+> 2026-09-09. Read §33d as "a real artifact was removed", never as "the reported artifact was fixed".
+
+Prompt 45 kept those tails deliberately, and this is **Joe overriding a recorded ruling in
+conversation, not a re-raise of one** (rule 10, checked). What shipped is neither of the two options
+prompt 45 weighed: a stop at **95% sitting exactly on the existing 82→100 line**, then zero at 100%,
+so every existing stop is untouched and only the last 5% of each radius moves.
+
+| gradient | stops |
+|---|---|
+| `bnGlow0` / `bdGlow0` | 0% → 0.32, 45.3% → 0.176, 82% → 0.058, **95% → 0.0313**, **100% → 0** |
+| `bnGlow1` / `bdGlow1` | 0% → 0.42, 45.3% → 0.231, 82% → 0.076, **95% → 0.0413**, **100% → 0** |
+
+Measured at the mobile breakpoint, rgb(255,170,60) over the stage ground: the edge removed is a step
+of **3.0/255** (outer) and **4.1/255** (inner); the re-taper repaints **3.16%** of the visible stage
+by at most **3.53/255**. Zeroing the tails outright would have repainted **11.38%** — which
+reproduces prompt 45's recorded 10.6% — and that is why the re-taper was chosen over it.
+
+**§33e — three stale notes were corrected in the same commit as the work that stranded them**
+(rule 30, and rule 33's shape). The generator's header paragraph said `THE GLOWS' OUTER STOPS ARE LEFT
+AS DESIGNED`, and it is **generated output** — it is emitted into `BannerMobileV2.jsx`, so `--check`
+round-trips it and leaving it would have shipped a paragraph asserting the opposite of what the
+generator had just produced. `banner-mobile-v2.json`'s `headroom_paint.unchanged` pointed the reader
+at that same paragraph "for why their outer stops keep their tails".
+
+**The third is the one that cost this block real time.** `BannerDesktopV2.jsx` opened with *"Generated
+2026-09-04 from banner-desktop-v2.json"* and *"regenerate from the JSON if the design changes"*, and
+**there is no desktop generator** — `scripts/` holds `build_banner_mobile.py` and nothing else. So
+E5's step 4 is a hand-edit of a file whose header forbids hand-edits, which is rule 33 verbatim, and
+`Banner.js` said the same thing in the plural about both components. Both now say what is true, and
+`tests/test_banner_generator.py` grew a **`TheDesktopBannerIsTranscribed`** class so the desktop file
+has a guard at all: it pins every value transcribed out of the JSON — the cutout filename, both stop
+lists, the whole halo filter, the halo fill — and **deliberately does not pin the 23 mark
+coordinates**, which came out of prompt 42 and which no prompt since has had a reason to move. The
+byte-for-byte class above it can only exist because a program writes the file it checks; this one
+exists because nothing does.
+
+**§33f — and the block lost a gate run to rule 12, through a door nobody knew was there.** After the
+icons went in, `qa-shots` died on `locator('.mrail-cell')` with a 30-second timeout — the exact
+signature of an app fault, arriving one step after five tracked binaries changed. It was neither.
+
+`/?day=2026-09-03&sport=mlb&view=grid` was returning **500**, and so was every other route:
+
+```
+ModuleParseError: Module parse failed: Unexpected token (11:73)
+  * next-metadata-route-loader
+> throw new Error('Default export is missing in "C:\Users\jlull\Joe's Projects\...\app\manifest.js"')
+```
+
+That is **rule 12's apostrophe**, in `next dev` rather than in `next build`. The loader wraps the
+absolute path in a **single-quoted** string and `Joe's` closes it, so `app/manifest.js`'s generated
+module can never parse in this repo. It is not compiled until something requests
+`/manifest.webmanifest` — **and the request that did it was mine**, a curl checking the manifest a
+few minutes earlier. Once it fails, the failure is cached in the module graph and every page 500s,
+because the manifest `<link>` is part of the document.
+
+**TWO THINGS THIS IS NOT.** It is not the icon swap: after killing the server by path, removing
+`web/.next` and restarting, both `/` and the grid route serve 200 **with v8 in place**. And it does
+not reach production: Vercel builds at `/vercel/path0`, which has no apostrophe.
+
+**THE PART WORTH KEEPING is how nearly it was misread.** The first run of this gate was piped through
+`tail -4`, so `[exited with code 0]` was **`tail`'s** exit code and the `TimeoutError` scrolled past in
+four lines that looked like noise — rule 26's trap, in a gate, in a block that had already run four
+clean ones. Rule 12 now names the route, and no gate in this block was read through a pipe again.
+
+---
+
+## 34. THE BANNER HAD FIVE GREEN GATES AND NOTHING WATCHING THE PAGE — 2026-09-09, prompt 84
+
+**§34a — the render was not stale, and the comparison that said so was reading the wrong file.**
+Cowork found `web/qa/p83final/mobile__today-all.png` byte-identical to `web/qa/p83/…` (sha256
+`df1656e4f93d77b5`) and read it as Block E's gate run having photographed the old banner. The
+mtimes say otherwise: `p83final` was written **19:38:58** and the first banner source edit landed
+**19:54:38**. `p83final` is block **D2**'s run. It is identical to `p83` because at that moment the
+banner genuinely had not been touched — the correct result, filed under a misleading name.
+
+The live artifact from the 20:20 post-clear run tells the real story, and it is measured rather than
+eyeballed:
+
+| | p83 / p83final | `web/qa/` (20:20) |
+|---|---|---|
+| TV screen, mean | rgb(127, 113, 116) | **rgb(30, 30, 35)** |
+| per-pixel channel spread | **103.0** — a colour test pattern | **5.7** — black |
+| whole-image diff vs p83 | — | `(0, 0, 771, 246)`, the banner band and nothing else |
+
+**THE NAMING IS THE DEFECT WORTH FIXING**, not the analysis: a directory called `p83final` that
+holds a mid-prompt run invites exactly this. Snapshot directories are named for the BLOCK from now
+on, not the prompt.
+
+**§34b — and the criticism underneath it was right, which is the part that mattered.** Block E
+changed the banner three ways and every guard it shipped with was in
+`tests/test_banner_generator.py`: **Python, reading JSX as text.** That is rule 24 verbatim — a fact
+established on the Python side is no evidence the JS runtime agrees. Five gates went green,
+`qa-shots` among them at 96/96, and not one assertion anywhere touched the served page. Had the
+bundle genuinely been stale, nothing in this repo would have said so.
+
+`web/scripts/lib/bannerdom.mjs` now reads the three facts out of the live document — the `<image
+href>`, the halo text's fill and filter, and every stop of both glow gradients — and `qa-shots`
+asserts them **at both breakpoints**, 96 → 108. Both halves matter: `Banner.js` mounts both
+components at once and CSS chooses which paints, so a fault in the hand-transcribed desktop file is
+invisible from a phone.
+
+**§34c — the assertions were then broken on purpose, because an unbroken assertion is a claim.**
+`web/scripts/probes/banner-mutation.mjs` reverts one fact at a time in the component source, waits
+for the dev server to actually serve the reverted markup, and requires the matching check to go red
+**and every other check to stay green** — collateral is reported, because a mutation that reddens
+four checks is an alarm rather than a guard. All six caught, no collateral, both files byte-restored.
+The probe and the gate import the SAME predicates; a probe with its own copy of the checks proves its
+copy works and nothing about the gate.
+
+The six Python tests prompt 83 added were never mutation-checked either, and prompt 83 had asked for
+it. Seven mutations, all seven caught, including the rule-32 pair — the same "no desktop generator"
+ruling in `BannerDesktopV2.jsx` and in `Banner.js`.
+
+**§34d — the byte-comparison guard was considered and deliberately NOT put in the gate.** "Fail if
+`mobile__today-all.png` comes back byte-identical to a frozen reference" would have flagged this,
+and it is the wrong instrument. That shot is a full page of live scores, records and rankings: it
+differs from any frozen reference on nearly every run, for reasons that have nothing to do with the
+banner, so it would pass for the wrong reason approximately always and could never distinguish "the
+banner changed" from "a score changed". This repo has already ruled against that shape once — the
+geometry section's whole argument is that a tripwire which fires on standings drift gets ignored, and
+prompt 74 then lost a real regression into exactly that bucket. It was run **once, as a check**: the
+current shot differs from p83 and the difference is confined to the banner band. The DOM assertions
+are the layer that belongs in the gate, and they are now mutation-proven.
+
+**§34e — `qa-shots` could not fail its own exit code, which is how prompt 83's pipe hid a crash.**
+The runner ended in `process.exit(0)` unconditionally: failures went to `assertions.json` and a
+`FAILURES - n/m` line on stdout, and nothing else. So the printed line was the only signal, and when
+it was read through `| tail -4` the status reported was **`tail`'s** — 0 — over a node process that
+had died on a `TimeoutError`. Rule 26 says the exit code *and* the parsed counts decide; this gate
+had no exit code to offer. It is now `process.exit(failed === 0 ? 0 : 1)`.
+
+**§34f — what Joe is being asked to look at.** Block E is entirely visual and nobody had seen it.
+`web/qa/banner-e/` holds the banner and the wordmark at both breakpoints, plus a 6× before/after of
+the ellipse boundary. The re-taper is a 3.53/255 change and that is easy to claim, so it is measured
+at the boundary rather than described: the step across the outer ellipse's edge goes **+1.96 → −1.00**
+and the inner **+2.84 → −0.23**. In both cases a discontinuity is replaced by the gradient's own
+continuous slope, which is precisely what "the ring is gone" has to mean.
+
+**§34g — AND RENDERING IT FOUND THE THING E4 WAS SUPPOSED TO FIX, STILL THERE.** This is the whole
+argument for looking at a visual change rather than asserting it, so it is recorded even though it
+makes the block's headline finding smaller.
+
+Joe's words were *"a faint rounded outline around the TV."* Cowork diagnosed that as the two warm
+ellipses' hard outer stops, Joe ruled for the re-taper, and E4 shipped it. **The re-taper is real and
+measured** — the discontinuity at the outer ellipse boundary goes +1.96 → −1.00 and at the inner
++2.84 → −0.23, in both cases replaced by the gradient's own continuous slope. But the ellipses are
+`rx` 138 and 66 around `cx` 346, on a 428-wide stage. **Neither of them is "around the TV"** — the
+television is 55.93 wide at x 306, and the outer ellipse's edge is 98px away from it.
+
+What IS around the TV, at exactly its box, is `globals.css:1981`:
+
+```css
+.bn-tvtap::after { border-radius: inherit; box-shadow: inset 0 0 0 1px var(--gold); opacity: .26; }
+.bn-tvtap--mobile { left: 71.5047%; top: 31.9259%; width: 13.0678%; height: 43.5556%; }
+```
+
+`71.5047% × 428 = 306.04`, `13.0678% × 428 = 55.93` — the TV image box to the hundredth. A **1px
+gold inset ring at opacity .26 with a 10px radius**: faint, rounded, gold, and around the set. It is
+unchanged before and after Block E, because Block E never touched it. `web/qa/banner-e/the-ring-is-
+the-tap-target.png` overlays the rect on the render and it lands on the artifact exactly.
+
+**JOE'S RULING, 2026-09-09: LEAVE IT.** Prompt 60 made the television a `<button>` that collapses
+the banner, and `BannerTap.js` states the reason in its own header: *"an illustration that silently
+became tappable is worse than no control."* That ring is the only resting cue that the TV does
+anything. **It read as a rendering artifact only because nothing else in the banner says the
+television is tappable** — once it is known to be an affordance, it stays.
+
+**AND THE TWO OBVIOUS ADJUSTMENTS ARE BOTH WORSE, which is why this is a ruling and not a deferral:**
+
+* **Dimming it** makes it worse at BOTH of its jobs at once. Below .26 it is still a rounded
+  rectangle sitting on the artwork — visible enough to read as an artifact — while being too faint to
+  read as a control. There is no opacity that is "not a smudge" and "still a cue".
+* **Gating it on `:hover` / `:focus-visible`** removes the resting cue entirely **on a phone**, which
+  is the device this app is built for. There is no hover on a touch screen, and focus arrives only
+  *after* the tap — so the cue would appear exclusively to people who had already guessed.
+
+**If it is ever revisited, the question is whether it reads as DESIGNED** — a ring that hugs the
+television's own silhouette rather than a 10px-radius box floating around it — **not whether to fade
+it toward invisibility.** That is a drawing problem, not an opacity problem.
+
+**THE PROCESS LESSON, and it is the most transferable thing this block produced.**
+
+**THREE SESSIONS REASONED ABOUT A ROUNDED OUTLINE NEAR A TELEVISION AND NONE OF THEM RENDERED IT.**
+Cowork measured the gradients and found a real discontinuity; Joe ruled on the re-taper; this session
+implemented it, regenerated, gated it five ways and reported it green. The diagnosis was plausible,
+arithmetically supported, independently reviewed — and about the wrong element. Nothing in that chain
+could have caught it, because every link was reasoning about stop lists and none was looking at the
+banner.
+
+**THE GAP IS ONE LAYER EARLIER THAN RULE 13.** That rule says a numeric threshold is measured against
+the local background, and every number here was; what nobody established was **WHICH ELEMENT was
+being measured**. A correct measurement of the wrong object is indistinguishable from a correct
+answer right up until someone looks.
+
+**So: a complaint phrased visually is answered with a crop that has the candidate outlined on it,
+before any measurement is taken.** `the-ring-is-the-tap-target.png` took one Pillow call and settled
+in a single look what three sessions of arithmetic had got backwards. The gradient's stop list is
+what you check *after* you know which thing you are looking at.
+
+**This sits beside rule 34 rather than under it.** Rule 34 says a platform behaviour recalled from
+memory is not evidence, and its object is the PLATFORM. This one's object is the ELEMENT: the claim
+"X is what you are seeing" is a hypothesis about which DOM node paints the pixels a person pointed
+at, and it is checkable in one image.
