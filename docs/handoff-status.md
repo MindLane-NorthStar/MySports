@@ -1,14 +1,16 @@
 # MySports — Handoff Status (rewritten 2026-09-05, prompt 46 stage 2)
 
-**This file lives in the repo** at `docs/handoff-status.md` and is mirrored to the Claude project at
-`claude/handoff-status.md`. The repo copy is the source; the project copy is written from it. Edit here.
+**This file lives in the repo** at `docs/handoff-status.md`, and the repo copy is the only copy. It
+used to be mirrored to the Claude project as `claude/handoff-status.md`; that copy was deleted from the
+Project on 2026-09-06 as a stale copy of a live authority (Cowork's check, 2026-09-11). Edit here.
 
 **THE CLOSED AND SUPERSEDED HISTORY LIVES IN `docs/handoff-archive.md`** (split out by prompt 87 on
 2026-09-10, moved verbatim, nothing deleted): the run narratives for prompts 46–84, closed and superseded
-sections, and the older measurement records. **This file stays the authority for anything current**;
-read the archive when you need to know why something was decided.
+sections, and the older measurement records. **This file stays the authority for current state** —
+repo state, gate floors, open items; since prompt 89 the working rules are `CLAUDE.md`'s alone. Read
+the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§37, all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§38, all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -180,10 +182,11 @@ Rule 14 claimed no writer credential existed in `.env`; one does (`deployment-co
 uncommittable under `.gitignore:1-2`). Joe kept the credential and amended the rule: it now says the
 credential exists locally for the pipeline's own use and that **a Claude Code session never reads,
 prints or uses it** — writes go through the connector or the nightly Action. The four conditions and
-the hard stops are unchanged. **Amended in both copies** — `CLAUDE.md` and the working rules below —
-because this file wins a disagreement. The ruling and its reasoning are register §36; the queue's
-"decision waiting on Joe" section is deleted. `deployment-contract.md`, `.env` and `.env.example` were
-not touched.
+the hard stops are unchanged. **Amended in both copies that existed on 2026-09-10** — `CLAUDE.md` and
+this file's own rules section — because this file then won a disagreement. (Prompt 89 later removed
+this file's copy and made `CLAUDE.md` the authority on rules; register §38.) The ruling and its
+reasoning are register §36; the queue's "decision waiting on Joe" section is deleted.
+`deployment-contract.md`, `.env` and `.env.example` were not touched.
 
 ### THE NFL NIGHTLY FETCHES EVERY GAME DAY, NOT ONLY SUNDAY (prompt 88 block A, Joe's ruling 2026-09-10)
 
@@ -252,7 +255,8 @@ alone.** What moved, and where to look now:
   the closed histories, superseded sections and the prompt 46–84 run narratives. **Moved verbatim:**
   rebuilding the original from the two new files, using the archive's own per-block provenance
   comments, reproduces it byte for byte. Kept here: Repo state with both tables, every `### OPEN`
-  item, the working rules, the "read this before…" operating notes, and prompts 84–87.
+  item, the working rules (until prompt 89 left them to `CLAUDE.md` alone), the "read this before…"
+  operating notes, and prompts 84–87.
 - **`docs/queue.md` is new** — real work that is understood and not started, each entry with its file
   and line, plus the **`.env` writer-credential contradiction written up as a decision for Joe**
   (rule 14 says there is none; `.env` has one, per `deployment-contract.md:142`; nothing was changed).
@@ -833,256 +837,19 @@ before touching any count line.
   repo copy cannot be rebuilt from the repo. A filing item, not a defect.
 - **`--faint` reaches 3.63:1 on the card top and true AA is unreachable there.** Joe's call, accepted.
   **Not a defect to re-raise.**
+- **21 tracked files still have CRLF working copies against LF blobs** — line-ending churn, identical
+  payload. Measured 2026-09-11 with `git ls-files --eol` (`i/lf` against `w/crlf`). Prompt 49 counted
+  34, restored 5 and left 29 open; the count has fallen since and the cause was not traced.
+  Renormalising rewrites every one and touches blame, so it is its own commit and Joe's sign-off. This
+  item lived inside the old rule 29 text until prompt 89 moved the rules out; the incident and how it
+  hid are in `docs/rules-casebook.md`, rule 29.
 
-## Working rules (binding)
+## Working rules — not in this file
 
-1. Certify Python for Windows.
-2. Never write to the repo while a Claude Code prompt is in flight.
-3. Secret gate every commit, ADDED lines only, with `grep`; never `findstr`.
-4. Stage by explicit path; never `git add -A`.
-5. Run-workflow-never-Re-run.
-6. DB: additive over destructive; SELECT-and-paste first; close (`valid_to`), don't delete.
-7. Unattended runs: self-committing stages, 2-strikes-skip, hard stops only for secret-gate /
-   destructive-DB / push-reject.
-8. WUAB/RESN sources never named.
-9. Loader-written provider facts never become reconciled observations.
-10. Check the register §7–§13, the home-page decision record, and this file before re-raising any
-    settled decision.
-11. Cowork's bridge shell calls git with `--no-optional-locks`.
-12. **`next build` cannot run locally** — Next interpolates the absolute path into a single-quoted JS
-    string and this repo lives under `Joe's Projects`. Fires only for `app/apple-icon.png`,
-    `app/icon.png`, `app/manifest.js`. Vercel builds at a path with no apostrophe; `next dev` is
-    unaffected. **Ruling: do nothing.** Never set `experimental.useWasmBinary`. **Standing caution:
-    the repo path contains an apostrophe and will keep breaking tooling that interpolates paths into
-    quoted strings.**
-13. **A numeric threshold is measured against the LOCAL background, never a global corner sample.**
-14. **DB writes go through the Supabase connector and only it** — no direct Postgres connection and
-    no writer credential in the repo or any prompt. A `mysports_writer` credential DOES exist in the
-    untracked local `.env` (`deployment-contract.md` §7 step 5), for the pipeline's own use —
-    `scripts/apply_migration.py` and loader runs that write directly — and `.gitignore:1-2` makes it
-    uncommittable. **A Claude Code session never reads, prints or uses it**: writes go through the
-    connector or the nightly Action, under the conditions below (amended prompt 88). Anon PostgREST reads
-    stay the normal read path. Every write needs NAMED approval for that operation (never
-    standing), SELECT-and-paste first (6), the schedule checked (27), and **every DDL statement
-    already in `db/migrations/` and applied FROM that file** — a connector change nobody wrote
-    down is drift no gate can catch. Hard stops regardless: `drop`, `truncate`, `delete` with no
-    `where`, any write while the loader runs.
-15. `npm run test:unit` is `node --test "test/**/*.test.mjs"` — quoted glob.
-16. Colour tokens are read from `web/app/globals.css`, never quoted from the mockups.
-17. **Edit JSON data files through a parser, never line-based**, and assert nothing but the intended
-    key changed.
-18. **Team-name resolution is exact-match within sport**, never substring or fuzzy — and MLB canonical
-    names are nickname-only, so cross-check a second key such as `abbreviation`.
-19. **Never issue an unbounded PostgREST select.** It silently caps at 1,000 rows and returns no
-    error. Use the paginating `restAll()`. Pin regression tests to the **call site**, never a row
-    count, or the test rots as the season grows.
-20. **Never edit a source file with a bare repeated string replace.** Use line-anchored surgery or a
-    parser, and assert only the intended region changed.
-21. ~~`git diff --ignore-cr-at-eol`~~ **RETIRED** — the condition it waited on was met. Kept as a
-    numbered stub so rules are never renumbered under a session that memorised them.
-22. **Before asserting what a component does, read the component and cite file and line — never the
-    contract document that describes it.** A contract says what a component SHOULD do; only the file
-    says what it DOES. Prompt 46 found its own brief naming `fitNameAndRecord()` as the grid's fit
-    function when it belongs to the list card and the grid never calls it.
-23. **When a change alters anything the locked reference implements, `docs/design/mobile_demo.html`
-    changes in the same commit.** A reference that lags the app stops being an authority and becomes
-    a second opinion.
-24. **A count computed on the Python side is no evidence the JS runtime agrees.** Pin the runtime path
-    on every kind of input it can receive.
-25. **A prompt is done when the deploy is green and the device agrees, not when it commits.**
-26. **The gate and the commit are SEPARATE COMMANDS.** The runner's exit code and its parsed counts
-    decide — never the last command in a chain. `b1b1d9b` went out red because a commit was
-    `&&`-chained after a gate whose final command was a `grep` that succeeded.
-27. **Check the schedule before a bulk database write, and never run two at once.** Prompt 46's
-    pre-approved `--all` reconcile started at 13:40:38 and the scheduled daily refresh — already
-    running since 13:37:02 — died five seconds later with `ERROR: deadlock detected` in its fixture
-    loader. The cron is `0 11 * * *` and drifts by up to four hours, so "it is the afternoon" is not
-    an answer; `gh run list --workflow schedule_refresh.yml -L 1` is. The same rule is why prompt
-    47's NASCAR load waited for its own NHL/NBA bootstrap to finish rather than running beside it.
-28. **A Python-side parse is no evidence GitHub Actions agrees.** PyYAML validated a
-    `bootstrap_season.yml` that Actions could not parse at all, and prompt 46 shipped it green. An
-    Actions expression is substituted everywhere in a `run:` block — inside shell comments too — and
-    an empty one is a syntax error for the whole file. `tests/test_workflows.py` is the guard.
-29. **A text write with no `newline=` produces different BYTES on Windows than on the runner.**
-    Python's text mode translates every `\n` to the platform separator, so
-    `path.write_text(x, encoding="utf-8")` emitted CRLF on this laptop and LF on Actions - one
-    adapter, two byte streams, depending on where it ran. `adapters/common.py`'s `dump_json` and
-    `write_text` did exactly that, and `scripts/build_cap_table.py` did it to two tracked files.
-    **Any writer that can reach a tracked file passes `newline="\n"` or writes bytes.**
-    This is rule 1 in a costume; it gets its own number because rule 1 did not stop it.
+**The binding working rules live in `CLAUDE.md`, section `## Working rules (binding)`, and that section
+is the authority on them.** The incidents behind them are in **`docs/rules-casebook.md`**, which is
+history and never binding.
 
-    **`tests/fixtures/*` is `-text` ON PURPOSE** (prompt 48): recorded fetches are asserted as
-    bytes, four tests pin a `sha256` and one pins a byte count, and normalisation on checkout
-    would break those on every machine but the recording one. So a recorded page KEEPS its CRs -
-    `indycar_2026_schedule.html` carries 5,727 of them - and "no CR under `tests/fixtures/`" is
-    the wrong rule. The right one is **disk bytes == index bytes**, which
-    `tests/test_fixture_bytes.py` asserts for both fixture directories.
-
-    **How it hid.** `.gitattributes` declares `*.json text eol=lf`, which normalises on read, so
-    git compared an LF blob against a CRLF working copy and reported the tree clean; git's stat
-    cache then never re-compared them. Prompt 49 stage 0 measured **34 tracked files** whose disk
-    bytes differ from their blobs - pure line-ending churn, identical payload. Five were restored
-    (the four `tests/fixtures/*_raw.json` and `web/test/fixtures/team-colours.json`); the other
-    **29 are an open item**, because renormalising them rewrites 29 files and touches blame, and
-    that deserves its own commit and Joe's sign-off rather than a ride-along.
-
-30. **A NOTE RECORDING AN ABSENCE IS A TIMESTAMP, NOT A FACT.** Before acting on "missing", "not yet
-    filed", "no mark in the tree", "none exists" or "TBD", **check the thing itself** - and when the
-    note turns out to be stale, **correct the note in the same commit as the work it misled you
-    about**, rather than leaving a corrected repo described by an uncorrected file.
-
-    Two instances in one run, prompt 52, which is why this is a rule and not an anecdote:
-
-    - **`data/brands.json`'s `bignoon` carried "no mark in the tree; FOX's cached wordmark is
-      monochrome, so no colour to derive."** `web/public/programs/big-noon-kickoff.png` had existed
-      since 2026-09-02 - four days - built correctly through the pipeline and referenced by nothing.
-      The note was true when written and false when read. Stage 6 caught it only because the prompt
-      named it; the colour it said could not be derived came out at 70.9 % saturated pixels.
-    - **`docs/prompts/README.md` carried a deliberate "Prompt 50's own brief is not yet filed",
-      naming its exact path in `Claude outputs\`.** Stage 8 read that section, concluded 50 and 51
-      were permanently lost, wrote "could not be reconstructed" into `docs/handoff-status.md`, and
-      moved on - without opening the path the note had just given it. Both briefs were filed from
-      that path minutes later (`cdfae84`) by copying, not reconstructing.
-
-    **The failure mode is the same both times: a note about an absence was read as evidence of the
-    absence.** The two are different ages. A note ages; the tree does not. The check is cheap - one
-    `ls`, one `git grep`, one `Test-Path` - and both misses cost a stage each.
-
-    **The second half of the rule is the half that was missed.** Prompt 52 corrected `bignoon`'s note
-    in the same commit as the wiring, which is the rule working; it then left its own false claim
-    standing in `handoff-status.md` for two commits after `cdfae84` had disproved it. Prompt 53
-    stage 1 is that cleanup, and it should not have needed a stage.
-
-31. **A SEARCH THAT FINDS NOTHING IS EVIDENCE ABOUT THE QUERY, NOT ABOUT THE REPO.** Before reporting
-    something absent, check that you searched **the representation the file actually uses** - label
-    versus slug, display name versus id, the enum versus the filter token, `+` versus `-plus`. **Name
-    the search you ran** in the report, so the reader can see what was and was not asked.
-
-    **THIS IS NOT RULE 30 IN A COSTUME, and the distinction is the remedy.** Rule 30 is about a claim
-    that was TRUE WHEN WRITTEN and went stale; its fix is "check the thing itself". Here the files
-    were correct and current, the thing itself WAS checked, and the answer was still wrong - because
-    the question was asked in the wrong vocabulary. Rule 30's remedy does not catch this one.
-
-    **Four instances, three of them in one week:**
-
-    - **`nfl-network`, reported absent from `data/access_profile.json` and `data/row_order.json`
-      TWICE** (prompt 54's report and the exchange before it). Both files carried it the whole time
-      under the label **`NFL Network`**. The search was `'nfl-network' in json.dumps(...)` - the
-      SLUG, against files that are LABEL-KEYED. The recommendation built on it was to ask Joe whether
-      he even receives the channel, which was a real question made to look like a blocker.
-    - **`truTV` and `TBS`**, the same shape: `trutv` and `tbs` find nothing, `truTV` and `TBS` find
-      both files.
-    - **`Paramount+` and `Disney+`, prompt 55 stage 2, caught mid-stage.** A slugify that mapped
-      non-alphanumerics to `-` turned `Paramount+` into `paramount`, so a count of "access-profile
-      networks without a mark" reported three when the answer was one. The published slugs are
-      `paramount-plus` and `disney-plus`. **The rule was being written while the mistake was being
-      made**, which is the best argument for it.
-
-    **The cheap defence is to search for the THING, not your spelling of it** - grep the file for a
-    distinctive substring (`NFL`, `Paramount`) before concluding, and read what shape came back. One
-    extra command; the misses above cost a wrong recommendation and a stage of rework.
-
-32. **A RULING IS NOT IMPLEMENTED UNTIL EVERY PLACE THAT RENDERS THE SAME THING OBEYS IT.** Before
-    calling a display ruling done, **enumerate the renderers** — `git grep` the CLASS, the COMPONENT
-    and the CONDITION, not the concept — and make each one obey or say in the report why it does not.
-
-    **THIS IS NOT 22, 30 OR 31 IN A COSTUME.** Rule 22 says read THE component before asserting what
-    it does; prompt 55's assertion about `Listing` was **correct**, and `Listing` really did obey the
-    ruling. Rules 30 and 31 are about an absence and about a query's vocabulary. Every fault below is
-    code that was **present, correct in its own file, and simply not the only file** — so none of the
-    three catches it.
-
-    **Four instances in one run (prompt 56), which is why this is a rule and not an anecdote:**
-
-    - **The reveal.** Joe ruled *"I only want list cards on list view and only grids on grid view."*
-      Prompt 55 put that into `Listing`. `PageCount`'s reveal button kept opening sport bands, `<h2>`
-      titles, matchup and program cards and the detail panel — **20 card and band elements under
-      Day · All · GRID, 88 under Week · All · GRID**, measured. The two components never met.
-    - **The weekday heading**, rendered at two DOM levels by the same file: a `<p>` above the bands
-      under ALL SPORTS, a `sectionLabel` inside `.band-headrow` with a tile picked.
-    - **The provenance line**, rendered on `rows.length` in day mode and on
-      `(visible.length || hidden.length)` in week mode — so a day whose games were all off-service
-      showed a count with no provenance while the identical week showed both.
-    - **"Does this day have content?"** — asked as `games.length` by day mode and `grouped[d]?.length`
-      by week mode, so a programs-only day rendered an empty container on the laptop in one mode and
-      answered properly in the other.
-
-    **The cheap defence is to name the OTHER renderer before you start.** Three of the four above are
-    one component rendering the same thing twice, or two components rendering the same thing
-    differently — findable in one `git grep` of the class or the prop, and each one shipped and sat
-    in the app for at least a prompt.
-
-33. **A NOTE ASSERTING THAT SOMETHING EXISTS IS NOT EVIDENCE THAT IT DOES.** Before relying on a
-    workflow a comment describes — "regenerated from", "built by", "validated against", "kept in
-    sync with" — **open the thing it names.** A file can be generated by a tool nobody has any more,
-    and the comment will not know.
-
-    **THIS IS RULE 30'S MIRROR, AND THAT IS EXACTLY WHY IT NEEDS ITS OWN NUMBER.** Rule 30 fires on
-    a note recording an ABSENCE — "missing", "not yet filed", "none exists", "TBD" — and every
-    trigger word in it is a negative. This case is the opposite shape: a note recording a PRESENCE,
-    stated with total confidence, which nothing had checked. Rule 30 as written would never fire
-    here, because nothing said anything was missing. The remedy is the same — go and look — but the
-    prompt to apply it is inverted, and a rule you never think to invoke is not a rule.
-
-    **NOR IS IT RULE 22 IN A COSTUME.** 22 says read THE COMPONENT before asserting what it does,
-    and here the component was read: `web/components/Banner.js:5-7` says plainly that the JSON files
-    "ship as DOCUMENTATION", that "nothing reads them at build time", and that "if the design moves,
-    the JSON changes and the component is regenerated from it - coordinates are never hand-edited
-    here." Reading it was not the problem. Believing its claim about a tool **somewhere else** was.
-    22 governs what a file does; 33 governs what a file says about the world outside it.
-
-    **THE INSTANCE.** Prompt 57 stage 6 went looking for that generator to apply model F.
-    `git grep` for `banner-mobile-v2` returned docs, `Banner.js`, the JSX and the JSON itself —
-    nothing under `scripts/`, `pipeline/` or `tests/` read it. The tool had never been in the repo.
-    So the instruction "edit the JSON and regenerate" was unfollowable, and had been since prompt 42
-    wrote it: the only edit anyone could actually make was the one the comment forbade. The stage
-    wrote `scripts/build_banner_mobile.py`, proved it reproduced the committed component
-    byte-for-byte from the unmodified JSON, and only then moved a coordinate.
-
-    **AND THE SAME SHAPE HAD ALREADY BEEN RECORDED TWICE WITHOUT BEING NAMED.** `build_demo.py`,
-    which `docs/design/mobile_demo.html` says regenerates it, is project-only — prompt 55 noted the
-    consequence ("the repo copy cannot be regenerated") and annotated the file by hand instead. So
-    is `app_template.html`, `build_banner.py` and `markkit.py`. **Every one of those is a live
-    instance of this rule**, and the honest reading is that this repo has a class of documented
-    tools that do not exist in it, not a one-off.
-
-    **The cheap defence is one `git grep` for the tool's own name** before believing a sentence
-    about how a file is maintained. If it is not there, either write it or write down that it is
-    missing — and the second is what prompt 55 did, correctly, when writing it was out of scope.
-
-34. **A PLATFORM BEHAVIOUR RECALLED FROM MEMORY IS NOT EVIDENCE.** Before briefing a risk, a
-    constraint or a workaround that rests on what CSS, the DOM, HTTP or a runtime *does*, check it —
-    against the spec, or against a note this repo already wrote next to the code it governs. State
-    which you checked.
-
-    **THE INSTANCE.** Cowork told Joe that a sticky page header "creates a new containing block"
-    above the mobile grid's sticky rail, called it a serious risk, and shaped a whole risk profile
-    around it. **It is false.** `position: fixed` and `position: sticky` do not establish containing
-    blocks for descendants; only `transform`, `filter`, `perspective`, `backdrop-filter`,
-    `will-change` and `contain` do. The recollection was of a real rule, applied to the wrong
-    property.
-
-    **THE REPO ALREADY HELD THE CORRECT VERSION, on the exact selector it governs.** `globals.css`
-    on `.mrail-cell` says the rail holds *"only while nothing between this element and
-    `.mgrid-scroll` carries a transform: a transformed ancestor would become its containing block…
-    which is exactly the bug prompt 30 fixed. Do not add one."* One `grep` for `mrail-cell` would
-    have produced it.
-
-    **WHAT IT COST, and it is not nothing even though the brief self-corrected.** The false version
-    reached Joe as a serious risk before a later pass caught it. A risk profile that is wrong in the
-    direction of caution still spends the reader's attention and can talk a design out of existence.
-
-    **DISTINCT FROM 22 AND 33, and the difference is what you go and read.** 22 says read THE
-    COMPONENT before asserting what it does; 33 says a note asserting something EXISTS is not
-    evidence it does. Both point at this repository. **This one's object is the platform**, which no
-    file here is authoritative for — the repo happening to carry the right note this time was luck,
-    and next time it will not. When the claim is about a language or a runtime, the spec is the
-    authority and memory is not.
-
-    **The cheap defence is that platform claims are the easiest of all to check** — one search, and
-    the answer is normative rather than a judgement. Anything phrased as "X creates/blocks/prevents
-    Y" is the shape to distrust.
-
-
----
-
+**This file is the authority on state** — repo state, gate floors, open items — **and not on rules.**
+It carried a second, longer copy of the rules until 2026-09-11, when prompt 89 removed it on Joe's
+ruling; that copy had already fallen two rules behind `CLAUDE.md`. Register §38.

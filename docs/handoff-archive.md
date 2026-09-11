@@ -5,8 +5,8 @@ to make `docs/handoff-status.md` a 155KB read at the start of every session. Pro
 on 2026-09-10 **verbatim — nothing was deleted and nothing was rewritten**; each block below carries a
 comment naming the lines it came from, so it can be traced to the pre-split file in git. Much of it is
 superseded by design: it is the record of why decisions were made, not a description of the app today.
-**`docs/handoff-status.md` remains the authority for anything current** — gate floors, open items, the
-working rules — and where the two disagree, that file wins.
+**`docs/handoff-status.md` remains the authority for current state** — gate floors, open items — and
+where the two disagree, that file wins. The working rules are `CLAUDE.md`'s alone (prompt 89).
 
 <!-- moved verbatim from docs/handoff-status.md lines 210-246 (pre-split numbering, parent of the prompt 87 commit) -->
 ### MLB LIVE SCORES HAD NEVER WORKED, AND THE ID SCHEME WAS NOT WHY (prompt 78 block B)

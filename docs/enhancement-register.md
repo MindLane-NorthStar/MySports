@@ -3324,3 +3324,39 @@ art that adapter writes). On the first dispatched run (`34554883837`) the Thursd
 `in_progress`, 17–7, while it was being played — the one line the change existed for. Records:
 `docs/handoff-status.md`'s prompt 88 block A entry; guarded by
 `tests/test_workflows.py::test_nfl_refresh_covers_every_game_day_not_only_sunday`.
+
+---
+
+## 38. CLAUDE.MD OWNS THE WORKING RULES; THE INCIDENTS MOVE TO A CASEBOOK — 2026-09-11, prompt 89
+
+**JOE'S RULING, two halves, 2026-09-11.**
+
+1. **`CLAUDE.md` owns the working rules outright.** `docs/handoff-status.md` dropped its copy and
+   points at `CLAUDE.md`. The precedence line gains one carve-out: `handoff-status.md` still wins on
+   **state** — repo state, gate floors, open items — and **`CLAUDE.md` wins on the rules**.
+2. **The incident detail behind the long-form rules is kept, in `docs/rules-casebook.md`** —
+   append-only history, explicitly non-binding. It was not discarded, and it did not move into
+   `CLAUDE.md`.
+
+**Why.** Rules are standing instructions, not state, so they do not belong in the file whose job is to
+track what changed. The drift proved where they are actually maintained: rules 35 and 36 were added to
+`CLAUDE.md` on 2026-09-09 and never reached `handoff-status.md`, whose copy stopped at 34 — while
+`CLAUDE.md`'s own precedence line said `handoff-status.md` won a disagreement, so the losing copy was
+the complete one. Prompt 88 nearly shipped the same shape of half-fix to rule 14. And a casebook that
+is append-only history cannot misdirect a session the way a stale rule copy can: it never states a
+rule, so there is nothing in it to follow. It is the same fix the gate floors got — one copy, and a
+pointer from the other.
+
+**The cost, stated honestly.** The precedence rule is now conditional — `handoff-status.md` wins on
+state, `CLAUDE.md` wins on rules — and a conditional rule about which file wins is itself a thing to get
+wrong, especially where a rule and a piece of state touch (a rule that names a figure; a state entry
+that describes a rule). The casebook is a third file a reader has to know exists. And prompt 89 found
+one false pointer its own reference search had missed: `CLAUDE.md`'s rules-section intro still said
+the full text lived in `handoff-status.md`, in words the search did not look for.
+
+**What moved, measured.** `handoff-status.md` 1,088 → 855 lines (the rules section, `:837–:1088`,
+removed); `docs/rules-casebook.md` 245 lines, carrying the text that only `handoff-status.md` held for
+rules 19, 21–24 and 26–34 (11,105 bytes of it by a per-rule comparison). The one piece of STATE inside
+the old rule text — the line-ending renormalisation open item — moved to `handoff-status.md`'s `## Open`
+list, re-measured at 21 files. `CLAUDE.md`'s 36 rule texts are byte-identical before and after. Queue
+item 8 is closed by this entry.

@@ -6,8 +6,9 @@ renderer. Joe Lull directs the build as architect and PM; he is not a developer.
 trade-offs plainly, never dumb them down, and lead with the recommendation.
 
 **This file is the standing brief. It is read automatically at session start so that a prompt does
-not have to restate it.** When it disagrees with `docs/handoff-status.md`, that file wins and this
-one is stale — say so.
+not have to restate it.** When it disagrees with `docs/handoff-status.md` on repo state, gate floors or
+open items, that file wins and this one is stale — say so. **On the working rules this file wins**:
+they live here and nowhere else.
 
 ---
 
@@ -15,13 +16,14 @@ one is stale — say so.
 
 | you need | read |
 |---|---|
-| current repo state, gates, open items, the full working rules | `docs/handoff-status.md` |
-| the closed history — past run narratives, superseded sections | `docs/handoff-archive.md` (split out by prompt 87; `handoff-status.md` wins on anything current) |
+| current repo state, gates, open items | `docs/handoff-status.md` |
+| the closed history — past run narratives, superseded sections | `docs/handoff-archive.md` (split out by prompt 87; `handoff-status.md` wins on current state) |
+| the incidents behind the working rules — history, non-binding | `docs/rules-casebook.md` |
 | real work that is understood and not started, and decisions waiting on Joe | `docs/queue.md` |
-| why a decision was made, and whether it is already settled | `docs/enhancement-register.md` (§1–§37) |
+| why a decision was made, and whether it is already settled | `docs/enhancement-register.md` (§1–§38) |
 | what a card, block or grid is supposed to look like | `docs/rendering-contract.md` + `docs/rendering-contract-mobile.md` (the Mobile Grid Addendum) |
 | the locked visual reference the app must match | `docs/design/mobile_demo.html` |
-| what a past run was actually asked to do | `docs/prompts/` — 92 briefs covering 01–88, verbatim; 39 and 42 are the only gaps, and 86 carries three revisions (see its README) |
+| what a past run was actually asked to do | `docs/prompts/` — 93 briefs covering 01–89, verbatim; 39 and 42 are the only gaps, and 86 carries three revisions (see its README) |
 | deploy, environment, what is publishable | `docs/deployment-contract.md` |
 | the first build specs — superseded, do not build from them | `docs/archive/` (moved out of the repo root by prompt 87) |
 
@@ -52,8 +54,9 @@ If a request arrives here that genuinely needs Cowork, say so in one line rather
 
 ## Working rules (binding)
 
-Full text and the incidents behind each one are in `docs/handoff-status.md`. Numbering is frozen —
-never renumber, even around the retired stub.
+This is the full text and the only copy; the incidents behind the rules are in
+`docs/rules-casebook.md`, which is history and never binding. Numbering is frozen — never renumber,
+even around the retired stub.
 
 1. Certify the Python interpreter for Windows before running anything Python.
 2. Never write to the repo while another Claude Code prompt is in flight.

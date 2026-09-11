@@ -6,9 +6,9 @@ repository root on 2026-09-10 (`git mv`, history intact) for one reason: a fresh
 the root would find a file called `MYSPORTS_BUILD_SPEC_v0.5.md` and reasonably take it for the
 authority. It is not, and has not been since 2026-09-02.
 
-**What is current instead** is the Read-first table in `CLAUDE.md`: `docs/handoff-status.md` for
-state and the working rules, `docs/enhancement-register.md` for decisions, the two rendering
-contracts for what the app draws, `docs/deployment-contract.md` for deploy, and `db/migrations/` as
+**What is current instead** is `CLAUDE.md` itself for the working rules, and its Read-first table for
+the rest: `docs/handoff-status.md` for state, `docs/enhancement-register.md` for decisions, the two
+rendering contracts for what the app draws, `docs/deployment-contract.md` for deploy, and `db/migrations/` as
 the schema's own record (working rule 14).
 
 | file | what it was | last changed | superseded by |
