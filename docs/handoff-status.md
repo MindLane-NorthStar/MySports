@@ -8,7 +8,7 @@
 sections, and the older measurement records. **This file stays the authority for anything current**;
 read the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§36, all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§37, all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -56,8 +56,9 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-10, prompt 88 blocks A and B — after the last gate run, not during it. NOT YET
-COMMITTED** (the brief forbids it): block A moved `pytest` 543 → 544; block B moved no count. Prompt 87
+**Measured 2026-09-10, prompt 88 blocks A and B — after the last gate run, not during it; committed
+as `8f3b3c1`.** Block A moved `pytest` 543 → 544; block B moved no count; the prompt 88 follow-up
+(step names, the Stage A2 result, register §37, queue item 8) moved none. Prompt 87
 before it: `pytest` 531 → 543, `test:unit` 593 → 596, `qa-shots` 113 → 121.
 
 **IT WAS STALE BY TWO ROWS AGAIN, AND BY THE SAME MECHANISM.** Prompt 86 opened by running all five
@@ -205,9 +206,17 @@ not assumed; `bootstrap_season.yml:43` is the precedent). It is named "team art"
 **0 games, exit 0** (so an off day cannot trip the loop's `|| exit 1`), Mon 9/14 → 1 game; the
 loader takes the empty-day fixture cleanly (`--emit-sql`, 0 games, exit 0) and Thursday's emits 16
 statements naming `nfl-401872657`. `pipeline.load --all` needs no change — it globs
-`*_fixture.json` (`load.py:351`). **Not yet proved on the runner:** a `workflow_dispatch` runs the
-workflow as pushed, so the acceptance test — seven `fixture:` lines, today's among them — waits for
-the push (the brief's Stage A2). The NHL step, whose name says "7-day window" over two calls, is
+`*_fixture.json` (`load.py:351`). **PROVED ON THE RUNNER (Stage A2):** dispatch
+`34554883837` on `8f3b3c1`, 2026-09-11 02:30 UTC (22:30 ET Thursday). The NFL step logged **eight**
+`fixture:` lines, one per viewing day 2026-09-09 through 2026-09-16 — the loop is yesterday, today
+and six more, so the brief's "seven" was a miscount of the same range — returning 1, 1, 0, 0, 13, 1,
+0, 0 games. **The database confirms it independently:** all 16 NFL games of 9/09–9/14 carry one
+transaction (xmin 11570) and `updated_at` 2026-09-11 02:42:34.832 UTC — 9/09 final, **9/10
+`in_progress` (the Thursday game, 49ers @ Rams 17–7, written while it was on)**, 9/13 thirteen
+scheduled, 9/14 scheduled. The team-art step ran clean (`logos: ok 0, cached 32, error 0`). Wall time
+22m03s against 18m32s; the NFL steps took ~4s, and the largest deltas were R2 transfer (+149s pulling
+the cache before any NFL step, −79s in render) — the fixture load's +61s is the only growth plausibly
+tied to the change, and one pair of runs cannot separate it from database load. The NHL step, whose name says "7-day window" over two calls, is
 fine: `adapters/nhl.py:323` — the NHL `/schedule/{date}` endpoint returns a 7-day `gameWeek`.
 
 `tests/test_workflows.py::test_nfl_refresh_covers_every_game_day_not_only_sunday` parses the YAML

@@ -18,7 +18,7 @@ one is stale — say so.
 | current repo state, gates, open items, the full working rules | `docs/handoff-status.md` |
 | the closed history — past run narratives, superseded sections | `docs/handoff-archive.md` (split out by prompt 87; `handoff-status.md` wins on anything current) |
 | real work that is understood and not started, and decisions waiting on Joe | `docs/queue.md` |
-| why a decision was made, and whether it is already settled | `docs/enhancement-register.md` (§1–§36) |
+| why a decision was made, and whether it is already settled | `docs/enhancement-register.md` (§1–§37) |
 | what a card, block or grid is supposed to look like | `docs/rendering-contract.md` + `docs/rendering-contract-mobile.md` (the Mobile Grid Addendum) |
 | the locked visual reference the app must match | `docs/design/mobile_demo.html` |
 | what a past run was actually asked to do | `docs/prompts/` — 92 briefs covering 01–88, verbatim; 39 and 42 are the only gaps, and 86 carries three revisions (see its README) |

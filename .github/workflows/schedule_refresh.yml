@@ -51,7 +51,7 @@ jobs:
             W=$(python -m pipeline.render_feed --sport cfb --latest-week || true)
             if [ -n "$W" ]; then python -m adapters.cfbd --week "$W"; fi
           fi
-      - name: NFL (ESPN) — next 7 viewing days (every game day, not only Sunday)
+      - name: NFL (ESPN) — yesterday, today and the next 6 viewing days (every game day, not only Sunday)
         # PROMPT 88, Joe's ruling 2026-09-10: the same rolling window NBA and MLB use. This fetched two
         # dates - yesterday and the coming Sunday - and `--date` holds ONLY that day's games
         # (adapters/espn.py:177), so Thursday and Monday games were never refreshed on the day they
@@ -73,12 +73,12 @@ jobs:
         run: |
           python -m adapters.nhl --date $(python -c "import datetime as d;print((d.date.fromisoformat('${{ steps.when.outputs.date }}')+d.timedelta(-1)).isoformat())") --no-logos || exit 1
           python -m adapters.nhl --date ${{ steps.when.outputs.date }}
-      - name: NBA — next 7 viewing days (ESPN source until the league file is reachable from a runner)
+      - name: NBA — yesterday, today and the next 6 viewing days (ESPN source until the league file is reachable from a runner)
         run: |
           for i in -1 0 1 2 3 4 5 6; do
             python -m adapters.nba --date $(python -c "import datetime as d;print((d.date.fromisoformat('${{ steps.when.outputs.date }}')+d.timedelta($i)).isoformat())") --no-logos || exit 1
           done
-      - name: MLB — next 7 viewing days (statsapi officialDate == ET viewing day)
+      - name: MLB — yesterday, today and the next 6 viewing days (statsapi officialDate == ET viewing day)
         run: |
           for i in -1 0 1 2 3 4 5 6; do
             python -m adapters.mlb --date $(python -c "import datetime as d;print((d.date.fromisoformat('${{ steps.when.outputs.date }}')+d.timedelta($i)).isoformat())") --no-logos || exit 1

@@ -3289,3 +3289,38 @@ verbatim. **Amended in BOTH copies** — `CLAUDE.md` and the full text in `docs/
 working rules — because `CLAUDE.md` says `handoff-status.md` wins a disagreement, and a fix to the
 losing copy alone would have left the winning one false. `docs/deployment-contract.md`, `.env` and
 `.env.example` were not touched.
+
+---
+
+## 37. THE NFL NIGHTLY FETCHES BY DATE, EVERY DAY OF A ROLLING WINDOW — 2026-09-10, prompt 88
+
+**The defect.** `schedule_refresh.yml`'s NFL step fetched two dates, yesterday and the coming Sunday
+(`t + timedelta((6 - t.weekday()) % 7)`), and `adapters/espn.py --date` holds only that day's games
+(`espn.py:177`). So every NFL game not on a Sunday — Thursday nights, Monday nights, December
+Saturdays, the Wednesday opener — was in neither fetch on the day it was played: it kept whatever
+kickoff and status the last full load wrote, and no score was stored while it was on. It failed no
+gate; prompt 87 found it by counting stored links.
+
+**Three options.**
+
+1. **Patch Thursday and Monday** — add those two days to the existing two-date step. Smallest diff,
+   but it encodes today's schedule shape: December Saturdays, flexed windows and a Wednesday opener
+   would each need another patch, and a hole of this kind is invisible until someone counts.
+2. **Fetch by NFL week number** (`--week N`, which the adapter supports). Rejected: nothing in the
+   nightly derives an NFL week, and a date-arithmetic derivation breaks exactly at week 18 and the
+   regular-season/playoff boundary — CFB needed a purpose-built `--latest-week` resolver for the same
+   reason (`schedule_refresh.yml`, the CFB step).
+3. **A rolling date window** — the loop NBA and MLB already use: yesterday for the finals, today, and
+   six more days, one `--date` call each.
+
+**JOE'S RULING: option 3.** Date-driven code never has to know what an NFL "week" is, so flex moves,
+December Saturdays, international morning games and the January boundary are all covered without
+anyone anticipating them. It is also the shape two other sports already run, so there is one pattern
+in the nightly rather than three.
+
+**What it cost, measured.** The NFL step went from two calls to eight and takes ~4 seconds; logos moved
+to one `--teams-only` step so eight calls do not mean eight logo passes (NFL is the only league whose
+art that adapter writes). On the first dispatched run (`34554883837`) the Thursday game was stored
+`in_progress`, 17–7, while it was being played — the one line the change existed for. Records:
+`docs/handoff-status.md`'s prompt 88 block A entry; guarded by
+`tests/test_workflows.py::test_nfl_refresh_covers_every_game_day_not_only_sunday`.
