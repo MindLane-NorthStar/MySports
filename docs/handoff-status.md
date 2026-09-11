@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **94 briefs, covering 01–91 with 90 still to be filed by its
-own later run, counted 2026-09-11 (prompt 91; this line said 92 until then, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **95 briefs, covering 01–91, counted 2026-09-11 by prompt 90
+(it said 94 with 90 still to be filed until then; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
 count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -57,6 +57,9 @@ main, HEAD is prompt 66. **THIS IS THE ONLY PLACE THE GATE FLOORS ARE RECORDED.*
 carried a second copy and it was wrong four times in one week (prompts 62, 63, 64, and again between
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
+
+**Measured 2026-09-11, run 2 (prompt 90) — `pytest` 544 → 569** (`tests/test_enrich_cfb_records.py`, 25);
+the other four did not move, and geometry's figures are unchanged because the CFB rows have not landed.
 
 **Re-measured 2026-09-11, run 1 (prompts 89 and 91) — no count moved; both are documents and one config
 file.** The line below is prompt 88's.
@@ -117,6 +120,7 @@ line claims to do.
 | prompt 87 block C | `test:unit` | 593 → **596** | three status-row tests in `gamelink.test.mjs` (the link is a child of the status row and of no links row; the row renders with an empty right slot; two explicit columns with the link stretched). Two tests REWRITTEN IN PLACE: `gamelink`'s footer test (the clause is now forbidden, not required) and `livejoin`'s render-site test (one site, not two) |
 | prompt 87 block C | `qa-shots` | 113 → **121** | the status row measured at 390 AND 560px: the link spans label top to value bottom, sits in the right column and in no links row, the closing line says nothing about it, and a program's row renders with its right slot empty — 4 checks × 2 widths |
 | prompt 88 block A | `pytest` | 543 → **544** | `test_nfl_refresh_covers_every_game_day_not_only_sunday` in `tests/test_workflows.py`: the NFL step's 7-day loop, the Sunday selector's absence, and the team-art step before the R2 push — parsed, not substring-matched (rule 28) |
+| prompt 90 | `pytest` | 544 → **569** | `tests/test_enrich_cfb_records.py` (25): the `"W-L"` split and the all-zero skip, the team_records rows (conference when carried, unknown ids skipped), `--current-week` pinned to fixed 2026 dates with both fallbacks, `main()` driven against a fake DB (one commit covers both writes; `--latest-week` keeps its meaning), and the nightly step's flag. Mutation-checked: wins/losses swapped fails 4; `max(week)` fails 8 |
 
 **QA-SHOTS' EXIT CODE WAS DECORATIVE UNTIL THIS COMMIT, AND EVERY `NODE EXIT=0` ABOVE IS AFFECTED.**
 The runner ended in `process.exit(0)` unconditionally: a failing assertion went into
@@ -386,7 +390,7 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 
 | gate | run from | floor |
 |---|---|---|
-| `pytest` | repo root | **544 passed + 1 skipped** (36 subtests) |
+| `pytest` | repo root | **569 passed + 1 skipped** (36 subtests) |
 | `npm run test:unit` | `web/` | **596** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **121/121** |
@@ -851,6 +855,23 @@ before touching any count line.
   opens a file itself, or a `grep -r` that happens to cross `.env` all pass them. The stop list in
   `CLAUDE.md` `## Committing` is the real control. **The OS-level option — Claude Code's sandboxing —
   exists and has not been evaluated.** Not evaluated here either.
+- **CFB RECORDS: THE DATA HAS NOT LANDED YET (prompt 90, register §40).** Prompt 90 changed the code and
+  the nightly step and wrote no row. `team_records` holds zero CFB rows until `schedule_refresh` runs
+  from the pushed ref — Joe dispatches it — and Cowork verifies the rows in the database directly
+  (`source = 'cfbd.enrich_cfb'`, `as_of` the run's ET date), not from the run's log. Until then every
+  CFB card renders exactly as before: no record on either surface, and no rank prefix on the grid.
+  `web/test/standings.test.mjs:131` says "Zero CFB team_records rows exist" and goes stale on that run.
+- **The game record columns are written and not read.** `enrich_cfb.py` still writes
+  `games.home_record` / `away_record` (the archived desktop renderer's path, with its conference form),
+  and `GAME_SELECT` (`web/lib/queries.js:9-46`) does not select them, so `MobileGrid.js`'s `stored`
+  branch never fires. The rank columns ARE selected and are what the grid's rank prefix reads — which
+  is the next item. Deliberately not changed by prompt 90.
+- **The grid and the card take a CFB rank from two places.** The grid reads `game.home_rank` /
+  `away_rank` (`MobileGrid.js:98`), a bare number with no poll; the list card reads `mysports.rankings`
+  and so is the only surface that can print the `AP` / `CFP` label and honour CFP-before-AP
+  (`web/lib/standings.js:103-105` and `:167` say exactly this). Once `--current-week` runs the grid's
+  number will be current again, but it stays label-less. What the compact grid run should show is a
+  design question, and it is Joe's. **Not fixed here.**
 
 ## Working rules — not in this file
 

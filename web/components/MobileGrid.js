@@ -89,9 +89,11 @@ function allZeroRecord(rec) {
 
 /**
  * The record run beside a name (contract v1.1). `games.home_record` / `away_record` are the CFB
- * enrichment path and are null for every game in the database today, so the run falls back to the
- * club's current team_records row - the same number the listings card shows. A club with neither
- * simply has no run, which is the contract's "suppressed at 0-0" behaviour by another route.
+ * enrichment path's desktop form, and GAME_SELECT (web/lib/queries.js) does not select them, so
+ * `stored` is always undefined here and the run comes from the club's current team_records row - the
+ * same number the listings card shows. CFB rows land there from pipeline/enrich_cfb.py (prompt 90).
+ * A club with no row simply has no run, which is the contract's "suppressed at 0-0" behaviour by
+ * another route.
  */
 function teamLine(game, side, standings) {
   const t = side === 'home' ? game.home : game.away;

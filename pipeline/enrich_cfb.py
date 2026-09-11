@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""CFB ranks, records and rivalry flags into mysports.games (prompt 15 stage 4; no schema change).
+"""CFB ranks, records and rivalry flags into mysports.games, and CFB records into mysports.team_records.
 
     python -m pipeline.enrich_cfb --week 1
     python -m pipeline.enrich_cfb --week 1 --fetch          # run the probe first (CFBD key from .env)
-    python -m pipeline.enrich_cfb --latest-week --fetch
+    python -m pipeline.enrich_cfb --current-week --fetch    # the nightly: the week containing today (ET)
+    python -m pipeline.enrich_cfb --latest-week --fetch     # the newest LOADED week - December, not today
     python -m pipeline.enrich_cfb --rivalries-only          # every loaded week, no enrichment file needed
 
 `games.home_rank / away_rank / home_record / away_record / is_rivalry / rivalry_id` existed but were
@@ -44,6 +45,18 @@ correct: **Clemson is not in the 2026 AP top 25.** It appears only in the Coache
 rank_of() deliberately never reads Coaches (Playoff Committee, else AP). A null there is the honest
 answer, not a miss.
 
+**Prompt 90 (Joe's rulings, 2026-09-11; register §40): CFB records also go into `team_records`,** the
+table every other sport's card and grid already read (`standingFor()` in web/lib/standings.js). The
+game columns above are still written - they are the archived desktop renderer's path - but the web
+app does not select them, so until this write existed no CFB record rendered anywhere. The records
+block is CFBD `/records?year=`, season to date for EVERY team (scripts/probe_enrichment.py), so one
+run writes every club with a record, not only the week's slate. No backfill: `standingFor()` reads
+only the newest `as_of` per team, so an older row would render nowhere.
+
+**`--current-week` exists because `--latest-week` means max(week)** - the newest week LOADED, which
+followed the schedule outward as it was built (week 8 on 2026-09-03, week 15 by 2026-09-11) while the
+nightly ran it, so weeks 2-7 were never enriched. `--latest-week` keeps its meaning for manual runs.
+
 Windows-portable: no %-strftime, every open() passes encoding=, ASCII console, the DSN is never printed.
 """
 from __future__ import annotations
@@ -52,8 +65,10 @@ import argparse
 import json
 import subprocess
 import sys
+from datetime import date, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
+from zoneinfo import ZoneInfo
 
 from pipeline.db import DB, ROOT
 
@@ -93,6 +108,24 @@ left join conferences ch on ch.id = th.conference_id
 left join conferences ca on ca.id = ta.conference_id
 where g.sport = 'cfb' and g.season = %s and g.week = %s
 """
+
+# Each loaded week's day range, for --current-week. From the database, not a provider call: the
+# dates are already there, and a fetch would be a new way for the step to fail.
+WEEK_RANGES_SQL = """
+select week, min(viewing_day), max(viewing_day)
+from games
+where sport = 'cfb' and season = %s and week is not null
+group by week
+"""
+
+# team_records.team_id is a foreign key to teams, and one unknown id would roll back the whole
+# transaction - ranks and rivalry flags included - so only known CFB ids are written.
+CFB_TEAM_IDS_SQL = "select id from teams where sport = 'cfb'"
+
+# Provider and module, in the shape of the existing values (espn.standings, nhl.standings, mlb-statsapi).
+TEAM_RECORDS_SOURCE = "cfbd.enrich_cfb"
+
+ET = ZoneInfo("America/New_York")
 
 
 def enrichment_path(year: int, week: int) -> Path:
@@ -171,6 +204,92 @@ def apply_week(db: DB, year: int, week: int, data: dict[str, Any]) -> dict[str, 
     return counts
 
 
+def split_record(display: Any) -> tuple[int, int, int] | None:
+    """A plain 'W-L' (or 'W-L-T') display -> (wins, losses, ties), the load.py:324 split; ties is 0
+    unless a third component exists. Never fed record_display()'s output: '4-1, 2-0 BIG 12' is the
+    desktop form and would not parse. None when missing or unparseable."""
+    if not isinstance(display, str):
+        return None
+    parts = [int(x) for x in display.split("-") if x.isdigit()]
+    if len(parts) < 2:
+        return None
+    return parts[0], parts[1], parts[2] if len(parts) > 2 else 0
+
+
+def parse_record(display: Any) -> tuple[int, int, int] | None:
+    """split_record(), and None for ALL ZEROES too: realRecord() and allZeroRecord() both treat
+    all-zero as "no record yet", so writing a 0-0 row buys nothing."""
+    rec = split_record(display)
+    return rec if rec and any(rec) else None
+
+
+def team_record_rows(records: dict[str, Any], season: int, as_of: date,
+                     known_ids: Iterable[str]) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    """One team_records row per known CFB team with a real overall record.
+
+    conf_wins / conf_losses come from the block's `conf` display when it carries one (week-1-style
+    files do; the week-8 file does not) and stay null otherwise - nothing is derived. Nothing renders
+    them today (M16 keeps the conference form off the phone); this is storage.
+    """
+    known = {str(k) for k in known_ids}
+    rows: list[dict[str, Any]] = []
+    counts = {"team_records": 0, "team_records_zero_skipped": 0, "team_records_unknown_team": 0}
+    for key in sorted(records, key=str):
+        rec = records.get(key) or {}
+        parsed = parse_record(rec.get("display"))
+        if parsed is None:
+            counts["team_records_zero_skipped"] += 1
+            continue
+        if str(key) not in known:
+            counts["team_records_unknown_team"] += 1
+            continue
+        # A 0-0 CONFERENCE record beside a real overall one is a true fact (only non-conference games
+        # so far), so the conference side is split without the all-zero skip.
+        conf = split_record((rec.get("conf") or {}).get("display"))
+        rows.append({"team_id": str(key), "season": season, "as_of": as_of,
+                     "wins": parsed[0], "losses": parsed[1], "ties": parsed[2],
+                     "conf_wins": conf[0] if conf else None, "conf_losses": conf[1] if conf else None,
+                     "source": TEAM_RECORDS_SOURCE})
+    counts["team_records"] = len(rows)
+    return rows, counts
+
+
+def write_team_records(db: DB, year: int, data: dict[str, Any], as_of: date) -> dict[str, int]:
+    """Upsert every CFB club's current record into team_records, beside apply_week's game columns and
+    inside the same transaction (main() commits both or neither)."""
+    known = [r[0] for r in db.fetch(CFB_TEAM_IDS_SQL)]
+    rows, counts = team_record_rows(data.get("records") or {}, year, as_of, known)
+    db.upsert("team_records", rows, "team_id, season, as_of",
+              ["wins", "losses", "ties", "conf_wins", "conf_losses"], tag="team_records")
+    return counts
+
+
+def current_week(ranges: Iterable[tuple[Any, date, date]], today: date) -> tuple[int, date, date, str] | None:
+    """The CFB week whose day range contains `today`; if none does, the next week to start after it;
+    if there is none, the highest week that has already ended. Returns (week, first, last, why).
+
+    `ranges` is (week, first viewing_day, last viewing_day) per loaded week. The last clause keeps a
+    December run from resolving to nothing; it is NOT max(week) - a loaded week that has not started
+    is chosen by the second clause first."""
+    rs = sorted((int(w), a, b) for w, a, b in ranges if w is not None and a is not None and b is not None)
+    for w, a, b in rs:
+        if a <= today <= b:
+            return w, a, b, "contains today"
+    upcoming = [r for r in rs if r[1] > today]
+    if upcoming:
+        w, a, b = min(upcoming, key=lambda r: (r[1], r[0]))
+        return w, a, b, "next to start after today"
+    ended = [r for r in rs if r[2] < today]
+    if ended:
+        w, a, b = max(ended, key=lambda r: r[0])
+        return w, a, b, "highest week already ended"
+    return None
+
+
+def today_et() -> date:
+    return datetime.now(ET).date()
+
+
 def apply_rivalries(db: DB) -> int:
     """Flag every CFB game whose two clubs are a known rivalry, in either orientation.
 
@@ -187,6 +306,8 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--week", type=int, action="append", help="cfb week (repeatable)")
     ap.add_argument("--latest-week", action="store_true", help="use the newest loaded week")
+    ap.add_argument("--current-week", action="store_true",
+                    help="use the week containing today (ET); else the next to start; else the last ended")
     ap.add_argument("--year", type=int, default=2026)
     ap.add_argument("--fetch", action="store_true", help="refresh the enrichment file from CFBD first")
     ap.add_argument("--rivalries-only", action="store_true", help="only set the rivalry flags")
@@ -202,8 +323,20 @@ def main(argv: list[str] | None = None) -> int:
             rows = db.fetch("select max(week) from games where sport = 'cfb' and season = %s", (args.year,))
             if rows and rows[0][0] is not None:
                 weeks.append(int(rows[0][0]))
+        # as_of is the ET date of THIS RUN: the records block is season to date, so a row is today's
+        # standings snapshot, not a fact about the enrichment week.
+        as_of = today_et()
+        if args.current_week:
+            cw = current_week(db.fetch(WEEK_RANGES_SQL, (args.year,)), as_of)
+            if cw is None:
+                print(f"  current week: none - no cfb {args.year} weeks loaded")
+            else:
+                print(f"  current week: {cw[0]} ({cw[1].isoformat()} to {cw[2].isoformat()}) - "
+                      f"{cw[3]}, today {as_of.isoformat()} ET")
+                weeks.append(cw[0])
         if not args.rivalries_only and not weeks:
-            print("ERROR: give --week N (repeatable), --latest-week, or --rivalries-only", file=sys.stderr)
+            print("ERROR: give --week N (repeatable), --latest-week, --current-week, or --rivalries-only",
+                  file=sys.stderr)
             return 2
 
         for week in sorted(set(weeks)):
@@ -221,7 +354,11 @@ def main(argv: list[str] | None = None) -> int:
             src = (data.get("ranking") or {}).get("source")
             print(f"  week {week}: {c['games']} game(s) - poll {src or 'NONE (ranks untouched)'} - "
                   f"{c['ranked_sides']} ranked side(s), {c['record_sides']} record side(s)")
-            for k, v in c.items():
+            t = write_team_records(db, args.year, data, as_of)
+            print(f"  week {week}: team_records {t['team_records']} row(s) as_of {as_of.isoformat()} - "
+                  f"{t['team_records_zero_skipped']} all-zero skipped, {t['team_records_unknown_team']} "
+                  f"unknown team(s) - records block generated {data.get('generatedAt') or 'unknown'}")
+            for k, v in {**c, **t}.items():
                 totals[k] = totals.get(k, 0) + v
 
         flagged = apply_rivalries(db)

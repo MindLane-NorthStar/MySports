@@ -309,9 +309,10 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
                       ["spread", "total", "home_moneyline", "away_moneyline", "fetched_at"], tag="game_odds")
             counts["odds"] += 1
         recs = g.get("records") or {}
-        # The same adapter records that feed team_records also go on the GAME, so the grid's record run
-        # and the listings card read one consistent source instead of two. Pro RANKS stay null - these
-        # leagues run no polls, and inventing one would be worse than an empty prefix.
+        # The same adapter records that feed team_records also go on the GAME. The web app reads only
+        # team_records - the grid's record run and the listings card both - because GAME_SELECT does
+        # not select the game columns; they are written and unread (register §40). Pro RANKS stay
+        # null - these leagues run no polls, and inventing one would be worse than an empty prefix.
         if recs:
             hr = _text(recs.get("home")) if _text(recs.get("home")) != "0-0" else None
             ar = _text(recs.get("away")) if _text(recs.get("away")) != "0-0" else None

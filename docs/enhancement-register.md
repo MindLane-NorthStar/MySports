@@ -3403,3 +3403,80 @@ Verified live on Claude Code 2.1.178: a denied command refuses rather than promp
 security boundary** — prefix matching, per-tool prefixes and path rules are all bypassable by a
 differently spelled command or a script that opens a file itself. The stop list, which governs intent,
 is the real control.
+
+## 40. CFB RECORDS GO INTO TEAM_RECORDS, AND THE NIGHTLY ENRICHES THE WEEK CONTAINING TODAY — 2026-09-11, prompt 90
+
+**Joe's report.** No record rendered beside a college football team on the list card or the grid card.
+Cowork measured the database and read the components on 2026-09-11; prompt 90 confirmed both defects
+against the tree before changing anything.
+
+**Defect 1 — `mysports.team_records` held no CFB rows at all.** `pipeline/standings.py:46` reads
+`LEAGUES = ("mlb", "nhl", "nba", "nfl")`; CFB was never in scope (684 CFB teams, zero records, against
+1,146 pro rows, Cowork's count). Both surfaces read that table and nothing else for a record: the list
+card through `web/lib/queries.js:215 standingsFor()` → `web/lib/standings.js:155 standingFor()`, and
+the grid through `web/components/MobileGrid.js:99-101`, whose `stored` branch is dead because
+`GAME_SELECT` (`queries.js:9-46`) selects `home_rank`/`away_rank` but not `home_record`/`away_record`.
+
+**Defect 2 — `--latest-week` means `max(week)`, and the nightly ran it.** `pipeline/enrich_cfb.py:201-204`
+(line numbers before this prompt) is `select max(week) from games where sport = 'cfb' and season = %s`
+— the newest week LOADED, not the week containing today — and `.github/workflows/schedule_refresh.yml:261`
+ran `enrich_cfb --latest-week --fetch` every night. On 2026-09-11 that was week 15 (one game, 2026-12-12)
+against the current week 2 (86 games, 2026-09-10 to 09-12). **The step has carried `--latest-week`
+since it was added, `e759e8e` on 2026-09-02** — when eight weeks were loaded and week 1 was current —
+so the CFB nightly enriched the wrong week from its first run until this prompt, following the schedule
+outward as it was built. Weeks 2–7 and 9–13 carry zero game-column records. The same defect is why the
+grid showed no CFB rank on week 2 (`MobileGrid.js:98` reads `game.home_rank`); the list card reads
+`mysports.rankings`, which was current, and was unaffected.
+
+**JOE'S RULINGS, 2026-09-11 — not to be re-argued.**
+
+1. **CFB records go into `team_records`, written by `pipeline/enrich_cfb.py`**, so CFB uses the read path
+   every other sport already uses. Not into `GAME_SELECT`; not by extending `standings.py`.
+2. **The CFB nightly enriches the week containing today**, not the newest loaded week.
+3. **No backfill.** Joe first approved a one-time backfill of weeks 2 onward. Cowork then measured that
+   `team_records` is keyed `(team_id, season, as_of)` and that `standingFor()` reads only the newest
+   `as_of` per team (`indexStandings()`, `standings.js:144-153`), so historical rows render nowhere and a
+   backfill would add rows nothing reads. **Cowork withdrew it and Joe accepted.** One nightly write of
+   every team's current record serves every CFB card in the season, past and future.
+
+**What shipped.**
+
+- **`--current-week`** (`enrich_cfb.py` `current_week()`): the week whose `viewing_day` range contains
+  today (ET); else the next week to start after today; else the highest week already ended. The ranges
+  come from the database (`WEEK_RANGES_SQL`), never a provider call, and **every run prints the resolved
+  week, its range and which of the three clauses chose it** — a step that silently picked a week is how
+  this survived every nightly run from 2026-09-02 on. `--latest-week` keeps its meaning for manual runs; only
+  `schedule_refresh.yml:261` changed.
+- **The `team_records` write** (`write_team_records()`), called in `main()` beside `apply_week()` and
+  committed in the same transaction. The overall record is split from the records block's plain `"W-L"`
+  display exactly as `pipeline/load.py:324` does, never from `record_display()`'s desktop form; ties only
+  from a third component; all-zero records skipped (`realRecord()` and `allZeroRecord()` discard them);
+  `conf_wins`/`conf_losses` from the block's `conf` display when it carries one, else null; `season` is
+  the enrichment year; **`as_of` is the ET date of the run**, because the block is season to date;
+  **`source` is `cfbd.enrich_cfb`**. Ids not in `teams` are skipped and counted — `team_records.team_id`
+  is a foreign key, and one unknown id would roll back ranks and rivalry flags with it.
+- **Coverage is every team, not the week's slate.** The block is CFBD `/records?year=`, season to date
+  for every team (`scripts/probe_enrichment.py:199-215`; the week-1 file holds 683 teams, 146 with a
+  record), so one run makes every CFB card in the season correct.
+- **The game record columns are still written, and still unread.** They are the archived desktop
+  renderer's path and `record_display()` builds that surface's conference form; removing them is a
+  separate decision nobody has made.
+
+**Left open on purpose, recorded so each is found rather than rediscovered.**
+
+- The grid takes its CFB rank from `game.home_rank`, the card from `mysports.rankings`; only the card can
+  print the `AP`/`CFP` label (`standings.js:103-105`, `:167`). What the compact grid run should show is
+  Joe's design question.
+- **The same `max(week)` shape lives in `pipeline/render_feed.py:194` `latest_week()`**, called by the CFB
+  finals pass (`schedule_refresh.yml:51`, Sunday and Monday) and by `render_all.yml:57` (the Saturday
+  desktop render). The finals pass is masked, not correct: the main CFB line fetches the date-derived
+  `cfb_week` (`:42`), which on a Sunday or Monday is still the week just played, while the pass itself
+  re-fetches December. Reported by prompt 90, not changed.
+- A manual `--week N` run WITHOUT `--fetch` writes that saved file's records under today's `as_of`; the
+  run prints the block's `generatedAt` beside the row count so a stale file is visible.
+- `WEEK_RANGES_SQL` groups by week alone. Only regular-season CFB is loaded today (`adapters/cfbd.py`
+  defaults `season_type` to `"regular"`); a postseason load that restarts week numbers would need a
+  `season_type`-aware range before `--current-week` can be trusted in January.
+
+**The data had not landed when this was written.** Prompt 90 wrote no row: the nightly Action does,
+under working rule 14. Cowork verifies the rows in the database, not from the run's log.

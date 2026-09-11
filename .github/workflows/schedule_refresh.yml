@@ -258,7 +258,7 @@ jobs:
         # and picks the new poll up on the day it lands, which a Tuesday-only step would not do
         # for records. Ranks are per-poll inside the module - a week with no poll published yet
         # leaves them untouched rather than erasing last week's, so a daily run is safe.
-        run: python -m pipeline.enrich_cfb --latest-week --fetch --workflow schedule_refresh
+        run: python -m pipeline.enrich_cfb --current-week --fetch --workflow schedule_refresh
       - name: Reconcile canonical facts (Milestone 2 — games with new evidence)
         run: python -m pipeline.reconcile --workflow schedule_refresh
       - name: Unit tests (resolver)
