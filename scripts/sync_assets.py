@@ -17,14 +17,18 @@ Reads R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_ASSETS fr
 the repo-root .env (never printed). Requires boto3 (pip install boto3). Windows-portable.
 
 Layout (contract section 3): assets/logos/*  -> logos/*, assets/network-logos/* -> network-logos/*,
-assets/fonts/* -> fonts/*, assets/brand/* -> brand/* (lockup source art). Keys are lowercase; comparison is by size + local SHA-256 vs the object's
-`sha256` metadata (set on every upload by this script), so unchanged files are skipped.
+assets/fonts/* -> fonts/*, assets/brand/* -> brand/* (lockup source art). Keys are lowercase. Comparison is
+BY BYTES in both directions (`same_bytes()`): size, then the listing's ETag against the local MD5, and the
+object's `sha256` metadata (set on every upload by this script) only for an ETag that is not an MD5.
+A key whose bytes differ on the two sides is a CONFLICT: `--push` sends the local copy, `--pull` takes the
+bucket's, and `--check` lists it separately so the flag can be chosen deliberately.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -37,6 +41,15 @@ CONTENT_TYPES = {".png": "image/png", ".svg": "image/svg+xml", ".ttf": "font/ttf
 
 def sha256(p: Path) -> str:
     h = hashlib.sha256()
+    with open(p, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def md5(p: Path) -> str:
+    """The comparison half of an S3/R2 single-part ETag - not a security digest, hence the flag."""
+    h = hashlib.md5(usedforsecurity=False)
     with open(p, "rb") as f:
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
@@ -94,6 +107,45 @@ def remote_sha(s3, bucket: str, key: str) -> str | None:
         return (s3.head_object(Bucket=bucket, Key=key).get("Metadata") or {}).get("sha256")
     except Exception:  # noqa: BLE001
         return None
+
+
+def cache_path(root: Path, key: str) -> Path:
+    """Where a bucket key lives in the local cache - the path the pull loop writes. Derived from the KEY,
+    not from `local_files()`, which walks only FOLDERS: the bucket also holds `grids/`, and a comparison
+    that consulted only the FOLDERS map would call every such key missing and pull it forever."""
+    folder, _, rest = key.partition("/")
+    return root / "assets" / folder / rest
+
+
+# A SINGLE-PART UPLOAD'S ETAG IS THE MD5 OF ITS BYTES, and `list_objects_v2` already returns it for
+# every object - `remote_objects()` has been storing it since the first version and nothing read it.
+# Measured against this bucket before this was built (prompt 94, working rule 34): 1,553 of the 1,578
+# keys on both sides had ETag == local MD5, every known-identical file in the sample matched, and none
+# of the 1,628 objects carried a multipart ETag.
+_SINGLE_PART_ETAG = re.compile(r"^[0-9a-f]{32}$")
+
+
+def same_bytes(s3, bucket: str, key: str, p: Path, r: dict) -> bool:
+    """Do the bucket's bytes for `key` match the local file `p`? `r` is the key's `remote_objects()` record.
+
+    THE ORDER IS THE POINT.
+      1. Size differs -> not the same. Free.
+      2. The ETag is 32 hex characters with no `-` -> it is the MD5; compare it with the local MD5. Free:
+         no request at all. THIS STEP IS THE WHOLE REASON THE HELPER EXISTS. The push used to fall through
+         to a `head_object` on every size-matching file - 1,533 sequential round trips a night to learn
+         that 0 files needed pushing - and the pull compared nothing, by key alone, which let a stale
+         cache survive `--pull` and then be republished over the newer object by the next `--push`.
+      3. Anything else -> one `head_object` for the `sha256` metadata, exactly the old test. A MULTIPART
+         upload's ETag is `<md5-of-part-md5s>-<N>`, NOT an MD5 of the bytes, and an absent ETag is no
+         answer at all. DELETING THIS FALLBACK SILENTLY BREAKS LARGE FILES: boto3 goes multipart above
+         8 MB, and every such file would then compare as changed, forever, in both directions.
+    """
+    if r["size"] != p.stat().st_size:
+        return False
+    etag = (r.get("etag") or "").strip('"').lower()
+    if _SINGLE_PART_ETAG.match(etag):
+        return etag == md5(p)
+    return (remote_sha(s3, bucket, key) or "") == sha256(p)
 
 
 # THE ART HAD NO CACHE POLICY AT ALL, and it cost an hour on 2026-09-08.
@@ -231,6 +283,83 @@ def special_modes(args) -> int:
     return 0
 
 
+class _CountingHeads:
+    """Counts `head_object` calls on the way through, so every run reports how many it made."""
+
+    def __init__(self, s3):
+        self._s3, self.heads = s3, 0
+
+    def head_object(self, **kwargs):
+        self.heads += 1
+        return self._s3.head_object(**kwargs)
+
+
+def plan(s3, bucket: str, root: Path, local: dict[str, Path], remote: dict[str, dict],
+         force: bool = False, existing_only: bool = False) -> dict:
+    """What `--push` would send and `--pull` would take. Reads; never writes, uploads or downloads.
+
+    Each key present on both sides is compared ONCE, by bytes (`same_bytes()`), and that verdict
+    serves both directions.
+    """
+    s3 = _CountingHeads(s3)
+    to_push: list[str] = []
+    to_pull: list[str] = []
+    verdict: dict[str, bool] = {}           # key -> the bytes match; a key is never compared twice
+    same = unpublished = 0
+    for key, p in local.items():
+        r = remote.get(key)
+        # --existing-only NEVER CREATES AN OBJECT (prompt 69). --force alone would have closed the
+        # remaining cache-header gap in one command, and prompt 68 stopped because of what else it
+        # would have done: 9 new objects under `network-logos/` and 12 under `brand/`, among them
+        # `hbo-max-wide-2023-retired.svg`, `app-icon-mysports-tv-v5-retired.png` and
+        # `...-v6a-rejected.png`. Publishing retired and rejected art is not a header fix. With this
+        # flag the local cache decides only WHICH bytes to rewrite, never what the bucket contains.
+        if existing_only and r is None:
+            unpublished += 1
+            continue
+        # --force PUSHES BYTES THAT ALREADY MATCH, and the only reason it exists is HEADERS.
+        # A normal push compares size then sha256 and skips anything identical, which is right for
+        # bytes and wrong for metadata: prompt 66 added `Cache-Control: public, max-age=300` to
+        # uploads and it reached only the 387 objects whose art happened to change that day, leaving
+        # 1,145 answering with no policy at all - the behaviour that cost an hour on 2026-09-08.
+        # There is no way to set a header on an existing R2 object except by writing it again.
+        if force or r is None:
+            to_push.append(key)
+        elif not same_bytes(s3, bucket, key, p, r):
+            verdict[key] = False
+            to_push.append(key)
+        else:
+            verdict[key] = True
+            same += 1
+    # THE PULL SIDE DECIDED BY KEY ALONE until prompt 94: `for key in remote: if key not in local`.
+    # A file the cache already had was never re-downloaded however far its bytes had drifted, and the
+    # push side - which DID compare bytes - then saw local != remote and uploaded the stale copy over
+    # the newer object. Art reverted with no error. Now a key is pulled when the cache has no copy OR
+    # its bytes differ. The copy is found at `local[key]` (the real file, whatever its case - 73 NBA
+    # logos are named `nba-ATL.png` against the key `logos/nba-atl.png`), else at `cache_path()`, which
+    # is how a key outside FOLDERS (`grids/`) is compared instead of pulled every night.
+    for key, r in remote.items():
+        if key not in verdict:
+            p = local.get(key) or cache_path(root, key)
+            if not p.is_file():
+                to_pull.append(key)
+                continue
+            verdict[key] = same_bytes(s3, bucket, key, p, r)
+            if verdict[key]:
+                same += 1
+        if not verdict[key]:
+            to_pull.append(key)
+    differ = [k for k in to_pull if verdict.get(k) is False]
+    return {
+        "to_push": to_push, "to_pull": to_pull, "same": same, "unpublished": unpublished,
+        "conflicts": [k for k in differ if k in local],        # --push sends one copy, --pull the other
+        "stale": [k for k in differ if k not in local],         # outside FOLDERS: only --pull can act
+        "local_only": [k for k in to_push if k not in remote],
+        "bucket_only": [k for k in to_pull if k not in verdict],
+        "heads": s3.heads,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     g = ap.add_mutually_exclusive_group(required=True)
@@ -285,40 +414,29 @@ def main(argv: list[str] | None = None) -> int:
     remote = remote_objects(s3, bucket, args.prefix)
     print(f"bucket {bucket}: {len(remote)} objects; local cache: {len(local)} files" + (f" (prefix {args.prefix})" if args.prefix else ""))
 
-    to_push, to_pull, same, unpublished = [], [], 0, 0
-    for key, p in local.items():
-        r = remote.get(key)
-        # --existing-only NEVER CREATES AN OBJECT (prompt 69). --force alone would have closed the
-        # remaining cache-header gap in one command, and prompt 68 stopped because of what else it
-        # would have done: 9 new objects under `network-logos/` and 12 under `brand/`, among them
-        # `hbo-max-wide-2023-retired.svg`, `app-icon-mysports-tv-v5-retired.png` and
-        # `...-v6a-rejected.png`. Publishing retired and rejected art is not a header fix. With this
-        # flag the local cache decides only WHICH bytes to rewrite, never what the bucket contains.
-        if args.existing_only and r is None:
-            unpublished += 1
-            continue
-        # --force PUSHES BYTES THAT ALREADY MATCH, and the only reason it exists is HEADERS.
-        # A normal push compares size then sha256 and skips anything identical, which is right for
-        # bytes and wrong for metadata: prompt 66 added `Cache-Control: public, max-age=300` to
-        # uploads and it reached only the 387 objects whose art happened to change that day, leaving
-        # 1,145 answering with no policy at all - the behaviour that cost an hour on 2026-09-08.
-        # There is no way to set a header on an existing R2 object except by writing it again.
-        if args.force or r is None:
-            to_push.append(key)
-        elif r["size"] != p.stat().st_size or (remote_sha(s3, bucket, key) or "") != sha256(p):
-            to_push.append(key)
-        else:
-            same += 1
-    for key in remote:
-        if key not in local:
-            to_pull.append(key)
-    print(f"  unchanged {same} · local-only/changed {len(to_push)} · bucket-only {len(to_pull)}"
-          + (f" · not in bucket, SKIPPED {unpublished}" if args.existing_only else ""))
+    pl = plan(s3, bucket, root, local, remote, force=args.force, existing_only=args.existing_only)
+    to_push, to_pull, conflicts = pl["to_push"], pl["to_pull"], pl["conflicts"]
+    # THE COUNTS NAME DISJOINT SETS. The old line printed `local-only/changed` and `bucket-only`, which
+    # stopped describing anything once a key whose bytes differ belongs to BOTH lists: `--push` would
+    # send it and `--pull` would take the bucket's copy, and the flag is the decision.
+    print(f"  unchanged {pl['same']} · conflict (bytes differ) {len(conflicts)} · local-only {len(pl['local_only'])}"
+          f" · bucket-only {len(pl['bucket_only'])}"
+          + (f" · cache differs outside FOLDERS {len(pl['stale'])}" if pl["stale"] else "")
+          + (f" · not in bucket, SKIPPED {pl['unpublished']}" if args.existing_only else ""))
+    print(f"  --push would send {len(to_push)} · --pull would take {len(to_pull)}"
+          f" · sha256 look-ups (head_object) {pl['heads']}")
 
     if args.check:
-        for k in to_push[:50]:
+        # THIS IS THE MODE A HUMAN RUNS TO DECIDE, so a conflict is named as one rather than printed
+        # under both "would push" and "would pull" with nothing to say they are the same key.
+        for k in conflicts[:50]:
+            print("  CONFLICT, bytes differ (--push sends the local copy, --pull takes the bucket's):", k)
+        for k in pl["stale"][:50]:
+            print("  would pull, cache copy differs (outside FOLDERS, so --push never sends it):", k)
+        c = set(conflicts)
+        for k in [k for k in to_push if k not in c][:50]:
             print("  would push:", k)
-        for k in to_pull[:50]:
+        for k in pl["bucket_only"][:50]:
             print("  would pull:", k)
         return 0
 
@@ -336,8 +454,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.pull:
         n = 0
         for key in to_pull:
-            folder, _, rest = key.partition("/")
-            dest = root / "assets" / folder / rest
+            dest = cache_path(root, key)
             dest.parent.mkdir(parents=True, exist_ok=True)
             s3.download_file(bucket, key, str(dest))
             n += 1

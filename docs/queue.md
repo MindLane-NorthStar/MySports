@@ -130,7 +130,8 @@ git tracks under `assets/fonts/`; `git ls-files assets/` is the check, and it re
 **Why nothing prevents it.** `actions/cache` appears nowhere in `schedule_refresh.yml`; `cache: pip` at
 `:35` is the only cache and it covers pip's wheels. A checkout materializes only the five fonts.
 `sync_assets.py:60-72` `local_files()` returns only what is on disk, `:312-314` puts every remote key
-that is not in that map on the pull list, and `:336-346` downloads them one at a time.
+that is not in that map on the pull list, and `:336-346` downloads them one at a time. (Line numbers in
+this entry are `sync_assets.py` as of `a7a3ffe`; prompt 94 moved them.)
 
 **The push's second cost.** `--push --prefix logos/ --make-dark` (`schedule_refresh.yml:253`) compares
 sizes at `sync_assets.py:308` and, when they match, calls `remote_sha()` (`:92-96`) — a `head_object`
@@ -142,9 +143,13 @@ per file — and the size always matches for a file pulled minutes earlier. Meas
 exists is never re-downloaded however far its bytes have drifted from the bucket, and the next `--push`
 compares sizes and shas, finds them different, and republishes the stale bytes over the newer object.
 Art reverts, silently. It is invisible on the runner today, whose cache holds nothing but the five
-tracked fonts, and live on any machine that keeps an `assets/`. **Caching `assets/` cannot ship before
-this is fixed**, because a warm cache is exactly the condition that turns the defect from theoretical
-into nightly. **Prompt 94 is written to fix it.**
+tracked fonts, and live on any machine that keeps an `assets/`. A warm cache is exactly the condition
+that would have turned it nightly, which is why caching could not ship first. **That precondition is now
+met: prompt 94 fixed it** (register §43) — both directions compare bytes, using the ETag the listing
+already returns, so a cached file that has drifted is pulled again, a key that differs on both sides is
+a reported CONFLICT, and the push's 1,533 round trips become zero. **What remains:** caching `assets/`,
+and deciding whether the nightly should pull the whole bucket at all — of its 101.5 MB, `logos/` is 88.7,
+and `grids/` (50 objects, 10.2 MB) sits outside `FOLDERS` (register §43's prefix table).
 
 **The tail-step cut is demoted, not deleted.** Unit tests (resolver) (`:265`), Watch links (`:267`)
 and Archive fixtures + raw payloads (`:281`) cost 0.5–2 minutes between them: **the split was never
@@ -156,6 +161,7 @@ than a deadline.
 **Why it is pressing.** Queue item 7 — the schedule built out to April 2027 — grows the loader's input
 and the asset cache, which are exactly the steps that have been growing.
 
-**Size.** Two pieces, and the order is the point: prompt 94's pull correctness fix first, then a cache
-for `assets/` that `refresh` and `render` can share, proved by dispatches rather than by any local gate;
-the job split after that, if it is still wanted. **A description of a problem, not an approved plan.**
+**Size.** The first piece has landed — prompt 94's byte comparison. What is left is a cache for
+`assets/` that `refresh` and `render` can share, and the whole-bucket question (brief 95), proved by
+dispatches rather than by any local gate; the job split after that, if it is still wanted. **A
+description of a problem, not an approved plan.**

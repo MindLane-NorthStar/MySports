@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **98 briefs, covering 01–93, counted 2026-09-11 by prompt 93
-(96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **99 briefs, covering 01–94, counted 2026-09-11 by prompt 94
+(98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
 count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -57,6 +57,9 @@ main, HEAD is prompt 66. **THIS IS THE ONLY PLACE THE GATE FLOORS ARE RECORDED.*
 carried a second copy and it was wrong four times in one week (prompts 62, 63, 64, and again between
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
+
+**Measured 2026-09-11, run 5 (prompt 94) — `pytest` 569 → 585** (`tests/test_sync_assets.py`, 16); the other
+four did not move.
 
 **Re-measured 2026-09-11, run 4 (prompt 93) — no count moved; one prompt filed, one untracked directory
 deleted, documents.**
@@ -126,6 +129,7 @@ line claims to do.
 | prompt 87 block C | `qa-shots` | 113 → **121** | the status row measured at 390 AND 560px: the link spans label top to value bottom, sits in the right column and in no links row, the closing line says nothing about it, and a program's row renders with its right slot empty — 4 checks × 2 widths |
 | prompt 88 block A | `pytest` | 543 → **544** | `test_nfl_refresh_covers_every_game_day_not_only_sunday` in `tests/test_workflows.py`: the NFL step's 7-day loop, the Sunday selector's absence, and the team-art step before the R2 push — parsed, not substring-matched (rule 28) |
 | prompt 90 | `pytest` | 544 → **569** | `tests/test_enrich_cfb_records.py` (25): the `"W-L"` split and the all-zero skip, the team_records rows (conference when carried, unknown ids skipped), `--current-week` pinned to fixed 2026 dates with both fallbacks, `main()` driven against a fake DB (one commit covers both writes; `--latest-week` keeps its meaning), and the nightly step's flag. Mutation-checked: wins/losses swapped fails 4; `max(week)` fails 8 |
+| prompt 94 | `pytest` | 569 → **585** | `tests/test_sync_assets.py` (16): the byte comparison's order and its request count (a single-part ETag costs no `head_object`; a size difference costs no hashing), the multipart and absent-ETag fallback, `test_pull_retakes_a_cached_file_whose_bytes_differ_from_the_bucket`, a `grids/` key compared at its derived path, mixed-case filenames, `--force` and `--existing-only` unchanged. Mutation-checked: the free ETag step removed fails 7; a key-only pull restored fails 2 |
 
 **QA-SHOTS' EXIT CODE WAS DECORATIVE UNTIL THIS COMMIT, AND EVERY `NODE EXIT=0` ABOVE IS AFFECTED.**
 The runner ended in `process.exit(0)` unconditionally: a failing assertion went into
@@ -395,7 +399,7 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 
 | gate | run from | floor |
 |---|---|---|
-| `pytest` | repo root | **569 passed + 1 skipped** (36 subtests) |
+| `pytest` | repo root | **585 passed + 1 skipped** (36 subtests) |
 | `npm run test:unit` | `web/` | **596** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **121/121** |
@@ -885,14 +889,21 @@ before touching any count line.
   (`schedule_refresh.yml:19`); successful jobs run 8–16 minutes, most of it the R2 asset pull (4–8m),
   the R2 logo push (2–3m) and the loader (1–4m). **Headroom, not a fix** — the durable fix is splitting
   the job, `docs/queue.md` item 9, not approved. Prompt 92 did not dispatch the workflow; Joe does.
-- **LIVE DEFECT — `--pull` NEVER CORRECTS A STALE LOCAL FILE, AND `--push` THEN REPUBLISHES IT (prompt 93,
-  register §42).** `scripts/sync_assets.py:312-314` decides what to pull by key alone: a key already in
-  the local `assets/` is never re-downloaded, however far its bytes have drifted from the bucket. The
-  next `--push` compares size and sha256, finds them different, and uploads the stale local bytes over
-  the newer object. **The symptom: art that reverts after a nightly, with no error anywhere.** Invisible
-  on the runner, which starts each night with only the five tracked fonts; live on any machine that
-  keeps an `assets/` — Joe's laptop. It is also why caching `assets/` in the workflow cannot ship first
-  (`docs/queue.md` item 9). Prompt 94 is written to fix it.
+- ~~**LIVE DEFECT — `--pull` NEVER CORRECTS A STALE LOCAL FILE, AND `--push` THEN REPUBLISHES IT (prompt
+  93, register §42).**~~ **CLOSED by prompt 94** (register §43): `scripts/sync_assets.py` now compares
+  bytes in both directions — size, then the listing's ETag against the local MD5, and a `head_object`
+  only for a multipart or absent ETag — so a cached file whose bytes differ is pulled again, and a key
+  that differs on both sides is reported as a CONFLICT instead of being silently republished. Pinned by
+  `tests/test_sync_assets.py`, whose regression test is
+  `test_pull_retakes_a_cached_file_whose_bytes_differ_from_the_bucket`.
+- **25 NBA DARK LOGOS DIFFER BETWEEN JOE'S `assets/` AND THE BUCKET — Joe's call (prompt 94).** The first
+  byte-comparing `--check` (2026-09-11) reports 25 conflicts, all `logos/nba-*_dark.png` (`nba-bkn` …
+  `nba-was`), the laptop's copies 1.5–2× the bucket's size. `--push --prefix logos/` from the laptop
+  would send the laptop's versions; `--pull` would replace them with the bucket's. **Neither was run.**
+  Until it is decided, a `--push` or `--pull` of `logos/` from the laptop is that decision, made by
+  accident. The same check lists 29 local-only files, among them retired and rejected art prompts 68–69
+  refused to publish — which is why a bare `--push` from the laptop stays a bad idea (`--existing-only`
+  exists for that).
 
 ## Working rules — not in this file
 

@@ -3572,3 +3572,73 @@ and the fallback is what has to be tested.
 **Also recorded:** the runner's `refresh` job starts with `assets/` holding exactly the five tracked
 fonts, so `git ls-files assets/` is the number any future `local cache:` line should equal on a cold
 runner. A different number means something is keeping state between runs.
+
+## 43. THE R2 SYNC COMPARES BYTES, WITH THE ETAG IT WAS ALREADY FETCHING — 2026-09-11, prompt 94
+
+**The defect (register §42).** `scripts/sync_assets.py` decided what to pull **by key alone** —
+`for key in remote: if key not in local` — so a file the cache already had was never re-downloaded,
+however far its bytes had drifted from the bucket. The push half DID compare bytes, so the next
+`--push` saw local ≠ remote and uploaded the stale copy over the newer object: art reverted, with no
+error. Invisible on the runner (nothing but the five tracked fonts survives a checkout), live on any
+machine that keeps an `assets/`.
+
+**The comparator was already in hand and thrown away.** `remote_objects()` has stored
+`{"size", "etag"}` for every key since the first version, and nothing read `etag`. For a single-part
+upload the ETag is the MD5 of the bytes, so a field the listing already returns answers "are these the
+same bytes" with no request at all. That is why the correctness fix and the speed fix are one change:
+the push's size-match branch used to fall through to a `head_object` per file — **1,533 a night, to
+push 0** (register §42).
+
+**Stage A, measured before anything was built (working rule 34)** — a throwaway read-only probe that
+listed and HEADed, and put, copied, deleted and downloaded nothing:
+
+- **A1, the premise holds.** 25 keys sampled from the 1,578 present on both sides; all 25 were
+  known byte-identical (`sha256` metadata == sha256 of the local file) and **all 25 had ETag == local
+  MD5**. A free pass over all 1,578 (no network) found 1,553 ETag == MD5 and 25 whose sizes differ;
+  every one of those 25 was HEADed and **none is known-identical** — they are real byte differences,
+  so the stop condition (a known-identical file whose ETag is not its MD5) did not fire. **No object
+  in the bucket carries a multipart ETag.**
+- **A2, the bucket by top-level prefix** (1,628 objects, 101.5 MB):
+
+  | prefix | objects | MB | in `FOLDERS` |
+  |---|---|---|---|
+  | `logos/` | 1,533 | 88.73 | yes |
+  | `grids/` | 50 | 10.15 | **no** |
+  | `network-logos/` | 31 | 0.85 | yes |
+  | `fonts/` | 5 | 1.47 | yes |
+  | `brand/` | 9 | 0.29 | yes |
+
+  `local_files()` walks only `FOLDERS`, so `grids/` could never be matched locally and would be pulled
+  forever even with the comparison fixed; the pull side now finds a cached copy at the path the key
+  itself names (`cache_path()`), which is what fixes the bucket rather than four prefixes.
+- **A3, sizes.** Local `assets/`: 1,722 files, 130.2 MB — including `handoff/`, `_audit_tmp/`,
+  `league-logos/`, `program-logos/` and `p73-banner-pin/`, none of which is in the bucket. Remote:
+  1,628 objects, 101.5 MB. Recorded for brief 95; not acted on.
+
+**The change.** One helper, `same_bytes()`: size differs → different, free; a 32-hex ETag with no `-` →
+compare with the local MD5, free; anything else → one `head_object` for the `sha256` metadata, which is
+the old test and **the case that keeps it correct** — deleting it silently breaks every multipart
+(>8 MB) upload. `plan()` computes both directions with one comparison per key: a key is pulled when the
+cache has no copy **or its bytes differ**, and a key that differs on both sides is a **CONFLICT** —
+`--push` sends the local copy, `--pull` takes the bucket's, the flag is the decision, and `--check`
+names it as one. `--force` and `--existing-only` keep their shape; nothing about what is uploaded
+changed. 16 tests in `tests/test_sync_assets.py`, and both required mutation checks failed when broken
+and passed when restored.
+
+**The live read-only check, 2026-09-11, on Joe's laptop:** `--check` ran in 4.3 s with **0**
+`head_object` calls — `unchanged 1553 · conflict (bytes differ) 25 · local-only 29 · bucket-only 50`.
+The 25 conflicts are `logos/nba-*_dark.png` (the laptop's copies are 1.5–2× the bucket's size); the 29
+local-only files include retired and rejected art that prompts 68–69 refused to publish; the 50
+bucket-only keys are all `grids/`. **None was resolved** — which side of each conflict is right is
+Joe's call (`docs/handoff-status.md`).
+
+**THE MULTIPART CAVEAT, for whoever touches this next:** a multipart upload's ETag is
+`<md5-of-part-md5s>-<N>` and is **not** an MD5 of the bytes. There are none in the bucket today; the
+fallback exists for the day there are, and a test pins it.
+
+**THE WORKFLOW IS LEFT ALONE, deliberately, until brief 95.** On the runner the pull is unchanged —
+its cache is empty, so every key is still bucket-only and 1,620 files still cross the wire twice a
+night — but the logo push should stop paying its 1,533 round trips at once; the next nightly's log will
+say so on its `sha256 look-ups (head_object)` line. Caching `assets/`, and whether the nightly should
+pull the whole bucket at all when `logos/` is 88.7 of its 101.5 MB and `grids/` sits outside `FOLDERS`,
+is brief 95's question, and this section is its evidence.

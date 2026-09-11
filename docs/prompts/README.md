@@ -13,7 +13,7 @@ and they are not going to be found** — see "The two gaps" below.
 
 **UPDATED 2026-09-10 BY PROMPT 87: 91 briefs, covering 01–87 — 92 covering 01–88 since prompt 88,
 93 covering 01–89 since prompt 89, 94 covering 01–91 with 90 to follow since prompt 91, 95 covering
-01–91 since prompt 90, 96 covering 01–92 since prompt 92, 98 covering 01–93 since prompt 93 — and 39 and 42 are still the only permanent gaps.** The count above was a timestamp twice over: prompt 81 had filed itself without the
+01–91 since prompt 90, 96 covering 01–92 since prompt 92, 98 covering 01–93 since prompt 93, 99 covering 01–94 since prompt 94 — and 39 and 42 are still the only permanent gaps.** The count above was a timestamp twice over: prompt 81 had filed itself without the
 count moving, and 61–80 and 82–87 were never filed at all. Prompt 87 copied those 28 files from
 `Claude outputs\` (see Provenance), and **86 carries three** — see "Duplicate numbers".
 
@@ -35,8 +35,8 @@ with `-superseded` in the name.
 
 ## What is here
 
-Ninety-eight briefs, `NN-slug.md` (this line said fifty-one until prompt 87, ninety-one until 88,
-ninety-two until 89, ninety-three until 91, ninety-four until 90, ninety-five until 92, ninety-six until 93 — counted from the directory each time, not incremented). Numbers in **bold** carry
+Ninety-nine briefs, `NN-slug.md` (this line said fifty-one until prompt 87, ninety-one until 88,
+ninety-two until 89, ninety-three until 91, ninety-four until 90, ninety-five until 92, ninety-six until 93, ninety-eight until 94 — counted from the directory each time, not incremented). Numbers in **bold** carry
 more than one file or are otherwise not what the number alone suggests; everything else is one brief,
 one file.
 
@@ -142,6 +142,7 @@ one file.
 | **91** | `91-autonomy-default.md` — *the text that ran, from `RUN-1-commit-89-and-autonomy-2026-09-11.md`; an earlier Block-1-only draft survives as `prompt-91-autonomy-default-2026-09-11.md` in `Claude outputs\` and was NOT filed, because the run's scope named only this path* |
 | 92 | `92-refresh-timeout.md` — *RUN 3, filed by the run it describes* |
 | 93 | `93-r2-sync-diagnosis.md` — *rev C, the text that ran. Revs A and B each stopped at their own stop condition before any change and are NOT filed; rev B carried rev A's corrected content in full, and the incident is in `docs/rules-casebook.md` (rules 30 and 33)* |
+| 94 | `94-r2-byte-compare.md` — *filed by the run it describes* |
 
 ## What is NOT here — the two gaps
 
@@ -217,6 +218,7 @@ briefs' titles against later ones, not a record anybody wrote at the time.
 | 91 | `Claude outputs\RUN-1-commit-89-and-autonomy-2026-09-11.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`7973fa98…1ca9`, 16,549 bytes), LF |
 | 92 | `Claude outputs\RUN-3-raise-refresh-timeout-2026-09-11.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`472ef2c8…e612`, 7,754 bytes), LF |
 | 93 | `Claude outputs\RUN-4-rev-C-mirror-and-queue9-2026-09-11.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`b4e4b6fb…e48f`, 12,893 bytes), LF |
+| 94 | `Claude outputs\prompt-94-r2-byte-compare-2026-09-11.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`9521203e…433e`, 13,852 bytes), LF |
 | 48 (second file) | `handoff/project-mirror/claude_phase4-claude-code-prompt-48-programs-live.md` (gitignored, deleted by prompt 93 after this copy) — copied with `shutil.copyfile`, whole file byte-identical by `sha256` (`84358ed7…366b`, 9,684 bytes), LF, nothing added |
 
 The fifteen filed by prompt 49 were copied with `shutil.copyfile` and verified byte-identical to
