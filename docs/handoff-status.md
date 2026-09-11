@@ -10,7 +10,7 @@ sections, and the older measurement records. **This file stays the authority for
 repo state, gate floors, open items; since prompt 89 the working rules are `CLAUDE.md`'s alone. Read
 the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§38, all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§39, all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **92 briefs, covering 01–88, since prompt 87 filed
-61–80 and 82–87 and prompt 88 filed itself** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **94 briefs, covering 01–91 with 90 still to be filed by its
+own later run, counted 2026-09-11 (prompt 91; this line said 92 until then, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
 count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -57,6 +57,9 @@ main, HEAD is prompt 66. **THIS IS THE ONLY PLACE THE GATE FLOORS ARE RECORDED.*
 carried a second copy and it was wrong four times in one week (prompts 62, 63, 64, and again between
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
+
+**Re-measured 2026-09-11, run 1 (prompts 89 and 91) — no count moved; both are documents and one config
+file.** The line below is prompt 88's.
 
 **Measured 2026-09-10, prompt 88 blocks A and B — after the last gate run, not during it; committed
 as `8f3b3c1`.** Block A moved `pytest` 543 → 544; block B moved no count; the prompt 88 follow-up
@@ -843,6 +846,11 @@ before touching any count line.
   Renormalising rewrites every one and touches blame, so it is its own commit and Joe's sign-off. This
   item lived inside the old rule 29 text until prompt 89 moved the rules out; the incident and how it
   hid are in `docs/rules-casebook.md`, rule 29.
+- **`.claude/settings.json` is friction reduction, not a security boundary** (prompt 91, register §39).
+  Its allow and deny rules are prefix matches per tool: a differently spelled command, a script that
+  opens a file itself, or a `grep -r` that happens to cross `.env` all pass them. The stop list in
+  `CLAUDE.md` `## Committing` is the real control. **The OS-level option — Claude Code's sandboxing —
+  exists and has not been evaluated.** Not evaluated here either.
 
 ## Working rules — not in this file
 

@@ -3360,3 +3360,46 @@ rules 19, 21–24 and 26–34 (11,105 bytes of it by a per-rule comparison). The
 the old rule text — the line-ending renormalisation open item — moved to `handoff-status.md`'s `## Open`
 list, re-measured at 21 files. `CLAUDE.md`'s 36 rule texts are byte-identical before and after. Queue
 item 8 is closed by this entry.
+
+---
+
+## 39. SELF-COMMIT IS THE DEFAULT, AND THE STOP LIST IS UNWAIVABLE — 2026-09-11, prompt 91
+
+**JOE'S RULING, 2026-09-11.** Self-committing stages and a push on green gates become the default for
+every brief, not the exception. In exchange, a short list of stops becomes unwaivable — no brief may
+authorize past it. Two-strikes-skip is **not** extended to attended runs; it stays an unattended-run
+behaviour. Working rule 7 carries the default; `CLAUDE.md` `## Committing` carries the stop list and
+the undo-block requirement.
+
+**The four reasons, recorded so they are not re-argued.**
+
+- **Gating the commit was close to pure cost.** An uncommitted working tree is not safer than a commit;
+  it is less reviewable. A commit gives a stable SHA, a clean diff and `git revert` as a one-command
+  undo; a dirty tree gives a diff against a moving baseline and no undo but `checkout --`.
+- **The push is cheap here specifically.** A bad deploy on a single-user personal app costs Joe a broken
+  page for the minutes until a revert deploys — and Vercel is the only compile check that exists
+  (working rule 12), so gating the deploy made the compile check late and rare.
+- **The one thing a push makes truly irreversible is a leaked secret**, so the secret gate is a stop no
+  brief can authorize past.
+- **The undo must be rehearsed, not theoretical**, so every self-committing run ends with an undo block:
+  the real revert commands, which stages were one-way, and the deploy result.
+
+**The stop list (S1–S7, in `CLAUDE.md` `## Committing`).** A secret-gate hit on added lines; any
+database write or DDL; a force-push, history rewrite or branch deletion; a gate that fails and cannot be
+made to pass; deleting or overwriting a tracked file outside the brief's named scope; any write to
+`.env`, `.env.example` or `.gitignore`'s credential lines; an R2 object deletion. It overrides any
+brief, and a brief that appears to authorize one of them is itself the error to report. Labelled S1–S7
+rather than 1–7 so a stop is never mistaken for a numbered working rule.
+
+**The cost Joe accepted.** This trades a pre-commit gate for a post-commit review, and **the review has
+to actually happen before the next brief is written** — otherwise the default quietly becomes
+"commit and nobody looks". It is also two-sided: every brief must now name the paths it may touch, or
+S5 has no definition.
+
+**What came with it.** `.claude/settings.json` (committed, project-level): an allow list for this
+project's constant, read-only or locally reversible commands and a deny list for the dangerous ones.
+Verified live on Claude Code 2.1.178: a denied command refuses rather than prompts, including a
+`--force` placed after the branch and the PowerShell twin of a rule. **It is friction reduction, not a
+security boundary** — prefix matching, per-tool prefixes and path rules are all bypassable by a
+differently spelled command or a script that opens a file itself. The stop list, which governs intent,
+is the real control.

@@ -20,10 +20,10 @@ they live here and nowhere else.
 | the closed history — past run narratives, superseded sections | `docs/handoff-archive.md` (split out by prompt 87; `handoff-status.md` wins on current state) |
 | the incidents behind the working rules — history, non-binding | `docs/rules-casebook.md` |
 | real work that is understood and not started, and decisions waiting on Joe | `docs/queue.md` |
-| why a decision was made, and whether it is already settled | `docs/enhancement-register.md` (§1–§38) |
+| why a decision was made, and whether it is already settled | `docs/enhancement-register.md` (§1–§39) |
 | what a card, block or grid is supposed to look like | `docs/rendering-contract.md` + `docs/rendering-contract-mobile.md` (the Mobile Grid Addendum) |
 | the locked visual reference the app must match | `docs/design/mobile_demo.html` |
-| what a past run was actually asked to do | `docs/prompts/` — 93 briefs covering 01–89, verbatim; 39 and 42 are the only gaps, and 86 carries three revisions (see its README) |
+| what a past run was actually asked to do | `docs/prompts/` — 94 briefs covering 01–91, verbatim; 39 and 42 are the only permanent gaps, 90 is filed by its own later run (numbers are identifiers, not run order), and 86 carries three revisions (see its README) |
 | deploy, environment, what is publishable | `docs/deployment-contract.md` |
 | the first build specs — superseded, do not build from them | `docs/archive/` (moved out of the repo root by prompt 87) |
 
@@ -64,8 +64,10 @@ even around the retired stub.
 4. Stage by explicit path. Never `git add -A`.
 5. Run the workflow; never Re-run it.
 6. Database: additive over destructive; SELECT and paste first; close (`valid_to`), don't delete.
-7. Unattended runs: self-committing stages, two-strikes-skip, hard stops only for a secret-gate hit,
-   a destructive database operation, or a rejected push.
+7. **Every brief self-commits its stages and pushes when all five gates pass, unless it says
+   otherwise** — a brief that wants a stop says so; silence means proceed. A red gate is never
+   committed over. Two-strikes-skip is for unattended runs only: an attended run stops and reports a
+   stage that fails twice. **The stop list in `## Committing` is unwaivable.**
 8. WUAB and RESN sources are never named.
 9. Loader-written provider facts never become reconciled observations.
 10. Check the register, the home-page decision record and `handoff-status.md` before re-raising a
@@ -281,8 +283,45 @@ holds at any absolute value.
 
 ## Committing
 
-**Never commit or push without Joe's explicit approval**, and never during an unattended run except
-where that run's own brief authorizes its stages to self-commit. Preserve intentionally
+**Every brief self-commits its stages and pushes when all five gates pass, unless the brief says
+otherwise** (working rule 7; Joe's ruling, 2026-09-11, register §39). A brief that wants a stop says
+so, and silence means proceed. Preserve intentionally
 known-broken states rather than tidying them. `assets/` is always untracked and is not drift.
 
 Commit messages are lower-case, and say what shipped rather than what was touched.
+
+### THE STOP LIST — seven things no brief may authorize past
+
+**This list is unwaivable. It overrides any brief, including one that appears to authorize the action
+— and a brief that contains such an authorization is itself the error to report.** Labelled S1–S7 so
+they are never confused with the numbered working rules.
+
+- **S1 — A secret-gate hit on added lines.** A pushed secret is the only truly irreversible outcome in
+  this repo; the fix is rotating the credential in three places.
+- **S2 — Any database write, and any DDL.** Working rule 14 already forbids a session using the
+  `mysports_writer` credential; this makes it unwaivable, so no brief can read the two as in tension.
+- **S3 — `git push --force`, any history rewrite, any branch deletion.** A revert is recoverable; a
+  pushed rewritten history is not, reliably.
+- **S4 — A gate that fails and cannot be made to pass.** Never commit or push over a red gate. Stop and
+  report which gate and what it said.
+- **S5 — Deleting or overwriting a tracked file outside the scope the brief names.** A brief names the
+  paths it may touch; anything outside that is a stop, not a judgment call.
+- **S6 — Any write to `.env`, `.env.example`, or `.gitignore`'s credential lines.**
+- **S7 — An R2 object deletion.** The upload is atomic per file, so an overwrite leaves the previous
+  bytes gone.
+
+### The undo block — every self-committing run ends its report with one
+
+Three things, no prose:
+
+- **The exact revert command with the real SHA filled in** — not a template. Several commits means
+  all of them, in the order they must be reverted (newest first).
+- **Which stages were one-way**, if any, and what undoing them would actually require. A committed file
+  deletion is not one-way; a dispatched workflow that wrote rows is.
+- **Whether the push deployed**, and the Vercel result.
+
+A run with nothing irreversible says so explicitly rather than omitting the block.
+
+**What this asks of Cowork, since the change is two-sided:** every brief names the paths it may touch,
+so S5 has a definition. A brief that does not name its scope is incomplete, and Claude Code says so
+rather than inferring one.

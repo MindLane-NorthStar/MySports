@@ -12,7 +12,8 @@ were filed from `Claude outputs\` afterwards; prompts 53-60 filed themselves. **
 and they are not going to be found** — see "The two gaps" below.
 
 **UPDATED 2026-09-10 BY PROMPT 87: 91 briefs, covering 01–87 — 92 covering 01–88 since prompt 88,
-93 covering 01–89 since prompt 89 — and 39 and 42 are still the only missing numbers.** The count above was a timestamp twice over: prompt 81 had filed itself without the
+93 covering 01–89 since prompt 89, 94 covering 01–91 with 90 to follow since prompt 91 — and 39 and
+42 are still the only permanent gaps.** The count above was a timestamp twice over: prompt 81 had filed itself without the
 count moving, and 61–80 and 82–87 were never filed at all. Prompt 87 copied those 28 files from
 `Claude outputs\` (see Provenance), and **86 carries three** — see "Duplicate numbers".
 
@@ -34,8 +35,8 @@ with `-superseded` in the name.
 
 ## What is here
 
-Ninety-three briefs, `NN-slug.md` (this line said fifty-one until prompt 87, ninety-one until 88,
-ninety-two until 89 — counted from the directory each time, not incremented). Numbers in **bold** carry
+Ninety-four briefs, `NN-slug.md` (this line said fifty-one until prompt 87, ninety-one until 88,
+ninety-two until 89, ninety-three until 91 — counted from the directory each time, not incremented). Numbers in **bold** carry
 more than one file or are otherwise not what the number alone suggests; everything else is one brief,
 one file.
 
@@ -136,6 +137,8 @@ one file.
 | 87 | `87-closeout-backfill-preview.md` — *filed by the run it describes* |
 | 88 | `88-nfl-window-rule14.md` — *written into the tree by Cowork before the run; committed with its work* |
 | 89 | `89-rules-ownership-casebook.md` — *copied from `Claude outputs\` by the run it describes, byte-identical by `sha256`* |
+| **90** | *not yet filed — runs AFTER 91, in RUN 2; the numbers are identifiers, not a run order* |
+| **91** | `91-autonomy-default.md` — *the text that ran, from `RUN-1-commit-89-and-autonomy-2026-09-11.md`; an earlier Block-1-only draft survives as `prompt-91-autonomy-default-2026-09-11.md` in `Claude outputs\` and was NOT filed, because the run's scope named only this path* |
 
 ## What is NOT here — the two gaps
 
@@ -197,6 +200,7 @@ briefs' titles against later ones, not a record anybody wrote at the time.
 | 61–80, 82–87 | `Claude outputs\prompt-NN[-slug].md` — filed by prompt 87 with `shutil.copyfile`, **28 of 28 byte-identical by `sha256`**, zero collisions, all LF. `81` was already here and is byte-identical to its `Claude outputs\` copy |
 | 88 | written into `docs/prompts/` directly by Cowork before the run, and committed with its work (`8f3b3c1`) |
 | 89 | `Claude outputs\prompt-89-rules-ownership-casebook-2026-09-11.md` — copied by prompt 89 with `shutil.copyfile`, byte-identical by `sha256` (`0b2ceb13…498b`, 17,434 bytes), LF |
+| 91 | `Claude outputs\RUN-1-commit-89-and-autonomy-2026-09-11.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`7973fa98…1ca9`, 16,549 bytes), LF |
 
 The fifteen filed by prompt 49 were copied with `shutil.copyfile` and verified byte-identical to
 their sources by `sha256`. The 36 filed by prompt 50 were extracted from
