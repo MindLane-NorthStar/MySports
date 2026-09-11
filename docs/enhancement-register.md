@@ -3480,3 +3480,51 @@ grid showed no CFB rank on week 2 (`MobileGrid.js:98` reads `game.home_rank`); t
 
 **The data had not landed when this was written.** Prompt 90 wrote no row: the nightly Action does,
 under working rule 14. Cowork verifies the rows in the database, not from the run's log.
+
+## 41. THE REFRESH JOB GETS 35 MINUTES — 2026-09-11, prompt 92
+
+**What happened.** `schedule_refresh` run #18 (the 07:00 ET schedule, 2026-09-11, on `09dcf72` — before
+prompts 89, 90 and 91 were pushed, so entirely on old code) ended with "The job has exceeded the
+maximum execution time of 20m0s." The `refresh` job (`.github/workflows/schedule_refresh.yml:16`) had
+`timeout-minutes: 20`. `render` declares `needs: refresh` (`:288`, `:289` after this change), so it was
+skipped and the grids did not regenerate that morning. **A pre-existing ceiling, not a consequence of
+prompts 89–91.**
+
+**Where the job got to — two measurements, and they differ on the tail.** Cowork read the database:
+`refresh_runs` 142–146 and the CFB week-15 `games.updated_at` put Standings at 14:51:49 UTC, CFB polls
+14:52:02, program eligibility 14:54:24, the loader 14:58:06, **the CFB enrichment step 15:02:31**,
+canonical reconcile 15:02:33 — about 18 minutes into a job that started at 14:44. That agrees with the
+runner. **The tail does not:** Cowork recorded the unit tests, watch links and archive as never
+completing, from their absence in the database — but none of the three writes a row there, so the
+database could not have shown them. The runner's own step record (`gh run view 34611905540`, read by
+prompt 92) says the unit tests and the watch-link report **succeeded**, and the kill landed in the last
+real step, **Archive fixtures + raw payloads**, cancelled at 15:04:21, 20m03s after the job started.
+Every canonical write in the run committed; what the timeout cost was the archive upload and, through
+`needs: refresh`, the render.
+
+**The durations, job-level.** The brief quoted 18, 22 and 23 minutes for the successful 2026-09-10 runs;
+those are whole-run times, `refresh` plus `render`. The `refresh` job alone, by run: #13 8m11s, #14
+9m46s, #15 15m31s, #16 10m19s, #17 15m16s, **#18 20m07s (killed)**. Per step, the time is not in the
+provider fetches (seconds each): it is the **R2 asset pull (4m → 7m)**, the **R2 logo push (2m → 3m)**
+and the **loader (0m55s → 4m25s)**. And #18 was a slow run on top of a grown job: every database-bound
+step ran 2–5× slower than in #17 (standings 7s → 12s, studio shows 33s → 1m08s, program eligibility
+12s → 26s, the loader 2m20s → 4m25s, the archive 33s → 1m33s) while the R2 pull was flat.
+
+**NOTHING REGRESSED; THE WORK OUTGREW THE BOX.** No code change made a step slow — prompt 88's
+eight-date NFL loop costs three seconds, and the CFB enrichment step has run in one to four (on its
+pre-prompt-90 code; the new code has not yet run on a runner). The
+job roughly doubled in three days as the asset cache and the loaded schedule grew, and a slow morning
+put it over a ceiling that had been tight since the start. Prompt 90 adds to that step a week-range
+query, a CFBD `/records` fetch and an upsert of roughly 680 rows; dispatching it at 20 minutes would
+have been a coin flip.
+
+**THE NUMBER: 35.** Fifteen minutes over the ceiling #18 exhausted and more than double the slowest
+successful job (15m31s), and still low enough that a genuinely hung job fails inside the hour instead of
+burning a runner. The comment above the line records the old value, the date and run #18, so the next
+reader knows it was measured. Nothing else in the workflow changed — not the step order, not the CFB
+step's position, not `render`.
+
+**What this does not fix, recorded so it is not mistaken for done.** Raising a ceiling buys headroom; it
+does not stop the job growing. **The durable fix is splitting the job** — a design question about
+ordering and failure isolation, and queue item 7 (the schedule to April 2027) makes it pressing. It is
+`docs/queue.md` item 9, described and not approved.

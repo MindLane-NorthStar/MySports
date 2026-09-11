@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **95 briefs, covering 01–91, counted 2026-09-11 by prompt 90
-(it said 94 with 90 still to be filed until then; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **96 briefs, covering 01–92, counted 2026-09-11 by prompt 92
+(95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
 count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -57,6 +57,8 @@ main, HEAD is prompt 66. **THIS IS THE ONLY PLACE THE GATE FLOORS ARE RECORDED.*
 carried a second copy and it was wrong four times in one week (prompts 62, 63, 64, and again between
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
+
+**Re-measured 2026-09-11, run 3 (prompt 92) — no count moved; a workflow timeout and documents.**
 
 **Measured 2026-09-11, run 2 (prompt 90) — `pytest` 544 → 569** (`tests/test_enrich_cfb_records.py`, 25);
 the other four did not move, and geometry's figures are unchanged because the CFB rows have not landed.
@@ -872,6 +874,14 @@ before touching any count line.
   (`web/lib/standings.js:103-105` and `:167` say exactly this). Once `--current-week` runs the grid's
   number will be current again, but it stays label-less. What the compact grid run should show is a
   design question, and it is Joe's. **Not fixed here.**
+- **THE `refresh` JOB REACHES THE CFB STEP AT ~18 OF WHAT WERE ITS 20 MINUTES (prompt 92, register §41).**
+  Run #18 (2026-09-11, old code) was killed at 20m03s: the CFB enrichment step ran at ~18 minutes, the
+  unit tests and the watch-link report completed, and the archive upload — the last real step — was
+  cancelled. Because `render` `needs: refresh`, **the grids did not regenerate that morning**, and they
+  will not on any morning the job overruns. Prompt 92 raised the ceiling to 35
+  (`schedule_refresh.yml:19`); successful jobs run 8–16 minutes, most of it the R2 asset pull (4–8m),
+  the R2 logo push (2–3m) and the loader (1–4m). **Headroom, not a fix** — the durable fix is splitting
+  the job, `docs/queue.md` item 9, not approved. Prompt 92 did not dispatch the workflow; Joe does.
 
 ## Working rules — not in this file
 

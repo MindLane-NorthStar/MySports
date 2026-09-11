@@ -15,7 +15,8 @@ concurrency: { group: mysports-refresh, cancel-in-progress: false }
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # was 20 until 2026-09-11 (prompt 92, register §41): run #18 was killed at that ceiling - measured, not guessed
+    timeout-minutes: 35
     outputs:
       date: ${{ steps.when.outputs.date }}
     env:

@@ -100,3 +100,34 @@ days) rather than typed.
 - **UFC cannot be built that far at all**: the source announces cards 8–12 weeks out.
 
 **Size.** Large, and mostly decisions.
+
+## 9. Split the `refresh` job
+
+**Numbered 9, not 8:** "queue item 8" already names the working-rules entry that register §38 closed and
+`handoff-status.md` cites, and a reused number would make those references ambiguous.
+
+**What.** `schedule_refresh.yml`'s `refresh` job does everything in one box: eight provider fetches, the R2
+asset pull and logo push, the program adapters, the loader, two reconcilers, the resolver unit tests, the
+watch-link report and the archive upload. Run #18 on 2026-09-11 overran its 20-minute ceiling and failed,
+and because `render` declares `needs: refresh` (`:289`), **one overrun anywhere in the job — even in a
+step that writes nothing — costs the day's grids.** Prompt 92 raised the ceiling to 35 (register §41);
+that is headroom, not a fix.
+
+**The evidence** (`gh run view`, job-level; register §41 has the full table). `refresh` took 8m11s
+(09-08), 9m46s (09-09), 15m31s, 10m19s and 15m16s (09-10/11), then 20m07s and was killed. The time is
+the **R2 asset pull (4–8m)**, the **R2 logo push (2–3m)** and the **loader (1–4m)**; the provider fetches
+take seconds each. #18 was also a slow morning: every database-bound step ran 2–5× slower than in #17.
+
+**The natural cut** is the three tail steps — **Unit tests (resolver)** (`:265`), **Watch links** (`:267`)
+and **Archive fixtures + raw payloads** (`:281`) — because **none of them writes canonical data**: the
+render does not need them to have run, and #18's kill landed in the archive, after every canonical write
+had committed. Measured, they cost 0.5–2 minutes, so cutting them buys **failure isolation** (a slow
+archive can no longer skip the render) more than time. The minutes live in the R2 sync, which is the
+other half of the design question.
+
+**Why it is pressing.** Queue item 7 — the schedule built out to April 2027 — grows the loader's input
+and the asset cache, which are exactly the steps that have been growing.
+
+**Size.** Medium: a workflow restructure (job boundaries, `needs:`, what each job checks out and
+caches), proved by dispatches rather than by any local gate. **A description of a problem, not an
+approved plan.**
