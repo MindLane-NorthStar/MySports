@@ -113,21 +113,49 @@ and because `render` declares `needs: refresh` (`:289`), **one overrun anywhere 
 step that writes nothing — costs the day's grids.** Prompt 92 raised the ceiling to 35 (register §41);
 that is headroom, not a fix.
 
-**The evidence** (`gh run view`, job-level; register §41 has the full table). `refresh` took 8m11s
-(09-08), 9m46s (09-09), 15m31s, 10m19s and 15m16s (09-10/11), then 20m07s and was killed. The time is
-the **R2 asset pull (4–8m)**, the **R2 logo push (2–3m)** and the **loader (1–4m)**; the provider fetches
-take seconds each. #18 was also a slow morning: every database-bound step ran 2–5× slower than in #17.
+**The evidence — the cost is the R2 pull, twice** (prompt 93, register §42). Every successful run read —
+#15, #16 and #17, 2026-09-10/11, `gh run view --log` — prints this in `refresh`'s "Pull asset cache
+from R2" step (`schedule_refresh.yml:45`, `sync_assets.py --pull`):
 
-**The natural cut** is the three tail steps — **Unit tests (resolver)** (`:265`), **Watch links** (`:267`)
-and **Archive fixtures + raw payloads** (`:281`) — because **none of them writes canonical data**: the
-render does not need them to have run, and #18's kill landed in the archive, after every canonical write
-had committed. Measured, they cost 0.5–2 minutes, so cutting them buys **failure isolation** (a slow
-archive can no longer skip the render) more than time. The minutes live in the R2 sync, which is the
-other half of the design question.
+```
+bucket mysports-assets: 1625 objects; local cache: 5 files
+  unchanged 5 · local-only/changed 0 · bucket-only 1620
+pulled 1620 file(s) <- mysports-assets
+```
+
+**and `render` prints the same three lines and pulls the same 1,620 again** (`render_all.yml:33`, the
+same `--pull`) — seven to eight more minutes a night. The five that are not pulled are the five fonts
+git tracks under `assets/fonts/`; `git ls-files assets/` is the check, and it returns 5.
+
+**Why nothing prevents it.** `actions/cache` appears nowhere in `schedule_refresh.yml`; `cache: pip` at
+`:35` is the only cache and it covers pip's wheels. A checkout materializes only the five fonts.
+`sync_assets.py:60-72` `local_files()` returns only what is on disk, `:312-314` puts every remote key
+that is not in that map on the pull list, and `:336-346` downloads them one at a time.
+
+**The push's second cost.** `--push --prefix logos/ --make-dark` (`schedule_refresh.yml:253`) compares
+sizes at `sync_assets.py:308` and, when they match, calls `remote_sha()` (`:92-96`) — a `head_object`
+per file — and the size always matches for a file pulled minutes earlier. Measured in the same runs:
+`bucket mysports-assets: 1533 objects; local cache: 1533 files (prefix logos/)`, `unchanged 1533`,
+`pushed 0`. That is 1,533 sequential round trips to learn nothing changed.
+
+**The defect on the same line.** `:312-314` decides what to pull **by key alone**, so a local file that
+exists is never re-downloaded however far its bytes have drifted from the bucket, and the next `--push`
+compares sizes and shas, finds them different, and republishes the stale bytes over the newer object.
+Art reverts, silently. It is invisible on the runner today, whose cache holds nothing but the five
+tracked fonts, and live on any machine that keeps an `assets/`. **Caching `assets/` cannot ship before
+this is fixed**, because a warm cache is exactly the condition that turns the defect from theoretical
+into nightly. **Prompt 94 is written to fix it.**
+
+**The tail-step cut is demoted, not deleted.** Unit tests (resolver) (`:265`), Watch links (`:267`)
+and Archive fixtures + raw payloads (`:281`) cost 0.5–2 minutes between them: **the split was never
+where the time was.** What it still buys is failure isolation — `render` declares `needs: refresh`
+(`:289-290`), so a slow archive, which is where run #18's kill landed, costs the day's grids. With
+prompt 92's 35-minute ceiling and a cached `assets/`, the split becomes a robustness decision rather
+than a deadline.
 
 **Why it is pressing.** Queue item 7 — the schedule built out to April 2027 — grows the loader's input
 and the asset cache, which are exactly the steps that have been growing.
 
-**Size.** Medium: a workflow restructure (job boundaries, `needs:`, what each job checks out and
-caches), proved by dispatches rather than by any local gate. **A description of a problem, not an
-approved plan.**
+**Size.** Two pieces, and the order is the point: prompt 94's pull correctness fix first, then a cache
+for `assets/` that `refresh` and `render` can share, proved by dispatches rather than by any local gate;
+the job split after that, if it is still wanted. **A description of a problem, not an approved plan.**

@@ -243,3 +243,30 @@ authority and memory is not.
 **The cheap defence is that platform claims are the easiest of all to check** — one search, and
 the answer is normative rather than a judgement. Anything phrased as "X creates/blocks/prevents
 Y" is the shape to distrust.
+
+### Rules 30 and 33 — one brief, three revisions, no change reached the tree (2026-09-11, prompt 93)
+
+On 2026-09-11 a Cowork brief (prompt 93, rev A) asserted that `assets/` was untracked, inferring it
+from `assets/` being absent from `.gitignore` and from the standing "clean apart from `assets/`"
+precondition. `git ls-files assets/` returns five tracked fonts. **The brief's own stop condition caught
+it:** it required the runner's `local cache:` count to be 0, the logs said 5, and the run held before
+any change. The inference is rule 30's shape — the label was checked, the thing was not.
+
+The same brief asserted that every file in the gitignored Project mirror under `handoff/` was a copy of
+a tracked document, and briefed the directory for deletion with an undo block that relied on it. **One
+of fifteen was not:** a 9,684-byte prompt-48 text with no byte-identical blob anywhere in git history
+and no copy anywhere under the repo. Deleting the directory as briefed would have destroyed the only
+copy. That claim is rule 33's shape — a statement that something exists elsewhere, relied on without
+opening the thing it names. The run found it while checking the claim, not because a gate asked.
+
+Rev B corrected both and **stopped again, because its own stop condition could not pass**: it required
+a recursive grep for the mirror directory's name to find only `.gitignore:28`, while its stage A mandated writing a provenance
+header naming that path, and while the brief itself sat in untracked scratch under the repo, naming it.
+The grep also found six closed briefs under `docs/prompts/` that name the path — history, not readers.
+Rev C restricted the check to `git grep … -- ':!docs/prompts/'`, dropped the header in favour of the
+README's provenance row, and ran.
+
+**What each stop caught:** rev A's, a false premise about the runner (fonts); the check behind rev A's
+undo block, an irreplaceable file; rev B's, a condition no run could satisfy. **No change reached the
+tree until rev C** — rev B's one staged file was taken back out of the index and deleted when its stop
+fired, leaving the tree exactly as it started.

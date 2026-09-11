@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **96 briefs, covering 01–92, counted 2026-09-11 by prompt 92
-(95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **98 briefs, covering 01–93, counted 2026-09-11 by prompt 93
+(96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
 count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -57,6 +57,9 @@ main, HEAD is prompt 66. **THIS IS THE ONLY PLACE THE GATE FLOORS ARE RECORDED.*
 carried a second copy and it was wrong four times in one week (prompts 62, 63, 64, and again between
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
+
+**Re-measured 2026-09-11, run 4 (prompt 93) — no count moved; one prompt filed, one untracked directory
+deleted, documents.**
 
 **Re-measured 2026-09-11, run 3 (prompt 92) — no count moved; a workflow timeout and documents.**
 
@@ -882,6 +885,14 @@ before touching any count line.
   (`schedule_refresh.yml:19`); successful jobs run 8–16 minutes, most of it the R2 asset pull (4–8m),
   the R2 logo push (2–3m) and the loader (1–4m). **Headroom, not a fix** — the durable fix is splitting
   the job, `docs/queue.md` item 9, not approved. Prompt 92 did not dispatch the workflow; Joe does.
+- **LIVE DEFECT — `--pull` NEVER CORRECTS A STALE LOCAL FILE, AND `--push` THEN REPUBLISHES IT (prompt 93,
+  register §42).** `scripts/sync_assets.py:312-314` decides what to pull by key alone: a key already in
+  the local `assets/` is never re-downloaded, however far its bytes have drifted from the bucket. The
+  next `--push` compares size and sha256, finds them different, and uploads the stale local bytes over
+  the newer object. **The symptom: art that reverts after a nightly, with no error anywhere.** Invisible
+  on the runner, which starts each night with only the five tracked fonts; live on any machine that
+  keeps an `assets/` — Joe's laptop. It is also why caching `assets/` in the workflow cannot ship first
+  (`docs/queue.md` item 9). Prompt 94 is written to fix it.
 
 ## Working rules — not in this file
 

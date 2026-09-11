@@ -3528,3 +3528,47 @@ step's position, not `render`.
 does not stop the job growing. **The durable fix is splitting the job** — a design question about
 ordering and failure isolation, and queue item 7 (the schedule to April 2027) makes it pressing. It is
 `docs/queue.md` item 9, described and not approved.
+
+## 42. THE R2 PULL DOWNLOADS THE WHOLE BUCKET TWICE A NIGHT, AND THE SAME LINE IS A DEFECT — 2026-09-11, prompt 93
+
+**The measurement** (`gh run view --log`, runs #15, #16 and #17, 2026-09-10/11). `refresh`'s "Pull asset
+cache from R2" step prints `bucket mysports-assets: 1625 objects; local cache: 5 files`, then
+`unchanged 5 · local-only/changed 0 · bucket-only 1620` and `pulled 1620 file(s)`. **`render` prints the
+same lines and pulls the same 1,620 again** (`render_all.yml:33`), so the whole bucket crosses the wire
+twice a night. The logo push (`schedule_refresh.yml:253`) then compares 1,533 objects and pushes 0:
+`sync_assets.py:308` checks sizes and, when they match — always, for a file pulled minutes earlier —
+calls `remote_sha()` (`:92-96`), one sequential `head_object` per file. This is where register §41's
+"R2 asset pull (4–8m)" and "R2 logo push (2–3m)" went.
+
+**Why:** a checkout materializes only what git tracks, there is no `actions/cache` in the workflow (the
+only cache is `cache: pip`, `:35`), `local_files()` (`sync_assets.py:60-72`) returns only what is on disk,
+and `:312-314` pulls every remote key the local map lacks.
+
+**THE COST AND THE DEFECT ARE THE SAME LINE.** `:312-314` decides by key alone, so a local file that
+exists is never re-downloaded however far its bytes have drifted, and the next `--push` republishes the
+stale bytes over the newer object — art that reverts after a nightly, silently. On the runner it cannot
+fire, because nothing but the five fonts survives a checkout; on a machine that keeps `assets/` it is
+live. **That is why caching `assets/` — the obvious way to buy back the minutes — cannot ship on its
+own:** a warm cache is exactly the condition that turns the defect nightly. The correctness fix is the
+enabling change, not a nicety.
+
+**The correction to rev A's fact 1, and how it was caught.** Prompt 93's first revision stated that a
+checkout materializes nothing under `assets/`. **It does: five tracked fonts under `assets/fonts/`.**
+Cowork had inferred "untracked" from `assets/` being absent from `.gitignore` and from every brief's
+"clean apart from `assets/`" precondition, and never ran `git ls-files assets/` — the label was
+checked and the thing was not (working rule 30). The brief's own stop condition, "local cache: N files
+with N not 0", fired on exactly those five and held the run before any change; the diagnosis survived,
+since 1,620 of 1,625 is the whole bucket less the files git checks out. Rev A's other unverified claim —
+that every file in the gitignored Project mirror under `handoff/` was a copy of a tracked document —
+was false for one of fifteen; see `docs/rules-casebook.md` and the prompts README's row for
+`48-programs-live-part-2.md`.
+
+**THE RULING: the fix is deferred to its own brief, prompt 94,** because the comparison strategy is a
+design choice that was Joe's to make: the ETag `list_objects_v2` already returns for every object, free,
+against a `head_object` per file made parallel. **Whoever takes it: a multipart upload's ETag carries a
+`-N` suffix and is not an MD5 of the bytes**, so an ETag comparison needs a fallback for those objects,
+and the fallback is what has to be tested.
+
+**Also recorded:** the runner's `refresh` job starts with `assets/` holding exactly the five tracked
+fonts, so `git ls-files assets/` is the number any future `local cache:` line should equal on a cold
+runner. A different number means something is keeping state between runs.

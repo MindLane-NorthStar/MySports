@@ -13,7 +13,7 @@ and they are not going to be found** — see "The two gaps" below.
 
 **UPDATED 2026-09-10 BY PROMPT 87: 91 briefs, covering 01–87 — 92 covering 01–88 since prompt 88,
 93 covering 01–89 since prompt 89, 94 covering 01–91 with 90 to follow since prompt 91, 95 covering
-01–91 since prompt 90, 96 covering 01–92 since prompt 92 — and 39 and 42 are still the only permanent gaps.** The count above was a timestamp twice over: prompt 81 had filed itself without the
+01–91 since prompt 90, 96 covering 01–92 since prompt 92, 98 covering 01–93 since prompt 93 — and 39 and 42 are still the only permanent gaps.** The count above was a timestamp twice over: prompt 81 had filed itself without the
 count moving, and 61–80 and 82–87 were never filed at all. Prompt 87 copied those 28 files from
 `Claude outputs\` (see Provenance), and **86 carries three** — see "Duplicate numbers".
 
@@ -35,8 +35,8 @@ with `-superseded` in the name.
 
 ## What is here
 
-Ninety-six briefs, `NN-slug.md` (this line said fifty-one until prompt 87, ninety-one until 88,
-ninety-two until 89, ninety-three until 91, ninety-four until 90, ninety-five until 92 — counted from the directory each time, not incremented). Numbers in **bold** carry
+Ninety-eight briefs, `NN-slug.md` (this line said fifty-one until prompt 87, ninety-one until 88,
+ninety-two until 89, ninety-three until 91, ninety-four until 90, ninety-five until 92, ninety-six until 93 — counted from the directory each time, not incremented). Numbers in **bold** carry
 more than one file or are otherwise not what the number alone suggests; everything else is one brief,
 one file.
 
@@ -93,7 +93,8 @@ one file.
 | 45 | `45-banner-seam-headroom-pickers.md` |
 | 46 | `46-night-run-ui-docs-reconciler-loads.md` |
 | 47 | `47-programs-migrations-nhl-nba-nascar.md` |
-| 48 | `48-programs-live-source-docs-v1.7.md` |
+| **48** | `48-programs-live-source-docs-v1.7.md` — *filed from `Claude outputs\` in `7a0fcf5`* |
+| **48** | `48-programs-live-part-2.md` — *recovered 2026-09-11 from the gitignored `handoff/project-mirror/`; provenance under "Duplicate numbers"* |
 | 49 | `49-nascar-times-race-key.md` |
 | 50 | `50-schedule-hub-foundation.md` |
 | 51 | `51-one-gap-shorter-toggles-my-teams.md` |
@@ -140,6 +141,7 @@ one file.
 | **90** | `90-cfb-records.md` — *the text that ran (RUN 2, rev B), filed by the run it describes; it ran AFTER 91 — the numbers are identifiers, not a run order* |
 | **91** | `91-autonomy-default.md` — *the text that ran, from `RUN-1-commit-89-and-autonomy-2026-09-11.md`; an earlier Block-1-only draft survives as `prompt-91-autonomy-default-2026-09-11.md` in `Claude outputs\` and was NOT filed, because the run's scope named only this path* |
 | 92 | `92-refresh-timeout.md` — *RUN 3, filed by the run it describes* |
+| 93 | `93-r2-sync-diagnosis.md` — *rev C, the text that ran. Revs A and B each stopped at their own stop condition before any change and are NOT filed; rev B carried rev A's corrected content in full, and the incident is in `docs/rules-casebook.md` (rules 30 and 33)* |
 
 ## What is NOT here — the two gaps
 
@@ -156,8 +158,9 @@ a gap and a placeholder is not.
 
 ## Duplicate numbers
 
-Four numbers carry more than one file — 23, 26 and 43 two each, 86 three — and each is a different
-situation (86 added by prompt 87):
+Five numbers carry more than one file — 23, 26, 43 and 48 two each, 86 three — and each is a different
+situation (86 added by prompt 87, 48 by prompt 93; `13-14-combined-…` is the merged run of two numbers and
+has its own row, so it is not counted here):
 
 - **23** — two versions of one brief, ninety minutes apart on 2026-09-03. The later
   (`23-season-weeks-overlap.md`, 08:57) states a superset of the earlier's objective: *"season load,
@@ -180,6 +183,15 @@ situation (86 added by prompt 87):
   was itself superseded by **rev. C**; it was never pasted into the session that ran prompt 86, hence
   `-superseded`. Rev. C (`86-rev-c-selfcommit-countdown-gamelink-stickytimes.md`) is what ran for
   Block A′ (committing A as `1b458a0`), Block B (`a24f7af`) and Block C (`f08d7dc`).
+- **48** — **two texts, and which relation they have is NOT DETERMINED** (prompt 93). The second,
+  `48-programs-live-part-2.md`, was recovered on 2026-09-11 from the gitignored `handoff/project-mirror/`,
+  where it was `claude_phase4-claude-code-prompt-48-programs-live.md` — the Claude Project's naming —
+  **9,684 bytes, mtime 2026-09-05 22:07 UTC (18:07 ET)**. It had never been filed here, and no
+  byte-identical copy existed in git history or anywhere under the repo, so deleting that directory
+  would have destroyed it. It is filed with nothing added: its provenance lives here, not in the file.
+  **Whether it is an earlier draft of 48 or a genuine second block is not determined** — its title says
+  "programs go live, part 2", as the filed brief's does, and it is about a quarter of that brief's
+  35,934 bytes. Neither fact settles it, and it is not settled by inference.
 
 ## 75 and 76 — filed, and no commit carries them
 
@@ -204,6 +216,8 @@ briefs' titles against later ones, not a record anybody wrote at the time.
 | 90 | `Claude outputs\RUN-2-cfb-records-2026-09-11.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`fb345a2e…5d1c`, 25,678 bytes), LF |
 | 91 | `Claude outputs\RUN-1-commit-89-and-autonomy-2026-09-11.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`7973fa98…1ca9`, 16,549 bytes), LF |
 | 92 | `Claude outputs\RUN-3-raise-refresh-timeout-2026-09-11.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`472ef2c8…e612`, 7,754 bytes), LF |
+| 93 | `Claude outputs\RUN-4-rev-C-mirror-and-queue9-2026-09-11.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`b4e4b6fb…e48f`, 12,893 bytes), LF |
+| 48 (second file) | `handoff/project-mirror/claude_phase4-claude-code-prompt-48-programs-live.md` (gitignored, deleted by prompt 93 after this copy) — copied with `shutil.copyfile`, whole file byte-identical by `sha256` (`84358ed7…366b`, 9,684 bytes), LF, nothing added |
 
 The fifteen filed by prompt 49 were copied with `shutil.copyfile` and verified byte-identical to
 their sources by `sha256`. The 36 filed by prompt 50 were extracted from

@@ -24,8 +24,13 @@ artifacts/
 # none of it - though that search finds probes WRITTEN ABOUT, not probes RUN, so it is a floor on
 # what deserves promotion and not a ceiling.
 web/qa/
-# the Claude Project mirror: a regenerable copy of docs, named as the Project names them
+# the Claude Project mirror - DELETED 2026-09-11 (prompt 93); ignored still, as a guard. Record below.
 handoff/project-mirror/
+# It was a hand-written copy of fifteen docs, named as the Project names them, three to six days stale,
+# and it still held the copy of the working rules that register §38 removed. Fourteen of its files were
+# byte copies of blobs already in git history; ONE EXISTED NOWHERE ELSE and is now filed as
+# docs/prompts/48-programs-live-part-2.md. The ignore line above stays so a recreated mirror can never
+# reach the index (register §42). Why a second copy of a doc is the defect: CLAUDE.md.
 
 # python bytecode
 __pycache__/
