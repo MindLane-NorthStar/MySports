@@ -3252,3 +3252,40 @@ program row outright as well. Adding one is its own piece of work.
 
 **No streaming claim.** ESPN's app-site-association carries no general `/watch` claim; this link opens
 a game page, and nothing in its copy may say otherwise.
+
+---
+
+## 36. RULE 14 IS AMENDED; THE LOCAL WRITER CREDENTIAL STAYS — 2026-09-10, prompt 88
+
+**The contradiction.** Working rule 14 said there was *"no writer credential in the repo, in `.env`,
+or in any prompt."* The local `.env` — untracked, `.gitignore:1-2` — holds a live `mysports_writer`
+connection string, and `docs/deployment-contract.md` §7 step 5 ("Local `.env`") is the instruction
+that put it there. Nothing was ever exposed; two documents simply disagreed, and prompt 87 filed it in
+`docs/queue.md` as a decision waiting on Joe.
+
+**The two options, as they were put.**
+
+1. **Remove the credential from `.env`**, so rule 14 becomes true as written. Cost: nothing on the
+   laptop can write to the database — `scripts/apply_migration.py` and loader runs that write directly
+   rather than emitting SQL stop working, and every write goes through the nightly Action or the
+   Supabase connector.
+2. **Keep it and amend rule 14** to say the credential exists locally for the pipeline's own use and
+   that a Claude Code session never uses it. Cost: the rule relies on discipline rather than absence.
+
+**JOE'S RULING: option 2.** The credential stays on the laptop; the rule stops claiming it does not
+exist.
+
+**Why this was the smaller change.** The framing at the time was that one of the two documents would
+have to change. On reading both, only the rule was wrong. The deployment contract instructs a
+legitimate setup step, and the same `.env` holds four R2 credentials that nothing disputes, so removing
+one line would have been a behaviour change (no local writes at all) to fix a sentence. Every write
+since rule 14's revision has in practice gone through the connector or the Action anyway, and the rule
+now says that is where a session's writes go.
+
+**What changed.** Rule 14's false clause, and nothing else of it: the four binding conditions (named
+approval per operation, SELECT and paste first, the schedule checked, DDL applied from a file in
+`db/migrations/`), the hard stops, and PostgREST anon reads as the normal read path all stand
+verbatim. **Amended in BOTH copies** — `CLAUDE.md` and the full text in `docs/handoff-status.md`'s
+working rules — because `CLAUDE.md` says `handoff-status.md` wins a disagreement, and a fix to the
+losing copy alone would have left the winning one false. `docs/deployment-contract.md`, `.env` and
+`.env.example` were not touched.

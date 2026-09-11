@@ -18,10 +18,10 @@ one is stale — say so.
 | current repo state, gates, open items, the full working rules | `docs/handoff-status.md` |
 | the closed history — past run narratives, superseded sections | `docs/handoff-archive.md` (split out by prompt 87; `handoff-status.md` wins on anything current) |
 | real work that is understood and not started, and decisions waiting on Joe | `docs/queue.md` |
-| why a decision was made, and whether it is already settled | `docs/enhancement-register.md` (§1–§35) |
+| why a decision was made, and whether it is already settled | `docs/enhancement-register.md` (§1–§36) |
 | what a card, block or grid is supposed to look like | `docs/rendering-contract.md` + `docs/rendering-contract-mobile.md` (the Mobile Grid Addendum) |
 | the locked visual reference the app must match | `docs/design/mobile_demo.html` |
-| what a past run was actually asked to do | `docs/prompts/` — 91 briefs covering 01–87, verbatim; 39 and 42 are the only gaps, and 86 carries three revisions (see its README) |
+| what a past run was actually asked to do | `docs/prompts/` — 92 briefs covering 01–88, verbatim; 39 and 42 are the only gaps, and 86 carries three revisions (see its README) |
 | deploy, environment, what is publishable | `docs/deployment-contract.md` |
 | the first build specs — superseded, do not build from them | `docs/archive/` (moved out of the repo root by prompt 87) |
 
@@ -82,9 +82,14 @@ never renumber, even around the retired stub.
     rule 36's: kill the dev server by path, `rm -rf web/.next`, restart. **Vercel is unaffected** — it
     builds at `/vercel/path0`, which has no apostrophe.
 13. A numeric threshold is measured against the **local background**, never a global corner sample.
-14. **Database writes go through the Supabase connector, and only through it.** There is still no
-    direct Postgres connection and no writer credential in the repo, in `.env`, or in any prompt —
-    the connector holds it. PostgREST reads with the publishable anon key remain the app's normal
+14. **Database writes go through the Supabase connector, and only through it.** There is no direct
+    Postgres connection and no writer credential in the repo or in any prompt. A `mysports_writer`
+    credential **does** exist in the untracked local `.env`, put there by
+    `docs/deployment-contract.md` §7 step 5 for the pipeline's own use — `scripts/apply_migration.py`
+    and loader runs that write directly rather than emitting SQL — and `.gitignore:1-2` makes it
+    uncommittable. **A Claude Code session never reads it, prints it, or uses it**: writes go through
+    the connector or the nightly Action, under the four conditions below.
+    PostgREST reads with the publishable anon key remain the app's normal
     read path and are always allowed. Four conditions bind every write: **named approval for that
     operation** — approval for one is never standing approval for the next; **SELECT and paste
     first** (rule 6); **the schedule checked first** (rule 27); and **every DDL statement exists as

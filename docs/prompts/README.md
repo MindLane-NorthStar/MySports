@@ -11,8 +11,8 @@ only in the Project or under gitignored `artifacts/`; prompt 52 stage 8 filed it
 were filed from `Claude outputs\` afterwards; prompts 53-60 filed themselves. **62 files are here, covering 01-60. 39 and 42 are missing,
 and they are not going to be found** — see "The two gaps" below.
 
-**UPDATED 2026-09-10 BY PROMPT 87: 91 briefs, covering 01–87, and 39 and 42 are still the only
-missing numbers.** The count above was a timestamp twice over: prompt 81 had filed itself without the
+**UPDATED 2026-09-10 BY PROMPT 87: 91 briefs, covering 01–87 — 92 covering 01–88 since prompt 88 —
+and 39 and 42 are still the only missing numbers.** The count above was a timestamp twice over: prompt 81 had filed itself without the
 count moving, and 61–80 and 82–87 were never filed at all. Prompt 87 copied those 28 files from
 `Claude outputs\` (see Provenance), and **86 carries three** — see "Duplicate numbers".
 
@@ -34,7 +34,7 @@ with `-superseded` in the name.
 
 ## What is here
 
-Ninety-one briefs, `NN-slug.md` (this line said fifty-one until prompt 87). Numbers in **bold** carry
+Ninety-two briefs, `NN-slug.md` (this line said fifty-one until prompt 87, ninety-one until 88). Numbers in **bold** carry
 more than one file or are otherwise not what the number alone suggests; everything else is one brief,
 one file.
 
@@ -133,6 +133,7 @@ one file.
 | **86** | `86-rev-b-countdown-push-gamelink-stickytimes-superseded.md` — *not pasted into the session that ran 86* |
 | **86** | `86-rev-c-selfcommit-countdown-gamelink-stickytimes.md` — *what RAN for A′, B and C* |
 | 87 | `87-closeout-backfill-preview.md` — *filed by the run it describes* |
+| 88 | `88-nfl-window-rule14.md` — *written into the tree by Cowork before the run; committed with its work* |
 
 ## What is NOT here — the two gaps
 

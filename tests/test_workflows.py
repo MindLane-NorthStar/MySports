@@ -112,6 +112,44 @@ def test_schedule_refresh_conditions_logos_before_pushing():
     assert "--make-dark" in run, "the logo push step must condition dark variants on the runner"
 
 
+def test_nfl_refresh_covers_every_game_day_not_only_sunday():
+    """The nightly NFL step fetches a rolling window of dates, and the Sunday-only selector is gone.
+
+    PROMPT 88, Joe's ruling 2026-09-10. The step fetched two dates - yesterday and the coming Sunday,
+    `t + timedelta((6 - t.weekday()) % 7)` - and `adapters/espn.py --date` holds ONLY that day's games
+    (`espn.py:177`). So every NFL game not on a Sunday was in neither fetch on the day it was played.
+    Now it is the NBA/MLB loop: yesterday for the finals, then today and the next six days.
+
+    RULE 28: parse the YAML and walk to the STEP. A substring test would pass with the loop sitting in
+    a comment, or with the old two-date form still in the `run` and the loop merely added beside it -
+    which is why the second assertion is about the selector being GONE, not the loop being present.
+
+    WHY IT MATTERS ENOUGH TO PIN. The hole drops two game days a week - Thursday and Monday, and
+    Saturdays in December - for an entire season, and FAILS NO OTHER GATE: the games still render,
+    from whatever kickoff and status the last full load wrote, and no score is stored while they are
+    on. It was found by counting stored links on 2026-09-10 (`nfl-401872657` Thu, `nfl-401872931`
+    Mon), not by anything that went red.
+    """
+    doc = yaml.safe_load((ROOT / ".github" / "workflows" / "schedule_refresh.yml").read_text(encoding="utf-8"))
+    steps = doc["jobs"]["refresh"]["steps"]
+    nfl = [s for s in steps if str(s.get("name", "")).startswith("NFL") and "--date" in str(s.get("run", ""))]
+    assert len(nfl) == 1, f"expected exactly one NFL date-driven step, found {len(nfl)}"
+    run = nfl[0]["run"]
+    assert "for i in -1 0 1 2 3 4 5 6" in run, "yesterday for the finals, then today and six days on"
+    assert "--league nfl" in run and "--no-logos" in run
+    assert "(6-t.weekday())" not in run, "the Sunday-only selector must be gone, not merely supplemented"
+
+    # AND THE ART THE LOOP SUPPRESSES IS REFRESHED ONCE, BEFORE THE R2 PUSH. NFL is the only league
+    # whose logos this adapter writes (`espn.py:290-292`); `--no-logos` on every date would otherwise
+    # stop NFL art refreshing at all - a behaviour change riding along with a scheduling fix.
+    names = [str(s.get("name", "")) for s in steps]
+    art = [i for i, s in enumerate(steps) if "--league nfl --teams-only" in str(s.get("run", ""))]
+    assert len(art) == 1, "exactly one NFL teams-only step"
+    push = next(i for i, n in enumerate(names) if n.startswith("Push new logos to R2"))
+    assert art[0] < push, "the art is fetched before it is pushed"
+    assert "--no-logos" not in steps[art[0]]["run"], "the teams-only step is the one that fetches logos"
+
+
 def test_cfbd_teams_fetch_is_not_restricted_to_the_week():
     """The other half of the same defect, and the half no workflow file can show.
 

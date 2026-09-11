@@ -51,10 +51,24 @@ jobs:
             W=$(python -m pipeline.render_feed --sport cfb --latest-week || true)
             if [ -n "$W" ]; then python -m adapters.cfbd --week "$W"; fi
           fi
-      - name: NFL (ESPN) — yesterday (finals pass) then the coming Sunday's week
+      - name: NFL (ESPN) — next 7 viewing days (every game day, not only Sunday)
+        # PROMPT 88, Joe's ruling 2026-09-10: the same rolling window NBA and MLB use. This fetched two
+        # dates - yesterday and the coming Sunday - and `--date` holds ONLY that day's games
+        # (adapters/espn.py:177), so Thursday and Monday games were never refreshed on the day they
+        # were played. Dates, not NFL week numbers: nothing here has to know what a week is, so flex
+        # moves, December Saturdays and the week-18 boundary need no special case.
+        # `--no-logos` on every date, as the NBA/NHL/MLB steps do; the art moves to the step below.
         run: |
-          python -m adapters.espn --league nfl --date $(python -c "import datetime as d;print((d.date.fromisoformat('${{ steps.when.outputs.date }}')+d.timedelta(-1)).isoformat())") || exit 1
-          python -m adapters.espn --league nfl --date $(python -c "import datetime as d;t=d.date.fromisoformat('${{ steps.when.outputs.date }}');print((t+d.timedelta((6-t.weekday())%7)).isoformat())")
+          for i in -1 0 1 2 3 4 5 6; do
+            python -m adapters.espn --league nfl --date $(python -c "import datetime as d;print((d.date.fromisoformat('${{ steps.when.outputs.date }}')+d.timedelta($i)).isoformat())") --no-logos || exit 1
+          done
+      - name: NFL teams and team art (ESPN) — the refresh the date loop no longer carries
+        # NFL is the only league whose team art this adapter writes (adapters/espn.py:290-292), and the
+        # date loop above suppresses it. `--teams-only` reaches fetch_logos for all 32 teams and returns
+        # before any schedule fetch - the shape bootstrap_season.yml already uses. fetch_logos is
+        # idempotent, so an unchanged logo costs a cached check. Named without the word that the R2
+        # push step below is selected by in tests/test_workflows.py.
+        run: python -m adapters.espn --league nfl --teams-only
       - name: NHL — yesterday (finals pass) then the 7-day window
         run: |
           python -m adapters.nhl --date $(python -c "import datetime as d;print((d.date.fromisoformat('${{ steps.when.outputs.date }}')+d.timedelta(-1)).isoformat())") --no-logos || exit 1

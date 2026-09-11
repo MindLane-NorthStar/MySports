@@ -8,7 +8,7 @@
 sections, and the older measurement records. **This file stays the authority for anything current**;
 read the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§35, all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§36, all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -21,8 +21,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **91 briefs, covering 01–87, since prompt 87 filed
-61–80 and 82–87** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **92 briefs, covering 01–88, since prompt 87 filed
+61–80 and 82–87 and prompt 88 filed itself** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
 count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -56,9 +56,9 @@ carried a second copy and it was wrong four times in one week (prompts 62, 63, 6
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
 
-**Measured 2026-09-10, prompt 87 block C — after that block's last gate run, not during it.** Block A
-moved no count (documents, plus geometry's 2026-09-13 span re-pinned 770.1 → 830.4 for Countdown); block
-B moved `pytest` 531 → 543; block C moved `test:unit` 593 → 596 and `qa-shots` 113 → 121.
+**Measured 2026-09-10, prompt 88 blocks A and B — after the last gate run, not during it. NOT YET
+COMMITTED** (the brief forbids it): block A moved `pytest` 543 → 544; block B moved no count. Prompt 87
+before it: `pytest` 531 → 543, `test:unit` 593 → 596, `qa-shots` 113 → 121.
 
 **IT WAS STALE BY TWO ROWS AGAIN, AND BY THE SAME MECHANISM.** Prompt 86 opened by running all five
 gates on the unmodified tree at `dcf6281`: `pytest` **521 passed + 1 skipped**, `test:unit` 570,
@@ -110,6 +110,7 @@ line claims to do.
 | prompt 87 block B | `pytest` | 531 → **543** | `tests/test_game_url_backfill.py` (12): migration 0019's own SQL expression EXECUTED (SQLite, with Postgres's `strpos` shimmed) against `boxscore_url()` for every sport and id shape, incl. cfb's whole-id asymmetry and a two-hyphen MLB id |
 | prompt 87 block C | `test:unit` | 593 → **596** | three status-row tests in `gamelink.test.mjs` (the link is a child of the status row and of no links row; the row renders with an empty right slot; two explicit columns with the link stretched). Two tests REWRITTEN IN PLACE: `gamelink`'s footer test (the clause is now forbidden, not required) and `livejoin`'s render-site test (one site, not two) |
 | prompt 87 block C | `qa-shots` | 113 → **121** | the status row measured at 390 AND 560px: the link spans label top to value bottom, sits in the right column and in no links row, the closing line says nothing about it, and a program's row renders with its right slot empty — 4 checks × 2 widths |
+| prompt 88 block A | `pytest` | 543 → **544** | `test_nfl_refresh_covers_every_game_day_not_only_sunday` in `tests/test_workflows.py`: the NFL step's 7-day loop, the Sunday selector's absence, and the team-art step before the R2 push — parsed, not substring-matched (rule 28) |
 
 **QA-SHOTS' EXIT CODE WAS DECORATIVE UNTIL THIS COMMIT, AND EVERY `NODE EXIT=0` ABOVE IS AFFECTED.**
 The runner ended in `process.exit(0)` unconditionally: a failing assertion went into
@@ -172,6 +173,48 @@ value bottom 509.22, left edge 199 on the right column; 560px — 534.00–568.0
 the empty third track, so even at 560 it is two columns). Contract: `rendering-contract.md` §12 v1.7.1
 and Addendum M11's v2.2 amendment; `docs/design/mobile_demo.html` moved with it (rule 23).
 
+### RULE 14 IS TRUE AGAIN — AMENDED, THE CREDENTIAL KEPT (prompt 88 block B, Joe's ruling 2026-09-10)
+
+Rule 14 claimed no writer credential existed in `.env`; one does (`deployment-contract.md` §7 step 5,
+uncommittable under `.gitignore:1-2`). Joe kept the credential and amended the rule: it now says the
+credential exists locally for the pipeline's own use and that **a Claude Code session never reads,
+prints or uses it** — writes go through the connector or the nightly Action. The four conditions and
+the hard stops are unchanged. **Amended in both copies** — `CLAUDE.md` and the working rules below —
+because this file wins a disagreement. The ruling and its reasoning are register §36; the queue's
+"decision waiting on Joe" section is deleted. `deployment-contract.md`, `.env` and `.env.example` were
+not touched.
+
+### THE NFL NIGHTLY FETCHES EVERY GAME DAY, NOT ONLY SUNDAY (prompt 88 block A, Joe's ruling 2026-09-10)
+
+`schedule_refresh.yml`'s NFL step fetched two dates — yesterday and the coming Sunday,
+`t + timedelta((6 - t.weekday()) % 7)` — and `adapters/espn.py --date` holds only that day's games
+(`espn.py:177`), so Thursday and Monday games (and December Saturdays) were never refreshed on the
+day they were played: stale kickoff and status, no score stored while they were on. **It is now the
+NBA/MLB loop**: `for i in -1 0 1 2 3 4 5 6`, one `--date` call per viewing day, each `--no-logos`.
+Dates, not NFL week numbers — Joe's choice over a week-number fetch and over patching Thursday and
+Monday — so flex moves, December Saturdays and the week-18 boundary need no special case.
+
+**The art the loop suppresses moved to its own step**, `adapters.espn --league nfl --teams-only`,
+before the R2 push: NFL is the only league whose logos that adapter writes (`espn.py:290-292`), and
+`--teams-only` reaches `fetch_logos` for all 32 teams and returns before any schedule fetch (checked,
+not assumed; `bootstrap_season.yml:43` is the precedent). It is named "team art", not "logos":
+`test_schedule_refresh_conditions_logos_before_pushing` selects the ONE step whose name contains
+"logos" — the R2 push — and the brief's suggested name would have made that two.
+
+**Measured before the push, in an ignored directory:** the adapter for Thu 9/10 → 1 game, Fri 9/11 →
+**0 games, exit 0** (so an off day cannot trip the loop's `|| exit 1`), Mon 9/14 → 1 game; the
+loader takes the empty-day fixture cleanly (`--emit-sql`, 0 games, exit 0) and Thursday's emits 16
+statements naming `nfl-401872657`. `pipeline.load --all` needs no change — it globs
+`*_fixture.json` (`load.py:351`). **Not yet proved on the runner:** a `workflow_dispatch` runs the
+workflow as pushed, so the acceptance test — seven `fixture:` lines, today's among them — waits for
+the push (the brief's Stage A2). The NHL step, whose name says "7-day window" over two calls, is
+fine: `adapters/nhl.py:323` — the NHL `/schedule/{date}` endpoint returns a 7-day `gameWeek`.
+
+`tests/test_workflows.py::test_nfl_refresh_covers_every_game_day_not_only_sunday` parses the YAML
+(rule 28) and pins the loop, the Sunday selector's ABSENCE, and the art step before the push.
+Mutation-checked three ways: the original two-date step, the loop with the Sunday line added back,
+and the art step removed — each fails it.
+
 ### EVERY GAME GETS ITS LINK — MIGRATION 0019, APPLIED (prompt 87 block B, 2026-09-10)
 
 `db/migrations/0019_backfill_game_urls.sql` fills `boxscore_url` for every game that has none, deriving
@@ -183,7 +226,8 @@ which prompt 78 ruled against, so it is pinned**: `tests/test_game_url_backfill.
 migration's own expression and compares it with `boxscore_url()`; a changed template in either
 place fails it (mutation-checked, and the cfb asymmetry is caught only by the hyphenated-cfb case,
 which is why it is there). **Applied only on Joe's named approval (rule 14)**, after the push. It
-fixes the LINK only; the Thursday/Monday NFL refresh hole is `docs/queue.md` item 1.
+fixes the LINK only; the Thursday/Monday NFL refresh hole was `docs/queue.md` item 1, closed by
+prompt 88 block A (see its entry above).
 
 **APPLIED 2026-09-10 20:21 UTC on Joe's named approval.** 3,527 rows written — exactly the
 migration transaction's rows — and **0 games are left without a link, 3,953 of 3,953**. The 426
@@ -214,7 +258,8 @@ alone.** What moved, and where to look now:
 
 **FOUND WHILE CHECKING THE QUEUE, not in the brief:** Monday Night Football has the same refresh hole
 as Thursday — `nfl-401872931` (Mon 9/14) had no stored link alongside Thursday's `nfl-401872657`,
-because the nightly fetches only yesterday and the coming Sunday. Queue item 1 carries both.
+because the nightly fetches only yesterday and the coming Sunday. Queue item 1 carried both; prompt
+88 block A closed it.
 
 ### THE TIME ROW LOCKS UNDER THE PICKER (prompt 86 block C, Joe's Route A, 2026-09-10)
 
@@ -325,7 +370,7 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 
 | gate | run from | floor |
 |---|---|---|
-| `pytest` | repo root | **543 passed + 1 skipped** (36 subtests) |
+| `pytest` | repo root | **544 passed + 1 skipped** (36 subtests) |
 | `npm run test:unit` | `web/` | **596** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **121/121** |
@@ -370,7 +415,8 @@ stream. Next: which patterns MySports can populate, then a tap on the phone.
 
 **Easier than when this was written (prompt 87):** on 2026-09-10 Joe tapped the MLB.TV link from
 inside the installed app and the MLB app opened, so a `target="_blank"` link from the PWA DOES hand off
-to a claimed app (`docs/research/mlb-tv-tap-test.md`). `docs/queue.md` item 2 carries this forward.
+to a claimed app (`docs/research/mlb-tv-tap-test.md`). `docs/queue.md` item 1 carries this forward
+(it was item 2 until prompt 88 closed the NFL-window entry).
 
 ### OPEN — THE STREAMING FEATURE IS AT THE EVIDENCE-GATHERED STAGE
 
@@ -801,8 +847,12 @@ before touching any count line.
     the repo path contains an apostrophe and will keep breaking tooling that interpolates paths into
     quoted strings.**
 13. **A numeric threshold is measured against the LOCAL background, never a global corner sample.**
-14. **DB writes go through the Supabase connector and only it** — still no direct Postgres
-    connection and no writer credential in the repo, `.env` or any prompt. Anon PostgREST reads
+14. **DB writes go through the Supabase connector and only it** — no direct Postgres connection and
+    no writer credential in the repo or any prompt. A `mysports_writer` credential DOES exist in the
+    untracked local `.env` (`deployment-contract.md` §7 step 5), for the pipeline's own use —
+    `scripts/apply_migration.py` and loader runs that write directly — and `.gitignore:1-2` makes it
+    uncommittable. **A Claude Code session never reads, prints or uses it**: writes go through the
+    connector or the nightly Action, under the conditions below (amended prompt 88). Anon PostgREST reads
     stay the normal read path. Every write needs NAMED approval for that operation (never
     standing), SELECT-and-paste first (6), the schedule checked (27), and **every DDL statement
     already in `db/migrations/` and applied FROM that file** — a connector change nobody wrote
