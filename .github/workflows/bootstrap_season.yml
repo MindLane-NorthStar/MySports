@@ -46,7 +46,8 @@ jobs:
               mlb) python -m adapters.mlb --date $(TZ=America/New_York date +%F) --teams --all-logos ;;
             esac
           done
-      - run: python scripts/sync_assets.py --push
+      # The opt-in flag is deliberate (prompt 96): this workflow exists to fetch art the bucket does not have yet.
+      - run: python scripts/sync_assets.py --push --allow-new
       - name: Reference data -> mysports.* (idempotent)
         run: python -m pipeline.bootstrap
       # THE STEP THIS WORKFLOW WAS MISSING. It fetched teams and logos and then loaded whatever

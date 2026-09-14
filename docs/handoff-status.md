@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **100 briefs, covering 01–95, counted 2026-09-14 by prompt 95
-(99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **101 briefs, covering 01–96, counted 2026-09-14 by prompt 96
+(100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
 count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -57,6 +57,9 @@ main, HEAD is prompt 66. **THIS IS THE ONLY PLACE THE GATE FLOORS ARE RECORDED.*
 carried a second copy and it was wrong four times in one week (prompts 62, 63, 64, and again between
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
+
+**Measured 2026-09-14, prompt 96 — `pytest` 591 → 598** (`tests/test_logo_conditioning.py`, 7); the other
+four did not move.
 
 **Measured 2026-09-14, prompt 95 — `pytest` 585 → 591** (`PushGuard`, 6); the other four did not move.
 
@@ -133,6 +136,7 @@ line claims to do.
 | prompt 90 | `pytest` | 544 → **569** | `tests/test_enrich_cfb_records.py` (25): the `"W-L"` split and the all-zero skip, the team_records rows (conference when carried, unknown ids skipped), `--current-week` pinned to fixed 2026 dates with both fallbacks, `main()` driven against a fake DB (one commit covers both writes; `--latest-week` keeps its meaning), and the nightly step's flag. Mutation-checked: wins/losses swapped fails 4; `max(week)` fails 8 |
 | prompt 94 | `pytest` | 569 → **585** | `tests/test_sync_assets.py` (16): the byte comparison's order and its request count (a single-part ETag costs no `head_object`; a size difference costs no hashing), the multipart and absent-ETag fallback, `test_pull_retakes_a_cached_file_whose_bytes_differ_from_the_bucket`, a `grids/` key compared at its derived path, mixed-case filenames, `--force` and `--existing-only` unchanged. Mutation-checked: the free ETag step removed fails 7; a key-only pull restored fails 2 |
 | prompt 95 | `pytest` | 585 → **591** | `PushGuard` in `tests/test_sync_assets.py` (6), driven through the real `main()` with `_put` counted: a push that would create an object refuses and uploads nothing; `--allow-new` publishes; a push with nothing new proceeds unflagged; `--existing-only` creates nothing; `--force` does not bypass the guard; the nightly's logo push carries the flag. Mutation-checked: the guard moved after the first upload fails 2; the guard removed fails 2 |
+| prompt 96 | `pytest` | 591 → **598** | seven in `tests/test_logo_conditioning.py`: the file really holds mixed-case rulings; a lowercase file for a team ruled raw in mixed case gets the ruling (the runner's case); the mixed-case file still does (the laptop's); case-insensitivity does not widen the ruling; the `derive` set matches in any case; one team ruled both ways under two spellings is still caught; a conditioned file already on the runner heals to the raw art once and a second run writes nothing. Two existing tests REWRITTEN IN PLACE to compare in `rule_key()` spelling, not weakened. Mutation-checked: the case-sensitive code restored fails 6; normalizing the sets but not the stem fails 1 |
 
 **QA-SHOTS' EXIT CODE WAS DECORATIVE UNTIL THIS COMMIT, AND EVERY `NODE EXIT=0` ABOVE IS AFFECTED.**
 The runner ended in `process.exit(0)` unconditionally: a failing assertion went into
@@ -402,7 +406,7 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 
 | gate | run from | floor |
 |---|---|---|
-| `pytest` | repo root | **591 passed + 1 skipped** (36 subtests) |
+| `pytest` | repo root | **598 passed + 1 skipped** (36 subtests) |
 | `npm run test:unit` | `web/` | **596** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **121/121** |
@@ -899,26 +903,23 @@ before touching any count line.
   that differs on both sides is reported as a CONFLICT instead of being silently republished. Pinned by
   `tests/test_sync_assets.py`, whose regression test is
   `test_pull_retakes_a_cached_file_whose_bytes_differ_from_the_bucket`.
-- **THE BUCKET HOLDS CONDITIONED DARK ART FOR 25 NBA TEAMS JOE RULED RAW — a live defect (prompts 94–95,
-  register §44).** The 25 `--check` conflicts (`logos/nba-*_dark.png`) are not compression: the bucket's
-  are 256×256 conditioned derives, the laptop's are 500×500 byte copies of their bases, and all 25 teams
-  are in `skip_derive` — so **the laptop matches Joe's ruling and the bucket contradicts it.** Run #14
-  (2026-09-09) published the derives because `team_dark_variants()` matches the ruling case-sensitively
-  (`scripts/build_web_marks.py:633`, `p.stem in skip_derive`) and the runner's bases are lowercase pulled
-  files (`nba-bkn.png`) while the ruling says `nba-BKN`. **Do not "fix" it by pushing the laptop's copies:**
-  the next nightly would re-derive and push them back. The fix is a case-insensitive lookup in
-  `build_web_marks.py` first; then the 25 can be restored. Nothing was pushed or pulled. **Open.**
+- ~~**THE BUCKET HOLDS CONDITIONED DARK ART FOR 25 NBA TEAMS JOE RULED RAW — a live defect (prompts 94–95,
+  register §44).**~~ **CLOSED by prompt 96** (register §45): `build_web_marks.rule_key()` makes the
+  ruling match in any case, on both the rulings and the filename, so the runner's lowercase pulled files
+  (`nba-bkn.png`) now hit `nba-BKN`. `data/logo_conditioning.json` is unchanged. **The bucket corrects
+  itself on the next nightly — not by a manual push:** the ruled-raw branch sees the conditioned dark file
+  differ from its base, copies the base over it, and the logo push rewrites the 25 existing objects
+  (proved in scratch, idempotent on a second run). **Until that nightly runs, the 25 conflicts remain in
+  `--check`.** What the run should log: `0 generated, 25 copied raw (ruled skip_derive)` and `pushed 25`.
 - **29 LOCAL-ONLY FILES ON JOE'S LAPTOP — the guard now stands between them and the bucket (prompt 95).**
   `--check` lists 29 files under `network-logos/` and `brand/` that the bucket lacks, among them the
   retired and rejected art prompts 68–69 stopped (`hbo-max-wide-2023-retired.svg`,
   `app-icon-mysports-tv-v5-retired.png`, `…-v6a-rejected.png`). A bare `--push` now refuses, exits 3 and
   lists all 29 before any upload; publishing any of them takes `--allow-new`, deliberately. Whether some
   of them SHOULD be published is Joe's call.
-- **`bootstrap_season.yml:49` NEEDS `--allow-new` BEFORE ITS NEXT DISPATCH (prompt 95).** It runs a bare
-  `sync_assets.py --push` after fetching provider logos onto a fresh runner, so under the guard it will
-  refuse — and fail before its reference-data and season-fetch steps — whenever a fetched logo is new to
-  the bucket. It is manual-only (last run 2026-09-05) and was outside prompt 95's scope. Queue item 7's
-  build-out to April 2027 is the dispatch that would hit it.
+- ~~**`bootstrap_season.yml:49` NEEDS `--allow-new` BEFORE ITS NEXT DISPATCH (prompt 95).**~~ **CLOSED by
+  prompt 96**: the bare `--push` now passes `--allow-new`, with a comment saying the workflow exists to
+  fetch art the bucket does not have yet.
 
 ## Working rules — not in this file
 

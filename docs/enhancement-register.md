@@ -3693,3 +3693,52 @@ installed 12.3.0 (`requirements.txt` pins only `pillow>=10`), but an encoder can
 **Prompt 94's saving, seen in production.** The "Push new logos to R2" step took **2m53s** on run #19
 (old code) and **0m02s** on runs #20 and #21, each logging `sha256 look-ups (head_object) 0`. The pull
 is unchanged (3–8 minutes; the runner's cache is still empty), and that is brief 96.
+
+## 45. JOE'S RAW-LOGO RULING MATCHES IN ANY CASE, SO IT REACHES THE RUNNER — 2026-09-14, prompt 96
+
+**The chain, each link checked against the tree (prompt 95 found it; Cowork verified it independently;
+prompt 96 re-measured the parts it changed).**
+
+- **The data.** `data/logo_conditioning.json`'s `skip_derive` holds 463 ids. Exactly 25 contain an
+  uppercase letter, all NBA (`nba-BKN` … `nba-WAS`), spelled as the database spells them. The other 438
+  are numeric college ids. `derive` holds five more mixed-case NBA ids (ATL, HOU, PHI, TOR, UTA).
+- **The comparison.** `conditioning_rulings()` built its sets from those keys as written, and
+  `team_dark_variants()` tested `p.stem in skip_derive` — the filename on whatever machine was running.
+- **Two machines, two spellings.** Joe's laptop has `nba-BKN.png`, so the stem matched, the ruled-raw
+  branch fired, and his dark files are byte copies of the 500px bases, as ruled. The nightly runner's
+  logos are the files it PULLED from R2, whose keys `sync_assets.py` lowercases on upload, so it had
+  `nba-bkn.png`, the stem missed, and the file fell through to the conditioning chain: 256px,
+  `derive` + `floor_l(0.5)`. **The ruling was silently not applied.**
+- **The only trace read as normal work.** Run #14's log said `dark logo variants: 25 generated, 0
+  copied raw (ruled skip_derive)`, then `pushed 25 file(s)`. Nothing failed. **The divergence began
+  with run #14 on 2026-09-09** and held for five days, on 25 teams including the Cavaliers — the day
+  after Joe made the ruling by looking at the art.
+
+**THE FIX IS IN THE COMPARISON, NOT THE DATA — decided, with the reason.** Three spellings of a team id
+are in play: the database's, the local filename's and the lowercased R2 key's. Lowercasing the 25 keys
+in the JSON would cure today's symptom and leave the next mixed-case id broken, and the JSON is the
+record of Joe's ruling in the spelling he gave it. So `build_web_marks.rule_key()` normalizes **both
+sides** — the sets `conditioning_rulings()` builds (`skip_derive` AND `derive`, which had the same
+exposure) and the stem tested against them — and the both-ways conflict check now runs in the
+normalized spelling, so two spellings of one team cannot hide a contradiction.
+`data/logo_conditioning.json` is unchanged.
+
+**It self-heals, and prompt 96 proved that rather than trusting it.** In a scratch directory built
+from real bytes — the 25 bases under the runner's lowercase names and the 25 conditioned objects exactly
+as the bucket holds them (the code's own rebuild matched them 25/25) — the fixed `team_dark_variants()`
+reported `0 generated, 25 copied raw (ruled skip_derive)` and left every dark file a byte copy of its
+500px base; **a second run reported `25 already present` and rewrote nothing**, so the correction is
+one-time, not a 25-file push every night. A read-only `plan()` against the real bucket listing then
+showed `--push` would send those 25 as **rewrites of existing objects, 0 new**, so prompt 95's guard does
+not stand in the way. **The next nightly corrects the bucket on its own; nothing was pushed by hand.**
+
+**Also in this change:** `bootstrap_season.yml`'s bare `--push` gains `--allow-new` — that workflow
+exists to fetch art the bucket does not have yet, and prompt 95's guard would otherwise stop it before
+its reference-data load.
+
+**Searched and named, not changed.** `git grep` for `logo_conditioning|skip_derive|conditioning_rulings|
+CONDITIONING` outside `docs/`: only `build_web_marks.py` reads the file (`audit_dark_logos.py` imports
+`LOGO_DIR` alone; `fetch_team_assets.py`, `sync_assets.py` and `web/lib/config.js` mention it in prose).
+The one other id-to-filename construction in the same shape is `team_cap_art()`
+(`build_web_marks.py` `LOGO_DIR / f"{team_id}.png"`), which would miss a lowercase runner file for a
+mixed-case id; its only cap team today is `mlb-137`, so it is latent. Left alone and recorded.

@@ -81,8 +81,12 @@ def test_a_split_by_context_team_is_in_neither_list():
 
 
 def test_the_loader_reads_what_the_file_says():
+    """Every id the file names, in `rule_key()` spelling (prompt 96): the loader normalizes case, so
+    this compares normalized to normalized. It said `skip == set(SKIP)` until then, which pinned the
+    case-sensitive spelling that let the runner miss 25 NBA rulings."""
     skip, der = bwm.conditioning_rulings()
-    assert skip == set(SKIP) and der == set(DERIVE)
+    assert skip == {bwm.rule_key(k) for k in SKIP} and der == {bwm.rule_key(k) for k in DERIVE}
+    assert len(skip) == len(SKIP) and len(der) == len(DERIVE), "two spellings of one id collapsed"
 
 
 def test_every_ruling_has_art_on_disk():
@@ -243,8 +247,9 @@ def test_a_split_team_is_conditioned_like_an_unruled_one(college_logos):
 def test_the_lookup_is_not_league_aware(college_logos):
     """A bare-number college id and a `{league}-{number}` pro id resolve through the same path."""
     skip, der = bwm.conditioning_rulings()
-    assert _one(SKIP, True) in skip and _one(SKIP, False) in skip
-    assert _one(DERIVE, True) in der and _one(DERIVE, False) in der
+    k = bwm.rule_key                                # the loader's sets are in rule_key spelling (prompt 96)
+    assert k(_one(SKIP, True)) in skip and k(_one(SKIP, False)) in skip
+    assert k(_one(DERIVE, True)) in der and k(_one(DERIVE, False)) in der
 
 
 # ------------------------------------------------- the grid's own cap art (prompt 69 stage 3)
@@ -308,3 +313,96 @@ def test_a_cap_file_is_not_a_base_logo(tmp_path, monkeypatch):
     bwm.team_dark_variants()
     assert (tmp_path / "zz-9_dark.png").exists(), "a real base is still conditioned"
     assert not (tmp_path / "zz-9_cap_dark.png").exists(), "a cap file is not a base"
+
+
+# ------------------------------------------------- the ruling matches in any case (prompt 96)
+#
+# THE RUNNER NEVER SAW 25 RULINGS. The rulings file names NBA teams as the database does (`nba-BKN`);
+# the laptop's logo files carry the same spelling, but the nightly runner's are the files it PULLED
+# from R2, whose keys are lowercased on upload (`nba-bkn.png`). `p.stem in skip_derive` compared the
+# two case-sensitively, missed, and conditioned 25 teams Joe had ruled raw - from run #14 on
+# 2026-09-09, with a counts line that read `25 generated`. These pin the match to both spellings.
+
+MIXED_SKIP = sorted(i for i in SKIP if i != i.lower())        # the 25 NBA ids, as the file spells them
+MIXED_DERIVE = sorted(i for i in DERIVE if i != i.lower())
+
+
+def _conditioned(src: Path, dst: Path) -> None:
+    """Build the conditioned 256px variant exactly the way team_dark_variants' fallthrough does."""
+    im = Image.open(src).convert("RGBA")
+    im.thumbnail((bwm.DARK_MAX, bwm.DARK_MAX), Image.LANCZOS)
+    bwm.floor_l(bwm.derive(im), 0.5).save(dst, "PNG", optimize=True)
+
+
+def test_the_file_really_has_mixed_case_rulings_to_protect():
+    """If this ever reads zero, the tests below are testing nothing - say so rather than pass."""
+    assert MIXED_SKIP and MIXED_DERIVE
+
+
+def test_a_lowercase_file_for_a_team_ruled_raw_in_mixed_case_still_gets_the_ruling_applied(tmp_path, monkeypatch):
+    """THE RUNNER'S CASE: the ruling says `nba-XXX`, the pulled file is `nba-xxx.png`."""
+    monkeypatch.setattr(bwm, "LOGO_DIR", tmp_path)
+    stem = MIXED_SKIP[0].lower()
+    _base(tmp_path / f"{stem}.png")
+    c = bwm.team_dark_variants()
+    assert c["ruled_raw"] == 1 and c["generated"] == 0, \
+        f"the ruling was not applied: {MIXED_SKIP[0]} is skip_derive but {stem}.png was conditioned"
+    assert _sha(tmp_path / f"{stem}_dark.png") == _sha(tmp_path / f"{stem}.png"), "the ruling was not applied"
+
+
+def test_the_same_team_named_in_its_own_mixed_case_still_gets_the_ruling_applied(tmp_path, monkeypatch):
+    """THE LAPTOP'S CASE: both spellings, one behaviour."""
+    monkeypatch.setattr(bwm, "LOGO_DIR", tmp_path)
+    stem = MIXED_SKIP[0]
+    _base(tmp_path / f"{stem}.png")
+    c = bwm.team_dark_variants()
+    assert c["ruled_raw"] == 1, "the ruling was not applied to the mixed-case filename"
+    assert _sha(tmp_path / f"{stem}_dark.png") == _sha(tmp_path / f"{stem}.png")
+
+
+def test_case_insensitivity_does_not_widen_the_ruling(tmp_path, monkeypatch):
+    """A team NOT ruled raw - unruled, or ruled `derive` in mixed case - is still conditioned."""
+    monkeypatch.setattr(bwm, "LOGO_DIR", tmp_path)
+    for stem in ("zzz-not-a-ruled-team", MIXED_DERIVE[0].lower()):
+        _base(tmp_path / f"{stem}.png")
+    c = bwm.team_dark_variants()
+    assert (c["ruled_raw"], c["generated"]) == (0, 2)
+    for stem in ("zzz-not-a-ruled-team", MIXED_DERIVE[0].lower()):
+        assert _sha(tmp_path / f"{stem}_dark.png") != _sha(tmp_path / f"{stem}.png"), f"{stem} took the raw art"
+
+
+def test_the_derive_set_matches_in_any_case_too():
+    """`derive` is built from the same file on the same line and had the same exposure."""
+    _, der = bwm.conditioning_rulings()
+    for i in MIXED_DERIVE:
+        assert bwm.rule_key(i) in der and bwm.rule_key(i.lower()) in der and bwm.rule_key(i.upper()) in der
+
+
+def test_one_team_ruled_both_ways_under_two_spellings_is_still_caught(tmp_path, monkeypatch):
+    """Normalizing BEFORE the both-ways check is what keeps `nba-XYZ` raw and `nba-xyz` derive from hiding."""
+    f = tmp_path / "rulings.json"
+    f.write_text(json.dumps({"skip_derive": {"nba-XYZ": 1}, "derive": {"nba-xyz": 1}}), encoding="utf-8")
+    monkeypatch.setattr(bwm, "CONDITIONING", f)
+    with pytest.raises(ValueError, match="ruled both ways"):
+        bwm.conditioning_rulings()
+
+
+def test_a_conditioned_file_already_on_the_runner_heals_to_the_raw_art_once(tmp_path, monkeypatch):
+    """THE SELF-HEAL, and that it is ONE-TIME. The runner pulls today's bucket: a lowercase base and
+    the conditioned 256px dark file run #14 published. After the fix the ruled-raw branch sees a dark
+    file whose bytes differ from the base, copies the base over it, and `--push` uploads that as a
+    rewrite. The second run must find the ruling satisfied and write nothing, or the fix would turn
+    into a 25-file push every night."""
+    monkeypatch.setattr(bwm, "LOGO_DIR", tmp_path)
+    stem = MIXED_SKIP[0].lower()
+    base, dark = tmp_path / f"{stem}.png", tmp_path / f"{stem}_dark.png"
+    Image.new("RGBA", (500, 500), (40, 40, 40, 255)).save(base, "PNG")
+    _conditioned(base, dark)
+    assert Image.open(dark).size == (256, 256) and _sha(dark) != _sha(base)
+    c1 = bwm.team_dark_variants()
+    assert (c1["ruled_raw"], c1["generated"]) == (1, 0)
+    assert _sha(dark) == _sha(base), "the conditioned file was not replaced with the raw art"
+    stamp = dark.stat().st_mtime_ns
+    c2 = bwm.team_dark_variants()
+    assert (c2["ruled_raw"], c2["present"]) == (0, 1), "the second run rewrote a satisfied ruling"
+    assert dark.stat().st_mtime_ns == stamp and _sha(dark) == _sha(base)

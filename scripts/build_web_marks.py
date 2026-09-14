@@ -559,8 +559,26 @@ def _sha(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
+def rule_key(team_id: str) -> str:
+    """The one spelling a ruling is matched in, applied to BOTH sides: the ids in the rulings file and
+    the filename stem being tested against them.
+
+    THE MATCH WAS CASE-SENSITIVE AND IT SILENTLY UNDID 25 RULINGS (prompt 96, register §45). Three
+    spellings of a team id are in play - the database's (`nba-BKN`), the local filename's (the same, on
+    the machine that fetched it) and the R2 key's (`nba-bkn`, lowercased on upload by sync_assets.py).
+    The rulings file keeps Joe's spelling; the nightly runner's bases are the files it PULLED, so they
+    carry the key's. `p.stem in skip_derive` therefore missed every NBA team on the runner, the file
+    fell through to the conditioning chain, and from run #14 (2026-09-09) the bucket held 256px derived
+    art for 25 teams Joe had ruled raw - with a counts line reading `25 generated` as if that were
+    normal work. The fix is here and not in the data: lowercasing the file would cure today's 25 and
+    leave the next mixed-case id broken, and the file is the record of the ruling as Joe gave it.
+    """
+    return team_id.lower()
+
+
 def conditioning_rulings() -> tuple[set[str], set[str]]:
-    """Joe's per-team rulings from `data/logo_conditioning.json`: (skip_derive, derive).
+    """Joe's per-team rulings from `data/logo_conditioning.json`: (skip_derive, derive), both in
+    `rule_key()` spelling - so a caller must test `rule_key(stem) in ...`, never the raw stem.
 
     Decided by eye on 2026-09-08 over the 124 pro-league teams, each judged on both grounds the app
     uses. The file is the AUTHORITY over the byte-identity test below, and it has to be, because for
@@ -578,8 +596,9 @@ def conditioning_rulings() -> tuple[set[str], set[str]]:
     except (FileNotFoundError, ValueError) as e:  # noqa: BLE001 - rulings are optional, not required
         print(f"  warn: {CONDITIONING.name}: {e} - no per-team rulings applied")
         return set(), set()
-    skip, der = set(d.get("skip_derive") or ()), set(d.get("derive") or ())
-    both = skip & der
+    skip = {rule_key(k) for k in (d.get("skip_derive") or ())}
+    der = {rule_key(k) for k in (d.get("derive") or ())}
+    both = skip & der          # in the normalized spelling, so two spellings of one team cannot hide a conflict
     if both:
         raise ValueError(f"{CONDITIONING.name}: ruled both ways: {sorted(both)}")
     return skip, der
@@ -630,9 +649,11 @@ def team_dark_variants(force: bool = False) -> dict[str, int]:
                    if not (p.stem.endswith("_dark") or p.stem.endswith("_cap")))
     for p in bases:
         dark = p.with_name(f"{p.stem}_dark.png")
-        if p.stem in skip_derive:
+        if rule_key(p.stem) in skip_derive:
             # RULED RAW. No identity test - see the note above. --force re-copies; the bytes are the
-            # same either way, so it is the write that is skipped, never the ruling.
+            # same either way, so it is the write that is skipped, never the ruling. The match is
+            # CASE-INSENSITIVE (`rule_key`, prompt 96): the runner's files are lowercase pulled keys
+            # (`nba-bkn.png`) and the ruling says `nba-BKN`, and the case-sensitive test missed them.
             if not (dark.exists() and not force and _sha(dark) == _sha(p)):
                 shutil.copyfile(p, dark)
                 counts["ruled_raw"] += 1

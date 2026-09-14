@@ -270,3 +270,23 @@ README's provenance row, and ran.
 undo block, an irreplaceable file; rev B's, a condition no run could satisfy. **No change reached the
 tree until rev C** — rev B's one staged file was taken back out of the index and deleted when its stop
 fired, leaving the tree exactly as it started.
+
+### Rule 30 — a ruling in a data file is not in force until something proves it fires (2026-09-14, prompts 95–96)
+
+On 2026-09-08 Joe ruled by eye that 101 pro teams' charcoal-context logos should be the raw art, and
+`data/logo_conditioning.json` recorded it. The tests passed, the laptop's build honoured it, and the file
+read as the ruling. **On the nightly runner it never fired for 25 of them:** the file spells NBA ids as the
+database does (`nba-BKN`), the runner's logos are lowercase files pulled from R2 (`nba-bkn.png`), and the
+membership test compared the two case-sensitively. From run #14 (2026-09-09) the bucket held conditioned
+art for 25 teams Joe had ruled raw, the Cavaliers among them.
+
+**The only evidence either way was a counts line, and it looked healthy while doing the opposite of the
+ruling:** `dark logo variants: 25 generated, 0 copied raw (ruled skip_derive)`. A reader who knew the
+ruling existed could have seen that `copied raw` should not be 0 on a machine holding 25 ruled NBA
+teams; nobody was looking, because the ruling was "done". It surfaced five days later only because
+prompt 94's byte comparison made the bucket and the laptop disagree out loud, and prompt 95 measured the
+disagreement instead of assuming it was compression.
+
+**The shape is rule 30's:** the label — the ruling sitting in the file, the tests green — was checked,
+and the thing — what the runner actually wrote — was not. Prompt 96 fixed the comparison and added tests
+that run the RUNNER'S spelling, not only the laptop's. No new rule.
