@@ -1,9 +1,14 @@
 # MySports — render the viewing day(s) and publish grids to R2 (deployment contract v1.0 §5; contract §11)
-# Daily 09:30 UTC in season (05:30 EDT), after a successful refresh, or manual. Inert until secrets exist.
+# Runs AFTER A REFRESH (schedule_refresh.yml's `render` job calls it: `needs: refresh` + `uses:`) or on
+# manual dispatch. Inert until secrets exist.
+# IT HAS NO SCHEDULE OF ITS OWN, ON PURPOSE (prompt 98, Joe's ruling 2026-09-14; register §47). It had one -
+# 09:30 UTC in season - and its header claimed that ran "after a successful refresh". It never did:
+# measured, the standalone run fired BEFORE the refresh on 12 of 12 days (2026-09-02..13), by 42-74
+# minutes, so every grid it drew on its own schedule came from the previous day's rows. A failed refresh
+# should leave yesterday's grids in R2 untouched, not publish a fresh-looking stale one. Do not add a
+# schedule back as an apparent omission.
 name: render_all
 on:
-  schedule:
-    - cron: "30 9 * 9,10,11,12,1,2 *"
   workflow_dispatch:
     inputs:
       date: { description: "Viewing day (YYYY-MM-DD, ET). Default: today.", required: false }

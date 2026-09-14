@@ -3809,3 +3809,58 @@ has always drawn from the previous day's rows. The refresh already renders throu
 `needs: refresh` job, so the standalone schedule is a second trigger for the same work; on 2026-09-14 the
 two collided in `render_all`'s own `concurrency: { group: mysports-render, cancel-in-progress: true }` and
 the standalone run was cancelled. What to do with it is Joe's decision (`docs/queue.md` item 10).
+
+## 47. THE STANDALONE RENDER SCHEDULE IS GONE, AND THE CONTRACT CATCHES UP — 2026-09-14, prompt 98
+
+**JOE'S RULING, 2026-09-14: drop it.** Queue item 10 is decided and deleted: `render_all.yml`'s own
+`schedule:` block (`30 9 * 9,10,11,12,1,2 *`) is removed. `workflow_dispatch` and `workflow_call` stay —
+the first is how Joe renders by hand, the second is how the refresh calls it. The refresh already
+triggers a render (`schedule_refresh.yml`'s `render` job: `needs: refresh`, `uses:
+./.github/workflows/render_all.yml`), and with two refreshes a day since prompt 97, two correctly ordered
+renders follow without it.
+
+**The evidence (prompt 97, `gh run list`):** the standalone run fired **before the refresh on 12 of 12
+days**, 2026-09-02..13, by 42–74 minutes. It never once drew current rows; every grid it produced on its
+own schedule came from the previous day's data. The file's header had claimed it ran "after a successful
+refresh"; that header now says what is true and why the schedule went, so nobody re-adds it as an
+apparent omission.
+
+**The backstop argument, and why it lost.** Keeping it would cover a day the refresh fails — but on that
+day it renders stale data, so it publishes grids that look current and are not: the same failure shape as
+the `25 generated` counts line that hid the logo defect for five days (§45). A failed refresh should leave
+yesterday's grids in R2 untouched, which §5 of the deployment contract already provides for (the upload is
+atomic per file). And chasing the order with a later time does not work: the two workflows drift by
+different amounts (refresh median 3h44m, render 4h15m), so a schedule cannot pin an order that GitHub's
+queue decides.
+
+**The contract, corrected — v1.0.4, in v1.0.3's own shape ("the code was right and the contract was
+stale, so the contract moved").** `docs/deployment-contract.md` §5 had two wrong rows: `render_all.yml`
+"daily 09:30 UTC in season", which this prompt makes false, and **`schedule_refresh.yml` "daily 11:00
+UTC", which prompt 97 changed on 2026-09-14 without updating — that brief's miss**, fixed here. Both rows
+now say what the workflows say: refresh at 07:37 and 11:37 UTC (3:37 / 7:37 a.m. EDT, 2:37 / 6:37 a.m. EST
+after 2026-11-01); render after a successful refresh or by hand, with no schedule of its own.
+
+**D7's "a refresh run is ~3 minutes", measured.** The billing API could not be read — `users/{u}/settings/
+billing/*` needs the `user` token scope and this `gh` login carries `gist, read:org, repo`; the
+per-workflow `timing` endpoint answers `{"billable":{}}` — so the account's own consumed minutes and
+allowance are **outstanding**. What was measured instead is runtime, from every job's start and end time,
+each job rounded up to the whole minute as GitHub bills Linux runners:
+
+| 2026-09-01 .. 09-14 | runs | minutes | per successful run |
+|---|---|---|---|
+| `schedule_refresh` (refresh + its render) | 22 | 323 | median **15** (7–29); refresh job 10, render job 5 |
+| `render_all` standalone | 13 | 71 | median **5** (2–12) |
+| `bootstrap_season` | 9 | 82 | median 6 (2–48) |
+| `backup_schema` | 2 | 2 | 1 |
+| **total** | | **478** | |
+
+The run has grown — **the last six refresh runs have a median of 22 minutes** — so D7's premise was off by
+roughly five to seven times. **Projection for a 30-day month under the new schedule, standalone render
+gone:** two runs a day at 22 minutes ≈ **1,324 minutes, 66 % of the 2,000 allowance**; at the all-run
+median of 15, ≈ 904 (45 %). **It clears — but not by the order of magnitude the contract claimed**, and a
+season build-out through `bootstrap_season` (one run took 48 minutes) comes out of the same allowance. D7 and
+the §5 budget line now carry the measured figures. The schedule is Joe's; nothing here proposes one.
+
+**Also noticed, not changed:** `backup_schema.yml`'s weekly `0 12 * * 0` is the repo's only other schedule,
+and it sits at minute 0 — the slot prompt 97 moved the refresh off. It is weekly and a late backup costs
+nothing, so it is recorded rather than moved.
