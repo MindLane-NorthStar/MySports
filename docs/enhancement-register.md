@@ -3642,3 +3642,54 @@ night — but the logo push should stop paying its 1,533 round trips at once; th
 say so on its `sha256 look-ups (head_object)` line. Caching `assets/`, and whether the nightly should
 pull the whole bucket at all when `logos/` is 88.7 of its 101.5 MB and `grids/` sits outside `FOLDERS`,
 is brief 95's question, and this section is its evidence.
+
+## 44. `--push` REFUSES TO PUBLISH WHAT NOBODY APPROVED, AND THE 25 CONFLICTS ARE A RULING THE RUNNER IGNORES — 2026-09-14, prompt 95
+
+**The guard.** `scripts/sync_assets.py --push` now **refuses to create objects** the bucket does not
+have unless `--allow-new` is given. A push whose plan holds any local-only key exits 3 **before the
+first `_put`** — so a partial publish is impossible — and lists every such key with the two ways
+forward (`--allow-new`, or `--existing-only`). Rewriting objects the bucket already has is untouched;
+`--existing-only` keeps its exact meaning; `--force` does not bypass the guard, because force is about
+headers on existing objects. `--push-grids` and `--push-data` are different paths with different
+intent and were left alone. **Why:** prompt 94's honest comparison showed 29 local-only files on Joe's
+laptop that a bare `--push` would publish, among them the retired and rejected art prompts 68 and 69
+stopped by reading a diff — two catches, not a control, and the bucket is public.
+
+**The nightly needed the flag in the same commit**, and the evidence is in its own log: run #21
+(2026-09-13) created four objects — `logos/110242.png`, `logos/110242_dark.png`, `logos/2130.png`,
+`logos/2130_dark.png` — through exactly this push. `schedule_refresh.yml`'s logo push now passes
+`--allow-new`, with a comment saying it is deliberate. **`bootstrap_season.yml:49` also runs a bare
+`--push`** (manual-only; outside prompt 95's scope): it fetches provider logos onto a fresh runner and
+pushes them, so it will now refuse whenever a fetched logo is new to the bucket, and fail before its
+reference-data and season-fetch steps. The refusal names the fix; the flag must be added before its
+next dispatch (`docs/handoff-status.md`).
+
+**The 25 conflicts — measured, and not compression.** Brief 95 expected pixel-identical files at
+different compression. **Every one differs in dimensions**: the bucket's `logos/nba-*_dark.png` are
+256×256, the laptop's 500×500, both RGBA. The rest of the chain, measured read-only:
+
+- the laptop's 25 are **byte-identical to their own 500px bases**, and **all 25 teams are in
+  `skip_derive`** in `data/logo_conditioning.json` — Joe's prompt-64 ruling that these teams' dark art
+  is the raw file. The laptop holds what the ruling says;
+- the bucket's 25 are **pixel-identical to the conditioned derive** (`thumbnail(256)` →
+  `derive` → `floor_l(0.5)`) computed from those same bases — the chain the ruling exists to prevent;
+- **run #14 (2026-09-09) published them**: its log reads `dark logo variants: 25 generated, 0 copied
+  raw (ruled skip_derive)` and `pushed 25 file(s)`, and the bucket's objects are stamped 2026-09-09
+  15:04 UTC;
+- **why the runner ignored the ruling:** `team_dark_variants()` tests `p.stem in skip_derive`
+  (`build_web_marks.py:633`) — a case-sensitive match. The ruling file names the NBA teams in
+  uppercase (`nba-BKN`); the laptop's bases carry that case, but the runner's are the files it PULLED,
+  and bucket keys are lowercase (`nba-bkn.png`). Of 463 `skip_derive` entries exactly 25 contain
+  uppercase, all NBA, and they are exactly the 25 conflicts.
+
+**So the conflict is not an art question after all — the ruling already answers it, and the bucket is
+on the wrong side.** Since 2026-09-09 the listings have floated conditioned art for 25 NBA teams Joe
+ruled raw. And **pushing the laptop's copies would not stick**: the next nightly would pull them, miss
+the ruling again, see a dark file byte-identical to its base, recondition it and push the 256px version
+back. The fix is a case-insensitive ruling lookup in `build_web_marks.py`, which is outside prompt 95's
+scope; nothing was resolved. **Pillow was measured and ruled out**: the laptop runs 12.2.0, the runner
+installed 12.3.0 (`requirements.txt` pins only `pillow>=10`), but an encoder cannot change dimensions.
+
+**Prompt 94's saving, seen in production.** The "Push new logos to R2" step took **2m53s** on run #19
+(old code) and **0m02s** on runs #20 and #21, each logging `sha256 look-ups (head_object) 0`. The pull
+is unchanged (3–8 minutes; the runner's cache is still empty), and that is brief 96.

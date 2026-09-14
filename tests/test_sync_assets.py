@@ -201,6 +201,74 @@ class Plan(TempCache):
         self.assertEqual((pl["to_push"], pl["to_pull"], pl["same"]), ([], [], 1))
 
 
+class ListingS3(StubS3):
+    """StubS3 plus a one-page `list_objects_v2`, enough for the real `main()` to plan against."""
+
+    def __init__(self, remote: dict[str, bytes]):
+        super().__init__()
+        self.remote = remote
+
+    def list_objects_v2(self, Bucket, Prefix=None, **_):  # noqa: N803
+        keys = [k for k in sorted(self.remote) if Prefix is None or k.startswith(Prefix)]
+        return {"Contents": [{"Key": k, "Size": len(self.remote[k]), "ETag": '"%s"' % md5_of(self.remote[k])}
+                             for k in keys], "IsTruncated": False}
+
+
+class PushGuard(TempCache):
+    """PROMPT 95: `--push` refuses to CREATE objects unless `--allow-new` says so, before any upload.
+
+    Driven through the real `main()` - the argument parsing, the plan and the upload loop - with the
+    client, the repo root, the `.env` loader and `_put` replaced. `_put` is the only thing that can
+    publish, so its call count IS the guard."""
+
+    def push(self, argv, remote):
+        s3 = ListingS3(remote)
+        with mock.patch.object(sa, "client", lambda: s3), \
+             mock.patch.object(sa, "find_repo_root", lambda: self.root), \
+             mock.patch.object(sa, "load_dotenv", lambda *_: None), \
+             mock.patch.object(sa, "_put") as put, \
+             mock.patch("sys.stdout"), mock.patch("sys.stderr"):
+            code = sa.main(argv)
+        return code, sorted(c.args[2] for c in put.call_args_list)
+
+    def test_a_push_that_would_create_an_object_refuses_and_uploads_nothing(self):
+        self.put("brand/app-icon-mysports-tv-v6a-rejected.png", b"never publish this")
+        self.put("logos/changed.png", b"new bytes")       # a legitimate rewrite, also held back
+        code, puts = self.push(["--push"], {"logos/changed.png": b"old bytes"})
+        self.assertEqual(code, 3)
+        self.assertEqual(puts, [])          # THE GUARD: not one _put, so no partial publish
+
+    def test_allow_new_publishes_the_new_object(self):
+        self.put("logos/new-team.png", b"a new club")
+        code, puts = self.push(["--push", "--allow-new"], {})
+        self.assertEqual((code, puts), (0, ["logos/new-team.png"]))
+
+    def test_a_push_with_nothing_new_proceeds_without_the_flag(self):
+        # the guard must not fire on the ordinary case: rewriting what the bucket already has
+        self.put("logos/changed.png", b"new bytes")
+        self.put("logos/same.png", b"same")
+        code, puts = self.push(["--push"], {"logos/changed.png": b"old bytes", "logos/same.png": b"same"})
+        self.assertEqual((code, puts), (0, ["logos/changed.png"]))
+
+    def test_existing_only_proceeds_and_creates_nothing(self):
+        self.put("brand/app-icon-mysports-tv-v5-retired.png", b"retired")
+        self.put("logos/changed.png", b"new bytes")
+        code, puts = self.push(["--push", "--existing-only"], {"logos/changed.png": b"old bytes"})
+        self.assertEqual((code, puts), (0, ["logos/changed.png"]))
+
+    def test_force_does_not_bypass_the_guard(self):
+        self.put("logos/same.png", b"same")
+        self.put("network-logos/hbo-max-wide-2023-retired.svg", b"<svg/>")
+        code, puts = self.push(["--push", "--force"], {"logos/same.png": b"same"})
+        self.assertEqual((code, puts), (3, []))
+
+    def test_the_nightly_logo_push_opts_in(self):
+        wf = (ROOT / ".github" / "workflows" / "schedule_refresh.yml").read_text(encoding="utf-8")
+        self.assertEqual(wf.count("--allow-new"), 1)          # exactly once, on the logo push line
+        runs = [ln.strip() for ln in wf.splitlines() if ln.strip().startswith("run:") and "--allow-new" in ln]
+        self.assertEqual(runs, ["run: python scripts/sync_assets.py --push --prefix logos/ --make-dark --allow-new"])
+
+
 class NoKeyOnlyPull(unittest.TestCase):
     def test_the_pull_path_no_longer_decides_by_key_alone(self):
         src = (ROOT / "scripts" / "sync_assets.py").read_text(encoding="utf-8")

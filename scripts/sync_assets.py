@@ -4,7 +4,8 @@
 The bucket `mysports-assets` is the source of truth; `assets/` on any machine is a cache.
 
     python scripts/sync_assets.py --check          # list what differs, change nothing
-    python scripts/sync_assets.py --push           # upload local files the bucket lacks or that differ
+    python scripts/sync_assets.py --push           # rewrite objects whose bytes differ; REFUSES to create new ones
+    python scripts/sync_assets.py --push --allow-new   # ...and publish local files the bucket lacks (deliberate)
     python scripts/sync_assets.py --pull           # download bucket files the cache lacks or that differ
     python scripts/sync_assets.py --push --prefix logos/   # one prefix only
     python scripts/sync_assets.py --push --prefix logos/ --force   # rewrite even unchanged bytes (headers)
@@ -380,6 +381,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="never create an object: rewrite only keys the bucket ALREADY has, and skip "
                          "every local file it does not. Pair with --force to reset METADATA (the "
                          "cache header) without publishing anything new.")
+    ap.add_argument("--allow-new", action="store_true",
+                    help="let --push CREATE objects the bucket does not have yet. Without it, a push "
+                         "whose plan contains any local-only file refuses before uploading anything and "
+                         "lists them. The bucket is public: publishing is a decision, not a default.")
     ap.add_argument("--force", action="store_true",
                     help="push every local file under --prefix even where the bytes already match. "
                          "For rewriting METADATA on objects that are otherwise unchanged - a header "
@@ -441,6 +446,24 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.push:
+        # --push REFUSES TO CREATE OBJECTS UNLESS TOLD TO (prompt 95). Rewriting an object the bucket
+        # already has is the ordinary case; PUBLISHING something new is the case that has twice nearly
+        # gone wrong. Prompts 68 and 69 each stopped a push that would have put retired and rejected art
+        # (`hbo-max-wide-2023-retired.svg`, `...-v6a-rejected.png`) into a public bucket, and they caught
+        # it by reading a diff - two lucky catches, not a control. The refusal happens HERE, before the
+        # first `_put`, so a partial publish is impossible. `--force` does not bypass it (force is about
+        # headers on EXISTING objects); `--existing-only` never reaches it (its plan has no local-only
+        # keys). The nightly creates objects legitimately - a new team's logo and its dark variant - so
+        # schedule_refresh.yml passes `--allow-new` on its logo push, in the same commit as this guard.
+        new = pl["local_only"]
+        if new and not args.allow_new:
+            print(f"REFUSED: --push would CREATE {len(new)} object(s) that {bucket} does not have. "
+                  "Nothing was uploaded.", file=sys.stderr)
+            for k in new:
+                print(f"  new: {k}", file=sys.stderr)
+            print("  To publish them, re-run with --allow-new. To rewrite only what the bucket already "
+                  "has, use --existing-only.", file=sys.stderr)
+            return 3
         n = 0
         for key in to_push:
             p = local[key]

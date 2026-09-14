@@ -250,7 +250,12 @@ jobs:
         # provider happened to serve, which for most teams is a byte copy of the base that sinks
         # into --panel #23262B. sync_assets.py:152 documents the flag as idempotent, and
         # build_web_marks.team_dark_variants leaves genuinely distinct provider art alone.
-        run: python scripts/sync_assets.py --push --prefix logos/ --make-dark
+        # THE OPT-IN FLAG AT THE END OF THE LINE BELOW IS DELIBERATE, NOT NOISE (prompt 95): --push now
+        # refuses to CREATE objects unless told to, because a bare push from a laptop nearly published
+        # retired art twice. This step creates objects legitimately - a new team's logo and its dark
+        # variant (run #21 made four) - so it opts in. Remove the flag and the first nightly with a new
+        # logo fails here.
+        run: python scripts/sync_assets.py --push --prefix logos/ --make-dark --allow-new
       - name: Load fixtures into mysports.* (evidence only — Milestone 1 loader)
         run: python -m pipeline.load --all --workflow schedule_refresh
       - name: CFB ranks, records + rivalry flags into games (loader-written provider facts)

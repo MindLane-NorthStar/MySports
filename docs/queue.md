@@ -131,7 +131,7 @@ git tracks under `assets/fonts/`; `git ls-files assets/` is the check, and it re
 `:35` is the only cache and it covers pip's wheels. A checkout materializes only the five fonts.
 `sync_assets.py:60-72` `local_files()` returns only what is on disk, `:312-314` puts every remote key
 that is not in that map on the pull list, and `:336-346` downloads them one at a time. (Line numbers in
-this entry are `sync_assets.py` as of `a7a3ffe`; prompt 94 moved them.)
+this entry are `sync_assets.py` as of `a7a3ffe`; prompts 94 and 95 both moved them.)
 
 **The push's second cost.** `--push --prefix logos/ --make-dark` (`schedule_refresh.yml:253`) compares
 sizes at `sync_assets.py:308` and, when they match, calls `remote_sha()` (`:92-96`) — a `head_object`
@@ -161,7 +161,9 @@ than a deadline.
 **Why it is pressing.** Queue item 7 — the schedule built out to April 2027 — grows the loader's input
 and the asset cache, which are exactly the steps that have been growing.
 
-**Size.** The first piece has landed — prompt 94's byte comparison. What is left is a cache for
-`assets/` that `refresh` and `render` can share, and the whole-bucket question (brief 95), proved by
-dispatches rather than by any local gate; the job split after that, if it is still wanted. **A
+**Size.** The first piece has landed — prompt 94's byte comparison, and its push saving is measured in
+production (2m53s → 0m02s, register §44). Prompt 95 added the publish guard, which is a safety change and
+not a speed one. **What remains is the cache and the render-side pull:** a cache for `assets/` that
+`refresh` and `render` can share, and whether either should pull the whole bucket at all (brief 96),
+proved by dispatches rather than by any local gate; the job split after that, if it is still wanted. **A
 description of a problem, not an approved plan.**
