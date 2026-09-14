@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **101 briefs, covering 01–96, counted 2026-09-14 by prompt 96
-(100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **102 briefs, covering 01–97, counted 2026-09-14 by prompt 97
+(101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
 count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -57,6 +57,8 @@ main, HEAD is prompt 66. **THIS IS THE ONLY PLACE THE GATE FLOORS ARE RECORDED.*
 carried a second copy and it was wrong four times in one week (prompts 62, 63, 64, and again between
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
+
+**Re-measured 2026-09-14, prompt 97 — no count moved; two schedule lines and documents.**
 
 **Measured 2026-09-14, prompt 96 — `pytest` 591 → 598** (`tests/test_logo_conditioning.py`, 7); the other
 four did not move.
@@ -920,6 +922,13 @@ before touching any count line.
 - ~~**`bootstrap_season.yml:49` NEEDS `--allow-new` BEFORE ITS NEXT DISPATCH (prompt 95).**~~ **CLOSED by
   prompt 96**: the bare `--push` now passes `--allow-new`, with a comment saying the workflow exists to
   fetch art the bucket does not have yet.
+- **THE NIGHTLY IS BEST-EFFORT, AND IT HAS BEEN MEASURABLY LATE (prompt 97, register §46).** GitHub queues
+  scheduled workflows: the old `0 11 * * *` started a median 3h44m late (worst 5h13m) over 12 days, and
+  on 2026-09-14 it had not fired 5h22m after it was due, which left that day's cards on Friday's records.
+  **The mitigation is the second run** — `37 7` and `37 11` UTC since prompt 97 — which buys redundancy,
+  not punctuality. **If both runs still drift, the next thing to try is an external trigger calling
+  `workflow_dispatch` through the API** (a scheduler outside GitHub). Not built; not approved. The first
+  scheduled run under the new times is the real test.
 
 ## Working rules — not in this file
 

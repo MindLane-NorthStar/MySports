@@ -3742,3 +3742,70 @@ CONDITIONING` outside `docs/`: only `build_web_marks.py` reads the file (`audit_
 The one other id-to-filename construction in the same shape is `team_cap_art()`
 (`build_web_marks.py` `LOGO_DIR / f"{team_id}.png"`), which would miss a lowercase runner file for a
 mixed-case id; its only cap team today is `mlb-137`, so it is latent. Left alone and recorded.
+
+## 46. TWO REFRESH RUNS A DAY, BOTH OFF THE TOP OF THE HOUR — 2026-09-14, prompt 97
+
+**JOE'S RULING, 2026-09-14: two scheduled runs a day, at 3:37 a.m. and 7:37 a.m. Eastern** —
+`schedule_refresh.yml` now carries `37 7 * * *` and `37 11 * * *` (UTC) in place of `0 11 * * *`. The
+trigger: on 2026-09-14 the White Sox–Guardians card showed Friday's records, Friday's games-back and no
+pitching matchup, because the day's refresh had not run — every row for that game was last written
+2026-09-13 14:48:39 UTC.
+
+**The real fire times, measured (`gh run list`, `event == schedule` only).** In every run `startedAt`
+equals `createdAt`: the whole delay is GitHub queueing the scheduled event, not a runner waiting.
+
+| scheduled refresh, due 11:00 UTC | created / started (UTC) | delay |
+|---|---|---|
+| #1 Wed 09-02 | 15:00 | 4h00m |
+| #5 Thu 09-03 | 14:49 | 3h49m |
+| #6 Fri 09-04 | 14:38 | 3h38m |
+| #7 Sat 09-05 | 13:37 | 2h37m |
+| #10 Sun 09-06 | 13:51 | 2h51m |
+| #11 Mon 09-07 | 16:13 | **5h13m** (worst) |
+| #13 Tue 09-08 | 14:50 | 3h50m |
+| #14 Wed 09-09 | 14:55 | 3h55m |
+| #15 Thu 09-10 | 14:42 | 3h42m |
+| #18 Fri 09-11 | 14:44 | 3h44m |
+| #20 Sat 09-12 | 13:48 | 2h48m |
+| #21 Sun 09-13 | 14:44 | 3h44m |
+| Mon 09-14 | — | **not fired at 16:22 UTC, 5h22m after it was due** |
+
+**Median 3h44m, worst 5h13m, best 2h37m over 12 days; no date from 09-02 to 09-13 is missing.** 09-14 is
+either the worst delay yet or the first drop — it cannot be called until the day ends; Joe's manual
+dispatch (#22, 15:39 UTC) was that day's only refresh. `render_all.yml`'s own schedule (09:30 UTC) shows
+the same shape: 13 scheduled runs 09-02..09-14, median 4h15m late, worst 6h27m (09-14), none missing.
+
+**Where Cowork's inferred figures were wrong, and by how much.** Its table read the first step recorded
+in `mysports.refresh_runs`, which records steps, never job starts, and assumed ~8 minutes before the
+first one. The real gap is ~3 minutes, so the inferred delays were **overstated by 2–6 minutes** —
+09-04 ~3h40m vs 3h38m, 09-07 ~5h15m vs 5h13m, 09-09 ~4h vs 3h55m, 09-13 ~3h45m vs 3h44m. **Right in
+substance, wrong in the last digits;** the measured table above replaces it.
+
+**Why, and the honest caveat.** GitHub runs scheduled workflows on a best-effort basis and the top of the
+hour is the platform's most congested minute. **Moving off `:00` usually helps and is not a guaranteed
+cure**; at least one public report describes the delay persisting after a minute change. That is why the
+second run matters more than the minute: **one run a day has no backstop, and this change buys
+redundancy rather than punctuality.** The loader is idempotent, so the second pass costs runner minutes
+and nothing else.
+
+**The cost:** a whole run (refresh + its render) measured 10–28 minutes over the last six successful
+runs, median ~21, so two a day is **roughly 40–45 runner-minutes against ~20**.
+
+**The concurrency interaction, stated not solved.** `concurrency: { group: mysports-refresh,
+cancel-in-progress: false }` means a run that starts while another holds the group QUEUES. The worst
+measured delay (5h13m) is longer than the four-hour gap, but queueing needs the 07:37 run to be delayed
+~3.5 hours MORE than the 11:37 run (the gap less a ~20-minute run); the observed spread over 12 days is
+2h36m (2h37m to 5h13m). **Possible in principle, not seen in this sample** — and a queued run still runs.
+
+**DAYLIGHT SAVING.** The schedule is UTC with no DST awareness: 07:37 / 11:37 UTC land at 3:37 / 7:37
+a.m. EDT until **2026-11-01**, then at 2:37 / 6:37 a.m. EST until March. Keeping the clock times means
+shifting both lines by an hour; nothing in the repo will remind anyone. The comment above the lines says
+so.
+
+**The `render_all` finding (recorded; that workflow was not changed).** Its header says it runs "after a
+successful refresh", but its own schedule, 09:30 UTC, is ninety minutes BEFORE the old 11:00 refresh —
+and measured, **the standalone render fired before the refresh on all 12 days, by 42–74 minutes**, so it
+has always drawn from the previous day's rows. The refresh already renders through its own
+`needs: refresh` job, so the standalone schedule is a second trigger for the same work; on 2026-09-14 the
+two collided in `render_all`'s own `concurrency: { group: mysports-render, cancel-in-progress: true }` and
+the standalone run was cancelled. What to do with it is Joe's decision (`docs/queue.md` item 10).

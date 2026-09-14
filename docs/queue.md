@@ -167,3 +167,27 @@ not a speed one. **What remains is the cache and the render-side pull:** a cache
 `refresh` and `render` can share, and whether either should pull the whole bucket at all (brief 96),
 proved by dispatches rather than by any local gate; the job split after that, if it is still wanted. **A
 description of a problem, not an approved plan.**
+
+## 10. The standalone `render_all` schedule — keep it, move it, or drop it
+
+**What.** `render_all.yml` carries its own schedule, `30 9 * 9,10,11,12,1,2 *` (09:30 UTC, September
+through February), and its header says it runs "after a successful refresh". It does not: 09:30 is
+ninety minutes before the refresh it claims to follow. **Measured (`gh run list`, prompt 97): the
+standalone render fired BEFORE the scheduled refresh on all 12 days from 2026-09-02 to 09-13, by 42–74
+minutes**, so it has always drawn the grids from the previous day's rows. Its own fire times: 13 scheduled
+runs, median 4h15m late, worst 6h27m, none missing.
+
+**Why it is a decision and not a bug.** `schedule_refresh.yml`'s `render` job already runs `render_all`
+through `needs: refresh`, so every refresh is followed by a correct render; the standalone schedule is a
+second trigger for the same work. The two share `concurrency: { group: mysports-render,
+cancel-in-progress: true }`, and on 2026-09-14 they collided and the standalone run was cancelled.
+
+**Under the new refresh times** (07:37 and 11:37 UTC, prompt 97) a 09:30 render sits nominally 113
+minutes AFTER the first run. If the drift were gone, it would follow that run. **Stage A's numbers point to
+the two workflows drifting together** — their measured gap held at 42–74 minutes against a nominal 90 —
+so the order would probably hold even with drift; but that is twelve days of correlation, not a
+guarantee, and it would still fall before the second run's rows.
+
+**The options:** drop the standalone schedule (the refresh already renders), or move it after the second
+run. **Size:** one line in `render_all.yml` either way. **A description of a problem, not an approved
+plan.**

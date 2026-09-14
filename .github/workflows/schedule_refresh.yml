@@ -5,7 +5,20 @@
 name: schedule_refresh
 on:
   schedule:
-    - cron: "0 11 * * *"
+    # TWO RUNS A DAY, BOTH AT :37 (prompt 97, Joe's ruling 2026-09-14; register §46). The header's
+    # "DAILY 11:00 UTC" line predates this.
+    # 1. THE MINUTE IS DELIBERATE. Scheduled runs are best-effort and :00 is the platform's busiest
+    #    minute. The old 11:00 UTC schedule was MEASURED (gh run list, 12 runs 2026-09-02..13) starting a
+    #    median 3h44m late, worst 5h13m, and on 2026-09-14 it had not fired 5h22m after it was due.
+    #    Moving off :00 usually helps; it is not a guaranteed cure.
+    # 2. THE SECOND RUN IS A BACKSTOP, NOT A SECOND OPINION. The loader is idempotent, so a second pass
+    #    costs runner minutes and nothing else, and a late or dropped early run no longer means a
+    #    wrong card all day.
+    # 3. DAYLIGHT SAVING: these times are UTC and have no DST awareness. 07:37 / 11:37 UTC land at 3:37 /
+    #    7:37 a.m. EDT until 2026-11-01, then at 2:37 / 6:37 a.m. EST until March. To keep the clock
+    #    times, shift BOTH lines by an hour - nothing in the repo will remind you.
+    - cron: "37 7 * * *"
+    - cron: "37 11 * * *"
   workflow_dispatch:
     inputs:
       date:
