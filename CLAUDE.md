@@ -20,10 +20,10 @@ they live here and nowhere else.
 | the closed history — past run narratives, superseded sections | `docs/handoff-archive.md` (split out by prompt 87; `handoff-status.md` wins on current state) |
 | the incidents behind the working rules — history, non-binding | `docs/rules-casebook.md` |
 | real work that is understood and not started, and decisions waiting on Joe | `docs/queue.md` |
-| why a decision was made, and whether it is already settled | `docs/enhancement-register.md` (§1–§47) |
+| why a decision was made, and whether it is already settled | `docs/enhancement-register.md` (§1–§48) |
 | what a card, block or grid is supposed to look like | `docs/rendering-contract.md` + `docs/rendering-contract-mobile.md` (the Mobile Grid Addendum) |
 | the locked visual reference the app must match | `docs/design/mobile_demo.html` |
-| what a past run was actually asked to do | `docs/prompts/` — 103 briefs covering 01–98, verbatim; 39 and 42 are the only permanent gaps (numbers are identifiers, not run order: 90 ran after 91), and 86 carries three revisions (see its README) |
+| what a past run was actually asked to do | `docs/prompts/` — 104 briefs covering 01–99, verbatim; 39 and 42 are the only permanent gaps (numbers are identifiers, not run order: 90 ran after 91), and 86 carries three revisions (see its README) |
 | deploy, environment, what is publishable | `docs/deployment-contract.md` |
 | the first build specs — superseded, do not build from them | `docs/archive/` (moved out of the repo root by prompt 87) |
 

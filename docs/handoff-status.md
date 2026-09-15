@@ -10,7 +10,7 @@ sections, and the older measurement records. **This file stays the authority for
 repo state, gate floors, open items; since prompt 89 the working rules are `CLAUDE.md`'s alone. Read
 the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§39, all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§48 — this said §1–§39 until prompt 99 corrected it, counted; all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **103 briefs, covering 01–98, counted 2026-09-14 by prompt 98
-(102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **104 briefs, covering 01–99, counted 2026-09-15 by prompt 99
+(103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
 count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -57,6 +57,11 @@ main, HEAD is prompt 66. **THIS IS THE ONLY PLACE THE GATE FLOORS ARE RECORDED.*
 carried a second copy and it was wrong four times in one week (prompts 62, 63, 64, and again between
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
+
+**Re-measured 2026-09-15, prompt 99 — no count moved; one metadata value and documents.** Written after
+the last gate run. `npm run geometry` was pointed at the dev server's port (`-- http://localhost:3000`),
+because the script defaults to 3001. Its figures are identical to the baseline taken at the start of the
+run.
 
 **Re-measured 2026-09-14, prompt 98 — no count moved; a workflow schedule removed and documents.**
 
@@ -942,6 +947,29 @@ before touching any count line.
   (queue item 7; one run took 48 minutes) comes out of the same allowance. **Not close today; worth
   watching as the job grows.** The account's real figure needs `gh auth refresh -s user` or a look at the
   GitHub billing page — Joe's.
+- **OPEN — THE STATUS BAR IS `black` NOW, AND ONLY JOE'S PHONE CAN SAY WHETHER THAT FIXED THE WASH (prompt
+  99, register §48).** `web/app/layout.js` emits `apple-mobile-web-app-status-bar-style` = `black` in
+  place of the translucent style that let iOS 27's blur land on the app's own pixels. **Rule 25's second
+  half is outstanding.** The deploy being green is not the result, and no gate can be: smoke, qa-shots
+  and geometry run with no safe-area inset and have always rendered this geometry. **A reinstall comes
+  first**: iOS is taken to read the tag at install, so the existing Home Screen icon keeps the old
+  behaviour until the app is removed and re-added from Safari. What to look at: a dark opaque bar owned by
+  iOS, the banner starting just below it, and no wash over the wordmark or the collapsed header.
+  **The pre-measured follow-up, if the gap under the bar is unwanted:** the wordmark's first ink now sits
+  **4.41 CSS px below the bar at 430** (4.00 at 390). The one line that closes it is written out in §48
+  (`@media (display-mode: standalone) and (max-width: 699px){.banner{margin-top:calc(-100% * 4.392 / 428)}}`),
+  and applying it is a one-line edit, not a new measurement. For comparison: Joe's first ruling was 18 px, and
+  under the translucent style the ink sat 5.59 px inside the band. **The revert is one word**, `black` back
+  to `black-translucent`, plus the same reinstall.
+- **STALE COMMENTS PROMPT 99 COULD NOT CORRECT — `globals.css` was read-only for it (rule 30, owed).**
+  `globals.css:1960-1962` says the banner bleeds *"under the translucent status bar, which is the entire
+  point of black-translucent"*. `:1966-1967` and `:2003-2004` say the artwork carries *"11 stage px"* of
+  headroom. `:1993-2008`'s table says the ink lands *"EXACTLY at the band's lower edge"*. The first became
+  untrue with prompt 99. The rest have been untrue since `d24e8e0` (2026-09-07) moved the artwork up 7
+  stage px: the headroom is 4.392 and the installed ink sat 5.59 px inside the band. M22 carries the
+  correction (Addendum v2.3). The CSS comments want the same edit, by the next run that may touch that
+  file. `web/components/Banner.js:21` and `banner-mobile-v2.json`'s `stage.units` note (*"155/428"*,
+  stale since the viewBox became 428 × 135) are the same kind of debt.
 
 ## Working rules — not in this file
 

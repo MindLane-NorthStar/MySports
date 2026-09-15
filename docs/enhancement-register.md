@@ -3864,3 +3864,118 @@ the §5 budget line now carry the measured figures. The schedule is Joe's; nothi
 **Also noticed, not changed:** `backup_schema.yml`'s weekly `0 12 * * 0` is the repo's only other schedule,
 and it sits at minute 0 — the slot prompt 97 moved the refresh off. It is weekly and a late backup costs
 nothing, so it is recorded rather than moved.
+
+## 48. THE STATUS BAR GOES BACK TO iOS — `black`, NOT TRANSLUCENT — 2026-09-15, prompt 99
+
+**Numbered by count:** §1–§47 each appear exactly once and there was no §48.
+
+**The symptom.** iOS 27 paints a progressive blur over the top edge of an installed PWA. On Joe's phone
+it muddies whatever is at the top — the banner wordmark, and the collapsed header once it has taken over.
+
+**The trigger.** `web/app/layout.js` carried `statusBarStyle: 'black-translucent'` from `ba05819`
+(2026-09-03). That style lays the web view UNDER the status bar, so whatever iOS does to that band lands on
+the app's own pixels.
+
+**Why no CSS can fix it, and why nothing was added.** `.chdr` (`globals.css:3173-3180`: sticky, `top: 0`,
+`z-index: 40`, `background: var(--spot-2)`, `padding-top: env(safe-area-inset-top, 0px)`) already paints
+opaque ground across the whole band, and **Joe reports the wash over it too.** So the blur is composited
+above the web view, and nothing the page paints can defeat it. The usual remedy, a fixed element pinned to
+the top with `height: env(safe-area-inset-top)`, would be a second copy of `.chdr`, which has already been
+shown not to work, so prompt 99 was told not to add one and did not. **Two more elements paint into the band,
+named because they are evidence about the same question:** the banner in its pinned state,
+`html[data-pin='banner'] .banner` (`globals.css:3313-3317`, sticky `top: 0`, carrying its own inset
+padding), and `.dpanel-scrim` (`globals.css:1557-1561`, `position: fixed; inset: 0`) while a game's detail
+panel is open. Neither was changed.
+
+**Why not `default`.** The comment it replaces recorded it: with `statusBarStyle` absent, Next emitted no
+status-bar tag and iOS fell back to `default` — *"an opaque LIGHT bar sitting above a #1b1b1b app."* The
+same comment named `black` as *"the no-layout-consequence fallback: a dark opaque bar."* That is what
+shipped. `viewportFit: 'cover'` stays, because `globals.css:204-205` and `:1842-1843` read the left, right
+and bottom insets. `themeColor` and the manifest's two colours stay `#1b1b1b` (= `--spot-2`).
+
+**Evidence that it emits.** The served HTML of `/`, `/weeks` and `/history` carries exactly one
+`<meta name="apple-mobile-web-app-status-bar-style" content="black"/>`. That check reads the EMITTED value,
+and it was mutation-checked. Adding `other: { 'apple-mobile-web-app-status-bar-style':
+['black','translucent'].join('-') }` to `metadata` passes a source grep (the word never appears, and
+`statusBarStyle: 'black'` still appears once), but Next then emits two tags, **the translucent one first**.
+The emitted check fails that 3/3, and passes the real file 3/3.
+
+### What the top measures now — stage D, four figures, arithmetic on the artwork
+
+1. **Stage width: 428.** `web/components/BannerMobileV2.jsx:34`, `viewBox="0 0 428 135"`, generated from
+   `web/lib/banner-mobile-v2.json:6` (`stage.w`).
+2. **The wordmark's first ink: stage y = 4.392.** Baseline `29.88` (`banner-mobile-v2.json:91`, emitted at
+   `BannerMobileV2.jsx:73-74`), font size `36` (`:93`), and the tallest glyph's outline top read from the
+   font the page actually loads, `web/public/fonts/BarlowCondensed-Bold.ttf` (sha256 `e476562e…`): 1000
+   units per em, cap height 700, **O and S overshoot to 708**. So 29.88 − 708/1000 × 36 = **4.392**; the flat
+   capitals top out at 4.680. **The definition** is the top of the gold glyph outlines. The dark
+   `bnTitleHalo` is excluded, because it is darker than the ground and reads as shadow, not shape. The sheen
+   cannot count, because it is masked to the glyphs. **The JSON's
+   `cap_height: 25.92` (0.72 × 36) is the halo's radius basis, not the ink**, and would give 3.96. The font
+   settles it.
+   *Corroboration, not the measurement:* the dev server renders at inset 0 (the geometry `black` produces).
+   At DPR 3 its first row of gold ink is device row 13, which is 4.333 CSS px at both 390 and 430. That is
+   within one device row of the font's figure at each width; the renderer snaps glyphs to whole pixels.
+3. **The clearance under `black`:** 4.392 × 390/428 = **4.00 CSS px at 390**, and 4.392 × 430/428 =
+   **4.41 CSS px at 430** (Joe's iPhone 14 Pro Max).
+4. **The compensation that would pull the wordmark flush under the bar — NOT APPLIED:**
+
+   ```css
+   @media (display-mode: standalone) and (max-width: 699px){.banner{margin-top:calc(-100% * 4.392 / 428)}}
+   ```
+
+   A percentage `margin-top` resolves against the containing block's WIDTH (CSS 2.1 §8.3, which says so of
+   `margin-top` explicitly). `.banner`'s containing block is the full-width `body` (`Chrome` returns a bare
+   fragment), which is the width the SVG scales to, so the offset tracks the artwork at every phone width:
+   −4.00 at 390, −4.41 at 430. It sits **beside** the existing standalone block rather than inside it, for
+   one reason: in landscape the phone is wider than 699px and shows the DESKTOP banner, whose headroom this
+   does not measure. It moves the whole banner, so the TV's tap target (`BannerTap`, a child of
+   `.bn-mobile`, `Banner.js:44-47`) moves with its artwork. **What it removes is the artwork's empty headroom**: 4.392 stage px of ground,
+   glow and the upper tail of the dark halo leave through the top of the web view. Under `black` that is
+   the bar's lower edge; the strip is not "behind" the bar, it is simply not painted. No gold is cut, and the
+   O and S tops land at y = 0.00. If WebKit's pixel snapping shaves a device row off those tops,
+   `4.1` in place of `4.392` keeps one row of air.
+
+**The comparison, at 430 CSS px, for Joe to judge — no recommendation:**
+
+| state | wordmark's first ink vs. the bottom of the status band |
+|---|---|
+| Joe's first installed ruling (prompt 45), later judged too much | **+18 px** |
+| **`black`, as shipped by this prompt** | **+4.41 px** (4.00 at 390) |
+| with the compensation above | **0.00 px** |
+| today, `black-translucent` | **−5.59 px — inside the band** (−6.00 at 390) |
+
+**THE LAST ROW CORRECTS TWO DOCUMENTS AND THE BRIEF.** M22 and `globals.css:1993-2008` say the ink lands
+*"EXACTLY at the band's lower edge"*, zero clearance. That was true when prompt 51 measured it: baseline
+`36.88`, first ink 36.88 − 25.488 = 11.39 stage px, which is where the "11 stage px of headroom" comes from.
+**`d24e8e0` ("banner: model f", 2026-09-07) moved every element up 7 stage px**; its own message says the
+artwork had *"11 units of margin above and 14 below; both become 4"*. The inset rules and their comments did not follow. Installed, the
+standalone padding is `inset − 10`, so the ink sits at `inset − 10 + 4.41`: **5.59 px inside the band at
+any inset**, whichever iPhone it is. Since 2026-09-07 the top of the wordmark has been sitting in exactly
+the strip iOS 27 now blurs. M22 is amended in this commit (rule 30). The `globals.css` comments could not
+be: the brief made that file read-only. They are an open item in `docs/handoff-status.md`.
+
+**Prompts 45, 46, 50 and 51's tuning is DORMANT, NOT DELETED.** `globals.css:2011` (`max(0px,
+calc(env(safe-area-inset-top, 0px) - 14px))`), `:2034` (the standalone `+ 4px - 14px`) and `:3178`
+(`.chdr`'s inset padding) all resolve to 0 when the top inset is 0, on their own guards. If the style ever
+goes back to translucent they wake exactly as they were, including the 5.59 px overlap above.
+
+**The trade.** The edge-to-edge top goes: the artwork no longer runs up behind the clock and battery. In
+return the top is unwashed, because iOS's own dark bar owns the band. That trade is Joe's to confirm on the
+device.
+
+**What no gate can say.** `npm run smoke`, `node scripts/qa-shots.mjs` and `npm run geometry` run in
+desktop Chromium with no safe-area inset. They have always rendered the geometry this change produces, so
+none of them can detect it and none can confirm it. Five green gates here are not a verdict.
+
+**The platform assumption (rule 34), stated.** That `black` puts the web view below the bar with a top
+inset of 0 rests on this repo's own record of the non-translucent family: `default` observed as a bar
+*"sitting above"* the app, and the old comment's *"no-layout-consequence"*. It does not rest on a spec, and
+not on iOS 27. If iOS 27 reported a top inset under `black`, the three rules would add `max(0, inset − 10)`
+and the clearance would grow by that much. The phone decides, **after a reinstall**: iOS is taken to read
+the status-bar tag at install, so the existing Home Screen icon keeps the old behaviour until it is
+removed and re-added from Safari.
+
+**Also noticed, not changed (out of scope):** `web/components/Banner.js:21` and the JSON's own
+`stage.units` note still say the phone banner's height is `width x 155/428`. Since `d24e8e0` the viewBox
+has been 428 × 135.

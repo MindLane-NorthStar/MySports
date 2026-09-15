@@ -1,5 +1,11 @@
 # Mobile Grid Addendum — v2.1 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04 · per-team cap surface and art, candidate D, 2026-09-04)
 
+> **v2.3 (2026-09-15, prompt 99).** **M22 IS AMENDED.** The installed app's status bar is iOS's own
+> `black` bar now, not the translucent one, so the banner starts below it and M22's rules fall to 0 on
+> their own guards. M22's measured table was also stale before this change: `d24e8e0` (2026-09-07)
+> moved the artwork up 7 stage px, so its headroom is 4.392 stage px, not 11. Nothing M1–M21 or M23
+> says changes, and the grid canvas is not touched.
+>
 > **v2.2 (2026-09-10, prompt 86 block C).** **M5 IS AMENDED** — the axis leaves `.mgrid-scroll` and
 > pins under the control stack when the header is collapsed, kept over its columns by a transform
 > on its track. M4's rule is untouched and now asserted in a test: the track is not an ancestor of
@@ -312,6 +318,31 @@ a `<text>` element's bounding rect is its EM box, which reports the "first ink" 
 **`max(0px, …)` is load-bearing** — a browser with no safe area reports 0, and 0 − 14 is negative
 padding. **A third 6 px would be the one that bites:** at −20 px the ink would sit 6 px inside the
 band. The left, right and bottom insets are untouched.
+
+> **v2.3 AMENDMENT (2026-09-15, prompt 99). THE STATUS BAND IS iOS's, AND THE TABLE ABOVE IS HISTORY.**
+>
+> **What changed.** `web/app/layout.js` emits `apple-mobile-web-app-status-bar-style` = **`black`**.
+> Under the translucent style, iOS 27 composites a blur over the band the web view occupies. `.chdr`
+> already painted opaque `--spot-2` there and the wash appeared over it anyway, so no page paint can stop
+> it. Register §48 carries the reasoning, the evidence, and the rejected `default`.
+>
+> **What is true at the top of the installed app now.** iOS draws a dark opaque bar and the web view
+> begins below it, with a top inset of 0 (the expectation; the device confirms it, rule 25). Both rules
+> above resolve to 0, and the banner artwork starts at the bar's lower edge. **The wordmark's first ink
+> is the artwork's own headroom: stage y 4.392**. That is baseline 29.88 minus the O and S outline tops
+> (708 of 1000 units at 36 px, in `web/public/fonts/BarlowCondensed-Bold.ttf`); the flat capitals top out
+> at 4.680. It renders as **4.00 CSS px below the bar at 390 and 4.41 at 430.** A one-line pull-up that
+> would close that gap is written out in §48 and is NOT applied.
+>
+> **The table above was already wrong, and says so here rather than being rewritten.** It was measured
+> with the wordmark's baseline at 36.88. `d24e8e0` ("banner: model f", 2026-09-07) moved every element up
+> 7 stage px, and nothing above followed. From then until this change, the installed ink sat at
+> `inset − 10 + 4.41`, which is **5.59 px INSIDE the band at 430 (6.00 at 390) at any inset**, not 0.0.
+> *"The 11 stays in the drawing"* stopped being true that day; the drawing carries 4.392.
+>
+> **The rules are dormant, not deleted.** `globals.css:2011`, `:2034` and `.chdr`'s inset padding at
+> `:3178` stay. If the status bar ever goes back to translucent they resume exactly as they were,
+> including the overlap measured above.
 
 **M23. THE WEEK GRID, and the geometry check reshaped (v2.1, 2026-09-06, prompt 54).**
 

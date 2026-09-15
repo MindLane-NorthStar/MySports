@@ -15,12 +15,29 @@ export const metadata = {
   // Next's App Router serves and links app/icon.png and app/apple-icon.png by file convention. If a
   // link tag ever seems necessary here, the icon file is in the wrong place.
   //
-  // statusBarStyle was ABSENT, so Next emitted no apple-mobile-web-app-status-bar-style and iOS
-  // fell back to `default` - an opaque LIGHT bar sitting above a #1b1b1b app. 'black-translucent'
-  // makes the web view extend UNDER the status bar, which is only correct alongside the
-  // safe-area work in globals.css and the viewport export below; the two ship together or not at
-  // all. ('black' would be the no-layout-consequence fallback: a dark opaque bar.)
-  appleWebApp: { title: 'MySports TV', statusBarStyle: 'black-translucent' },
+  // statusBarStyle IS 'black' (prompt 99, 2026-09-15): iOS draws its own dark opaque bar and the
+  // web view starts BELOW it. From `ba05819` (2026-09-03) it was the translucent style, which lays
+  // the web view UNDER the status bar - and iOS 27 composites a progressive blur over that band,
+  // muddying whatever of the app sits in it. THE BLUR IS ABOVE THE WEB VIEW, NOT IN IT: `.chdr`
+  // already paints opaque --spot-2 across the whole band (globals.css, padding-top:
+  // env(safe-area-inset-top)) and Joe saw the wash over it anyway, so no background the page paints
+  // can defeat it. Handing the band back to iOS is the fix, and there is deliberately no fixed
+  // status-bar element anywhere: `.chdr` already was one, and it did not work.
+  //
+  // NOT `default`: when statusBarStyle was ABSENT, Next emitted no apple-mobile-web-app-status-bar-
+  // style and iOS fell back to `default` - an opaque LIGHT bar sitting above a #1b1b1b app.
+  //
+  // WHAT THE TOP LOOKS LIKE NOW. Below the bar the top inset is 0, so globals.css's three
+  // top-inset rules fall to 0 on their own guards and the banner artwork starts at the bar's lower
+  // edge. The wordmark's first ink is then the artwork's own headroom: stage y 4.392 (baseline 29.88
+  // minus 708/1000 x 36 - the O and S tops in public/fonts/BarlowCondensed-Bold.ttf), which is
+  // 4.41 CSS px at 430 wide and 4.00 at 390. Under the translucent style it sat 5.6 px (at 430)
+  // INSIDE the band. Register §48 has the arithmetic and the one-line pull-up, not applied.
+  //
+  // viewportFit: 'cover' below STAYS: the left, right and bottom insets still need it. Treat any
+  // change here as needing the home-screen app removed and re-added from Safari - iOS is taken to
+  // read this tag at install (prompt 99's brief; not something this repo has measured).
+  appleWebApp: { title: 'MySports TV', statusBarStyle: 'black' },
 };
 
 // viewportFit: 'cover' is what lets the page paint into the notch and home-indicator areas, and
