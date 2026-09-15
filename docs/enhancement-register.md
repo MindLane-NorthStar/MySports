@@ -3979,3 +3979,43 @@ removed and re-added from Safari.
 **Also noticed, not changed (out of scope):** `web/components/Banner.js:21` and the JSON's own
 `stage.units` note still say the phone banner's height is `width x 155/428`. Since `d24e8e0` the viewBox
 has been 428 × 135.
+
+## 49. THE STRAY `AGENTS.md` IS DELETED, AND DELIBERATELY NOT IGNORED — 2026-09-15, prompt 100
+
+**Numbered by count:** §1–§48 each appear exactly once and there was no §49.
+
+**JOE'S RULING, 2026-09-15:** *"Codex got in this repo by accident. Remove the AGENTS.md file — it
+doesn't belong there."*
+
+**What it was.** An untracked `AGENTS.md` in the repo root: **22,539 bytes, mtime 2026-09-14 16:00:15
+EDT (20:00 UTC)**, sha256 `147c8941…a108`. It was never in any commit on any ref (`git log --all --
+AGENTS.md` is empty). Prompt 99 found it at its start and reported it, and nothing in the tree read it.
+**It was a machine-made copy of `CLAUDE.md`, measured rather than assumed:** take `CLAUDE.md` as of
+`d6cd7b2` (22,564 bytes, the version current when the copy was written), replace its four `Claude Code`
+with `Codex` and its one `Claude.ai` with `Codex.ai`, and the result is **byte-identical** to
+`AGENTS.md`. Nothing else in it differed, so nothing in it was unique.
+
+**It was already drifting.** Against `CLAUDE.md` at `9faa97b` it differed on exactly the two rows prompt
+99 had updated: the register range (`§1–§47` against `§1–§48`) and the brief count (103 covering 01–98
+against 104 covering 01–99). It was a second copy of the working rules, which is the failure §38 closed
+on 2026-09-11 and the reason recorded at `.gitignore:33`, `CLAUDE.md:215` and `handoff-status.md:57`:
+a copy nobody diffs drifts, and nothing fails when it does.
+
+**How it went.** Checked untracked (`git ls-files --error-unmatch` failed) and unreferenced
+(`git grep -n AGENTS.md -- ':!docs/prompts/'` was empty before this entry was written; it now finds
+only this entry and the handoff line that closes the item, which are the record and not references. A
+case-insensitive search found only "user agents" in an MLB research note). It was removed with Python's `os.remove`, and the removal was proved by
+a directory listing, not by the absence of an error. **The listing is the proof, not `git grep`:**
+`git grep` searches only tracked files, so it returned nothing while the file was still on disk. The
+authority for the deletion was Joe's ruling and the brief naming the path in its scope. The settings deny
+list is not a boundary. It also does not deny a bare `rm`; it denies `rm -rf *` and `rm -fr *`.
+
+**NOT GITIGNORED, ON PURPOSE.** If Codex, or anything else, writes the file again, an ignore line would
+make it invisible, while an untracked file shows up as `?? AGENTS.md` in the next `git status`, where
+somebody sees it. Working rule 4 (stage by explicit path) already keeps an untracked file out of a commit,
+so ignoring it would buy nothing and cost the only signal. **The `handoff/project-mirror/` line is the
+opposite case, for its own stated reason:** `.gitignore:27-33` keeps that line *"so a recreated mirror can
+never reach the index"*. There the risk worth guarding was committing it; here it is not noticing it.
+
+**No new working rule.** Rule 2 (one writer at a time) already covers a second agent in the repo, and
+`CLAUDE.md` owns the rules (§38).
