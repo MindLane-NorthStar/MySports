@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **106 briefs, covering 01–101, counted 2026-09-16 by prompt 101
-(105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **107 briefs, covering 01–102, counted 2026-09-16 by prompt 102
+(106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
 count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -62,6 +62,13 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > appended a `Re-measured … prompt NN` line beneath it without touching the sentence above them, so
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
+
+**Re-measured 2026-09-16, prompt 102 — no count moved; two device items closed and CSS comments.** Written
+after the last gate run. **One gate caught a real thing mid-run and is worth the line:** `test:unit` failed
+608/609 on the first attempt because a new `globals.css` COMMENT spelled `safe-area-inset-top`, and
+`nav.test.mjs` counts that token across the whole file to prove exactly three RULES claim the top edge. The
+comment was reworded to say "the top inset" — the convention every other comment in that file already
+follows — and the guard was not touched.
 
 **Measured 2026-09-16, prompt 101 — `npm run test:unit` 596 → 609** (block A's release policy and
 block B's re-arm, thirteen tests); the other four did not move.
@@ -959,15 +966,20 @@ before touching any count line.
   (queue item 7; one run took 48 minutes) comes out of the same allowance. **Not close today; worth
   watching as the job grows.** The account's real figure needs `gh auth refresh -s user` or a look at the
   GitHub billing page — Joe's.
-- **OPEN — THE STATUS BAR IS `black` NOW, AND ONLY JOE'S PHONE CAN SAY WHETHER THAT FIXED THE WASH (prompt
-  99, register §48).** `web/app/layout.js` emits `apple-mobile-web-app-status-bar-style` = `black` in
-  place of the translucent style that let iOS 27's blur land on the app's own pixels. **Rule 25's second
-  half is outstanding.** The deploy being green is not the result, and no gate can be: smoke, qa-shots
-  and geometry run with no safe-area inset and have always rendered this geometry. **A reinstall comes
-  first**: iOS is taken to read the tag at install, so the existing Home Screen icon keeps the old
-  behaviour until the app is removed and re-added from Safari. What to look at: a dark opaque bar owned by
-  iOS, the banner starting just below it, and no wash over the wordmark or the collapsed header.
-  **THE PRE-MEASURED FOLLOW-UP IS WITHDRAWN — DO NOT APPLY IT (prompt 101, 2026-09-16).** The line
+- ~~**OPEN — THE STATUS BAR IS `black` NOW, AND ONLY JOE'S PHONE CAN SAY WHETHER THAT FIXED THE WASH
+  (prompt 99, register §48).**~~ **CLOSED 2026-09-16 — Joe tested the installed app after prompt 101
+  deployed and reported *"It works — we're good."*** Rule 25's second half is satisfied for the banner:
+  `web/app/layout.js` emits `apple-mobile-web-app-status-bar-style` = `black`, iOS draws its own opaque
+  bar, and the wash over the wordmark is gone. **Two kinds of evidence, and they are not the same.** The
+  BEFORE state is measured at pixel scale (the matched pair below); the AFTER is Joe reporting by eye on
+  the device. **There is no post-fix pixel measurement**, and nobody should later read this entry as if
+  there were. **ONE HALF OF THE ORIGINAL CRITERIA IS WEAKER THAN THE OTHER, said plainly:** the criteria
+  were *"a dark opaque bar owned by iOS, the banner starting just below it, and no wash over the wordmark
+  **or the collapsed header**."* The banner half is confirmed directly. **The collapsed header was never
+  measured for wash** — the basis is Joe reporting the navbar rendering correctly across several
+  screenshots, which is weaker, and is recorded at that strength rather than rounded up.
+  **THE PRE-MEASURED FOLLOW-UP IS WITHDRAWN — DO NOT APPLY IT (prompt 101, 2026-09-16), AND CLOSING THIS
+  ITEM DOES NOT REVIVE IT.** The line
   §48 wrote out (`margin-top: calc(-100% * 4.392 / 428)`) moves the wordmark 4.4 CSS px UP, and the
   matched screenshot pair of 2026-09-16 found iOS 27 feathering a scrim down to ~90 CSS px with the
   wordmark inside it — so up is darker, not better. §48 carries the reversal; register §50 has the
@@ -975,26 +987,33 @@ before touching any count line.
   stays there. For comparison: Joe's first ruling was 18 px, and
   under the translucent style the ink sat 5.59 px inside the band. **The revert is one word**, `black` back
   to `black-translucent`, plus the same reinstall.
-- **OPEN — BLOCK B IS PROVISIONAL UNTIL JOE'S PHONE AGREES (prompt 101, register §50).** The wordmark's
-  tap-restore now re-arms the banner pin, on the hypothesis that an element holding the top edge
-  suppresses iOS 27's scroll-edge scrim — three consistent observed states, and NOT proof of the
-  mechanism. **What to look at:** collapse the header by scrolling, tap MYSPORTS TV in the navbar, and
-  see whether the restored wordmark is as bright as it is on a fresh open. It was measured at **0.484
-  of full brightness** at the top of the capitals before this change. **No reinstall is needed** — this
-  is app code, not the install-time status-bar tag prompt 99 changed; a reload is enough. **If it
-  fails**, the fallback is headroom above the wordmark, which prompt 101 deliberately did not
-  pre-emptively take (prompts 46, 50 and 51 each reclaimed some of that space), and the single-command
-  revert is in the prompt 101 report. **Block A of the same commit is independent and is proven in the
-  browser** — keep it either way; revert block B alone.
-- **STALE COMMENTS PROMPT 99 COULD NOT CORRECT — `globals.css` was read-only for it (rule 30, owed).**
-  `globals.css:1960-1962` says the banner bleeds *"under the translucent status bar, which is the entire
-  point of black-translucent"*. `:1966-1967` and `:2003-2004` say the artwork carries *"11 stage px"* of
-  headroom. `:1993-2008`'s table says the ink lands *"EXACTLY at the band's lower edge"*. The first became
-  untrue with prompt 99. The rest have been untrue since `d24e8e0` (2026-09-07) moved the artwork up 7
-  stage px: the headroom is 4.392 and the installed ink sat 5.59 px inside the band. M22 carries the
-  correction (Addendum v2.3). The CSS comments want the same edit, by the next run that may touch that
-  file. `web/components/Banner.js:21` and `banner-mobile-v2.json`'s `stage.units` note (*"155/428"*,
-  stale since the viewBox became 428 × 135) are the same kind of debt.
+- ~~**OPEN — BLOCK B IS PROVISIONAL UNTIL JOE'S PHONE AGREES (prompt 101, register §50).**~~ **CLOSED
+  2026-09-16 — Joe confirmed on the device, by eye: the restored wordmark is no longer washed.** The
+  wordmark's tap-restore re-arms the banner pin, and the SHIP is no longer provisional.
+  **THE EXPLANATION IS STILL A HYPOTHESIS, and that is not a formality.** What Joe confirmed is the
+  OUTCOME. The MECHANISM — that an element holding the top edge suppresses iOS 27's scroll-edge scrim —
+  still rests on three consistent observed states and is not proof. A working fix is evidence FOR the
+  hypothesis, not a promotion of it to fact. **If the scrim ever comes back after a change to the pin,
+  read that sentence first**: the mechanism was never nailed down, so the pin is the suspect but not a
+  proven cause. Before this change the wordmark measured **0.484 of full brightness** at the top of the
+  capitals (pixel-measured); the after is Joe looking at his phone, with no post-fix measurement.
+  The fallback that was held in reserve — headroom above the wordmark — was NOT needed and was not
+  taken; the space stays where prompts 46, 50 and 51 left it.
+- ~~**STALE COMMENTS PROMPT 99 COULD NOT CORRECT — `globals.css` was read-only for it (rule 30, owed).**~~
+  **CLOSED by prompt 102** (2026-09-16): `globals.css`'s banner comments now say what is true. The header
+  no longer claims the banner bleeds *"under the translucent status bar"*; the drawing's headroom reads
+  **4.392 stage px** rather than *"11"*; and the measured table is kept as dated history with its two
+  corrections named — `d24e8e0` moved the baseline 36.88 → 29.88 so the ink sat 5.59 px INSIDE the band,
+  and prompt 99's `black` makes the inset 0. Figures taken from Addendum M22 v2.3, which agreed with the
+  handoff figures exactly. **Comments only, proved rather than asserted:** with every comment stripped,
+  the stylesheet is byte-identical before and after (same sha256), and the comment delimiters balance at
+  262/262. **Three more of the same staleness were found and fixed in the same pass** beyond the three
+  this item named — the old `:1991` *"the 11 stays in the drawing"*, and the standalone block's
+  *"4 here + the artwork's own 11"* and *"lands exactly on the inset's lower edge"* (rule 32: a
+  correction is not done until every place saying the same thing obeys).
+  **STILL OWED, AND NOT THIS PROMPT:** `web/components/Banner.js:21` and `banner-mobile-v2.json`'s
+  `stage.units` note both still say the phone banner is *"width x 155/428"* when the viewBox has been
+  428 × 135 since `d24e8e0`. It touches a component and a data file, which prompt 102's scope excluded.
 - ~~**A SECOND AGENT REACHED THIS REPO ONCE AND LEFT A COPY OF THE RULES BEHIND (found by prompt 99).**~~
   **CLOSED by prompt 100** (register §49, Joe's ruling 2026-09-15: Codex got in by accident). The
   untracked root `AGENTS.md` (22,539 bytes, 2026-09-14 16:00 EDT) was `CLAUDE.md` at `d6cd7b2` with

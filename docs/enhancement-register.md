@@ -3869,6 +3869,17 @@ nothing, so it is recorded rather than moved.
 
 **Numbered by count:** §1–§47 each appear exactly once and there was no §48.
 
+> **CONFIRMED ON THE DEVICE 2026-09-16 (prompt 102).** Joe reinstalled the PWA, tested, and reported
+> *"It works — we're good."*: iOS draws its own dark opaque bar, the banner starts below it, and the
+> wash over the wordmark is gone. Rule 25's second half is satisfied and the open item is closed.
+> **Two caveats travel with that, both understated rather than rounded up.** First, the evidence is
+> asymmetric — every BEFORE figure here is measured at pixel scale, while the AFTER is a person
+> looking at a phone, and **there is no post-fix pixel measurement.** Second, this section's criteria
+> included *"no wash over the wordmark OR THE COLLAPSED HEADER"*, and **the collapsed header was
+> never measured for wash**; the basis for that half is Joe reporting the navbar rendering correctly
+> across several screenshots. **The pull-up in item 4 below stays withdrawn** — closing the item does
+> not revive it.
+
 **The symptom.** iOS 27 paints a progressive blur over the top edge of an installed PWA. On Joe's phone
 it muddies whatever is at the top — the banner wordmark, and the collapsed header once it has taken over.
 
@@ -3961,7 +3972,10 @@ artwork had *"11 units of margin above and 14 below; both become 4"*. The inset 
 standalone padding is `inset − 10`, so the ink sits at `inset − 10 + 4.41`: **5.59 px inside the band at
 any inset**, whichever iPhone it is. Since 2026-09-07 the top of the wordmark has been sitting in exactly
 the strip iOS 27 now blurs. M22 is amended in this commit (rule 30). The `globals.css` comments could not
-be: the brief made that file read-only. They are an open item in `docs/handoff-status.md`.
+be: the brief made that file read-only. **They were corrected by prompt 102 on 2026-09-16** — the
+header no longer claims the banner bleeds under a translucent bar, the headroom reads 4.392 stage px
+rather than 11, and the measured table is kept as dated history carrying both of its corrections.
+Comments only: with every comment stripped the stylesheet is byte-identical before and after.
 
 **Prompts 45, 46, 50 and 51's tuning is DORMANT, NOT DELETED.** `globals.css:2011` (`max(0px,
 calc(env(safe-area-inset-top, 0px) - 14px))`), `:2034` (the standalone `+ 4px - 14px`) and `:3178`
@@ -4033,8 +4047,17 @@ never reach the index"*. There the risk worth guarding was committing it; here i
 **Numbered by count:** §1–§49 each appear exactly once and there was no §50.
 
 Two defects in one release path. **Block A is mechanism-proven, in the browser, in both directions.
-Block B is a HYPOTHESIS about iOS 27 with strong evidence, and ships PROVISIONAL** — its wiring is
-proven, its premise is not, and only Joe's phone can settle it (rule 25).
+Block B's wiring is proven and its PREMISE IS A HYPOTHESIS about iOS 27.** It shipped provisional
+under rule 25.
+
+> **CONFIRMED ON THE DEVICE 2026-09-16, and the ship is no longer provisional (prompt 102).** Joe
+> tested the installed app after this deployed and reported *"It works — we're good."* — the navbar
+> appears on the FIRST scroll-down after a switch to WEEK, and the restored wordmark is no longer
+> washed. **THE EXPLANATION IS STILL A HYPOTHESIS.** He confirmed the OUTCOME; the MECHANISM below
+> is unchanged in status, and a working fix is evidence FOR it rather than a promotion of it to
+> fact. **The evidence is also of two kinds** and the difference matters more than it reads: every
+> BEFORE figure in this section is measured at pixel scale, and the AFTER is a person looking at a
+> phone. **No post-fix pixel measurement exists.**
 
 ### Block A — the first scroll after a landing did not collapse the header
 
@@ -4077,7 +4100,7 @@ call to it — prompt 71's ruling that THE LANDING never collapses the header. I
 guard at full force (a `collapseHeader()` inside `land()` still trips it) and makes both halves of the
 predicate watchable by a test.
 
-### Block B — the wordmark is half-brightness after a tap-restore (PROVISIONAL)
+### Block B — the wordmark is half-brightness after a tap-restore (FIXED; the mechanism is still a hypothesis)
 
 **Two screenshots, same iPhone, same install, same minute, both on prompt 99 rev B** (723 × 1568
 pixels), measured by Cowork 2026-09-16:
@@ -4105,6 +4128,13 @@ unconditionally sticky at `top: 0` with opaque `--spot-2`, and Joe reports the n
 correctly in every screenshot. So across three observed states, **an element holding the top edge
 appears to suppress iOS 27's scroll-edge scrim, and ordinary in-flow content under the status bar
 receives it.** Three consistent data points is good evidence and is NOT proof of the mechanism.
+
+**AND THE 2026-09-16 CONFIRMATION DID NOT CHANGE THAT.** The fix works on the device, which makes a
+fourth observation consistent with this explanation — a re-armed pin, and no wash. It still does not
+separate this explanation from any other that predicts the same outcome. **If a later change to the
+pin brings the scrim back, start here**: the mechanism was never established, so the pin is the first
+suspect and not a proven cause, and the thing to get is a matched before/after pixel pair of the kind
+that produced the figures above.
 
 **THE CHANGE:** the wordmark's expand re-arms the pin — Joe's prompt-73 ruling (*"make banner STICKY
 until the user scrolls"*) reaching the one entry point that never armed. `AutoScroll.js` subscribes to

@@ -1957,15 +1957,40 @@ html[data-hdr='collapsed'] .mgrid-axis {
 
 /* ---- banner + nav row (design session 2026-09-02; compact bar retired 2026-09-04) */
 /* ============================================================= MAIN BANNER (every route) */
-/* The banner BLEEDS: its background reaches the very top edge under the translucent status bar,
- * which is the entire point of black-translucent. Only its CONTENT is pushed clear, with padding
- * rather than a margin so the gradient still paints behind the clock and battery.
+/* The banner BLEEDS: its background reaches the very top edge of whatever box it is given, and only
+ * its CONTENT is pushed clear - with padding rather than a margin, so the ground still paints across
+ * the whole of it rather than leaving a gap above.
+ *
+ * THE STATUS BAR IS iOS's OWN SINCE PROMPT 99 (2026-09-15), AND THIS PARAGRAPH USED TO SAY THE
+ * OPPOSITE. It read "under the translucent status bar, which is the entire point of
+ * black-translucent". `web/app/layout.js` now emits `apple-mobile-web-app-status-bar-style` =
+ * `black`: iOS draws an opaque bar, the web view begins BELOW it, and the top inset is 0 - so every
+ * top-inset rule in this file resolves to 0 on its own guard and the artwork starts at the bar's
+ * lower edge. The cause was iOS 27 compositing a blur over the band the web view occupied; `.chdr`
+ * painted opaque `--spot-2` there and the wash appeared over it anyway, so no paint of this page's
+ * could defeat it. Register §48; Addendum M22's v2.3 amendment is the contract side. Joe confirmed
+ * the result on the device on 2026-09-16.
+ *
+ * THE RULES BELOW ARE DORMANT, NOT DEAD. They are written against the top inset, which env() reports
+ * as 0 while the bar is `black`. If the style ever goes back to translucent they wake exactly as they
+ * were - including the 5.59px overlap recorded further down. (The property is deliberately not
+ * spelled out in this prose: `web/test/nav.test.mjs` counts the literal token across this whole file
+ * to prove exactly three RULES claim the top edge, and a mention in a comment reads as a fourth.)
  *
  * THE INSET IS ADDED WHOLE, PLUS 7px WHEN INSTALLED (prompt 44, amended by prompt 45).
  * Prompt 28 SUBTRACTED 18px here, because the OLD artwork carried ~18px of empty gradient above its
  * glyphs and a 47px iPhone inset would have stacked two gaps. Banner v2 is not that drawing: it
- * carries 11 stage px of headroom, the gap Joe set in phone iteration 9 (22 -> 11), so prompt 44
+ * carried 11 stage px of headroom, the gap Joe set in phone iteration 9 (22 -> 11), so prompt 44
  * removed the subtraction and let the whole inset through.
+ *
+ * THAT 11 IS HISTORY: THE DRAWING CARRIES 4.392 STAGE PX (`d24e8e0`, "banner: model f",
+ * 2026-09-07). That commit moved every element up 7 stage px - its own message says the artwork had
+ * "11 units of margin above and 14 below; both become 4" - and none of the comments here followed,
+ * so this file went on quoting 11 for nine days and misled prompt 99's brief. The figure is read
+ * off the artwork and the font rather than a comment: baseline 29.88 (`web/lib/banner-mobile-v2.json`)
+ * minus the O and S outline tops, 708 of 1000 units at 36px in
+ * `web/public/fonts/BarlowCondensed-Bold.ttf`, which is 4.392; the flat capitals top out at 4.680.
+ * Corrected here by prompt 102 under rule 30, in the same commit as the closeout it belongs to.
  *
  * Then Joe saw it installed: "the tight distance between the bezel and top of the MySports TV text
  * ... we need to add a smidge of padding." His ruling was 18px of clear space, and the extra came
@@ -1987,25 +2012,43 @@ html[data-hdr='collapsed'] .mgrid-axis {
 
      THIS SUPERSEDES PROMPT 44's "absorb nothing of the inset" ruling (`a68af01`). That ruling
      protected banner v2's own headroom - the gap Joe set in the September 4 phone iteration - and
-     Joe's later device observations override it. The artwork is still not touched: coordinates are
-     never hand-edited and the 11 stays in the drawing.
+     Joe's later device observations override it. The artwork is still not touched by THIS rule:
+     coordinates are never hand-edited here. (It was `d24e8e0` that moved them, in the JSON and
+     through the generator, taking the drawing's headroom from 11 stage px to 4.392.)
 
-     WHERE THE INK ACTUALLY LANDS, measured by scanning rendered pixels rather than by arithmetic,
-     because a <text> element's bounding box is its em box and not its ink:
+     WHERE THE INK LANDED WHEN THIS WAS MEASURED - AND THE TABLE IS HISTORY, NOT THE CURRENT TOP.
+     Measured by scanning rendered pixels rather than by arithmetic, because a <text> element's
+     bounding box is its em box and not its ink. It was taken on 2026-09-06 with the wordmark's
+     baseline at 36.88 and an inset that existed:
 
-       no inset          padding 0    first ink y = 10.0 at 390, 11.0 at 430   (unchanged)
+       no inset          padding 0    first ink y = 10.0 at 390, 11.0 at 430
        inset 47, before  padding 43   first ink y = 53.0   6px below the band
        inset 47, AFTER   padding 37   first ink y = 47.0   EXACTLY at the band's lower edge
        inset 59, before  padding 55   first ink y = 65.0   6px below
        inset 59, AFTER   padding 49   first ink y = 59.0   EXACTLY at the band's lower edge
 
-     So 14 does NOT push the wordmark into the status bar, and the arithmetic that suggested it
-     would missed the standalone rule's +4: net absorption is 14 - 4 = 10 CSS px, which is exactly
-     the artwork's measured headroom (11 STAGE px = 10.0 CSS px at 390, the SVG scaling 390/428).
-     There is zero overlap with the clock and battery glyphs, and nothing is clipped - the padding
-     resolves positive at every inset, so the artwork's top is never above y = 0.
+     TWO THINGS HAVE HAPPENED TO IT SINCE, and both are why it is kept rather than rewritten - the
+     rows above are what was true on the day, and a table with no date is how this drifted.
 
-     A THIRD 6px WOULD BE THE ONE THAT BITES. At -20px the ink would sit 6px inside the band.
+       1. `d24e8e0` (2026-09-07) moved the baseline 36.88 -> 29.88. The "EXACTLY at the band's lower
+          edge" rows stopped being true that day: the installed ink then sat at inset - 10 + 4.41,
+          which is 5.59px INSIDE the band at 430 (6.00 at 390), at ANY inset. Nobody saw it until
+          iOS 27 started blurring exactly that strip.
+       2. Prompt 99 made the bar `black`, so the inset is 0 and every row with an inset in it
+          describes a state this app is no longer in.
+
+     WHAT IS TRUE NOW: the padding resolves to 0, the artwork starts at the bar's lower edge, and
+     the wordmark's first ink is the drawing's own headroom - 4.392 stage px, which renders as
+     4.00 CSS px at 390 and 4.41 at 430. Joe confirmed the result on the device on 2026-09-16.
+     Addendum M22's v2.3 amendment carries the same figures; register §48 has the arithmetic.
+
+     So 14 did NOT push the wordmark into the status bar, and the arithmetic that suggested it
+     would missed the standalone rule's +4: net absorption is 14 - 4 = 10 CSS px, which matched the
+     artwork's headroom AS IT WAS (11 stage px = 10.0 CSS px at 390, the SVG scaling 390/428).
+     Against today's 4.392 the same subtraction is what put the ink inside the band.
+
+     A THIRD 6px WOULD HAVE BEEN THE ONE THAT BIT. At -20px the ink would have sat 6px inside the
+     band - and `d24e8e0` then did the equivalent to the artwork instead, without touching a rule.
 
      WHAT IT DOES NOT TOUCH: the left, right and bottom insets, which Joe confirmed correct. */
   padding-top:max(0px, calc(env(safe-area-inset-top, 0px) - 14px));
@@ -2026,11 +2069,17 @@ html[data-hdr='collapsed'] .mgrid-axis {
    4px, HALVED FROM PROMPT 45's 7 (prompt 46, Joe on 2026-09-05: "Now there is too much space above
    MySports TV ... reduce that amount that was added by half"). Half of 7 is 3.5 and this is an
    integer pixel; at 3x DPR the half-pixel is a third of a device pixel, below anything the panel can
-   show. Wordmark first ink now sits 15px below the inset: 4 here + the artwork's own 11. */
+   show. Wordmark first ink then sat 15px below the inset: 4 here + the artwork's own 11.
+
+   BOTH HALVES OF THAT LAST SENTENCE ARE NOW HISTORY. The artwork carries 4.392 stage px since
+   `d24e8e0`, not 11, and since prompt 99 the inset is 0 - so this rule contributes nothing and the
+   ink sits 4.41 CSS px below iOS's bar at 430. It stays for the translucent case, not for today. */
 @media (display-mode: standalone){
   /* The installed app keeps prompt 46's +4 and takes the -14 through the same max() guard, so the
-     two never fight. NET ABSORPTION IS 10px, and that is why the wordmark lands exactly on the
-     inset's lower edge rather than inside it - see the measured table above. */
+     two never fight. Net absorption is 10px, which is why the wordmark landed exactly on the
+     inset's lower edge while the drawing carried 11 stage px of headroom - see the table above,
+     and read its two corrections: after `d24e8e0` the same 10px put the ink 5.59px INSIDE the
+     band, and since prompt 99 the inset is 0 and this whole expression resolves to 0. */
   .banner{padding-top:max(0px, calc(env(safe-area-inset-top, 0px) + 4px - 14px))}
 }
 .bn-pc{position:relative}
