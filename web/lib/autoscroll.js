@@ -7,6 +7,11 @@
 // could drift. Prompt 68 needed the arrival rule pinned properly, so the whole pure half moved out.
 // `lib/headerstate.js` is the same shape and the same reason.
 
+// ONE NAME FOR THE SENTINEL, from the module that owns it. `lib/headerstate.js` exports the id the
+// page renders and the observer watches; the release policy at the foot of this file has to find the
+// same element, and a second copy of that string is a second thing to get wrong.
+import { SENTINEL_ID } from './headerstate.js';
+
 /**
  * Breathing room between the sticky stack's lower edge and whatever the scroll lands on.
  *
@@ -143,4 +148,59 @@ export function decideScroll(state, trigger, key) {
   // arriving at the key they started on does not undo that.
   const navigated = state.navigated || key !== state.arrivalKey;
   return { scroll: navigated, state: { arrivalKey: state.arrivalKey, navigated } };
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * THE FIRST SCROLL AFTER A LANDING HAD NOTHING TO COLLAPSE IT (prompt 101 block A, Joe 2026-09-15).
+ *
+ * Joe: "you scroll down and the banner disappears, scroll up and the banner is still there, scroll
+ * down again and THEN the banner disappears and navbar appears." And, which named the cause: "I
+ * can't scroll down on initial open because the DAY / All Games / List view today is so short
+ * there's no scrolldown to perform. When I immediately shift to week and scroll down, there is no
+ * navbar popup."
+ *
+ * WHY IT HAPPENS, and it is not a regression: an IntersectionObserver reports CROSSINGS, not
+ * positions. The landing carries the page past the sentinel (~1050 in week/all games/list, against a
+ * sentinel near 340) while `suppressScrollCollapse()` is in force, so that crossing is delivered and
+ * swallowed. The observer's state then SITS at "not intersecting". The reader's first scroll down
+ * crosses nothing, so no callback exists to fire; scrolling back up re-intersects and the machine is
+ * one-way; the second scroll down is the first real crossing. components/CollapsedHeader.js's
+ * observer note has described this since prompt 71 and treated it as acceptable. Joe's ruling is
+ * that it is not.
+ *
+ * WHAT THIS DOES NOT DO. It adds a collapse path and never an expand path, so lib/headerstate.js's
+ * promise - "SCROLL ONLY EVER COLLAPSES ... if one is ever added, this file's whole promise is
+ * void" - is intact. And it is INERT wherever the observer still works: when the sentinel is on
+ * screen the crossing is still to come and the observer owns it, so prompts 71 and 73 cannot
+ * regress through here.
+ */
+
+/**
+ * The policy for a pin release that is ALSO the reader's first collapse.
+ *
+ * `collapse` IS INJECTED rather than imported, for two reasons. The first is the one this repo has a
+ * test for: components/AutoScroll.js must contain no call to `collapseHeader`, because prompt 71's
+ * ruling is that THE LANDING never collapses the header - so the component passes the function and
+ * never invokes it, and that guard keeps its full force. The second is that an injected function is
+ * a function a test can watch, which is what makes both halves of this predicate assertable without
+ * a browser.
+ *
+ * @param {Document} doc
+ * @param {() => void} collapse   headerstate.js's `collapseHeader`, passed by reference
+ * @returns {(downward: boolean) => boolean} whether this release also collapsed the header
+ */
+export function pinReleaseCollapse(doc, collapse) {
+  return (downward) => {
+    // DIRECTION FIRST. The natural gesture after a landing is a scroll back UP to see the banner the
+    // pin just kept on the screen; collapsing on that would take it away in the reader's face.
+    if (!downward) return false;
+    const el = doc && typeof doc.getElementById === 'function' ? doc.getElementById(SENTINEL_ID) : null;
+    if (!el) return false;
+    // AND THE SENTINEL MUST ALREADY BE ABOVE THE VIEWPORT, which is the proof that the observer
+    // cannot do this job for this scroll: its crossing was spent during the landing. While the
+    // sentinel is on screen this returns false and the observer collapses as it always has.
+    if (el.getBoundingClientRect().top >= 0) return false;
+    collapse();
+    return true;
+  };
 }

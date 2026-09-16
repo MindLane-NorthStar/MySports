@@ -90,7 +90,11 @@
 import { useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
-import { suppressScrollCollapse, releaseScrollCollapse } from '../lib/headerstate.js';
+import {
+  suppressScrollCollapse,
+  releaseScrollCollapse,
+  collapseHeader,
+} from '../lib/headerstate.js';
 import { armBannerPin, installPinRelease } from '../lib/bannerpin.js';
 import {
   SCROLL_GAP,
@@ -99,6 +103,7 @@ import {
   stackBottom,
   scrollTargetFor,
   decideScroll,
+  pinReleaseCollapse,
 } from '../lib/autoscroll.js';
 
 /** The live entry state. MODULE SCOPE deliberately - see the note at the top of this file. */
@@ -179,7 +184,18 @@ export default function AutoScroll() {
     // same complaint one journey further along.
     armBannerPin();
     let stopRelease = null;
-    const listen = () => { if (!stopRelease) stopRelease = installPinRelease(window); };
+    let live = true;
+    // THE RELEASE NOW CARRIES A POLICY (prompt 101 block A). `collapseHeader` is PASSED, never
+    // called here: prompt 71's ruling is that the landing must never collapse the header, and
+    // autoscroll.test.mjs enforces exactly that on this file's text. What the policy decides is
+    // whether the reader's own first scroll - the one that releases the pin - is also the collapse
+    // the sentinel can no longer deliver, because the landing spent its crossing. lib/autoscroll.js
+    // carries the reasoning and both guards.
+    const listen = () => {
+      if (!stopRelease) {
+        stopRelease = installPinRelease(window, pinReleaseCollapse(document, collapseHeader));
+      }
+    };
     const rearm = () => { if (stopRelease) { stopRelease(); stopRelease = null; } armBannerPin(); };
 
     // EVERY ENTRY BUT THE ARRIVAL. The effect re-runs on any change to the path or the query, which
@@ -205,7 +221,9 @@ export default function AutoScroll() {
       if (back.scroll) { rearm(); land(listen); }
     };
     document.addEventListener('visibilitychange', onVisible);
+
     return () => {
+      live = false;
       document.removeEventListener('visibilitychange', onVisible);
       timers.forEach(window.clearTimeout);
       timers = [];

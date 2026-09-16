@@ -21,7 +21,9 @@ import { dirname, join } from 'node:path';
 
 import {
   decideScroll, scrollTargetFor, stackBottom, heldHeight, SCROLL_GAP, TOP_STACK,
+  pinReleaseCollapse,
 } from '../lib/autoscroll.js';
+import { SENTINEL_ID } from '../lib/headerstate.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const src = (p) => readFileSync(join(HERE, '..', p), 'utf8');
@@ -324,6 +326,64 @@ test('BOTH triggers go through the one predicate - the handler is the easy half 
   // triggers go through the one predicate, and the handler is the easy half to forget.
   assert.match(c, /if \(entry\.scroll\) land\(listen\); else listen\(\);/);
   assert.match(c, /if \(back\.scroll\) \{ rearm\(\); land\(listen\); \}/);
+});
+
+// ------------------------------- the first scroll after a landing (prompt 101 block A, Joe 2026-09-15)
+//
+// Joe: "you scroll down and the banner disappears, scroll up and the banner is still there, scroll
+// down again and THEN the banner disappears and navbar appears." The landing crosses the sentinel
+// while the observer is suppressed, that crossing is spent, and the reader's first scroll down
+// therefore produces no callback at all.
+
+/** A document with the sentinel at a given viewport top, or without one at all. */
+function sentinelDoc(top) {
+  return {
+    getElementById: (id) => (id === SENTINEL_ID && top !== null
+      ? { getBoundingClientRect: () => ({ top }) }
+      : null),
+  };
+}
+
+test('a DOWNWARD release with the sentinel already above the viewport collapses', () => {
+  const calls = [];
+  const policy = pinReleaseCollapse(sentinelDoc(-720), () => calls.push('collapse'));
+  assert.equal(policy(true), true, 'it reports that it collapsed');
+  assert.deepEqual(calls, ['collapse'], 'exactly once');
+});
+
+test('a downward release with the sentinel ON SCREEN does nothing - the observer owns it', () => {
+  // THE GUARD THAT KEEPS PROMPTS 71 AND 73 INTACT. While the sentinel is still on screen its
+  // crossing has not happened yet, so the observer will deliver it; collapsing here as well would
+  // be a second collapse path in the one case that already works.
+  const calls = [];
+  const policy = pinReleaseCollapse(sentinelDoc(12), () => calls.push('collapse'));
+  assert.equal(policy(true), false);
+  assert.deepEqual(calls, [], 'the observer has not fired yet, and this must not pre-empt it');
+});
+
+test('an UPWARD release never collapses, however far the sentinel is above', () => {
+  // The natural gesture after a landing is a scroll back up to the banner. This is the direction
+  // half of the predicate, and it is why lib/bannerpin.js measures the offset at install time.
+  const calls = [];
+  const policy = pinReleaseCollapse(sentinelDoc(-720), () => calls.push('collapse'));
+  assert.equal(policy(false), false);
+  assert.deepEqual(calls, []);
+});
+
+test('no sentinel in the document is a no-op, not a throw', () => {
+  const calls = [];
+  const policy = pinReleaseCollapse(sentinelDoc(null), () => calls.push('collapse'));
+  assert.equal(policy(true), false);
+  assert.deepEqual(calls, []);
+});
+
+test('SCROLL STILL ONLY EVER COLLAPSES - the policy has no expand path', () => {
+  // lib/headerstate.js: "SCROLL ONLY EVER COLLAPSES ... if one is ever added, this file's whole
+  // promise is void." Block A adds a collapse path; the source is read with comments stripped so
+  // the prose above cannot answer for the code.
+  const lib = src('lib/autoscroll.js')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.doesNotMatch(lib, /expandHeader/, 'no scroll path may expand the header');
 });
 
 test('the entry state is MODULE scope, not a ref and not sessionStorage', () => {

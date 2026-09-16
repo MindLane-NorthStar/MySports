@@ -128,6 +128,84 @@ test('the release listener fires ONCE and removes itself', () => {
   stop();
 });
 
+/**
+ * A window whose scroll offset can be moved between the install and the event.
+ *
+ * The direction is measured from the offset AT INSTALL TIME, so a fake that cannot move cannot test
+ * it: `fakeDoc` above answers for the document half, and this is the other.
+ */
+function pinWin(doc, scrollY = 0) {
+  const handlers = [];
+  return {
+    document: doc,
+    scrollY,
+    handlers,
+    addEventListener: (t, fn, opts) => handlers.push({ t, fn, opts }),
+    removeEventListener: (t, fn) => {
+      const i = handlers.findIndex((h) => h.t === t && h.fn === fn);
+      if (i >= 0) handlers.splice(i, 1);
+    },
+  };
+}
+
+// ------------------------------------------------- the release's direction (prompt 101 block A)
+test('the release callback is told the scroll was DOWNWARD', () => {
+  // The landing leaves the reader ~1050px down with the sentinel above them and its crossing already
+  // spent. A scroll DOWN from there is the one the observer can no longer answer.
+  const doc = fakeDoc();
+  armBannerPin(doc);
+  const win = pinWin(doc, 1050);
+  const seen = [];
+  installPinRelease(win, (downward) => seen.push(downward));
+  win.scrollY = 1120;
+  win.handlers[0].fn();
+  assert.deepEqual(seen, [true], 'one call, and it says downward');
+  assert.equal(bannerPinArmed(doc), false, 'and the pin let go exactly as before');
+});
+
+test('an UPWARD scroll still releases the pin, and reports NOT downward', () => {
+  // The natural gesture after a landing is a scroll back up to see the banner the pin just kept on
+  // screen. Collapsing on that would take it away in the reader's face, so the direction is carried
+  // to the caller rather than assumed.
+  const doc = fakeDoc();
+  armBannerPin(doc);
+  const win = pinWin(doc, 1050);
+  const seen = [];
+  installPinRelease(win, (downward) => seen.push(downward));
+  win.scrollY = 980;
+  win.handlers[0].fn();
+  assert.deepEqual(seen, [false], 'one call, and it says the scroll was not downward');
+  assert.equal(bannerPinArmed(doc), false, 'the release itself is unconditional');
+});
+
+test('the callback runs AFTER the pin is released and the listener is off', () => {
+  // `collapseHeader()` scrolls the page itself - headerstate.js's compensation - so a callback
+  // invoked while this listener was still attached would re-enter it.
+  const doc = fakeDoc();
+  armBannerPin(doc);
+  const win = pinWin(doc, 0);
+  let atCallback = null;
+  installPinRelease(win, () => {
+    atCallback = { armed: bannerPinArmed(doc), listeners: win.handlers.length };
+  });
+  win.scrollY = 40;
+  win.handlers[0].fn();
+  assert.deepEqual(atCallback, { armed: false, listeners: 0 });
+});
+
+test('the one-argument signature still works - no callback, no throw', () => {
+  // Every caller before prompt 101 passed only the window, and `installPinRelease(win)` is still a
+  // complete call: the pin releases and nothing else happens.
+  const doc = fakeDoc();
+  armBannerPin(doc);
+  const win = pinWin(doc, 100);
+  installPinRelease(win);
+  win.scrollY = 200;
+  win.handlers[0].fn();
+  assert.equal(bannerPinArmed(doc), false);
+  assert.equal(win.handlers.length, 0);
+});
+
 test('the cleanup removes a listener that never fired', () => {
   const doc = fakeDoc();
   const handlers = [];
@@ -153,7 +231,12 @@ test('the LISTENER IS NOT INSTALLED WHILE A LANDING IS IN FLIGHT, and that is th
   // frame after its last correction. Nothing it does can reach a listener that does not exist yet.
   const c = src('components/AutoScroll.js');
   assert.match(c, /const land = \(done\) => \{/);
-  assert.match(c, /installPinRelease\(window\)/);
+  // REWRITTEN IN PLACE BY PROMPT 101, NOT WEAKENED. It read `/installPinRelease\(window\)/`, which
+  // stopped matching when block A gave the release a policy argument. The property this test is
+  // about - the listener is installed by `land`, one frame after the last correction - is unchanged;
+  // what the line now pins is the WHOLE call, so the policy cannot be dropped or rewired silently
+  // either.
+  assert.match(c, /installPinRelease\(window, pinReleaseCollapse\(document, collapseHeader\)\)/);
   assert.match(c, /if \(entry\.scroll\) land\(listen\); else listen\(\);/,
     'no landing means nothing to wait for, so the listener goes on immediately');
   assert.match(c, /requestAnimationFrame\(done\);/,

@@ -121,14 +121,34 @@ export function bannerPinArmed(doc = typeof document === 'undefined' ? null : do
  * the life of the document - the thing CollapsedHeader.js's observer note rules out. It is re-armed
  * by the next navigation, which re-runs the effect that installed it.
  *
+ * `onRelease` IS A CALLBACK AND NOT AN IMPORT, and that is the whole reason this module can be told
+ * about the collapse without knowing about it (prompt 101 block A). The note at the top of this file
+ * is explicit that RELEASE AND COLLAPSE ARE TWO EVENTS AT TWO MOMENTS; importing `collapseHeader`
+ * here would conflate them permanently, in every case, which is exactly the hazard. A callback lets
+ * the LANDING'S OWN context - components/AutoScroll.js, which knows what the landing just did to the
+ * sentinel - decide whether this particular release is also the reader's first collapse. This module
+ * still owns only the pin.
+ *
+ * WHY THE DIRECTION IS MEASURED HERE rather than by the callback: `win.scrollY` at install time is
+ * the only moment at which the "before" figure exists. By the time the callback runs the page has
+ * already moved, so a caller could not compute it. The comparison is against the offset the reader
+ * started from, not against the landing's target.
+ *
+ * THE ORDER INSIDE THE HANDLER IS LOAD-BEARING: release the pin, take the listener off, and only
+ * then call back. `collapseHeader()` scrolls the page itself (headerstate.js's compensation), so a
+ * callback invoked while this listener was still attached would re-enter it.
+ *
  * @param {Window} win
+ * @param {(downward: boolean) => void} [onRelease]  optional; called AFTER the pin has let go
  * @returns {() => void} teardown, for the effect's cleanup
  */
-export function installPinRelease(win) {
+export function installPinRelease(win, onRelease) {
   if (!win || typeof win.addEventListener !== 'function') return () => {};
+  const from = win.scrollY;
   const onScroll = () => {
     releaseBannerPin(win.document);
     win.removeEventListener('scroll', onScroll);
+    if (typeof onRelease === 'function') onRelease(win.scrollY > from);
   };
   win.addEventListener('scroll', onScroll, { passive: true });
   return () => win.removeEventListener('scroll', onScroll);
