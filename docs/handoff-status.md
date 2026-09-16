@@ -10,7 +10,7 @@ sections, and the older measurement records. **This file stays the authority for
 repo state, gate floors, open items; since prompt 89 the working rules are `CLAUDE.md`'s alone. Read
 the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§51 — this said §1–§39 until prompt 99 corrected it, counted; all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§52 — this said §1–§39 until prompt 99 corrected it, counted; all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -62,6 +62,16 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > appended a `Re-measured … prompt NN` line beneath it without touching the sentence above them, so
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
+
+**Measured 2026-09-16, prompt 105 — `pytest` 609 → 612** (the width-match ruling, three tests); the other
+four did not move. Written after the last gate run. **NOT PUSHED** — the tree is now TWO commits ahead
+of `origin/main`; see the open item below.
+
+> **A CAUTION FOR WHOEVER READS THE FLOOR TABLE NEXT: `pytest` and `test:unit` both read 609 at
+> `55b946c`, and this file has a history of transposed counts** (prompts 62, 63 and 64 each found one
+> wrong, which is why the floors live in one place). They diverge again at prompt 105 — pytest 612,
+> test:unit 609 — but if a future run sees two gates at the same number, that is a coincidence of
+> 2026-09-16 and not a copy of one row into the other. Read each from its own run.
 
 **Measured 2026-09-16, prompt 104 — `pytest` 598 → 609** (`tests/test_cavs_simulcast.py`, 11); the other
 four did not move. Written after the last gate run. **`test:unit` held at 609 only because two deliberate
@@ -170,6 +180,7 @@ line claims to do.
 | prompt 90 | `pytest` | 544 → **569** | `tests/test_enrich_cfb_records.py` (25): the `"W-L"` split and the all-zero skip, the team_records rows (conference when carried, unknown ids skipped), `--current-week` pinned to fixed 2026 dates with both fallbacks, `main()` driven against a fake DB (one commit covers both writes; `--latest-week` keeps its meaning), and the nightly step's flag. Mutation-checked: wins/losses swapped fails 4; `max(week)` fails 8 |
 | prompt 94 | `pytest` | 569 → **585** | `tests/test_sync_assets.py` (16): the byte comparison's order and its request count (a single-part ETag costs no `head_object`; a size difference costs no hashing), the multipart and absent-ETag fallback, `test_pull_retakes_a_cached_file_whose_bytes_differ_from_the_bucket`, a `grids/` key compared at its derived path, mixed-case filenames, `--force` and `--existing-only` unchanged. Mutation-checked: the free ETag step removed fails 7; a key-only pull restored fails 2 |
 | prompt 95 | `pytest` | 585 → **591** | `PushGuard` in `tests/test_sync_assets.py` (6), driven through the real `main()` with `_put` counted: a push that would create an object refuses and uploads nothing; `--allow-new` publishes; a push with nothing new proceeds unflagged; `--existing-only` creates nothing; `--force` does not bypass the guard; the nightly's logo push carries the flag. Mutation-checked: the guard moved after the first upload fails 2; the guard removed fails 2 |
+| prompt 105 | `pytest` | 609 → **612** | three in `tests/test_cavs_simulcast.py` for Joe's width-match ruling: both composites' halves share a width in the PUBLISHED bitmap (measured off the ink, split on the seam, so `wuab-43`'s own internal row gap cannot fool it), and `stack()` reads the BOTTOM part rather than the widest. Mutation-checked four ways, each failing: the ink-area balance restored (in-memory AND with the marks rebuilt, where CBS comes back 192px over a 150px mark), matched to the widest part, and matched to the top part |
 | prompt 104 | `pytest` | 598 → **609** | `tests/test_cavs_simulcast.py` (11): the fifteen announced games; the outlet is PER GAME and the package-level `outlet` survives only under `superseded`; the 9/2/4 split and the 13/6 totals; date+tricode is the key, proved on the two Detroit games whose outlets differ; `simulcast_outlets()` matching and its three misses (wrong opponent, wrong day, team with no package); that `_simulcast_row` still emits NOTHING, which is prompt 105's boundary; and both composite marks published, recipe-backed and inside the hf bounds. Mutation-checked five ways, each failing the assertion that guards it: the date check dropped from the matcher, `_simulcast_row` made to emit, a composite dropped from the recipe table, the two Detroit games flattened to the same outlets, and the package-level `outlet` restored |
 | prompt 101 | `test:unit` | 596 → **609** | `bannerpin.test.mjs` (4): the release callback's direction both ways, that it runs only after the pin is off and the listener is removed, and that the one-argument signature still works. `autoscroll.test.mjs` (9): `pinReleaseCollapse`'s four cases (downward + sentinel above collapses; downward + sentinel on screen does NOT, because the observer still owns it; upward never; no sentinel is a no-op), the no-expand-path guard, `pinRearmOnExpand`'s four transition cases, and the wiring with its animation frame. One existing assertion REWRITTEN IN PLACE — `installPinRelease(window)` no longer matched once the call took a policy argument, and it now pins the whole call. Mutation-checked twelve ways, every one failing the suite |
 | prompt 96 | `pytest` | 591 → **598** | seven in `tests/test_logo_conditioning.py`: the file really holds mixed-case rulings; a lowercase file for a team ruled raw in mixed case gets the ruling (the runner's case); the mixed-case file still does (the laptop's); case-insensitivity does not widen the ruling; the `derive` set matches in any case; one team ruled both ways under two spellings is still caught; a conditioned file already on the runner heals to the raw art once and a second run writes nothing. Two existing tests REWRITTEN IN PLACE to compare in `rule_key()` spelling, not weakened. Mutation-checked: the case-sensitive code restored fails 6; normalizing the sets but not the stem fails 1 |
@@ -442,7 +453,7 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 
 | gate | run from | floor |
 |---|---|---|
-| `pytest` | repo root | **609 passed + 1 skipped** (36 subtests) |
+| `pytest` | repo root | **612 passed + 1 skipped** (36 subtests) |
 | `npm run test:unit` | `web/` | **609** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **121/121** |
@@ -893,10 +904,12 @@ before touching any count line.
   fallback is better than bad art.
 - **`unverified` is load-bearing semantics** — now documented in `data/authority_rules.json` `_about`
   and `adapters/README.md`.
-- **OPEN — PROMPT 104 IS COMMITTED BUT NOT PUSHED, AND THE TWO NEW MARKS ARE NOT IN R2 (2026-09-16,
-  register §51).** The brief withheld the push deliberately: it changes in-season broadcast data and
-  publishes new artwork, and Joe authorizes both himself after looking at the rendered samples in
-  `assets/p104-composite-marks/` (untracked). **ONE authorization, not two, and the brief expected
+- **OPEN — PROMPTS 104 AND 105 ARE COMMITTED BUT NOT PUSHED: the tree is TWO commits ahead of
+  `origin/main` (2026-09-16, register §51 and §52).** Both briefs withheld the push deliberately: the
+  work changes in-season broadcast data and publishes new artwork, and Joe authorizes the deploy
+  himself after looking at the rendered samples — `assets/p104-composite-marks/` for the marks as
+  first built, and **`assets/p105-composite-width-match/` for the before/after of his width-match
+  ruling**, which is the current state (both untracked). **ONE authorization, not two, and the brief expected
   two:** `git push` is the whole of it. **There is no R2 push for these marks and there was never
   going to be** — `web/lib/config.js:253` says the processed marks are what "the app ships itself
   (web/public/marks), NOT the raw bucket art", `markUrl()` returns the app-relative `/marks/{slug}.png`,

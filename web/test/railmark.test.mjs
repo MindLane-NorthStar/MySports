@@ -57,8 +57,12 @@ test('31 of 32 marks land on the 600px^2 target; the one exception is the widest
   }
   // THE PROPERTY IS THAT ESPN2 IS THE ONLY EXCEPTION, and that is unchanged: prompt 72's `directv`
   // came onto the 600px^2 target with no code change, the same way HBO Max's stacked lockup did -
-  // and so did prompt 104's two composites, measured at 30.00 x 20.00 and 27.21 x 22.05, both 600.0.
-  // The exception list is the assertion that matters; the count moves with the suite.
+  // and so did prompt 104's two composites. **Prompt 105 RESIZED both** - Joe ruled CBS down to the
+  // width of the mark beneath it, which makes each stack taller and narrower - and they came back
+  // onto the target with no code change here, the same way: 30.00 x 20.00 -> 27.73 x 21.64 and
+  // 27.21 x 22.05 -> 23.52 x 25.51, all four 600.0. Re-measured rather than assumed, and they stay
+  // INSIDE this assertion; if a composite ever misses the target that is a finding, not a reason to
+  // except it. The exception list is the assertion that matters; the count moves with the suite.
   assert.deepEqual(off.sort(), ['espn2']);
   assert.equal(manifest.length - off.length, 34);
 });

@@ -426,11 +426,26 @@ RECIPES: dict[str, tuple[str, Callable[[Image.Image], Image.Image]]] = {
 # A RECIPE, NOT A HAND-COMPOSITED PNG, for the reason everything else in this file is one: a
 # hand-made bitmap cannot be rebuilt when its parts change, and these parts have moved before.
 #
-# THE HALVES ARE BALANCED BY INK AREA, NOT BY HEIGHT. That is this file's own normalization argument
-# applied one level down: `ink_area` exists precisely because equal heights make a wide wordmark
-# dominate a compact roundel, which is what web/lib/marks.js's "NBC reads smaller than FOX" note
-# describes. CBS is the widest, inkiest mark in the suite (hf 0.758, the lowest but one), so stacking
-# it at DAZN's height would bury DAZN under it.
+# THE HALVES ARE MATCHED BY WIDTH (Joe's ruling, 2026-09-16, prompt 105), AND THAT OVERRIDES THE
+# INK-AREA BALANCE THIS RECIPE SHIPPED WITH.
+#
+#   "the CBS half is too big in both composites. Scale CBS down so its width equals the width of the
+#    mark beneath it, and let its height follow proportionally."
+#
+# THE OVERRIDDEN RULE IS RECORDED RATHER THAN DELETED, because it was not a bug and the distinction
+# matters to whoever reads this next. Prompt 104 balanced the halves by INK AREA - each part scaled
+# by sqrt(ref/area) against the smallest area in the stack, deliberately scaling the inkier half
+# DOWN - on this file's own argument that `ink_area` exists because equal heights let a wide wordmark
+# bury a compact one (web/lib/marks.js's "NBC reads smaller than FOX"). CBS is the widest, inkiest
+# mark in the suite, so that rule already shrank it: to 0.787 of DAZN's height, and it still read too
+# large to Joe at the real list box. **The recipe had already answered this complaint, by measurement,
+# and Joe looked at the answer and ruled it insufficient.** Width matching is a DIFFERENT GOVERNING
+# RULE, not a correction: it is scoped to COMPOSITES and nothing else in the suite is touched.
+#
+# THE COST IS ACCEPTED, NOT DESIGNED AROUND (Joe has seen it). Matching widths makes each stack
+# taller and narrower, so `object-fit: contain` in the list card's 56x40 box starts fitting by HEIGHT
+# instead of width and the mark loses horizontal size - `cbs-wuab-43` lands at roughly two-thirds of
+# the box width. The measured before/after fills are in register §52.
 COMPOSITES: dict[str, tuple[str, ...]] = {
     "cbs-dazn":    ("cbs", "dazn"),
     "cbs-wuab-43": ("cbs", "wuab-43"),
@@ -439,17 +454,27 @@ COMPOSITE_GAP = 0.10          # transparent gap between halves, as a fraction of
 
 
 def stack(parts: list[Image.Image], gap_frac: float = COMPOSITE_GAP) -> Image.Image:
-    """Stack marks vertically, each scaled to carry the SAME INK, centre-aligned, gap between.
+    """Stack marks vertically, EVERY PART SCALED TO THE WIDTH OF THE BOTTOM ONE, gap between.
 
-    `ink_area` is normalized to a 100px height and is therefore scale-invariant, so two marks carry
-    equal ink at rendered size when `area * height**2` matches - i.e. heights scale as
-    sqrt(ref/area). `ref` is the SMALLEST area in the stack, so the inkier half is scaled DOWN and
-    nothing is ever upscaled past its published resolution.
+    Joe's ruling of 2026-09-16 - see the note above for what it overrides and why that is a ruling
+    rather than a fix. Height follows the width proportionally; nothing else decides the size.
+
+    THE BOTTOM PART SETS THE WIDTH, and for a two-part stack - which is what both composites are -
+    that is exactly "the mark beneath it" in Joe's words. For a hypothetical three-part stack this
+    reads the BOTTOM-MOST part rather than each part's immediate neighbour; that case does not exist
+    yet and is not tested, so it is written down rather than left to be discovered.
+
+    NOTHING IS UPSCALED: the bottom part keeps its published pixels and every part above it is only
+    ever made smaller, because it is the widest marks that are being brought down to a narrower one.
     """
-    areas = [ink_area(p) for p in parts]
-    ref = min([a for a in areas if a] or [1.0])
-    scaled = [resize_h(p, max(1, round(p.height * ((ref / a) ** 0.5 if a else 1.0))))
-              for p, a in zip(parts, areas)]
+    target_w = parts[-1].width
+    scaled = []
+    for p in parts:
+        if p.width == target_w:
+            scaled.append(p)
+        else:
+            h = max(1, round(p.height * target_w / p.width))
+            scaled.append(p.resize((target_w, h), Image.LANCZOS))
     gap = max(1, round(gap_frac * max(s.height for s in scaled)))
     w = max(s.width for s in scaled)
     h = sum(s.height for s in scaled) + gap * (len(scaled) - 1)

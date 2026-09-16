@@ -4278,3 +4278,63 @@ reached** — not because it was avoided, because it does not govern this path.
 No prompt-104 text exists in `Claude outputs\`, so there is nothing to copy byte-identically.
 `docs/prompts/README.md` is explicit that an invented brief filed beside real ones is worse than an
 acknowledged gap, so nothing was filed and the count stands at 107 covering 01–102.
+
+## 52. CBS MATCHES THE WIDTH BENEATH IT, WHICH OVERRIDES THE INK-AREA BALANCE — 2026-09-16, prompt 105
+
+**Numbered by count:** §1–§51 each appear exactly once and there was no §52.
+
+**JOE'S RULING, 2026-09-16**, having looked at the marks §51 shipped, at the real list box: *"the CBS
+half is too big in both composites. Scale CBS down so its width equals the width of the mark beneath
+it, and let its height follow proportionally."*
+
+### This is an override, not a fix, and the difference is the whole entry
+
+`stack()` balanced the halves by **ink area** — each part scaled by `sqrt(ref/area)` against the
+smallest area in the stack, deliberately scaling the inkier half DOWN. That was not an oversight:
+`ink_area` exists in this file precisely because equal heights let a wide wordmark bury a compact
+one (`web/lib/marks.js`'s "NBC reads smaller than FOX"), and CBS is the widest, inkiest mark in the
+suite. **The recipe had already anticipated this exact complaint and answered it by measurement** —
+it shrank CBS to 0.787 of DAZN's height — **and Joe looked at that answer and ruled it
+insufficient.** Width matching is a different governing rule. It is scoped to `COMPOSITES`; nothing
+else in the suite is touched, and the overridden rule is recorded in the code rather than deleted.
+
+### What it produced, measured
+
+| | published | drawn in the 56 × 40 box | fits by |
+|---|---|---|---|
+| `cbs-dazn` **before** | 192 × 128 | **56.00 × 37.33** | width |
+| `cbs-dazn` **after** | 164 × 128 | **51.25 × 40.00** | height |
+| `cbs-wuab-43` **before** | 158 × 128 | **49.38 × 40.00** | height |
+| `cbs-wuab-43` **after** | 118 × 128 | **36.88 × 40.00** | height |
+
+Cowork's mock of the same recipe predicted ≈164 × 128 → ≈51.3 × 40.0 and ≈120 × 128 → ≈37.3 × 40.0.
+The recipe agrees on `cbs-dazn` exactly and lands 2px narrower on `cbs-wuab-43` (118 against 120,
+36.88 against 37.3). **Nothing was tuned to hit the mock.**
+
+**"The mark beneath it" is unambiguous, checked rather than assumed:** inside `wuab-43` the
+RESN/DAZN block is **174px — the mark's own full width** — and the "Cleveland's 43" row above it is
+165px. So the width CBS matches is 174 for `cbs-wuab-43` and 280 for `cbs-dazn`.
+
+**THE COST IS ACCEPTED, NOT DESIGNED AROUND.** Taller and narrower stacks mean `object-fit: contain`
+fits by HEIGHT, so both lose horizontal size and `cbs-wuab-43` now fills about two-thirds of the box
+width (36.88 of 56). Joe has seen it.
+
+**`hf` moved and still clamps**, which is expected and belongs on the record: raw `cbs-dazn` 1.249 →
+**1.259**, raw `cbs-wuab-43` 1.487 → **1.527**, both published at the frozen `HF_MAX` of 1.150. The
+clamp is not a defect and does not reach the list card at all — that surface fits by CSS box and
+reads no `hf`. `HF_MIN`/`HF_MAX` and `COMPOSITE_GAP` were left alone.
+
+**NOTHING ELSE MOVED.** All 33 non-composite marks rebuilt **byte-identical**;
+`build_brand_marks.target()` reads 11764.455021972657 before and after; the manifest is still 35
+entries. The composites' rail fit changed and **both still land exactly on the 600px² target** —
+30.00 × 20.00 → 27.73 × 21.64 and 27.21 × 22.05 → 23.52 × 25.51 — so `espn2` remains the only
+exception and neither was excepted to make a test pass.
+
+**Samples:** `assets/p105-composite-width-match/` (untracked) — both composites before and after at
+the real box, with drawn sizes, plus 8× blow-ups.
+
+### The follow-up this is NOT
+
+**"Cleveland's" inside `wuab-43` does not read at any size that fits this box**, at either sizing,
+and it costs a tier of height that pushes everything else smaller. If `cbs-wuab-43` reads too small
+on the device, **the lever is the 43 artwork, not the stack rule.** Recorded; not acted on.

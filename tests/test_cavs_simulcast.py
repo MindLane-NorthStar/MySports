@@ -114,6 +114,63 @@ def test_the_composite_marks_are_published_and_are_recipes_over_real_parts(slug,
         assert p in MANIFEST, f"{slug} is built from {p}, which must itself be published"
 
 
+@pytest.mark.parametrize("slug,parts", [("cbs-dazn", ("cbs", "dazn")), ("cbs-wuab-43", ("cbs", "wuab-43"))])
+def test_the_halves_are_matched_BY_WIDTH_not_by_ink_area(slug, parts):
+    """JOE'S RULING, 2026-09-16 (prompt 105, register §52): "Scale CBS down so its width equals the
+    width of the mark beneath it, and let its height follow proportionally."
+
+    THIS OVERRODE THE INK-AREA BALANCE prompt 104 shipped, which is why the check is on the WIDTHS in
+    the published bitmap rather than on the recipe's intent. Under the old rule the two halves
+    carried equal ink and CBS came out WIDER than the mark below it; under this one they share an
+    edge-to-edge width. Restoring the ink-area balance fails here, which is the point.
+    """
+    from PIL import Image
+    im = Image.open(MARKS / f"{slug}.png").convert("RGBA")
+    alpha = im.split()[3]
+
+    def ink_rows():
+        on = [any(alpha.getpixel((x, y)) >= 16 for x in range(im.width)) for y in range(im.height)]
+        runs, s = [], None
+        for y, v in enumerate(on + [False]):
+            if v and s is None:
+                s = y
+            elif not v and s is not None:
+                runs.append((s, y)); s = None
+        return runs
+
+    runs = ink_rows()
+    # the seam is the widest empty run - the gap stack() inserts between the halves. `wuab-43` has
+    # its own internal row gap, so the halves are split on the LARGEST gap, not on every gap.
+    gaps = [(a[1], b[0]) for a, b in zip(runs, runs[1:])]
+    assert gaps, f"{slug} has no gap between halves"
+    seam = max(gaps, key=lambda g: g[1] - g[0])
+    halves = [(0, seam[0]), (seam[1], im.height)]
+
+    widths = []
+    for y0, y1 in halves:
+        xs = [x for x in range(im.width) if any(alpha.getpixel((x, y)) >= 16 for y in range(y0, y1))]
+        widths.append(max(xs) - min(xs) + 1)
+    top, bottom = widths
+    assert abs(top - bottom) <= 2, (
+        f"{slug}: the halves must share a width - top {top}px, bottom {bottom}px. "
+        "Greater than 2px apart means the width match is gone (the ink-area balance is back, "
+        "or CBS was matched to the wrong part).")
+    assert im.width - max(widths) <= 2, "and the composite is no wider than its halves"
+
+
+def test_the_width_match_reads_the_BOTTOM_part_not_the_widest_one():
+    """The rule is 'the mark beneath it'. CBS is the widest mark in the suite, so a stack that
+    matched on the WIDEST part would leave CBS at 461 and blow the other half up to meet it -
+    upscaling published art and inverting the ruling."""
+    from PIL import Image
+    from scripts.build_web_marks import stack
+    top = Image.new("RGBA", (400, 100), (255, 255, 255, 255))     # the wide one, on top
+    bottom = Image.new("RGBA", (100, 100), (255, 255, 255, 255))  # the narrow one, beneath
+    out = stack([top, bottom])
+    assert out.width == 100, f"the BOTTOM part sets the width; got {out.width}"
+    assert out.height < 100 + 100 + 30, "and the top part's height came down with its width"
+
+
 def test_the_suite_still_holds_the_marks_that_were_there_before():
     """Adding composites must not drop or rename anything: build() writes the whole manifest, and
     `--only` truncating it is a footgun this file's own docstring records."""
