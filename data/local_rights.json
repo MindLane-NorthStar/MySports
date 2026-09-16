@@ -27,12 +27,146 @@
    "source": "Cavaliers press release 2026-09-01 (cavs.com/dazn, dazn.com/cavaliers): multi-year DAZN partnership from the 2026-27 preseason; RESN produces in-house and is the master portal brand; DAZN streams every game not selected exclusively for national broadcast (ESPN/ABC, NBC/Peacock, Prime Video), preseason included; NBA TV games co-exist",
    "decision": "Joe 2026-09-01: treat DAZN as AVAILABLE (subscribing) - product decision 7, same pattern as Apple TV (decision 4)",
    "simulcasts": {
-    "outlet": "WUAB 43",
     "surface": "tv",
     "expectedCount": 15,
-    "note": "15 games per season free on DAZN and simulcast OTA on WUAB 43. The partner is hand-entered on Joe's authority (2026-09-01); the club's public announcement of partner and schedule is pending ('communicated at a later date') and the weekly research watch covers it. Games are hand-entered here as announced - no WUAB row is emitted until dated games exist below.",
-    "games": [],
-    "confirmed": "Joe, 2026-09-01 (hand-entered authority; public announcement pending)"
+    "asOf": "2026-09-15",
+    "source": "WOIO/WUAB announcement, 2026-09-15 (https://www.cleveland19.com/2026/09/15/cleveland-cavaliers-games-return-free-over-the-air-television-19-news/): the package is \"a simulcast of the games available for free in front of the Cavaliers on DAZN paid subscription paywall offering\". Joe confirms this is the complete list, not a first tranche. TWO CORRECTIONS TO THE ARTICLE ON JOE'S AUTHORITY: it prints \"Cleveland and Phoenix\" for February 14, which is Phoenix AT Cleveland, and \"Cleveland at DC\", which is WAS.",
+    "note": "15 games per season free on DAZN and simulcast over the air. THE OUTLET IS PER GAME, not per package: thirteen of the fifteen are on WOIO, two are WUAB 43 only, and four are on both - one `outlet` field could not say that. Games are matched by ET date + opponent tricode, source-agnostic. DAL, DET and CHA EACH APPEAR TWICE, so the tricode alone is not a key and no matcher may treat it as one. `side` is the announcement's own home/away and is provenance, not part of the match key.",
+    "outletNote": "WOIO is CBS's Cleveland station (data/row_order.json: network CBS, station WOIO, channel 19), which is why it is deliberately NOT an entry in data/access_profile.json - it resolves as CBS. WUAB 43 is its own network there and already carries RESN/DAZN inside its mark. How a simulcast row resolves its access, and how the two stations render, is prompt 105's question: prompt 104 lands the data and the artwork only, and adapters/nba.py emits no simulcast row yet.",
+    "games": [
+     {
+      "date": "2026-10-26",
+      "opponent": "MIN",
+      "side": "home",
+      "outlets": [
+       "WUAB 43"
+      ]
+     },
+     {
+      "date": "2026-10-29",
+      "opponent": "ATL",
+      "side": "away",
+      "outlets": [
+       "WUAB 43"
+      ]
+     },
+     {
+      "date": "2026-11-02",
+      "opponent": "OKC",
+      "side": "home",
+      "outlets": [
+       "WOIO",
+       "WUAB 43"
+      ]
+     },
+     {
+      "date": "2026-11-14",
+      "opponent": "DAL",
+      "side": "home",
+      "outlets": [
+       "WOIO"
+      ]
+     },
+     {
+      "date": "2026-12-12",
+      "opponent": "GSW",
+      "side": "home",
+      "outlets": [
+       "WOIO"
+      ]
+     },
+     {
+      "date": "2026-12-18",
+      "opponent": "DET",
+      "side": "away",
+      "outlets": [
+       "WOIO"
+      ]
+     },
+     {
+      "date": "2026-12-23",
+      "opponent": "WAS",
+      "side": "away",
+      "outlets": [
+       "WOIO"
+      ]
+     },
+     {
+      "date": "2027-01-02",
+      "opponent": "CHA",
+      "side": "away",
+      "outlets": [
+       "WOIO"
+      ]
+     },
+     {
+      "date": "2027-01-23",
+      "opponent": "DAL",
+      "side": "away",
+      "outlets": [
+       "WOIO"
+      ]
+     },
+     {
+      "date": "2027-01-29",
+      "opponent": "TOR",
+      "side": "away",
+      "outlets": [
+       "WOIO"
+      ]
+     },
+     {
+      "date": "2027-02-06",
+      "opponent": "ORL",
+      "side": "home",
+      "outlets": [
+       "WOIO"
+      ]
+     },
+     {
+      "date": "2027-02-14",
+      "opponent": "PHX",
+      "side": "home",
+      "outlets": [
+       "WOIO"
+      ]
+     },
+     {
+      "date": "2027-03-09",
+      "opponent": "DET",
+      "side": "away",
+      "outlets": [
+       "WOIO",
+       "WUAB 43"
+      ]
+     },
+     {
+      "date": "2027-03-14",
+      "opponent": "SAC",
+      "side": "away",
+      "outlets": [
+       "WOIO",
+       "WUAB 43"
+      ]
+     },
+     {
+      "date": "2027-04-04",
+      "opponent": "CHA",
+      "side": "home",
+      "outlets": [
+       "WOIO",
+       "WUAB 43"
+      ]
+     }
+    ],
+    "confirmed": "Joe, 2026-09-16 (public announcement 2026-09-15; the complete list, not a first tranche)",
+    "superseded": {
+     "outlet": "WUAB 43",
+     "note": "15 games per season free on DAZN and simulcast OTA on WUAB 43. The partner is hand-entered on Joe's authority (2026-09-01); the club's public announcement of partner and schedule is pending ('communicated at a later date') and the weekly research watch covers it. Games are hand-entered here as announced - no WUAB row is emitted until dated games exist below.",
+     "confirmed": "Joe, 2026-09-01 (hand-entered authority; public announcement pending)",
+     "supersededOn": "2026-09-16",
+     "why": "the announcement landed on 2026-09-15 and the outlet turned out to be per game; the single `outlet: \"WUAB 43\"` above could not express thirteen WOIO games, two WUAB-only and four on both"
+    }
    }
   }
  }

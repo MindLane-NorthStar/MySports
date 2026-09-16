@@ -28,7 +28,13 @@ test('the manifest carries published geometry for every mark, and h is PUBLISH_H
   // detail card wears a mark instead of the word. The count is stated rather than derived on
   // purpose - a mark appearing or vanishing unnoticed is exactly what this file exists to catch -
   // so bump it deliberately when the suite grows, and never to make a run go green.
-  assert.equal(manifest.length, 33);
+  // 33 -> 35: prompt 104 added the two COMPOSITES for the Cavaliers' OTA simulcast, `cbs-dazn` and
+  // `cbs-wuab-43` - CBS stacked over the stream it simulcasts. Bumped deliberately, and they are
+  // held to every assertion in this file rather than excepted from it: both land exactly on the
+  // 600px^2 rail target below. NOTE FOR PROMPT 105: Joe ruled them LIST VIEW ONLY, and nothing in
+  // the manifest records that - a mark carries no surface. If the rail must never draw them, that
+  // fact needs somewhere to live.
+  assert.equal(manifest.length, 35);
   for (const m of manifest) {
     assert.ok(Number.isInteger(m.w) && m.w > 0, `${m.slug} has a width`);
     // build_web_marks.py PUBLISH_H = 128. Anything else means the published suite is not what the
@@ -50,9 +56,11 @@ test('31 of 32 marks land on the 600px^2 target; the one exception is the widest
     if (Math.abs(r.height * r.width - RAIL_TARGET_AREA) > 1) off.push(m.slug);
   }
   // THE PROPERTY IS THAT ESPN2 IS THE ONLY EXCEPTION, and that is unchanged: prompt 72's `directv`
-  // came onto the 600px^2 target with no code change, the same way HBO Max's stacked lockup did.
+  // came onto the 600px^2 target with no code change, the same way HBO Max's stacked lockup did -
+  // and so did prompt 104's two composites, measured at 30.00 x 20.00 and 27.21 x 22.05, both 600.0.
+  // The exception list is the assertion that matters; the count moves with the suite.
   assert.deepEqual(off.sort(), ['espn2']);
-  assert.equal(manifest.length - off.length, 32);
+  assert.equal(manifest.length - off.length, 34);
 });
 
 test('NO mark is drawn wider than the rail content box - the CSS clamp must not bind', () => {

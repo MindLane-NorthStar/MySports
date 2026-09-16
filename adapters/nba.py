@@ -67,19 +67,45 @@ def _local_row(side: dict[str, Any], carriage: dict[str, Any], start: str, tbd: 
                      start_time=start, tbd=tbd, source="data/local_rights.json", label=f"{nick} local TV - carrier TBA")
 
 
-def _simulcast_row(side: dict[str, Any], carriage: dict[str, Any], other_ab: str, start: str, tbd: bool,
-                   available: set[str] | list[str] = (), unavailable: set[str] | list[str] = ()) -> dict[str, Any] | None:
-    """Hand-entered OTA simulcast (decision 7: 15 Cavs games on WUAB 43, announced in-season). Games are matched by
-    ET date + opponent tricode so the entry works for both the ESPN and league-file sources."""
-    cs = carriage.get(side["abbreviation"]) or {}
+def simulcast_outlets(carriage: dict[str, Any], abbrev: str, other_ab: str, start: str) -> list[str]:
+    """The OTA outlets carrying this game, from data/local_rights.json. Empty list when none.
+
+    MATCHED ON ET DATE **AND** OPPONENT TRICODE, AND THE PAIR IS THE KEY. The 2026-09-15 announcement
+    has DAL, DET and CHA twice each, so a matcher keyed on the tricode alone would put the December
+    Detroit game's outlets on the March one. The date is what separates them, and the file says so too.
+
+    THE OUTLET IS PER GAME SINCE THE ANNOUNCEMENT (prompt 104). It used to be one field on the package
+    - `outlet: "WUAB 43"` - which could not express thirteen WOIO games, two WUAB-only and four on
+    both. Nothing here reads that old field any more.
+    """
+    cs = carriage.get(abbrev) or {}
     sim = cs.get("simulcasts") or {}
     day = et_date(start)
     for g in sim.get("games", []):
         if g.get("date") == day and g.get("opponent") == other_ab:
-            return media_row("web" if sim.get("surface") == "web" else "tv", sim["outlet"],
-                             outlet_access(sim["outlet"], available, unavailable), market="local", certainty="CONFIRMED",
-                             start_time=start, tbd=tbd, source="data/local_rights.json simulcasts",
-                             label=f"{sim['outlet']} simulcast")
+            return list(g.get("outlets") or [])
+    return []
+
+
+def _simulcast_row(side: dict[str, Any], carriage: dict[str, Any], other_ab: str, start: str, tbd: bool,
+                   available: set[str] | list[str] = (), unavailable: set[str] | list[str] = ()) -> dict[str, Any] | None:
+    """Hand-entered OTA simulcast (decision 7). **EMITS NOTHING, DELIBERATELY - PROMPT 105 OWNS THE ROW.**
+
+    This is not a stub that nobody finished. Until 2026-09-15 `games` was empty, so this function
+    returned None for every game ever passed to it; prompt 104 landed the fifteen announced games and
+    the artwork and was scoped to stop there, so returning None keeps the emitted schedule EXACTLY as
+    it is today while the data sits in the file waiting.
+
+    WHAT PROMPT 105 HAS TO DECIDE, and why guessing it here would be worse than emitting nothing:
+      * WOIO is CBS's Cleveland station and is deliberately absent from data/access_profile.json, so
+        `outlet_access("WOIO", ...)` has no answer yet - it resolves as CBS, and where that resolution
+        lives is a design question;
+      * four games carry TWO outlets, so "the simulcast row" is one row, two rows, or one row with a
+        composite mark, and the callers below dedupe on `m["outlet"]`, which assumes one;
+      * preemption, the rail, and the list card's mark are all in that same ruling.
+
+    `simulcast_outlets()` above is the lookup those will use, and it is tested.
+    """
     return None
 
 

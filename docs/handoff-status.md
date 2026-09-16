@@ -10,7 +10,7 @@ sections, and the older measurement records. **This file stays the authority for
 repo state, gate floors, open items; since prompt 89 the working rules are `CLAUDE.md`'s alone. Read
 the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§50 — this said §1–§39 until prompt 99 corrected it, counted; all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§51 — this said §1–§39 until prompt 99 corrected it, counted; all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -62,6 +62,13 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > appended a `Re-measured … prompt NN` line beneath it without touching the sentence above them, so
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
+
+**Measured 2026-09-16, prompt 104 — `pytest` 598 → 609** (`tests/test_cavs_simulcast.py`, 11); the other
+four did not move. Written after the last gate run. **`test:unit` held at 609 only because two deliberate
+counts were bumped:** `railmark.test.mjs` states the manifest size and the on-target count rather than
+deriving them, exactly so a mark cannot appear unnoticed — 33 → 35 and 32 → 34 for the two new
+composites, which land ON the 600px² rail target (30.00 × 20.00 and 27.21 × 22.05) rather than being
+excepted from it. **NOT PUSHED** — the brief withheld the push; see the open item below.
 
 **Re-measured 2026-09-16, prompt 102 — no count moved; two device items closed and CSS comments.** Written
 after the last gate run. **One gate caught a real thing mid-run and is worth the line:** `test:unit` failed
@@ -163,6 +170,7 @@ line claims to do.
 | prompt 90 | `pytest` | 544 → **569** | `tests/test_enrich_cfb_records.py` (25): the `"W-L"` split and the all-zero skip, the team_records rows (conference when carried, unknown ids skipped), `--current-week` pinned to fixed 2026 dates with both fallbacks, `main()` driven against a fake DB (one commit covers both writes; `--latest-week` keeps its meaning), and the nightly step's flag. Mutation-checked: wins/losses swapped fails 4; `max(week)` fails 8 |
 | prompt 94 | `pytest` | 569 → **585** | `tests/test_sync_assets.py` (16): the byte comparison's order and its request count (a single-part ETag costs no `head_object`; a size difference costs no hashing), the multipart and absent-ETag fallback, `test_pull_retakes_a_cached_file_whose_bytes_differ_from_the_bucket`, a `grids/` key compared at its derived path, mixed-case filenames, `--force` and `--existing-only` unchanged. Mutation-checked: the free ETag step removed fails 7; a key-only pull restored fails 2 |
 | prompt 95 | `pytest` | 585 → **591** | `PushGuard` in `tests/test_sync_assets.py` (6), driven through the real `main()` with `_put` counted: a push that would create an object refuses and uploads nothing; `--allow-new` publishes; a push with nothing new proceeds unflagged; `--existing-only` creates nothing; `--force` does not bypass the guard; the nightly's logo push carries the flag. Mutation-checked: the guard moved after the first upload fails 2; the guard removed fails 2 |
+| prompt 104 | `pytest` | 598 → **609** | `tests/test_cavs_simulcast.py` (11): the fifteen announced games; the outlet is PER GAME and the package-level `outlet` survives only under `superseded`; the 9/2/4 split and the 13/6 totals; date+tricode is the key, proved on the two Detroit games whose outlets differ; `simulcast_outlets()` matching and its three misses (wrong opponent, wrong day, team with no package); that `_simulcast_row` still emits NOTHING, which is prompt 105's boundary; and both composite marks published, recipe-backed and inside the hf bounds. Mutation-checked five ways, each failing the assertion that guards it: the date check dropped from the matcher, `_simulcast_row` made to emit, a composite dropped from the recipe table, the two Detroit games flattened to the same outlets, and the package-level `outlet` restored |
 | prompt 101 | `test:unit` | 596 → **609** | `bannerpin.test.mjs` (4): the release callback's direction both ways, that it runs only after the pin is off and the listener is removed, and that the one-argument signature still works. `autoscroll.test.mjs` (9): `pinReleaseCollapse`'s four cases (downward + sentinel above collapses; downward + sentinel on screen does NOT, because the observer still owns it; upward never; no sentinel is a no-op), the no-expand-path guard, `pinRearmOnExpand`'s four transition cases, and the wiring with its animation frame. One existing assertion REWRITTEN IN PLACE — `installPinRelease(window)` no longer matched once the call took a policy argument, and it now pins the whole call. Mutation-checked twelve ways, every one failing the suite |
 | prompt 96 | `pytest` | 591 → **598** | seven in `tests/test_logo_conditioning.py`: the file really holds mixed-case rulings; a lowercase file for a team ruled raw in mixed case gets the ruling (the runner's case); the mixed-case file still does (the laptop's); case-insensitivity does not widen the ruling; the `derive` set matches in any case; one team ruled both ways under two spellings is still caught; a conditioned file already on the runner heals to the raw art once and a second run writes nothing. Two existing tests REWRITTEN IN PLACE to compare in `rule_key()` spelling, not weakened. Mutation-checked: the case-sensitive code restored fails 6; normalizing the sets but not the stem fails 1 |
 
@@ -434,7 +442,7 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 
 | gate | run from | floor |
 |---|---|---|
-| `pytest` | repo root | **598 passed + 1 skipped** (36 subtests) |
+| `pytest` | repo root | **609 passed + 1 skipped** (36 subtests) |
 | `npm run test:unit` | `web/` | **609** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **121/121** |
@@ -845,8 +853,15 @@ before touching any count line.
   WWE, AEW, UFC, IndyCar and NASCAR all render.
 - **506sports NFL maps → `market_coverage_nfl`** (~Sept 8–9). Resolves E5's market-pending games; on
   the critical path for September 13.
-- **NHL and NBA hold only date-driven partial seasons** (47 and 19 games). `nba-BOS`, `nba-PHX`,
-  `nba-POR` have art and no games for that reason. A one-time bootstrap is the fix.
+- ~~**NHL and NBA hold only date-driven partial seasons** (47 and 19 games). `nba-BOS`, `nba-PHX`,
+  `nba-POR` have art and no games for that reason. A one-time bootstrap is the fix.~~ **STALE, AND BY
+  A LARGE MARGIN — corrected 2026-09-16 (prompt 104), measured through the anon REST path:** NBA holds
+  **1,206 games, 2026-10-20 → 2027-04-11**, and NHL **1,376, 2026-09-19 → 2027-04-10**. Both are full
+  seasons; the bootstrap this item asked for has evidently run. The figure was already wrong when
+  prompt 87 backfilled game links against **nba 1,206** rows and nobody reconciled the two lines. It
+  was found because prompt 104 expected most of the fifteen Cavs simulcast games to have no game to
+  match and **all fifteen matched** (rule 30: check the thing, not the note). Whether `nba-BOS`,
+  `nba-PHX` and `nba-POR` still lack games was NOT re-measured here.
 - **NHL/NBA `team_records` are season 2025 by design** (prompt 37); their cards show thin standings
   until a 2026-27 standings load exists.
 - **NFL/NBA adapters do not carry a conference.**
@@ -878,8 +893,26 @@ before touching any count line.
   fallback is better than bad art.
 - **`unverified` is load-bearing semantics** — now documented in `data/authority_rules.json` `_about`
   and `adapters/README.md`.
-- **The privacy gate before the Cavs season (late October):** production is a public URL. Confirm no
-  loaded broadcast row publishes the unannounced WUAB/RESN arrangement.
+- **OPEN — PROMPT 104 IS COMMITTED BUT NOT PUSHED, AND THE TWO NEW MARKS ARE NOT IN R2 (2026-09-16,
+  register §51).** The brief withheld the push deliberately: it changes in-season broadcast data and
+  publishes new artwork, and Joe authorizes both himself after looking at the rendered samples in
+  `assets/p104-composite-marks/` (untracked). **ONE authorization, not two, and the brief expected
+  two:** `git push` is the whole of it. **There is no R2 push for these marks and there was never
+  going to be** — `web/lib/config.js:253` says the processed marks are what "the app ships itself
+  (web/public/marks), NOT the raw bucket art", `markUrl()` returns the app-relative `/marks/{slug}.png`,
+  and `scripts/sync_assets.py` syncs only `assets/{logos, network-logos, fonts, brand}`. The two PNGs
+  are tracked files that reach production with the deploy. `--check` confirms it: local-only still
+  reads 29, the same set prompt 95 recorded, with neither composite among them. **Nothing renders from
+  any of this yet**: prompt 105 owns the row and the card.
+- **The privacy gate before the Cavs season (late October) — STILL OPEN, and its premise changed on
+  2026-09-15.** Production is a public URL. The gate was written when the WUAB/RESN arrangement was
+  UNANNOUNCED and hand-entered on Joe's authority; **WOIO/WUAB have now announced the fifteen-game
+  schedule publicly** (register §51, `docs/research/research-changelog.md` 2026-09-16), so what would
+  be published is a public fact rather than a private one. **That is a change of premise, not a
+  ruling: the item stays open and Joe closes it.** Prompt 104 landed the data and the artwork and
+  emitted no broadcast row at all — `adapters/nba.py`'s simulcast path deliberately returns nothing —
+  so nothing is published today either way. `CLAUDE.md` rule 8 is untouched and still binds: it
+  protects Joe's human sources, never the call signs, which this repo has always named.
 - **CBJ watch escalation ~Sept 15** (ask first). **IndyCar**: 2027 schedule, October.
 - **The unruled backlog:** E8, E9, E11, E12, E13, E15.
 - ~~The enhancement register §1–§13 are still project-only.~~ **CLOSED** — §1–§17 are in the repo.

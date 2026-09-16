@@ -411,6 +411,56 @@ RECIPES: dict[str, tuple[str, Callable[[Image.Image], Image.Image]]] = {
     # FOX shields.
     "trutv":            ("png", lambda im: floor_l(key_plate(im), 0.45)),
 }
+# ----------------------------------------------------------------------------- composites
+# TWO MARKS THAT ARE NOT ARTWORK: each is two ALREADY-PUBLISHED marks stacked (prompt 104, Joe's
+# ruling 2026-09-16 - LIST VIEW ONLY). WOIO/WUAB announced the Cavaliers' fifteen over-the-air
+# simulcasts on 2026-09-15, and the package puts a game on WOIO (CBS's Cleveland station), on
+# WUAB 43, or on both, alongside the DAZN stream it is a simulcast OF.
+#
+#   cbs-dazn      the nine WOIO-only games        CBS above DAZN
+#   cbs-wuab-43   the four both-station games     CBS above WUAB 43
+#
+# THE TWO WUAB-ONLY GAMES NEED NOTHING NEW - `wuab-43` already exists, and it already carries
+# RESN/DAZN inside it, which is also why `cbs-wuab-43` is a TWO-part stack and not a three.
+#
+# A RECIPE, NOT A HAND-COMPOSITED PNG, for the reason everything else in this file is one: a
+# hand-made bitmap cannot be rebuilt when its parts change, and these parts have moved before.
+#
+# THE HALVES ARE BALANCED BY INK AREA, NOT BY HEIGHT. That is this file's own normalization argument
+# applied one level down: `ink_area` exists precisely because equal heights make a wide wordmark
+# dominate a compact roundel, which is what web/lib/marks.js's "NBC reads smaller than FOX" note
+# describes. CBS is the widest, inkiest mark in the suite (hf 0.758, the lowest but one), so stacking
+# it at DAZN's height would bury DAZN under it.
+COMPOSITES: dict[str, tuple[str, ...]] = {
+    "cbs-dazn":    ("cbs", "dazn"),
+    "cbs-wuab-43": ("cbs", "wuab-43"),
+}
+COMPOSITE_GAP = 0.10          # transparent gap between halves, as a fraction of the taller half
+
+
+def stack(parts: list[Image.Image], gap_frac: float = COMPOSITE_GAP) -> Image.Image:
+    """Stack marks vertically, each scaled to carry the SAME INK, centre-aligned, gap between.
+
+    `ink_area` is normalized to a 100px height and is therefore scale-invariant, so two marks carry
+    equal ink at rendered size when `area * height**2` matches - i.e. heights scale as
+    sqrt(ref/area). `ref` is the SMALLEST area in the stack, so the inkier half is scaled DOWN and
+    nothing is ever upscaled past its published resolution.
+    """
+    areas = [ink_area(p) for p in parts]
+    ref = min([a for a in areas if a] or [1.0])
+    scaled = [resize_h(p, max(1, round(p.height * ((ref / a) ** 0.5 if a else 1.0))))
+              for p, a in zip(parts, areas)]
+    gap = max(1, round(gap_frac * max(s.height for s in scaled)))
+    w = max(s.width for s in scaled)
+    h = sum(s.height for s in scaled) + gap * (len(scaled) - 1)
+    out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    y = 0
+    for s in scaled:
+        out.paste(s, ((w - s.width) // 2, y), s)
+        y += s.height + gap
+    return trim(out)
+
+
 # SEC Network+ has no vector of its own: it is the SEC Network lockup plus a '+'.
 SVG_ALIAS = {"sec-network-plus": "sec-network"}
 # Ink-area normalization override (Joe): the Guardians composite reads small beside the others.
@@ -515,6 +565,18 @@ def build(only: list[str] | None = None, out_dir: Path | None = None,
             continue
         im = resize_h(trim(im), WORK_H)
         processed[slug] = trim(recipe(im))
+
+    # ---- composites, AFTER their parts exist. They have no source file, so `slugs()` cannot see
+    # them and they are not in `todo`; they are built from the PROCESSED parts, which means they
+    # inherit every conditioning decision those parts carry rather than repeating it.
+    for slug, parts in COMPOSITES.items():
+        if only and slug not in only:
+            continue
+        missing = [p for p in parts if p not in processed]
+        if missing:
+            print(f"  warn: {slug}: parts not built ({', '.join(missing)}) - skipped")
+            continue
+        processed[slug] = stack([processed[p] for p in parts])
 
     # ---- ink-area normalization, frozen into the manifest
     areas = {s: ink_area(im) for s, im in processed.items()}

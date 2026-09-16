@@ -4170,3 +4170,111 @@ one of them failing the suite** — the direction inverted, the callback dropped
 offset lost, the sentinel sign flipped, each guard dropped singly, the policy argument dropped, the
 transition detector widened to every notify, the initial state not read, the frame removed, the
 re-arm reordered after it, and the unsubscribe deleted.
+
+## 51. THE CAVS OTA SIMULCAST: THE SCHEDULE LANDS, AND THE OUTLET IS PER GAME — 2026-09-16, prompt 104
+
+**Numbered by count:** §1–§50 each appear exactly once and there was no §51.
+
+**FOUNDATION ONLY. Nothing about how a card or a grid renders changed**, and no broadcast row is
+emitted from this data: `adapters/nba.py`'s simulcast path deliberately returns nothing. Prompt 105
+owns the render and the row.
+
+### The announcement, and what it did to the schema
+
+WOIO/WUAB announced the over-the-air Cavaliers schedule on 2026-09-15
+(https://www.cleveland19.com/2026/09/15/cleveland-cavaliers-games-return-free-over-the-air-television-19-news/),
+which is the gate `data/local_rights.json` had been waiting on since 2026-09-01: `expectedCount: 15`,
+`games: []`, and a note saying the announcement was pending. Joe confirms it is the complete list.
+
+**ONE `outlet` FIELD COULD NOT SAY WHAT WAS ANNOUNCED.** The package is split across two stations:
+
+| | games |
+|---|---|
+| WOIO only | **9** |
+| WUAB 43 only | **2** |
+| both | **4** |
+| **WOIO total / WUAB 43 total** | **13 / 6** |
+
+So `outlet` moved ONTO the game: each entry is `{date, opponent, side, outlets: [...]}`. The old
+package-level field is kept under `superseded` with the reason, which is how this file already
+handles supersession (`nhl.CBJ`). **`side` is provenance and is NOT part of the match key.**
+
+**WOIO IS NOT AN `access_profile.json` ENTRY AND MUST NOT BECOME ONE.** It is CBS's Cleveland station
+— `data/row_order.json` says so in its own vocabulary (network CBS, station WOIO, channel 19) — so it
+resolves as CBS. WUAB 43 is its own network there, and its mark already carries RESN/DAZN inside it.
+
+**DAL, DET AND CHA EACH APPEAR TWICE.** Date plus tricode is the key; the tricode alone is not, and
+`simulcast_outlets()` says so where a future edit will read it.
+
+### All fifteen match a loaded game — which corrected a note by a factor of sixty
+
+Verified against the database through the anon REST path: every one of the twelve opponent tricodes
+resolves as `nba-XXX` in the loaded team table, and **15 of 15 entries match a loaded game** by ET
+`viewing_day` + opponent id. Every home/away side agrees with the announcement, **including both
+corrections Joe made to the article** — it prints "Cleveland and Phoenix" for February 14, which is
+Phoenix AT Cleveland, and "Cleveland at DC", which is WAS.
+
+The brief expected most to be unmatched, on `handoff-status.md`'s note that **"NHL and NBA hold only
+date-driven partial seasons (47 and 19 games)"**. Measured: **NBA 1,206 games and NHL 1,376**, both
+full seasons. That note was already wrong when prompt 87 backfilled links against 1,206 NBA rows. It
+is corrected in place (rule 30).
+
+### The two composite marks (Joe's ruling 2026-09-16, LIST VIEW ONLY)
+
+`cbs-dazn` for the nine WOIO-only games, `cbs-wuab-43` for the four both-station games; the two
+WUAB-only games use the existing `wuab-43`. **Recipes in `scripts/build_web_marks.py`, not hand-
+composited PNGs and not CSS**, built from the already-conditioned published marks so they inherit
+every conditioning decision rather than repeating it. Neither slug collided — checked against all 33
+manifest slugs and the published filenames.
+
+**THE HALVES ARE BALANCED BY INK AREA, NOT BY HEIGHT.** That is this file's own normalization argument
+one level down: `ink_area` exists because equal heights let a wide wordmark bury a compact roundel,
+which is `web/lib/marks.js`'s "NBC reads smaller than FOX". CBS is the inkiest mark in the suite.
+
+| slug | w × h | published hf | raw (derived) hf |
+|---|---|---|---|
+| `cbs` | 461 × 128 | 0.758 | 0.757 |
+| `dazn` | 280 × 128 | 0.964 | 0.938 |
+| `wuab-43` | 174 × 128 | 1.150 | 1.252 — clamped |
+| **`cbs-dazn`** | **192 × 128** | **1.150** | **1.249 — clamped** |
+| **`cbs-wuab-43`** | **158 × 128** | **1.150** | **1.487 — clamped** |
+
+**Both composites want more size than the frozen `HF_MAX` of 1.15 allows**, which is worth knowing
+before prompt 105 reasons about legibility — though the LIST CARD READS NO `hf` AT ALL: it fits the
+mark into a fixed CSS box (`.mnet-mark`, 56 × 40 on the phone, `object-fit: contain`), the same shape
+as the rail finding in `marks.js`.
+
+**THE SUITE DID NOT MOVE.** All 33 existing marks rebuilt **byte-identical**, and
+`build_brand_marks.target()` — which recovers the frozen ink-area target from the manifest — reads
+11764.455021972657 before and after, so the program marks are untouched.
+
+### What the composites actually cost, measured rather than asserted
+
+The risk named up front was that each half renders at roughly half its usual size. **In the list card
+it is less than that, and the reason is the box:** it is 56 wide, so CBS alone is already
+WIDTH-limited to 15.5px tall in it.
+
+| | drawn in the 56 × 40 box | each half vs. the same mark alone |
+|---|---|---|
+| `cbs-dazn` | 56.0 × 37.3 | CBS 15.46px (**0.99×**), DAZN 20.12px (**0.79×**) |
+| `cbs-wuab-43` | 49.4 × 40.0 | CBS 13.75px (**0.88×**), WUAB 43 24.06px (**0.60×**) |
+
+**0.60× is the worst case and it is not a verdict** — rendered samples are at
+`assets/p104-composite-marks/` (untracked) for Joe to look at at pixel scale.
+
+**THERE IS NO R2 PUSH FOR THESE MARKS, AND THE BRIEF EXPECTED ONE.** It instructed the run to stop
+before the push and to leave `--allow-new` unpassed, on the understanding that both composites would
+be new bucket objects. Checked rather than assumed (rule 33): `web/lib/config.js:253` calls the
+processed marks the ones "the app ships itself (web/public/marks), NOT the raw bucket art",
+`markUrl()` returns the app-relative `/marks/{slug}.png`, and `scripts/sync_assets.py`'s `FOLDERS` is
+`("logos", "network-logos", "fonts", "brand")` — `web/public/marks/` is not in it. These two PNGs are
+TRACKED FILES that reach production with the Vercel deploy, so the only gate on publishing them is
+the `git push` this prompt withheld. `--check` agrees: local-only is still 29, prompt 95's set, with
+neither composite in it. **No sync command was run in push mode, and the §44–§45 guard was never
+reached** — not because it was avoided, because it does not govern this path.
+
+### Not filed as a prompt brief, and why
+
+No prompt-104 text exists in `Claude outputs\`, so there is nothing to copy byte-identically.
+`docs/prompts/README.md` is explicit that an invented brief filed beside real ones is worse than an
+acknowledged gap, so nothing was filed and the count stands at 107 covering 01–102.

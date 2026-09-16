@@ -144,7 +144,7 @@
    "ESPN+"
   ]
  },
- "_ordering_note": "Station ordering rule (Joe, 2026-09-01): when WOIO 19, WUAB 43 and The CW/WBNX 55 share a grid, the order is WOIO 19 -> WUAB 43 -> WBNX 55 (channel order). WUAB 43 carries the OTA Cavs simulcasts (decision 7).",
+ "_ordering_note": "Station ordering rule (Joe, 2026-09-01): when WOIO 19, WUAB 43 and The CW/WBNX 55 share a grid, the order is WOIO 19 -> WUAB 43 -> WBNX 55 (channel order). The OTA Cavs simulcasts are split across BOTH stations (decision 7, schedule announced 2026-09-15): nine of the fifteen are WOIO only, two are WUAB 43 only, and four are on both - see data/local_rights.json nba.CLE.simulcasts, where the outlet is per game.",
  "mlb": {
   "broadcast": [
    {

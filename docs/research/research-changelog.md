@@ -6,6 +6,32 @@
 
 ---
 
+## 2026-09-16 — Cavaliers OTA simulcast: the schedule is ANNOUNCED, and the outlet is per game
+
+- **Doc:** supersedes the 2026-09-01 entry's "partner and schedule will be communicated at a later
+  date" and closes that entry's **standing watch**, which asked the weekly research task to surface
+  newly announced simulcast dates for hand entry.
+- **Old claim:** 15 free-plus-OTA games, partner and schedule pending; WUAB 43 hand-entered on Joe's
+  authority; `nba.CLE.simulcasts.games` empty.
+- **New claim:** WOIO/WUAB announced the full fifteen-game schedule on 2026-09-15. **The package is
+  split across two stations, which the old one-`outlet` encoding could not express: nine games on
+  WOIO only, two on WUAB 43 only, four on both.** WOIO is CBS's Cleveland station, so it is NOT an
+  `access_profile.json` entry — it resolves as CBS. The article describes the package as "a simulcast
+  of the games available for free in front of the Cavaliers on DAZN paid subscription paywall
+  offering"; Joe confirms it is the complete list, not a first tranche.
+- **Source:** https://www.cleveland19.com/2026/09/15/cleveland-cavaliers-games-return-free-over-the-air-television-19-news/
+  (2026-09-15). **Two corrections on Joe's authority:** the article prints "Cleveland and Phoenix" for
+  February 14, which is Phoenix AT Cleveland, and "Cleveland at DC", which is WAS.
+- **Encoded (prompt 104):** `data/local_rights.json → nba.CLE.simulcasts` - `outlet` moves ONTO each
+  game as `outlets: [...]`, the old package-level field is kept under `superseded`, and each entry is
+  `{date, opponent, side, outlets}`. **All fifteen match a loaded game today**, verified against the
+  database by ET `viewing_day` + opponent id. DAL, DET and CHA each appear twice, so the tricode alone
+  is not a key. Two composite marks were built for the list view, `cbs-dazn` and `cbs-wuab-43`.
+- **Still open:** no broadcast row is emitted from this data yet - `adapters/nba.py` deliberately
+  emits none, and how a simulcast row renders (one row or two, the access resolution for WOIO,
+  preemption, the rail) is prompt 105's. The privacy gate in `docs/handoff-status.md` is Joe's to
+  rule on and is untouched here.
+
 ## 2026-09-05 — Programs go live: every events & shows source probed from Joe's laptop
 
 The eleven events & shows documents were dropped into the repo (prompt 48 stage 0) and every source
