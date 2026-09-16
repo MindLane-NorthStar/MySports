@@ -94,6 +94,8 @@ import {
   suppressScrollCollapse,
   releaseScrollCollapse,
   collapseHeader,
+  subscribeHeader,
+  headerCollapsed,
 } from '../lib/headerstate.js';
 import { armBannerPin, installPinRelease } from '../lib/bannerpin.js';
 import {
@@ -104,6 +106,7 @@ import {
   scrollTargetFor,
   decideScroll,
   pinReleaseCollapse,
+  pinRearmOnExpand,
 } from '../lib/autoscroll.js';
 
 /** The live entry state. MODULE SCOPE deliberately - see the note at the top of this file. */
@@ -222,8 +225,32 @@ export default function AutoScroll() {
     };
     document.addEventListener('visibilitychange', onVisible);
 
+    // THE WORDMARK'S EXPAND RE-ARMS THE PIN (prompt 101 block B, PROVISIONAL - register §50).
+    //
+    // Tapping MYSPORTS TV in the navbar restores the banner and returns the reader to the top, and
+    // from there they have not scrolled - which is precisely the state Joe's prompt-73 ruling
+    // describes, "make banner STICKY until the user scrolls". It was the one entry point that never
+    // armed. The banner still travels on their next scroll; this is not the permanently pinned
+    // banner lib/bannerpin.js records as rejected.
+    //
+    // IT IS WIRED HERE AND NOT ON THE BUTTON. This effect owns the single release listener - there
+    // is never more than one - so arming from CollapsedHeader.js would set the attribute with
+    // nothing left to release it, which IS the rejected permanent pin.
+    //
+    // ONE FRAME LATER, FOR THE SAME REASON `land()` WAITS. `expandHeader()` calls
+    // `window.scrollTo(0, 0)` BEFORE `notify()` (lib/headerstate.js), so by the time this subscriber
+    // runs the offset has already moved but its `scroll` EVENT has not been dispatched yet - it
+    // comes at the next rendering opportunity. A listener installed synchronously here would catch
+    // that event and release the pin instantly, and the fix would appear to do nothing. This is the
+    // hazard lib/bannerpin.js documents, arriving through a second door.
+    const unsubscribe = subscribeHeader(pinRearmOnExpand(headerCollapsed, () => {
+      rearm();
+      requestAnimationFrame(() => { if (live) listen(); });
+    }));
+
     return () => {
       live = false;
+      unsubscribe();
       document.removeEventListener('visibilitychange', onVisible);
       timers.forEach(window.clearTimeout);
       timers = [];

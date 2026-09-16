@@ -13,7 +13,7 @@ and they are not going to be found** — see "The two gaps" below.
 
 **UPDATED 2026-09-10 BY PROMPT 87: 91 briefs, covering 01–87 — 92 covering 01–88 since prompt 88,
 93 covering 01–89 since prompt 89, 94 covering 01–91 with 90 to follow since prompt 91, 95 covering
-01–91 since prompt 90, 96 covering 01–92 since prompt 92, 98 covering 01–93 since prompt 93, 99 covering 01–94 since prompt 94, 100 covering 01–95 since prompt 95, 101 covering 01–96 since prompt 96, 102 covering 01–97 since prompt 97, 103 covering 01–98 since prompt 98, 104 covering 01–99 since prompt 99, 105 covering 01–100 since prompt 100 — and 39 and 42 are still the only permanent gaps.** The count above was a timestamp twice over: prompt 81 had filed itself without the
+01–91 since prompt 90, 96 covering 01–92 since prompt 92, 98 covering 01–93 since prompt 93, 99 covering 01–94 since prompt 94, 100 covering 01–95 since prompt 95, 101 covering 01–96 since prompt 96, 102 covering 01–97 since prompt 97, 103 covering 01–98 since prompt 98, 104 covering 01–99 since prompt 99, 105 covering 01–100 since prompt 100, 106 covering 01–101 since prompt 101 — and 39 and 42 are still the only permanent gaps.** The count above was a timestamp twice over: prompt 81 had filed itself without the
 count moving, and 61–80 and 82–87 were never filed at all. Prompt 87 copied those 28 files from
 `Claude outputs\` (see Provenance), and **86 carries three** — see "Duplicate numbers".
 
@@ -37,8 +37,8 @@ with `-superseded` in the name.
 
 ## What is here
 
-One hundred and five briefs, `NN-slug.md` (this line said fifty-one until prompt 87, ninety-one until 88,
-ninety-two until 89, ninety-three until 91, ninety-four until 90, ninety-five until 92, ninety-six until 93, ninety-eight until 94, ninety-nine until 95, one hundred until 96, one hundred and one until 97, one hundred and two until 98, one hundred and three until 99, one hundred and four until 100 — counted from the directory each time, not incremented). Numbers in **bold** carry
+One hundred and six briefs, `NN-slug.md` (this line said fifty-one until prompt 87, ninety-one until 88,
+ninety-two until 89, ninety-three until 91, ninety-four until 90, ninety-five until 92, ninety-six until 93, ninety-eight until 94, ninety-nine until 95, one hundred until 96, one hundred and one until 97, one hundred and two until 98, one hundred and three until 99, one hundred and four until 100, one hundred and five until 101 — counted from the directory each time, not incremented). Numbers in **bold** carry
 more than one file or are otherwise not what the number alone suggests; everything else is one brief,
 one file.
 
@@ -151,6 +151,7 @@ one file.
 | 98 | `98-drop-standalone-render.md` — *filed by the run it describes* |
 | 99 | `99-ios27-status-bar.md` — *rev B, the text that ran, filed by the run it describes. Rev A (`prompt-99-ios27-status-bar-2026-09-15.md` in `Claude outputs\`, 11,471 bytes) changed the value and left the follow-up unmeasured; no commit carries it — rev B's run found HEAD at `d6cd7b2`, prompt 98's commit, with no tracked change — and it is NOT filed, because the run's scope named only this path* |
 | 100 | `100-remove-agents-md.md` — *filed by the run it describes; the first three-digit number* |
+| 101 | `101-banner-pin-and-scroll-recovery.md` — *filed by the run it describes; block B ships PROVISIONAL, pending Joe's device* |
 
 ## What is NOT here — the two gaps
 
@@ -233,6 +234,7 @@ briefs' titles against later ones, not a record anybody wrote at the time.
 | 98 | `Claude outputs\prompt-98-drop-standalone-render-2026-09-14.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`56a87acb…7c2c`, 10,308 bytes), LF |
 | 99 | `Claude outputs\prompt-99-rev-B-ios27-status-bar-2026-09-15.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`d740da72…0d1a`, 13,708 bytes), LF |
 | 100 | `Claude outputs\prompt-100-remove-agents-md-2026-09-15.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`508abf19…fbbe4`, 6,569 bytes), LF |
+| 101 | `Claude outputs\prompt-101-banner-pin-and-scroll-recovery.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`ba82cc55…34f4`, 13,371 bytes), LF |
 | 48 (second file) | `handoff/project-mirror/claude_phase4-claude-code-prompt-48-programs-live.md` (gitignored, deleted by prompt 93 after this copy) — copied with `shutil.copyfile`, whole file byte-identical by `sha256` (`84358ed7…366b`, 9,684 bytes), LF, nothing added |
 
 The fifteen filed by prompt 49 were copied with `shutil.copyfile` and verified byte-identical to

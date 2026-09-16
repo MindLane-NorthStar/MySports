@@ -3918,7 +3918,15 @@ The emitted check fails that 3/3, and passes the real file 3/3.
    within one device row of the font's figure at each width; the renderer snaps glyphs to whole pixels.
 3. **The clearance under `black`:** 4.392 × 390/428 = **4.00 CSS px at 390**, and 4.392 × 430/428 =
    **4.41 CSS px at 430** (Joe's iPhone 14 Pro Max).
-4. **The compensation that would pull the wordmark flush under the bar — NOT APPLIED:**
+4. **The compensation that would pull the wordmark flush under the bar — NOT APPLIED, and since
+   2026-09-16 CONTRAINDICATED.**
+
+   > **REVERSED BY MEASUREMENT (prompt 101 block B, §50).** Do not apply this line. The matched
+   > screenshot pair of 2026-09-16 found iOS 27 feathering a scrim from the top edge down to about
+   > **90 CSS px**, roughly 30 px BELOW iOS's own 59 px bar, with the wordmark's glyph rows inside it
+   > at 0.484 of full brightness at the top of the capitals. This pull-up moves the wordmark **4.4 CSS
+   > px further UP**, which is deeper into the feather and darker, not better. The figures below stay
+   > as the measurement of the artwork they describe; only the recommendation is withdrawn.
 
    ```css
    @media (display-mode: standalone) and (max-width: 699px){.banner{margin-top:calc(-100% * 4.392 / 428)}}
@@ -4019,3 +4027,116 @@ never reach the index"*. There the risk worth guarding was committing it; here i
 
 **No new working rule.** Rule 2 (one writer at a time) already covers a second agent in the repo, and
 `CLAUDE.md` owns the rules (§38).
+
+## 50. THE FIRST SCROLL AFTER A LANDING, AND THE WORDMARK'S RE-ARM — 2026-09-16, prompt 101
+
+**Numbered by count:** §1–§49 each appear exactly once and there was no §50.
+
+Two defects in one release path. **Block A is mechanism-proven, in the browser, in both directions.
+Block B is a HYPOTHESIS about iOS 27 with strong evidence, and ships PROVISIONAL** — its wiring is
+proven, its premise is not, and only Joe's phone can settle it (rule 25).
+
+### Block A — the first scroll after a landing did not collapse the header
+
+**Joe, 2026-09-15:** *"you scroll down and the banner disappears, scroll up and the banner is still
+there, scroll down again and THEN the banner disappears and navbar appears."* And 2026-09-16, which
+named the cause: *"I can't scroll down on initial open because the DAY / All Games / List view today
+is so short there's no scrolldown to perform. When I immediately shift to week and scroll down, there
+is no navbar popup."*
+
+**THE MECHANISM: an IntersectionObserver reports CROSSINGS, NOT POSITIONS.** The landing carries the
+page past the sentinel while `suppressScrollCollapse()` is in force (prompt 71), so that crossing is
+delivered and swallowed and the observer's state then SITS at "not intersecting". The reader's first
+scroll down crosses nothing; the scroll back up re-intersects and the machine is one-way; the second
+scroll down is the first real crossing. `CollapsedHeader.js`'s observer note has described exactly
+this since prompt 71 and called it acceptable. Joe's ruling is that it is not.
+
+**MEASURED IN CHROMIUM at 390×844, driving the app the way Joe does** — open on day, tap WEEK, which
+is a client-side navigation and therefore a landing (a `page.goto` is a fresh document and an
+ARRIVAL, which scrolls nothing under prompt 68's rule, and the first attempt at this measurement made
+exactly that mistake and had to be re-run):
+
+| | after the landing | after ONE scroll down |
+|---|---|---|
+| **with block A** | scrollY 1545, sentinel top **−1210**, `data-hdr` null, `data-pin` banner | `data-hdr` **collapsed**, navbar visible |
+| **without it (control)** | scrollY 1545, sentinel top −1210, `data-hdr` null | `data-hdr` **still null**, no navbar — Joe's bug |
+
+**THE SHAPE.** `installPinRelease(win, onRelease)` captures `win.scrollY` at install time and, after
+releasing the pin and removing its own listener, calls back with whether the scroll was DOWNWARD.
+`lib/bannerpin.js` does NOT import `collapseHeader`: that file is explicit that *"RELEASE AND COLLAPSE
+ARE TWO EVENTS AT TWO MOMENTS, and conflating them is the whole hazard"*, so the policy lives in
+`lib/autoscroll.js` as `pinReleaseCollapse(doc, collapse)` and collapses only when **both** the scroll
+was downward **and** the sentinel is already above the viewport — the proof that the observer cannot
+do this job for this scroll. While the sentinel is on screen the observer still owns the collapse, so
+prompts 71 and 73 cannot regress through here, and `lib/headerstate.js`'s promise that **scroll only
+ever collapses** is intact: this adds a collapse path and no expand path.
+
+**`collapseHeader` IS PASSED BY REFERENCE, NEVER CALLED IN THE COMPONENT**, and that is not a
+stylistic choice: `autoscroll.test.mjs` asserts that `AutoScroll.js`, comments stripped, contains no
+call to it — prompt 71's ruling that THE LANDING never collapses the header. Injection keeps that
+guard at full force (a `collapseHeader()` inside `land()` still trips it) and makes both halves of the
+predicate watchable by a test.
+
+### Block B — the wordmark is half-brightness after a tap-restore (PROVISIONAL)
+
+**Two screenshots, same iPhone, same install, same minute, both on prompt 99 rev B** (723 × 1568
+pixels), measured by Cowork 2026-09-16:
+
+- **fresh open:** the status band is flat `#282828`, uniform across all 723 columns, no gradient.
+- **tap-restored:** `#020202` at the top with a continuous downward fade, dying out at y≈152 of 1568
+  — about **90 CSS px** from the top, so roughly 30 px BELOW iOS's own 59 px status bar.
+- **below that line the two shots are identical**, delta 0.0 on every sampled row from y=150 to
+  y=320. There is no banner-wide dimming; artwork, network logos and toggles are pixel-for-pixel the
+  same.
+- **the wordmark sits inside the feather** (glyph rows y=111–149). Tap-restored brightness as a
+  fraction of fresh-open: **0.484** at the top of the capitals, then 0.560, 0.585, 0.634, 0.680,
+  0.721, 0.768, 0.816, 0.863, **0.894** at the baseline, and 1.000 below y≈155. An earlier unmatched
+  pair gave 92 CSS px and 0.50 → 0.88 over the same span: two independent sets agree.
+
+**A CORRECTION TO THE FIRST READ, recorded rather than quietly dropped.** From the unmatched pair
+Cowork concluded the two shots were different BUILDS, a flat grey band and a fading black band looking
+like two `apple-mobile-web-app-status-bar-style` values. The matched pair disproves it: one install
+produces both bands, and the treatment is STATE-DEPENDENT.
+
+**THE HYPOTHESIS, and it is a hypothesis.** The only structural difference between the two states is
+`data-pin`: fresh open has the pin armed and `.banner` resolving to `position: sticky; top: 0`, while
+after a scroll the pin is released and `.banner` is `relative`. A third state agrees — `.chdr` is
+unconditionally sticky at `top: 0` with opaque `--spot-2`, and Joe reports the navbar renders
+correctly in every screenshot. So across three observed states, **an element holding the top edge
+appears to suppress iOS 27's scroll-edge scrim, and ordinary in-flow content under the status bar
+receives it.** Three consistent data points is good evidence and is NOT proof of the mechanism.
+
+**THE CHANGE:** the wordmark's expand re-arms the pin — Joe's prompt-73 ruling (*"make banner STICKY
+until the user scrolls"*) reaching the one entry point that never armed. `AutoScroll.js` subscribes to
+the header store inside its existing effect and re-arms on a COLLAPSED → EXPANDED transition only.
+
+**IT IS NOT THE REJECTED PERMANENT PIN, measured rather than argued.** `lib/bannerpin.js` records that
+a banner which never travels would break the sentinel, the height arithmetic and the route back. In
+Chromium: after the tap the pin is armed, `.banner` is `sticky` at top 0 and scrollY is 0 — and after
+one scroll the pin releases, `.banner` is `relative` again and its top is −300. **It still travels.**
+
+**THE TIMING HOLE IS REAL, AND WAS PROVEN BY BREAKING IT.** `expandHeader()` calls
+`window.scrollTo(0, 0)` BEFORE `notify()`, so the offset has already moved when the subscriber runs
+while its `scroll` event is still pending. With the listener installed synchronously, the browser
+shows `data-pin` null and `.banner` `relative` immediately after the tap — the fix doing nothing.
+Installed one animation frame later, the way `land()` does it, the pin survives.
+
+### What this does not do
+
+- **No headroom was added above the wordmark, and none of prompts 46/50/51's reclaimed space was
+  taken back.** That is the fallback if the device says block B failed.
+- **§48's pre-measured pull-up is CONTRAINDICATED** — see the line added there.
+- The stale `globals.css` comments are still queued and still untouched.
+
+### The gate that moved
+
+`npm run test:unit` **596 → 609**: thirteen tests, four in `bannerpin.test.mjs` (the direction both
+ways, the callback ordering, and the one-argument signature still working) and nine in
+`autoscroll.test.mjs` (the four policy cases, the no-expand guard, the four transition cases, and the
+wiring with its frame). **One existing assertion was REWRITTEN IN PLACE, not weakened:**
+bannerpin.test.mjs pinned `installPinRelease(window)`, which stopped matching when the call gained its
+policy argument; it now pins the whole call, which is strictly more. **Twelve mutation checks, every
+one of them failing the suite** — the direction inverted, the callback dropped, the install-time
+offset lost, the sentinel sign flipped, each guard dropped singly, the policy argument dropped, the
+transition detector widened to every notify, the initial state not read, the frame removed, the
+re-arm reordered after it, and the unsubscribe deleted.

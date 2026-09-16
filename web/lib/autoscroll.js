@@ -204,3 +204,28 @@ export function pinReleaseCollapse(doc, collapse) {
     return true;
   };
 }
+
+/**
+ * THE WORDMARK'S EXPAND RE-ARMS THE PIN (prompt 101 block B, provisional - see register §50).
+ *
+ * A transition detector rather than a handler: `subscribeHeader` notifies on every change, and only
+ * COLLAPSED -> EXPANDED is the wordmark restoring the banner. A collapse must not arm anything.
+ *
+ * This is Joe's prompt-73 ruling reaching one more entry point - "make banner STICKY until the user
+ * scrolls" - and not the design lib/bannerpin.js records as rejected: the banner still travels, the
+ * release still fires on the reader's next scroll, the sentinel still crosses, and the height
+ * arithmetic is untouched.
+ *
+ * @param {() => boolean} isCollapsed   headerstate.js's `headerCollapsed`
+ * @param {() => void} onExpand         run once per collapsed -> expanded transition
+ * @returns {() => void} the subscriber
+ */
+export function pinRearmOnExpand(isCollapsed, onExpand) {
+  let was = isCollapsed();
+  return () => {
+    const now = isCollapsed();
+    const expanded = was && !now;
+    was = now;
+    if (expanded) onExpand();
+  };
+}

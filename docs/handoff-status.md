@@ -10,7 +10,7 @@ sections, and the older measurement records. **This file stays the authority for
 repo state, gate floors, open items; since prompt 89 the working rules are `CLAUDE.md`'s alone. Read
 the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§49 — this said §1–§39 until prompt 99 corrected it, counted; all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§50 — this said §1–§39 until prompt 99 corrected it, counted; all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **105 briefs, covering 01–100, counted 2026-09-15 by prompt 100
-(104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **106 briefs, covering 01–101, counted 2026-09-16 by prompt 101
+(105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
 count runs ahead of the highest number. **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -53,10 +53,18 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 66. **THIS IS THE ONLY PLACE THE GATE FLOORS ARE RECORDED.** `CLAUDE.md`
+main, HEAD is prompt 101. **THIS IS THE ONLY PLACE THE GATE FLOORS ARE RECORDED.** `CLAUDE.md`
 carried a second copy and it was wrong four times in one week (prompts 62, 63, 64, and again between
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
+
+> **"HEAD is prompt 66" STOOD IN THIS LINE UNTIL PROMPT 101 (2026-09-16).** Thirty-five prompts
+> appended a `Re-measured … prompt NN` line beneath it without touching the sentence above them, so
+> the one clause naming the tree's position was the one thing on this page that was never true. The
+> rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
+
+**Measured 2026-09-16, prompt 101 — `npm run test:unit` 596 → 609** (block A's release policy and
+block B's re-arm, thirteen tests); the other four did not move.
 
 **Re-measured 2026-09-15, prompt 100 — no count moved; one untracked file deleted and documents.** Written
 after the last gate run; geometry again pointed at `-- http://localhost:3000`.
@@ -148,6 +156,7 @@ line claims to do.
 | prompt 90 | `pytest` | 544 → **569** | `tests/test_enrich_cfb_records.py` (25): the `"W-L"` split and the all-zero skip, the team_records rows (conference when carried, unknown ids skipped), `--current-week` pinned to fixed 2026 dates with both fallbacks, `main()` driven against a fake DB (one commit covers both writes; `--latest-week` keeps its meaning), and the nightly step's flag. Mutation-checked: wins/losses swapped fails 4; `max(week)` fails 8 |
 | prompt 94 | `pytest` | 569 → **585** | `tests/test_sync_assets.py` (16): the byte comparison's order and its request count (a single-part ETag costs no `head_object`; a size difference costs no hashing), the multipart and absent-ETag fallback, `test_pull_retakes_a_cached_file_whose_bytes_differ_from_the_bucket`, a `grids/` key compared at its derived path, mixed-case filenames, `--force` and `--existing-only` unchanged. Mutation-checked: the free ETag step removed fails 7; a key-only pull restored fails 2 |
 | prompt 95 | `pytest` | 585 → **591** | `PushGuard` in `tests/test_sync_assets.py` (6), driven through the real `main()` with `_put` counted: a push that would create an object refuses and uploads nothing; `--allow-new` publishes; a push with nothing new proceeds unflagged; `--existing-only` creates nothing; `--force` does not bypass the guard; the nightly's logo push carries the flag. Mutation-checked: the guard moved after the first upload fails 2; the guard removed fails 2 |
+| prompt 101 | `test:unit` | 596 → **609** | `bannerpin.test.mjs` (4): the release callback's direction both ways, that it runs only after the pin is off and the listener is removed, and that the one-argument signature still works. `autoscroll.test.mjs` (9): `pinReleaseCollapse`'s four cases (downward + sentinel above collapses; downward + sentinel on screen does NOT, because the observer still owns it; upward never; no sentinel is a no-op), the no-expand-path guard, `pinRearmOnExpand`'s four transition cases, and the wiring with its animation frame. One existing assertion REWRITTEN IN PLACE — `installPinRelease(window)` no longer matched once the call took a policy argument, and it now pins the whole call. Mutation-checked twelve ways, every one failing the suite |
 | prompt 96 | `pytest` | 591 → **598** | seven in `tests/test_logo_conditioning.py`: the file really holds mixed-case rulings; a lowercase file for a team ruled raw in mixed case gets the ruling (the runner's case); the mixed-case file still does (the laptop's); case-insensitivity does not widen the ruling; the `derive` set matches in any case; one team ruled both ways under two spellings is still caught; a conditioned file already on the runner heals to the raw art once and a second run writes nothing. Two existing tests REWRITTEN IN PLACE to compare in `rule_key()` spelling, not weakened. Mutation-checked: the case-sensitive code restored fails 6; normalizing the sets but not the stem fails 1 |
 
 **QA-SHOTS' EXIT CODE WAS DECORATIVE UNTIL THIS COMMIT, AND EVERY `NODE EXIT=0` ABOVE IS AFFECTED.**
@@ -419,7 +428,7 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 | gate | run from | floor |
 |---|---|---|
 | `pytest` | repo root | **598 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **596** |
+| `npm run test:unit` | `web/` | **609** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **121/121** |
 | `npm run geometry` | `web/` | all hard stops |
@@ -958,12 +967,25 @@ before touching any count line.
   first**: iOS is taken to read the tag at install, so the existing Home Screen icon keeps the old
   behaviour until the app is removed and re-added from Safari. What to look at: a dark opaque bar owned by
   iOS, the banner starting just below it, and no wash over the wordmark or the collapsed header.
-  **The pre-measured follow-up, if the gap under the bar is unwanted:** the wordmark's first ink now sits
-  **4.41 CSS px below the bar at 430** (4.00 at 390). The one line that closes it is written out in §48
-  (`@media (display-mode: standalone) and (max-width: 699px){.banner{margin-top:calc(-100% * 4.392 / 428)}}`),
-  and applying it is a one-line edit, not a new measurement. For comparison: Joe's first ruling was 18 px, and
+  **THE PRE-MEASURED FOLLOW-UP IS WITHDRAWN — DO NOT APPLY IT (prompt 101, 2026-09-16).** The line
+  §48 wrote out (`margin-top: calc(-100% * 4.392 / 428)`) moves the wordmark 4.4 CSS px UP, and the
+  matched screenshot pair of 2026-09-16 found iOS 27 feathering a scrim down to ~90 CSS px with the
+  wordmark inside it — so up is darker, not better. §48 carries the reversal; register §50 has the
+  pixel figures. The wordmark's first ink sits **4.41 CSS px below the bar at 430** (4.00 at 390) and
+  stays there. For comparison: Joe's first ruling was 18 px, and
   under the translucent style the ink sat 5.59 px inside the band. **The revert is one word**, `black` back
   to `black-translucent`, plus the same reinstall.
+- **OPEN — BLOCK B IS PROVISIONAL UNTIL JOE'S PHONE AGREES (prompt 101, register §50).** The wordmark's
+  tap-restore now re-arms the banner pin, on the hypothesis that an element holding the top edge
+  suppresses iOS 27's scroll-edge scrim — three consistent observed states, and NOT proof of the
+  mechanism. **What to look at:** collapse the header by scrolling, tap MYSPORTS TV in the navbar, and
+  see whether the restored wordmark is as bright as it is on a fresh open. It was measured at **0.484
+  of full brightness** at the top of the capitals before this change. **No reinstall is needed** — this
+  is app code, not the install-time status-bar tag prompt 99 changed; a reload is enough. **If it
+  fails**, the fallback is headroom above the wordmark, which prompt 101 deliberately did not
+  pre-emptively take (prompts 46, 50 and 51 each reclaimed some of that space), and the single-command
+  revert is in the prompt 101 report. **Block A of the same commit is independent and is proven in the
+  browser** — keep it either way; revert block B alone.
 - **STALE COMMENTS PROMPT 99 COULD NOT CORRECT — `globals.css` was read-only for it (rule 30, owed).**
   `globals.css:1960-1962` says the banner bleeds *"under the translucent status bar, which is the entire
   point of black-translucent"*. `:1966-1967` and `:2003-2004` say the artwork carries *"11 stage px"* of

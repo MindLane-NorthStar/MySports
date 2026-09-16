@@ -18,10 +18,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { region, anchorAt } from './region.mjs';
 
 import {
   decideScroll, scrollTargetFor, stackBottom, heldHeight, SCROLL_GAP, TOP_STACK,
-  pinReleaseCollapse,
+  pinReleaseCollapse, pinRearmOnExpand,
 } from '../lib/autoscroll.js';
 import { SENTINEL_ID } from '../lib/headerstate.js';
 
@@ -384,6 +385,67 @@ test('SCROLL STILL ONLY EVER COLLAPSES - the policy has no expand path', () => {
   const lib = src('lib/autoscroll.js')
     .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   assert.doesNotMatch(lib, /expandHeader/, 'no scroll path may expand the header');
+});
+
+// ------------------------------- the wordmark re-arms the pin (prompt 101 block B, PROVISIONAL)
+test('a COLLAPSED -> EXPANDED transition arms the pin, and nothing else does', () => {
+  let collapsed = true;
+  const runs = [];
+  const onChange = pinRearmOnExpand(() => collapsed, () => runs.push('rearm'));
+
+  collapsed = false;            // the wordmark expanded the header
+  onChange();
+  assert.deepEqual(runs, ['rearm'], 'the expand armed it');
+
+  onChange();
+  assert.deepEqual(runs, ['rearm'], 'a notify with no change does nothing');
+
+  collapsed = true;             // the reader scrolled and it collapsed again
+  onChange();
+  assert.deepEqual(runs, ['rearm'], 'a COLLAPSE must never arm the pin');
+
+  collapsed = false;            // and the wordmark again
+  onChange();
+  assert.deepEqual(runs, ['rearm', 'rearm'], 'every expand arms, not only the first');
+});
+
+test('a subscriber created while EXPANDED does not arm on its first notify', () => {
+  // The effect runs while the header is open in the ordinary case, so the initial value has to be
+  // read at construction: treating "not collapsed" as a transition would arm the pin on any
+  // unrelated notify.
+  let collapsed = false;
+  const runs = [];
+  const onChange = pinRearmOnExpand(() => collapsed, () => runs.push('rearm'));
+  onChange();
+  assert.deepEqual(runs, []);
+});
+
+test('the expand re-arm is wired in AutoScroll, and its listener waits a FRAME', () => {
+  // THE TIMING HOLE, AND IT IS THE WHOLE BLOCK. `expandHeader()` calls `window.scrollTo(0, 0)`
+  // BEFORE `notify()`, so when this subscriber runs the offset has already moved and its `scroll`
+  // event has NOT been dispatched yet. A listener installed synchronously here would catch that
+  // pending event and release the pin instantly - the fix would appear to do nothing.
+  const c = src('components/AutoScroll.js');
+  const sub = region(c, 'const unsubscribe = subscribeHeader(', 'return () => {',
+    "the header subscription's wiring");
+  assert.match(sub, /pinRearmOnExpand\(headerCollapsed, \(\) => \{/, 'the transition detector');
+  assert.match(sub, /rearm\(\);/, 'the pin goes back on');
+  assert.match(sub, /requestAnimationFrame\(\(\) => \{ if \(live\) listen\(\); \}\);/,
+    'and the listener goes on a frame later, after the pending scroll event has been missed');
+  // ORDER, not merely presence: re-arm first, then the frame that installs the release.
+  assert.ok(anchorAt(sub, 'rearm();') < anchorAt(sub, 'requestAnimationFrame'),
+    'arming after the frame would leave a window with a listener and no pin');
+  // and the subscription is torn down with the effect, or a route change leaves two of them
+  assert.match(c, /unsubscribe\(\);/, 'the cleanup unsubscribes');
+});
+
+test('expandHeader is READ but never CALLED by the landing - expansion stays manual', () => {
+  // lib/headerstate.js: "THE ONLY CALLER IS THE WORDMARK BUTTON. Nothing scroll-driven may call
+  // this." Block B subscribes to the store the wordmark notifies; it must not become a second way
+  // to expand.
+  const code = src('components/AutoScroll.js')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.doesNotMatch(code, /expandHeader/, 'the landing never expands the header');
 });
 
 test('the entry state is MODULE scope, not a ref and not sessionStorage', () => {
