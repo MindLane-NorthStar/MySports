@@ -44,7 +44,11 @@ test('the manifest carries published geometry for every mark, and h is PUBLISH_H
   }
 });
 
-test('31 of 32 marks land on the 600px^2 target; the one exception is the widest lockup', () => {
+// NAME CORRECTED BY PROMPT 106. It read "31 of 32 marks land on the 600px^2 target" while the
+// assertion below said 34 of 35 - stale since prompt 72 added `directv`, and passed over by 104 and
+// 105, both of which edited this very test. A failing run sent the reader hunting for 32 marks that
+// do not exist. The name now says the PROPERTY, which does not move when the suite grows.
+test('every mark lands on the 600px^2 rail target except ESPN2, the one irreducibly wide wordmark', () => {
   // Stage 5 landed 26 of 28, with ESPN2 and HBO Max short because their aspect put them against the
   // `RAIL_BOX_W / a` ceiling. Stage 7 replaced HBO Max's wide wordmark with the stacked 2025 lockup
   // (aspect 6.30 -> 2.14) and it came onto the target with NO CODE CHANGE - the fit recomputed from

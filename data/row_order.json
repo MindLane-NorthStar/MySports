@@ -127,6 +127,12 @@
     "channel": 3
    },
    {
+    "network": "CBS",
+    "station": "WOIO",
+    "channel": 19,
+    "_note": "the Cavaliers' OTA simulcast puts 13 of 15 games on WOIO (announced 2026-09-15; data/local_rights.json nba.CLE.simulcasts). station/channel ARE carried here, unlike the WUAB 43 entry below: the call-letters band is drawn from these keys, and the CBS mark does not carry the call letters the Cleveland's 43 art does. Placed after the national broadcasters and before WUAB 43, which is the station order WOIO 19 -> WUAB 43 this file's _ordering_note sets."
+   },
+   {
     "network": "WUAB 43",
     "_note": "no station/channel keys on purpose: the Cleveland's 43 mark identifies the station, so the call-letters band is suppressed (Joe, 2026-09-01)"
    }

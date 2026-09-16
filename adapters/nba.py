@@ -87,26 +87,41 @@ def simulcast_outlets(carriage: dict[str, Any], abbrev: str, other_ab: str, star
     return []
 
 
-def _simulcast_row(side: dict[str, Any], carriage: dict[str, Any], other_ab: str, start: str, tbd: bool,
-                   available: set[str] | list[str] = (), unavailable: set[str] | list[str] = ()) -> dict[str, Any] | None:
-    """Hand-entered OTA simulcast (decision 7). **EMITS NOTHING, DELIBERATELY - PROMPT 105 OWNS THE ROW.**
+def _simulcast_rows(side: dict[str, Any], carriage: dict[str, Any], other_ab: str, start: str, tbd: bool,
+                    available: set[str] | list[str] = (), unavailable: set[str] | list[str] = ()) -> list[dict[str, Any]]:
+    """Hand-entered OTA simulcast (decision 7): **ONE ROW PER OUTLET** (prompt 106, Joe 2026-09-16).
 
-    This is not a stub that nobody finished. Until 2026-09-15 `games` was empty, so this function
-    returned None for every game ever passed to it; prompt 104 landed the fifteen announced games and
-    the artwork and was scoped to stop there, so returning None keeps the emitted schedule EXACTLY as
-    it is today while the data sits in the file waiting.
+    IT EMITTED NOTHING UNTIL NOW, and that was deliberate rather than unfinished - prompt 104 landed
+    the fifteen announced games and was scoped to stop before the row, because three things were
+    undecided. Joe decided them on 2026-09-16 and this is what he ruled:
 
-    WHAT PROMPT 105 HAS TO DECIDE, and why guessing it here would be worse than emitting nothing:
-      * WOIO is CBS's Cleveland station and is deliberately absent from data/access_profile.json, so
-        `outlet_access("WOIO", ...)` has no answer yet - it resolves as CBS, and where that resolution
-        lives is a design question;
-      * four games carry TWO outlets, so "the simulcast row" is one row, two rows, or one row with a
-        composite mark, and the callers below dedupe on `m["outlet"]`, which assumes one;
-      * preemption, the rail, and the list card's mark are all in that same ruling.
+      * ONE ROW PER OUTLET, not one row carrying both. "Every network airing a Cavs game shows it on
+        the grid", so a both-station game emits a CBS row AND a WUAB 43 row and appears three times on
+        one grid with the DAZN lane - deliberate, not duplication. It is also the shape the callers
+        already expect: they dedupe on `m["outlet"]`, one outlet at a time.
+      * WOIO RESOLVES AS CBS, in `adapters/common.py`'s alias table - see the note there. The row's
+        outlet is the resolved one, so `service_id` is CBS and the grid lane, the access lookup and
+        the list card's mark all find it under a single name. WOIO stays out of access_profile.json.
+      * AVAILABLE IF ANY OUTLET IS, which needs no special case: each row carries its own
+        `outlet_access()`, so a game whose CBS row is AVAILABLE is available whatever DAZN says.
+        Someone with an antenna and no subscription can watch it, and that falls out of the data
+        rather than out of a rule in a component.
 
-    `simulcast_outlets()` above is the lookup those will use, and it is tested.
+    THE LABEL KEEPS THE STATION. The row's service is CBS, but "WOIO simulcast" is what is true of
+    the game, and the detail panel is where that sentence belongs.
+
+    NATIONAL EXCLUSIVITY IS THE CALLERS' GATE, not this function's - both sites already compute
+    `national_exclusive` for `_local_row` and now pass it here. None of the fifteen should collide,
+    since the package IS the DAZN free games; one that does is a finding rather than a row.
     """
-    return None
+    rows = []
+    for raw in simulcast_outlets(carriage, side["abbreviation"], other_ab, start):
+        outlet = normalize_outlet(raw)
+        rows.append(media_row("tv", outlet, outlet_access(outlet, available, unavailable),
+                              market="local", certainty="CONFIRMED", start_time=start, tbd=tbd,
+                              source="data/local_rights.json simulcasts",
+                              label=f"{raw} simulcast"))
+    return rows
 
 
 # ----------------------------------------------------------------------------- ESPN source (verified)
@@ -171,9 +186,13 @@ def build_from_espn(raw: dict[str, Any], root: Path, *, season: int, day_filter:
             other = away if s is home else home
             if not national_exclusive and not any(m["market"] == "local" and m["access"] == "AVAILABLE" for m in media):
                 media.append(_local_row(s, carriage, start, tbd, available, unavailable))
-            sim = _simulcast_row(s, carriage, other["abbreviation"], start, tbd, available, unavailable)
-            if sim and not any(m["outlet"] == sim["outlet"] for m in media):
-                media.append(sim)
+            # ONE ROW PER OUTLET, and the dedupe is unchanged - it just runs per row now. A game the
+            # league has taken exclusively national carries no OTA simulcast, so the gate matches
+            # `_local_row`'s above rather than inventing a second rule.
+            if not national_exclusive:
+                for sim in _simulcast_rows(s, carriage, other["abbreviation"], start, tbd, available, unavailable):
+                    if not any(m["outlet"] == sim["outlet"] for m in media):
+                        media.append(sim)
         recs = {k: r.get("summary") for k, c in sides.items() for r in (c.get("records") or []) if r.get("type") == "total"}
         # GAME-ID DIVERGENCE (see adapters/nba.py's league-file path below, and
         # tests/test_nba_game_ids.py). This path mints nba-{espnEventId} - the 9-digit ESPN id. THIS
@@ -246,9 +265,11 @@ def build_from_league(raw: dict[str, Any], root: Path, *, season: int, day_filte
                 other = away if s is home else home
                 if not national_exclusive and not any(m["market"] == "local" and m["access"] == "AVAILABLE" for m in media):
                     media.append(_local_row(s, carriage, start, tbd, available, unavailable))
-                sim = _simulcast_row(s, carriage, other["abbreviation"], start, tbd, available, unavailable)
-                if sim and not any(m["outlet"] == sim["outlet"] for m in media):
-                    media.append(sim)
+                # one row per outlet, same gate and same dedupe as the ESPN path above
+                if not national_exclusive:
+                    for sim in _simulcast_rows(s, carriage, other["abbreviation"], start, tbd, available, unavailable):
+                        if not any(m["outlet"] == sim["outlet"] for m in media):
+                            media.append(sim)
             # GAME-ID DIVERGENCE (see the ESPN path above, and tests/test_nba_game_ids.py). This
             # path mints nba-{nbaGameId} - the league's own 10-digit id, e.g. nba-0022600001 - which
             # is NOT what the database holds and NOT what web/lib/livescores.js joins on. Loading NBA

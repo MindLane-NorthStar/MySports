@@ -4,8 +4,8 @@ WHAT THIS COVERS AND WHAT IT DOES NOT. The fifteen games were announced on 2026-
 hand-entered in `data/local_rights.json`; they were verified against the loaded team table and the
 loaded games ONCE, by prompt 104, through the anon REST path. That check cannot live here - these
 tests touch no network - so what is pinned is the shape a later edit is most likely to break
-silently: the per-game outlet, the date+tricode key, and the boundary that keeps prompt 104 from
-emitting a broadcast row it did not design.
+silently: the per-game outlet, the date+tricode key, and - since prompt 106 - THE ROWS THEMSELVES,
+one per outlet, with WOIO resolving as CBS.
 
 THE SPLIT IS THE POINT. Nine games are on WOIO alone, two on WUAB 43 alone and four on both, so the
 old single `outlet` field on the package could not express the announcement. A regression here is
@@ -90,15 +90,100 @@ def test_simulcast_outlets_is_empty_for_a_game_that_is_not_in_the_package():
     assert simulcast_outlets(carriage, "BOS", "DET", "2026-12-18T17:00:00Z") == [], "no package for BOS"
 
 
-def test_no_broadcast_row_is_emitted_yet_and_that_is_deliberate():
-    """PROMPT 105 OWNS THE ROW. WOIO is absent from access_profile.json on purpose (it resolves as
-    CBS), four games carry two outlets, and both callers dedupe on a single `m["outlet"]` - so a row
-    emitted now would be a guess at three decisions nobody has made. When 105 makes them, this test
-    is the one to rewrite, deliberately, rather than to delete."""
-    from adapters.nba import _simulcast_row
-    carriage = RIGHTS["nba"]
+def _rows(other_ab, start, available=("CBS", "WUAB 43", "DAZN"), unavailable=()):
+    from adapters.nba import _simulcast_rows
     side = {"abbreviation": "CLE", "team": "Cavaliers"}
-    assert _simulcast_row(side, carriage, "DET", "2026-12-18T17:00:00Z", False) is None
+    return _simulcast_rows(side, RIGHTS["nba"], other_ab, start, False, set(available), set(unavailable))
+
+
+def test_a_woio_game_emits_ONE_row_and_it_is_CBS():
+    """WOIO resolves as CBS in `adapters/common.py`'s alias table, so the row's service is CBS and the
+    grid lane, the access lookup and the list card's mark all find it under one name. THE LABEL KEEPS
+    THE STATION, because "WOIO simulcast" is what is true of the game."""
+    rows = _rows("DAL", "2026-11-14T17:00:00Z")          # 12:00 ET on the announced day
+    assert [r["outlet"] for r in rows] == ["CBS"]
+    r = rows[0]
+    assert r["label"] == "WOIO simulcast", "the station survives in the label"
+    assert r["market"] == "local" and r["mediaType"] == "tv"
+    assert r["access"] == "AVAILABLE"
+    assert r["source"] == "data/local_rights.json simulcasts"
+
+
+def test_a_BOTH_STATION_game_emits_TWO_rows_one_per_outlet():
+    """Joe's ruling: every network airing the game shows it on the grid, so a both-station game
+    appears three times on one grid with the DAZN lane. ONE ROW PER OUTLET is what makes that
+    possible, and collapsing them into one row is the regression to catch."""
+    rows = _rows("DET", "2027-03-09T17:00:00Z")
+    assert [r["outlet"] for r in rows] == ["CBS", "WUAB 43"], "one row per outlet, in announced order"
+    assert {r["label"] for r in rows} == {"WOIO simulcast", "WUAB 43 simulcast"}
+
+
+def test_a_wuab_only_game_emits_the_WUAB_row_alone():
+    rows = _rows("MIN", "2026-10-26T23:00:00Z")
+    assert [r["outlet"] for r in rows] == ["WUAB 43"]
+
+
+def test_a_game_outside_the_package_emits_nothing():
+    assert _rows("BOS", "2026-12-18T17:00:00Z") == []
+    assert _rows("DET", "2026-12-19T17:00:00Z") == [], "right team, wrong day"
+
+
+def test_availability_is_ANY_outlet_and_falls_out_of_the_per_row_access():
+    """Joe ruled a simulcast game available if ANY of its outlets is - someone with an antenna and no
+    DAZN can watch. It needs no rule of its own: each row carries its own `outlet_access()`, so the
+    game has an AVAILABLE row whenever one outlet is available."""
+    rows = _rows("DET", "2027-03-09T17:00:00Z", available=("CBS",), unavailable=("WUAB 43", "DAZN"))
+    by = {r["outlet"]: r["access"] for r in rows}
+    assert by["CBS"] == "AVAILABLE"
+    assert by["WUAB 43"] == "UNAVAILABLE"
+    assert any(r["access"] == "AVAILABLE" for r in rows), "the antenna case"
+
+
+def test_WOIO_resolves_through_the_alias_table_and_stays_out_of_the_access_profile():
+    import json as _json
+    from adapters.common import normalize_outlet, outlet_access
+    assert normalize_outlet("WOIO") == "CBS"
+    assert normalize_outlet("WOIO 19") == "CBS"
+    assert outlet_access("WOIO", {"CBS"}, set()) == "AVAILABLE", "it inherits CBS's access"
+    ap = _json.loads((ROOT / "data" / "access_profile.json").read_text(encoding="utf-8"))
+    assert "WOIO" not in ap.get("available", []) and "WOIO" not in ap.get("unavailable", [])
+
+
+def test_BOTH_call_sites_gate_the_simulcast_on_national_exclusivity():
+    """A nationally exclusive game carries no local feed, and no OTA simulcast either.
+
+    ASSERTED ON THE SOURCE because the gate lives in the callers' loops, not in a function a test can
+    call - the same shape autoscroll.test.mjs uses for AutoScroll's wiring. It is here because a
+    mutation check found it unguarded: dropping the gate on either path left the whole suite green.
+
+    THIS IS LIVE, NOT THEORETICAL. Two of the fifteen announced games already carry a nationally
+    exclusive row in the loaded data - `nba-401910445` (2027-01-29 TOR) on ESPN and `nba-401910691`
+    (2027-03-09 DET, a BOTH-station game) on NBC - so today those two emit no simulcast row at all.
+    That contradiction between the announcement and the league's national selections is reported in
+    register §53 and is Joe's to rule on; what this test pins is only that the gate is applied.
+    """
+    src = (ROOT / "adapters" / "nba.py").read_text(encoding="utf-8")
+    code = "\n".join(l for l in src.splitlines() if not l.strip().startswith("#"))
+    guarded = code.count("if not national_exclusive:\n                for sim in _simulcast_rows(") \
+        + code.count("if not national_exclusive:\n                    for sim in _simulcast_rows(")
+    assert guarded == 2, "both the ESPN path and the league-file path must gate the simulcast rows"
+    assert code.count("_simulcast_rows(") == 3, "two call sites plus the definition, and no third path"
+
+
+def test_the_nba_band_has_a_CBS_LANE_with_the_station_keys():
+    """Block A. The lane has to exist or the CBS row has nowhere to sit on the grid. station/channel
+    ARE carried, unlike the WUAB 43 entry: the call-letters band is drawn from those keys
+    (scripts/render_day.py), and the CBS mark does not carry call letters the way the 43 art does."""
+    ro = json.loads((ROOT / "data" / "row_order.json").read_text(encoding="utf-8"))
+    band = ro["nba"]["broadcast"]
+    assert [b["network"] for b in band] == ["ABC", "NBC", "CBS", "WUAB 43"]
+    cbs = next(b for b in band if b["network"] == "CBS")
+    assert cbs["station"] == "WOIO" and cbs["channel"] == 19
+    assert "station" not in band[-1], "WUAB 43 still omits them on purpose"
+    # the same station, spelled the same way, in every band that carries it
+    for sport in ("cfb", "nfl"):
+        other = next(b for b in ro[sport]["broadcast"] if b["network"] == "CBS")
+        assert (other["station"], other["channel"]) == (cbs["station"], cbs["channel"])
 
 
 # ------------------------------------------------------------------ the composite marks

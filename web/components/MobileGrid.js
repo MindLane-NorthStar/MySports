@@ -48,7 +48,7 @@ import { useTextMeasurer } from '../lib/useTextMeasurer.js';
 // sportMarkUrl and SPORT_LABEL went with the grid's header (prompt 50 stage 5a): the tile row
 // above the grid is what states the sport now.
 import { teamLogoUrl, teamLogoDarkUrl, teamLogoCapUrl } from '../lib/config.js';
-import { markStyle, hasMark, railMark } from '../lib/marks.js';
+import { markStyle, hasMark, railMark, simulcastLanes } from '../lib/marks.js';
 // longDay went with the header too - the picker directly above the grid carries the date.
 import { etTime } from '../lib/format.js';
 import { cardName, cardBroadcast } from './MatchupCard.js';
@@ -135,13 +135,22 @@ export default function MobileGrid({ games, sport, day, standings, onOpen, nowMi
       // the sport's block policy. A 360-minute UFC card and a 120-minute Dynamite cannot share one
       // number the way two CFB games can.
       const program = isProgram(g);
-      const b = program ? programBroadcast(g) : cardBroadcast(g);
-      if (!known || !b) {
+      // ONE LANE PER NETWORK AIRING A CAVALIERS SIMULCAST (prompt 106, Joe 2026-09-16), and one
+      // block per game for everything else. `simulcastLanes` returns [] for every game but the
+      // fifteen, so this loop is unchanged for the whole rest of the app - which is deliberate: a
+      // lane per broadcast in general would split every CFB game across ESPN and ESPN+ and move the
+      // block and lane counts `npm run geometry` holds as hard stops.
+      const lanes = program ? [] : simulcastLanes(g);
+      const chosen = lanes.length
+        ? lanes.map((id) => (g.broadcasts || []).find((b) => String(b.service_id).toLowerCase() === id))
+          .filter(Boolean)
+        : [program ? programBroadcast(g) : cardBroadcast(g)].filter(Boolean);
+      if (!known || !chosen.length) {
         tbd.push(g);
         continue;
       }
       const mins = program ? programMinutes(g) : blockMinutes(g.sport);
-      timed.push({ game: g, start, end: start + mins, broadcast: b, program, mins });
+      for (const b of chosen) timed.push({ game: g, start, end: start + mins, broadcast: b, program, mins });
     }
 
     // M2: measure the widest rendered team line on THIS slate, in the real fonts.

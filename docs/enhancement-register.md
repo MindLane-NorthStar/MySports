@@ -4338,3 +4338,90 @@ the real box, with drawn sizes, plus 8× blow-ups.
 **"Cleveland's" inside `wuab-43` does not read at any size that fits this box**, at either sizing,
 and it costs a tier of height that pushes everything else smaller. If `cbs-wuab-43` reads too small
 on the device, **the lever is the 43 artwork, not the stack rule.** Recorded; not acted on.
+
+## 53. THE SIMULCAST ROWS, THE LIST COLLAPSE, AND THE THREE LANES — 2026-09-16, prompt 106
+
+**Numbered by count:** §1–§52 each appear exactly once and there was no §53.
+
+The render prompt §51 and §52 were foundation for. **Preemption is deliberately not here** — see the
+end of the prompt-106 brief for why it changed shape; it is prompt 107.
+
+### Joe's three rulings, 2026-09-16
+
+**1. EVERY NETWORK AIRING A CAVS GAME SHOWS IT ON THE GRID** — the WOIO/CBS row, the WUAB 43 lane and
+the RESN/DAZN lane, as applicable. A both-station game appears **three times on one grid**, and that
+is deliberate rather than duplication: the grid answers "what is on this channel at this hour", and
+for all three channels the answer is this game. **Measured in the browser** on 2027-03-14: the same
+6:00 PM Cavaliers @ Kings block draws in `cbs`, `wuab-43` and `dazn`.
+
+**THE SCOPE IS LOAD-BEARING.** `MobileGrid` drew one block per game via `cardBroadcast()`. A lane per
+broadcast IN GENERAL would split every CFB game across ESPN and ESPN+, double the blocks on a
+Saturday, and move the block and lane counts `npm run geometry` holds as HARD STOPS.
+`simulcastLanes()` returns `[]` for every game but the fifteen, and the gate's figures are unchanged
+after this change: cfb 64 blocks / 15 rows, mlb 3 / 2, nfl 18 / 4.
+
+**2. THE LIST SHOWS ONE CARD PER GAME**, wearing the composite for the services present:
+`dazn + cbs` → `cbs-dazn`; `dazn + wuab-43 + cbs` → `cbs-wuab-43`; `dazn + wuab-43` → `wuab-43`;
+`dazn` alone → unchanged. **Derived from the game's own rows, never from `data/local_rights.json`** —
+the rendering surface has no business knowing which games were hand-entered, and a test forbids both
+the library and the card from naming that file.
+
+**3. "SUPPRESS THE GREY NETWORK TEXT ON A COLLAPSED ROW" — THERE IS NO NETWORK TEXT TO SUPPRESS, AND
+THIS IS THE ENTRY'S ONE REAL SURPRISE.** The brief cited `web/lib/marks.js:26`, which opened *"A
+listings row shows the GREY NETWORK TEXT for every matchup, and additionally the processed mark"*.
+**That sentence has been false since ruling A3 (prompt 56).** `networkText()` was deleted from
+`MatchupCard.js` with that ruling; the grey line under the matchup is the VENUE, and the network name
+is not on the card at all. Verified in the rendered evidence: the `.mnet-text` on the three simulcast
+cards reads "Rocket Arena", "Golden 1 Center", "Rocket Arena".
+
+**So the outcome Joe asked for is already the outcome**, and nothing was implemented for it. What was
+done instead is the rule-30 correction: `marks.js`'s docstring now says what the card does, and
+records that it misled this brief. **Suppressing the venue would have contradicted A3**, which is his
+own earlier ruling, so it was not done. If he meant the venue line, that is a new ruling to give.
+
+### What was built
+
+- **`data/row_order.json` gained a CBS lane in the NBA band** — `ABC, NBC, CBS, WUAB 43`, placed
+  after the national broadcasters and before WUAB 43, which is the `WOIO 19 → WUAB 43` station order
+  the file's own `_ordering_note` sets. **It carries `station`/`channel`, and the WUAB entry still
+  does not — a decision, not a default:** `scripts/render_day.py:1231` draws a call-letters band from
+  those keys, and the CBS mark does not carry the call letters the Cleveland's 43 art does. The same
+  station is spelled identically in four bands now.
+- **`_simulcast_row` became `_simulcast_rows`: ONE ROW PER OUTLET.** That is the shape the callers'
+  `m["outlet"]` dedupe already expected and the shape the grid needs.
+- **WOIO resolves as CBS in `adapters/common.py`'s alias table**, which is where outlet spellings
+  already live. The row's `service_id` is `cbs`, so the lane, the access lookup and the card's mark
+  find it under one name; `outlet_access("WOIO")` now answers with CBS's access instead of UNKNOWN.
+  **WOIO stays out of `data/access_profile.json`**, and a test holds it there. The label keeps the
+  station: "WOIO simulcast".
+- **Availability is ANY outlet, and it needed no rule.** Each row carries its own `outlet_access()`,
+  so a game whose CBS row is AVAILABLE is available whatever DAZN says — the antenna case falls out
+  of the data rather than out of a component.
+- **`GameDetail` is NOT collapsed** (Cowork's call, stated for Joe to override): the detail view has
+  room, and "which service carries this" is the actual question there.
+
+### THE FINDING: two of the fifteen collide with a nationally exclusive row
+
+The brief said none should, since the package is the DAZN free games, and that one which did would be
+a finding. **Two do**, in the loaded data today:
+
+| game | announced | the loaded national row |
+|---|---|---|
+| `nba-401910445` — 2027-01-29 TOR | WOIO | **ESPN** |
+| `nba-401910691` — 2027-03-09 DET | **WOIO + WUAB 43** | **NBC** |
+
+Both are in `NATIONAL_EXCLUSIVE`, so today **those two emit no simulcast row at all** and carry no
+DAZN row either. The gate is respected as the brief instructed; whether the national selection
+supersedes the OTA simulcast, or the 2027 national data is provisional and will move, is **not
+decided here**. It is Joe's, and it wants a look before the season.
+
+### Evidence, and what a passing test is not
+
+`assets/p106-simulcast-render/` (untracked): the four list states and the three-lane grid, from the
+REAL app at 390 × DPR 3. The rows came from `adapters/nba._simulcast_rows` itself, through a
+**read-only proxy** that injects them into the PostgREST response on the way to the dev server — the
+loader has not run, and **nothing was written to the database**.
+
+`pytest` 612 → 619, `test:unit` 609 → 624. **Seven mutation checks, each failing the assertion that
+guards it** — including one that initially did NOT: dropping the national-exclusive gate left the
+whole suite green, so a guard for it was added and the mutation then failed.

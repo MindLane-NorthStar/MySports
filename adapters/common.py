@@ -278,6 +278,13 @@ OUTLET_ALIASES = {
     "TruTV": "truTV", "SN": "Sportsnet", "SNP": "Sportsnet", "SNO": "Sportsnet", "SNE": "Sportsnet", "SNW": "Sportsnet",
     "TVAS": "TVA Sports", "CBC": "CBC", "ESPN Deportes": "ESPN Deportes",
     "WUAB": "WUAB 43", "WUAB-43": "WUAB 43", "Cleveland's 43": "WUAB 43", "Cavaliers on DAZN": "DAZN", "DAZN 1": "DAZN",
+    # WOIO IS CBS, AND THIS IS WHERE THAT RESOLVES (prompt 106). The Cavaliers' OTA simulcast package
+    # names stations - thirteen of the fifteen are on WOIO - and WOIO is CBS's Cleveland affiliate
+    # (data/row_order.json carries it as network CBS, station WOIO, channel 19, in three bands). It is
+    # deliberately NOT an entry in data/access_profile.json and must stay out of it: resolving it here
+    # means `outlet_access("WOIO")` answers with CBS's access rather than UNKNOWN, and the emitted row
+    # carries service_id CBS, so the grid lane and the list card's mark find it under one name.
+    "WOIO": "CBS", "WOIO 19": "CBS",
     # MLB raw spellings (docs/research/mlb-adapter-brief.md 3.1-3.2); opponent RSNs pass through verbatim
     "Guardians.TV Presented by Progressive": "Guardians TV",
     "CLEGuardians.TV": "Guardians TV",

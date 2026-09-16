@@ -10,7 +10,7 @@ sections, and the older measurement records. **This file stays the authority for
 repo state, gate floors, open items; since prompt 89 the working rules are `CLAUDE.md`'s alone. Read
 the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§52 — this said §1–§39 until prompt 99 corrected it, counted; all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§53 — this said §1–§39 until prompt 99 corrected it, counted; all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -63,9 +63,14 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
 
+**Measured 2026-09-16, prompt 106 — `pytest` 612 → 619 and `test:unit` 609 → 624** (the simulcast rows,
+the list collapse and the grid lanes); smoke, qa-shots and geometry did not move. Written after the last
+gate run. **The geometry figures are the point of that last clause:** the lane rule is scoped to the
+fifteen games, and cfb 64 blocks / 15 rows, mlb 3 / 2 and nfl 18 / 4 are unchanged. **NOT PUSHED** — the
+tree is now THREE commits ahead of `origin/main`.
+
 **Measured 2026-09-16, prompt 105 — `pytest` 609 → 612** (the width-match ruling, three tests); the other
-four did not move. Written after the last gate run. **NOT PUSHED** — the tree is now TWO commits ahead
-of `origin/main`; see the open item below.
+four did not move.
 
 > **A CAUTION FOR WHOEVER READS THE FLOOR TABLE NEXT: `pytest` and `test:unit` both read 609 at
 > `55b946c`, and this file has a history of transposed counts** (prompts 62, 63 and 64 each found one
@@ -180,6 +185,8 @@ line claims to do.
 | prompt 90 | `pytest` | 544 → **569** | `tests/test_enrich_cfb_records.py` (25): the `"W-L"` split and the all-zero skip, the team_records rows (conference when carried, unknown ids skipped), `--current-week` pinned to fixed 2026 dates with both fallbacks, `main()` driven against a fake DB (one commit covers both writes; `--latest-week` keeps its meaning), and the nightly step's flag. Mutation-checked: wins/losses swapped fails 4; `max(week)` fails 8 |
 | prompt 94 | `pytest` | 569 → **585** | `tests/test_sync_assets.py` (16): the byte comparison's order and its request count (a single-part ETag costs no `head_object`; a size difference costs no hashing), the multipart and absent-ETag fallback, `test_pull_retakes_a_cached_file_whose_bytes_differ_from_the_bucket`, a `grids/` key compared at its derived path, mixed-case filenames, `--force` and `--existing-only` unchanged. Mutation-checked: the free ETag step removed fails 7; a key-only pull restored fails 2 |
 | prompt 95 | `pytest` | 585 → **591** | `PushGuard` in `tests/test_sync_assets.py` (6), driven through the real `main()` with `_put` counted: a push that would create an object refuses and uploads nothing; `--allow-new` publishes; a push with nothing new proceeds unflagged; `--existing-only` creates nothing; `--force` does not bypass the guard; the nightly's logo push carries the flag. Mutation-checked: the guard moved after the first upload fails 2; the guard removed fails 2 |
+| prompt 106 | `pytest` | 612 → **619** | seven in `tests/test_cavs_simulcast.py` for the emitted rows: a WOIO game emits ONE row and it is CBS with the station kept in the label; a both-station game emits TWO, one per outlet; a WUAB-only game emits its own; a game outside the package emits none; availability is ANY outlet, driven through `outlet_access`; WOIO resolves through the alias table and stays out of `access_profile.json`; and BOTH call sites gate the rows on national exclusivity. Mutation-checked seven ways |
+| prompt 106 | `test:unit` | 609 → **624** | fifteen in `web/test/simulcastmark.test.mjs`: the four mark states Joe named, an inactive row not counting, the service set read off the GAME rather than the announcement file, the grid's lane rule (three lanes for a both-station game, ONE block for every other game in the app), and the three facts that keep a composite off the rail - it is in no `row_order.json` band, in no access profile, and named in no component |
 | prompt 105 | `pytest` | 609 → **612** | three in `tests/test_cavs_simulcast.py` for Joe's width-match ruling: both composites' halves share a width in the PUBLISHED bitmap (measured off the ink, split on the seam, so `wuab-43`'s own internal row gap cannot fool it), and `stack()` reads the BOTTOM part rather than the widest. Mutation-checked four ways, each failing: the ink-area balance restored (in-memory AND with the marks rebuilt, where CBS comes back 192px over a 150px mark), matched to the widest part, and matched to the top part |
 | prompt 104 | `pytest` | 598 → **609** | `tests/test_cavs_simulcast.py` (11): the fifteen announced games; the outlet is PER GAME and the package-level `outlet` survives only under `superseded`; the 9/2/4 split and the 13/6 totals; date+tricode is the key, proved on the two Detroit games whose outlets differ; `simulcast_outlets()` matching and its three misses (wrong opponent, wrong day, team with no package); that `_simulcast_row` still emits NOTHING, which is prompt 105's boundary; and both composite marks published, recipe-backed and inside the hf bounds. Mutation-checked five ways, each failing the assertion that guards it: the date check dropped from the matcher, `_simulcast_row` made to emit, a composite dropped from the recipe table, the two Detroit games flattened to the same outlets, and the package-level `outlet` restored |
 | prompt 101 | `test:unit` | 596 → **609** | `bannerpin.test.mjs` (4): the release callback's direction both ways, that it runs only after the pin is off and the listener is removed, and that the one-argument signature still works. `autoscroll.test.mjs` (9): `pinReleaseCollapse`'s four cases (downward + sentinel above collapses; downward + sentinel on screen does NOT, because the observer still owns it; upward never; no sentinel is a no-op), the no-expand-path guard, `pinRearmOnExpand`'s four transition cases, and the wiring with its animation frame. One existing assertion REWRITTEN IN PLACE — `installPinRelease(window)` no longer matched once the call took a policy argument, and it now pins the whole call. Mutation-checked twelve ways, every one failing the suite |
@@ -453,8 +460,8 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 
 | gate | run from | floor |
 |---|---|---|
-| `pytest` | repo root | **612 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **609** |
+| `pytest` | repo root | **619 passed + 1 skipped** (36 subtests) |
+| `npm run test:unit` | `web/` | **624** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **121/121** |
 | `npm run geometry` | `web/` | all hard stops |
@@ -904,8 +911,9 @@ before touching any count line.
   fallback is better than bad art.
 - **`unverified` is load-bearing semantics** — now documented in `data/authority_rules.json` `_about`
   and `adapters/README.md`.
-- **OPEN — PROMPTS 104 AND 105 ARE COMMITTED BUT NOT PUSHED: the tree is TWO commits ahead of
-  `origin/main` (2026-09-16, register §51 and §52).** Both briefs withheld the push deliberately: the
+- **OPEN — PROMPTS 104, 105 AND 106 ARE COMMITTED BUT NOT PUSHED: the tree is THREE commits ahead of
+  `origin/main` (2026-09-16, register §51, §52 and §53).** **Vercel has compile-checked none of it**,
+  which is worth knowing before the next prompt stacks a fourth. Both briefs withheld the push deliberately: the
   work changes in-season broadcast data and publishes new artwork, and Joe authorizes the deploy
   himself after looking at the rendered samples — `assets/p104-composite-marks/` for the marks as
   first built, and **`assets/p105-composite-width-match/` for the before/after of his width-match
@@ -917,6 +925,13 @@ before touching any count line.
   are tracked files that reach production with the deploy. `--check` confirms it: local-only still
   reads 29, the same set prompt 95 recorded, with neither composite among them. **Nothing renders from
   any of this yet**: prompt 105 owns the row and the card.
+- **OPEN, FOR JOE — TWO OF THE FIFTEEN SIMULCAST GAMES COLLIDE WITH A NATIONALLY EXCLUSIVE ROW
+  (prompt 106, register §53).** `nba-401910445` (2027-01-29 TOR, announced WOIO) carries **ESPN** and
+  `nba-401910691` (2027-03-09 DET, announced WOIO **and** WUAB 43) carries **NBC**, both in
+  `NATIONAL_EXCLUSIVE`. **So those two emit no simulcast row today**, and carry no DAZN row either —
+  the adapter suppresses local feeds under national exclusivity, which prompt 106 respected rather
+  than worked around. Whether the national selection supersedes the announced OTA simulcast, or the
+  2027 national data is provisional and will move, is not decided. Worth a look before the season.
 - **The privacy gate before the Cavs season (late October) — STILL OPEN, and its premise changed on
   2026-09-15.** Production is a public URL. The gate was written when the WUAB/RESN arrangement was
   UNANNOUNCED and hand-entered on Joe's authority; **WOIO/WUAB have now announced the fifteen-game

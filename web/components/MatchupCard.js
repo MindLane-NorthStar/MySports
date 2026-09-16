@@ -25,7 +25,7 @@
 import { useRef } from 'react';
 import { etTime, teamColor, dayParts, slotContent } from '../lib/format.js';
 import { teamLogoDarkUrl, markUrl } from '../lib/config.js';
-import { showsMark } from '../lib/marks.js';
+import { showsMark, cardMarkSlug } from '../lib/marks.js';
 import { standingParts, standingFor, rankFor } from '../lib/standings.js';
 import { useTextMeasurer, useElementWidth } from '../lib/useTextMeasurer.js';
 import { fitNameAndRecord } from '../lib/cardGeometry.js';
@@ -164,8 +164,14 @@ export default function MatchupCard({ game, standings, rankings, showDay = false
   const { measure } = useTextMeasurer();
   const { home, away, sport } = game;
   const b = cardBroadcast(game);
+  // THE CAVALIERS' SIMULCAST COLLAPSES TO ONE CARD (prompt 106, Joe 2026-09-16). The grid shows a
+  // lane per network; the list shows one card wearing the composite for the services this game
+  // actually carries. `cardMarkSlug` derives that from the game's own rows - this component never
+  // reads data/local_rights.json, and null means "nothing to collapse", which is every other game in
+  // the app and leaves the line below exactly as it was.
+  const collapsed = cardMarkSlug(game);
   // Just the URL. The mark's box is CSS now, per breakpoint, so the card never computes hf.
-  const mark = showsMark(b) ? markUrl(b.service_id) : null;
+  const mark = collapsed ? markUrl(collapsed) : (showsMark(b) ? markUrl(b.service_id) : null);
   const fav = favourite(game);
   // Contract v1.6.6: the right slot's five rungs, decided once in a pure function so the
   // ORDERING can be tested without a DOM. See web/lib/format.js.

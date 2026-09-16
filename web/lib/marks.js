@@ -24,13 +24,24 @@ export function hasMark(slug) {
 }
 
 /**
- * A listings row shows the GREY NETWORK TEXT for every matchup, and additionally the processed mark
- * only for **access-profile networks**.
+ * A listings row shows the processed mark only for **access-profile networks**.
+ *
+ * THIS USED TO BEGIN "shows the GREY NETWORK TEXT for every matchup, and additionally the processed
+ * mark", AND THAT HAS BEEN FALSE SINCE RULING A3 (prompt 56). `networkText()` was deleted from
+ * components/MatchupCard.js with that ruling - the grey line under the matchup is the VENUE now, the
+ * network name is not on the card at all, and the mark is the only thing that names the service
+ * there. Corrected by prompt 106 (rule 30), because this sentence was read as live behaviour when
+ * that prompt was written: it carried a ruling to SUPPRESS the network text on a collapsed row, and
+ * there has been no text on any row to suppress for two months. The rows that name a service in
+ * words are GameDetail's, and the grid rail's labels.
  *
  * Having a published mark IS being an access-profile network: assets/network-logos holds art for
  * exactly the networks in data/access_profile.json plus Cleveland's own local rows, which is what
  * data/row_order.json builds the rail from. An out-of-market RSN - NBCS BA, Chicago Sports Network,
- * Marlins.TV - has no mark and therefore renders as grey text alone, which is the intended result.
+ * Marlins.TV - has no mark and therefore renders NOTHING in the card's mark column, which is the
+ * intended result. (That clause read "renders as grey text alone" and is corrected with the sentence
+ * above: the column holds an invisible placeholder so the track keeps its width - `.mnet-mark-empty`
+ * in globals.css - and the name is not printed anywhere on the card.)
  *
  * Note what this deliberately does NOT key off: the per-GAME `access_status`. Whether Cleveland gets
  * THIS Sunday's CBS regional game is a market question answered per game; whether CBS is a network in
@@ -39,6 +50,83 @@ export function hasMark(slug) {
  */
 export function showsMark(broadcast) {
   return Boolean(broadcast) && hasMark(broadcast.service_id);
+}
+
+/* ------------------------------------------------- the Cavaliers' OTA simulcast, collapsed (prompt 106)
+ *
+ * JOE'S RULING, 2026-09-16: the GRID shows every network airing the game - the CBS/WOIO row, the
+ * WUAB 43 lane and the RESN/DAZN lane, so a both-station game appears three times on one grid,
+ * deliberately - while the LIST shows ONE CARD per game wearing the composite mark for its state.
+ *
+ * DERIVED FROM THE SERVICES PRESENT ON THE GAME, never from data/local_rights.json. The rendering
+ * surface has no business knowing which games were hand-entered: by the time a card is drawn, the
+ * fact is simply which rows the game carries, and that is a question about this game rather than
+ * about the package. The adapter is the only thing that reads the announcement.
+ *
+ *   dazn + cbs               -> cbs-dazn       the nine WOIO-only games
+ *   dazn + wuab-43 + cbs     -> cbs-wuab-43    the four on both stations
+ *   dazn + wuab-43           -> wuab-43        the two WUAB-only games; the mark already exists
+ *   dazn alone               -> null, and the ordinary single-mark path draws `dazn` as it does today
+ *
+ * `wuab-43` ALREADY CARRIES RESN/DAZN INSIDE IT, which is why the three-service row takes the
+ * two-part `cbs-wuab-43` stack rather than anything with a third tier.
+ */
+const SIM_DAZN = 'dazn';
+const SIM_WUAB = 'wuab-43';
+const SIM_CBS = 'cbs';
+
+/**
+ * The slug the LIST card should wear for this game, or null to use the ordinary single-mark path.
+ * @param {{broadcasts?: Array<{service_id?: string, active?: boolean}>}} game
+ */
+export function cardMarkSlug(game) {
+  const ids = new Set((game?.broadcasts || [])
+    .filter((b) => b && b.active !== false)
+    .map((b) => String(b.service_id || '').toLowerCase()));
+  if (!ids.has(SIM_DAZN)) return null;            // not a Cavaliers local game; nothing to collapse
+  if (ids.has(SIM_WUAB)) return ids.has(SIM_CBS) ? 'cbs-wuab-43' : SIM_WUAB;
+  if (ids.has(SIM_CBS)) return 'cbs-dazn';
+  return null;
+}
+
+/**
+ * THE COMPOSITES ARE LIST-VIEW ONLY (Joe, 2026-09-16), and this is where that fact lives.
+ *
+ * `railmark.test.mjs` recorded the hole prompt 104 left: the ruling was a convention, and NOTHING in
+ * the manifest records a mark's surface - a mark is a slug and a size. Both composites land on the
+ * rail's 600px² target, so a leak would render perfectly and nobody would see it.
+ *
+ * WHAT ACTUALLY KEEPS THEM OUT, and it is two facts rather than a check: a rail lane is a row in
+ * `data/row_order.json` and a grid/detail mark is a broadcast's `service_id`. No composite is either
+ * - no adapter emits one as an outlet, and neither is a network. This set is what a test asserts
+ * those two facts against, and what a future surface should consult before drawing a mark it did not
+ * get from `cardMarkSlug()`.
+ */
+export const LIST_ONLY_MARKS = new Set(['cbs-dazn', 'cbs-wuab-43']);
+
+/**
+ * THE GRID SHOWS A LANE PER NETWORK AIRING THE GAME (Joe, 2026-09-16) - the other half of the same
+ * ruling, and the opposite of the list's.
+ *
+ * "Every network airing a Cavs game shows it on the grid - the WOIO/CBS row, the WUAB 43 lane, and
+ * the RESN/DAZN lane, as applicable per game." A both-station game therefore appears THREE TIMES on
+ * one grid. **Deliberate, not duplication**: the grid's question is "what is on this channel at this
+ * hour", and the answer for all three channels is this game.
+ *
+ * SCOPED TO THE SIMULCAST, AND THAT SCOPE IS LOAD-BEARING. `MobileGrid` otherwise draws one block per
+ * game, chosen by `cardBroadcast()`. Making every game occupy a lane per broadcast would put every
+ * CFB game on ESPN and ESPN+ into two rows, double the blocks on a Saturday, and move the block and
+ * lane counts the geometry gate holds as hard stops. This returns [] for every game that is not one
+ * of the fifteen, so nothing else on any grid moves.
+ *
+ * @returns {string[]} service ids to draw a lane for, in rail order; empty when the normal rule applies
+ */
+export function simulcastLanes(game) {
+  if (!cardMarkSlug(game)) return [];          // not a collapsed simulcast: one block, as today
+  const ids = new Set((game?.broadcasts || [])
+    .filter((b) => b && b.active !== false)
+    .map((b) => String(b.service_id || '').toLowerCase()));
+  return [SIM_CBS, SIM_WUAB, SIM_DAZN].filter((id) => ids.has(id));
 }
 
 /** The <img> props for a mark sized to a line box: 2/3 of the stack height, scaled by hf. */
