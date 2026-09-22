@@ -308,12 +308,12 @@ export default function Listing({ games: serverGames, standingsRows, rankingsRow
                    markFavorites={markFavorites} />
       )}
 
-      {/* THE MOBILE GRID IS MOBILE-ONLY. It used to render at every width, so a desktop MLB day whose
+      {/* THE MOBILE GRID IS TOUCH-ONLY. It used to render at every width, so a desktop MLB day whose
           archived PC grid had not been rendered showed a phone grid stretched across a 1060px column,
-          and a desktop CFB day showed BOTH. The Mobile Grid Addendum is explicit that its deviations
-          are phone-only - M5's shorthand hour axis says "PC keeps v1.2 labels" - so above the
-          breakpoint the desktop grid is the archived PC render and nothing else. CSS-gated at the
-          same 699px the rest of the app uses, so no JS width state and no hydration mismatch. */}
+          and a desktop CFB day showed BOTH. It was then PHONE-only (699px) until prompt 110, when Joe
+          ruled it a touch artefact: `.mgrid-only` shows it below 699px OR on a coarse pointer, and a
+          fine pointer gets the archived PC render and nothing else (Addendum M5, v2.4). CSS-gated, so
+          no JS width state and no hydration mismatch. */}
       {showGrid ? (
         <div className="mgrid-only">
           <MobileGrid games={gridGames} sport={sport} day={day} standings={standings} onOpen={setOpen}

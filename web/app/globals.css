@@ -2392,23 +2392,33 @@ html[data-hdr='collapsed'] .mgrid-axis {
      survives. */
 }
 
-/* ---- desktop shows the PC grid, not the mobile one (prompt 22)
- * The mobile grid is a PHONE artefact - the Mobile Grid Addendum's deviations are explicitly
- * phone-only (M5: "PC keeps v1.2 labels"). Above the breakpoint the desktop grid is the archived PC
- * render. Gated in CSS at the same 699px the rest of the app uses, so there is no JS width state and
- * no server/client hydration mismatch. */
+/* ---- a fine pointer shows the PC grid, a touch screen shows the mobile one (prompt 22, amended by 110)
+ * The mobile grid is a TOUCH artefact, not a phone artefact (Joe's ruling 2026-09-22, register §55;
+ * Mobile Grid Addendum v2.4 amends M5). It used to be phone-only - "PC keeps v1.2 labels" - gated at
+ * 699px alone, which left every iPad on the archived PC render: at 820 portrait that render is
+ * amputated mid-line with 508px of pan, and at ALL SPORTS it does not exist at all (prompt 107,
+ * assets/p107-tablet-grid/). So there are TWO ways in, and both stay: the 699px rule, because a phone
+ * is narrow and the breakpoint is load-bearing for the rest of this file; and `pointer: coarse`, at
+ * any width and in either orientation, because that is what an iPad reports. A trackpad reports
+ * `pointer: fine`, so desktops and touch laptops keep the archived grid - that is the intent. The
+ * grid's geometry derives from the data and never from the viewport, so on a landscape iPad it
+ * leaves ~230px of lane empty on the right; that is an accepted cost, not a defect, and using the
+ * width would change the geometry the addendum governs. Still gated in CSS, so there is no JS width
+ * state and no server/client hydration mismatch. nav.test.mjs holds the two rules to the same
+ * condition list. */
 .mgrid-only { display: none; }
-@media (max-width: 699px) {
+@media (max-width: 699px), (pointer: coarse) {
   .mgrid-only { display: block; }
 }
 
 /* The mirror of `.mgrid-only`, and it exists for the same reason: GRID VIEW means a different grid
-   at each width - the phone grid below 699px, the archived PC render above it (Mobile Grid Addendum
-   M5, "PC keeps v1.2 labels") - and BOTH are rendered with one hidden by a media query rather than
-   chosen in JS, so there is no server/client hydration mismatch. Same 699px boundary as everything
-   else in this file. */
+   per surface - the mobile grid below 699px OR on a coarse pointer, the archived PC render otherwise
+   (Mobile Grid Addendum M5 as amended by v2.4) - and BOTH are rendered with one hidden by a media
+   query rather than chosen in JS, so there is no server/client hydration mismatch. The condition
+   list here MUST be identical to `.mgrid-only`'s above, or some surface shows both grids or neither;
+   nav.test.mjs asserts the two lists are the same set. */
 .deskgrid-only { display: block; }
-@media (max-width: 699px) {
+@media (max-width: 699px), (pointer: coarse) {
   .deskgrid-only { display: none; }
 }
 

@@ -4589,3 +4589,94 @@ is the same second-copy failure that made `docs/handoff-status.md` the only home
    every one; removed, and it passed.
 
 `pytest` 619 → 626 (+ 1 skipped).
+
+## 55. THE MOBILE GRID IS A TOUCH ARTEFACT, AND THE LAST TWO DEBTS CLOSE — 2026-09-22, prompt 110
+
+**Numbered by count:** §1–§54 each appear exactly once and there was no §55.
+
+**JOE'S RULING, 2026-09-22:** *The mobile grid is a TOUCH artefact, not a phone artefact. Gate it on
+`pointer: coarse`, in both orientations, with no width ceiling.*
+
+### What it was decided on
+
+Prompt 107 measured the alternative rather than arguing it (`assets/p107-tablet-grid/`, untracked):
+
+| | mobile grid | archived PC grid |
+|---|---|---|
+| 820 portrait | complete, 77px of pan | **amputated** — headline, game block and every around-the-league row cut mid-line, 508px of pan |
+| 1180 / 1366 landscape | complete, ~230px of empty lane to the right | 228px of pan |
+| ALL SPORTS, any tablet width | works | **does not exist** — renders the "pick one above" sentence |
+
+Every measured figure was identical at every viewport, because the grid's width derives from the
+data and never from the viewport: 14 blocks, 9 rows, rail 60, lane 768.08, day span 613.95, block
+widths {268, 249, 229}, shortest block 229 against the 46 floor, zero wrapped names, zero overflow,
+axis pinned at every width. **The decisive fact was the PC grid, not the phone grid:** unreadable at
+820, and absent at ALL SPORTS by construction (an archived render is per sport). The one-timeline
+grid was the only thing on an iPad that showed every sport at all.
+
+**The ~230px of landscape dead space is an accepted cost, not a defect.** Making the grid use the
+extra width would change the geometry the Mobile Grid Addendum governs and the hard stops pin; that
+is a separate decision and was not taken here.
+
+### Block A — the band
+
+`.mgrid-only` and `.deskgrid-only` in `web/app/globals.css` are keyed off
+`@media (max-width: 699px), (pointer: coarse)`. **Both ways in stay:** a phone is narrow AND coarse,
+and the 699px breakpoint is load-bearing for the rest of the file. A trackpad reports
+`pointer: fine`, so desktops and touch laptops keep the archived grid — that is the intent. Still
+CSS-gated, so no JS width state and no hydration mismatch.
+
+**Measured in a browser with no override** (Playwright contexts, `hasTouch` for coarse): 820 and
+1366 touch — `.mgrid-only` block, `.deskgrid-only` none, 14 visible blocks, 9 rows, no PC notice;
+390 touch — the same; 1440 fine — the reverse, the PC notice visible and zero visible blocks; and
+600 fine — the mobile grid, through the width rule alone. Exactly one grid at every surface.
+
+**Pinned in `web/test/nav.test.mjs`** (the file that already counts CSS rules statically): the
+condition list is read off each rule and required to be the same SET, and that set is required to
+be exactly the phone breakpoint plus the coarse pointer; the two base rules are required to be
+opposite. **Mutation-checked:** the coarse condition removed from `.deskgrid-only` alone fails;
+removed from `.mgrid-only` alone fails. `weekgrid.test.mjs`'s existing pin on the 699px
+`.deskgrid-only` rule still passes as written.
+
+**Deliberately NOT added: a tablet viewport in `qa-shots.mjs`.** It would move a gate count, and
+the static mirror test is the cheaper guard. **Named as a follow-on:** if the tablet surface ever
+needs browser-level coverage — the axis pin, the pan, the dead space — the shape is prompt 107's
+throwaway script promoted into `qa-shots.mjs` as a third device at 820 × 1180 with `hasTouch`.
+
+### Block B — `gridIndex` pages
+
+Joe's ruling: page it now. `gridIndex` reads `generated_grids` through `restAll()`, ordered
+`generated_at.desc,id.desc` — the tiebreaker `newestGridFor` already used, so offset paging is
+stable. One round trip today (94 rows on 2026-09-22); more only when a bare `rest()` would have
+started dropping the oldest archives. **`restcap.test.mjs` now has no exception list at all.** The
+`REPORTED` mechanism was REMOVED rather than kept empty: an empty exception list is an invitation,
+and a read that needs one in future gets a decision written here and a `restAll()`, not a place to
+wait. The file's header says so. **Test accounting, said out loud:** the *"REPORTED list is exactly
+gridIndex"* test went with the mechanism (−1); a `gridIndex`-pages-with-`restAll` assertion took its
+place (+1); with the nav mirror test, `test:unit` 630 → 631. Mutation-checked: `gridIndex` back to
+bare `rest()` fails; the tiebreaker dropped fails.
+
+### Block C — the last place the disproved claim stood
+
+`web/scripts/geometry.mjs`'s comment above the day/week check no longer says the comparison is
+*"COMPLETELY IMMUNE to data drift, because both sides see the same standings on the same run"*. It
+says the check holds only while both sides READ the same standings, and that prompt 108 found the
+week's read truncated and this check is what noticed. The sentence that followed — *"if the two
+differ, the week path is handing MobileGrid different input, and that is the bug"* — was correct and
+is kept. No case, baseline or check logic moved; the gate's 45 PASS lines are the same 45.
+
+### The contract, which is the real change
+
+**Mobile Grid Addendum v2.4:** M5 is amended from "MOBILE ONLY" to touch surfaces only, with the
+scope of the addendum's deviations widened from phones to touch surfaces; "PC keeps v1.2 labels"
+still holds, because a fine pointer is what PC means. The two other places in the addendum that
+said phone-only are struck and corrected in place. **Rule 32, enumerated:** every live statement of
+the phone-only ruling was found by searching for *phone-only*, *phone artefact* and *PC keeps v1.2*
+across the repo — `globals.css` (both comments), `page.js` (two comments and the ALL SPORTS notice,
+which now says "on a phone or a tablet"), `Listing.js`, `weekgrid.test.mjs`'s comment, and the
+addendum three times — and each now says touch. The register's own §21-era entries that said
+phone-only are history and stand as written. `docs/design/mobile_demo.html` is untouched: it
+implements the grid's look, and nothing about the look changed (rule 23 does not fire).
+
+**Rule 25's second half is open until Joe opens the app on his iPad.** Nothing in this repo can
+confirm what a one-timeline grid looks like in his hands; the push is what puts it there.

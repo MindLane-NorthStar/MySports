@@ -176,9 +176,18 @@ export async function newestGridFor(sport, day) {
   return rows[0] || null;
 }
 
-/** Every (sport, day) that has at least one archived grid - used to decide what to offer. */
+/**
+ * Every (sport, day) that has at least one archived grid - used to decide what to offer.
+ *
+ * restAll, NOT rest (prompt 110, Joe's ruling): this read has NO filter, and the archive grows by
+ * about four rows a day. Prompt 109 measured it at 94 against PostgREST's 1,000-row cap - nine
+ * months of headroom - and because the order is descending, the cap would have dropped the OLDEST
+ * archives, so the app would quietly have stopped offering the earliest days it holds. One round
+ * trip today; more only when a bare rest() would otherwise have started lying. `id.desc` is the
+ * tiebreaker that makes offset paging stable, as newestGridFor already uses.
+ */
 export async function gridIndex() {
-  return rest('generated_grids?select=sport,game_date,generated_at&order=generated_at.desc');
+  return restAll('generated_grids?select=sport,game_date,generated_at&order=generated_at.desc,id.desc');
 }
 
 /* THE SEARCH CHAIN LIVED HERE AND IS GONE (prompt 57 stage 8).

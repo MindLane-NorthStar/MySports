@@ -63,6 +63,14 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
 
+**Measured 2026-09-22, prompt 110 — `test:unit` 630 → 631** (the `.mgrid-only`/`.deskgrid-only` mirror
+test in `nav.test.mjs`, +1; `restcap.test.mjs` −1 +1 as its REPORTED mechanism went and a `gridIndex`
+pin arrived); `pytest`, smoke, qa-shots and geometry did not move. Written after the last gate run. **The
+mobile grid is a TOUCH artefact now** (Joe's ruling, register §55): shown below 699px OR on a coarse
+pointer, so an iPad gets the one-timeline grid in either orientation; a fine pointer keeps the archived
+PC render. Mobile Grid Addendum v2.4. **PUSHED** — this one has to reach Joe's iPad, and the device is
+the check (rule 25). `gridIndex` pages; `geometry.mjs`'s comment no longer claims immunity to drift.
+
 **Measured 2026-09-22, prompt 109 — `pytest` 619 → 626 and `test:unit` 624 → 630** (block F's
 `tests/test_agent_instruction_files.py`, 7, and `web/test/restcap.test.mjs`, 6, the cap guard); smoke,
 qa-shots and geometry did not move. Written after the last gate run of the second stage. **Geometry went green
@@ -194,6 +202,7 @@ line claims to do.
 | prompt 94 | `pytest` | 569 → **585** | `tests/test_sync_assets.py` (16): the byte comparison's order and its request count (a single-part ETag costs no `head_object`; a size difference costs no hashing), the multipart and absent-ETag fallback, `test_pull_retakes_a_cached_file_whose_bytes_differ_from_the_bucket`, a `grids/` key compared at its derived path, mixed-case filenames, `--force` and `--existing-only` unchanged. Mutation-checked: the free ETag step removed fails 7; a key-only pull restored fails 2 |
 | prompt 95 | `pytest` | 585 → **591** | `PushGuard` in `tests/test_sync_assets.py` (6), driven through the real `main()` with `_put` counted: a push that would create an object refuses and uploads nothing; `--allow-new` publishes; a push with nothing new proceeds unflagged; `--existing-only` creates nothing; `--force` does not bypass the guard; the nightly's logo push carries the flag. Mutation-checked: the guard moved after the first upload fails 2; the guard removed fails 2 |
 | prompt 106 | `pytest` | 612 → **619** | seven in `tests/test_cavs_simulcast.py` for the emitted rows: a WOIO game emits ONE row and it is CBS with the station kept in the label; a both-station game emits TWO, one per outlet; a WUAB-only game emits its own; a game outside the package emits none; availability is ANY outlet, driven through `outlet_access`; WOIO resolves through the alias table and stays out of `access_profile.json`; and BOTH call sites gate the rows on national exclusivity. Mutation-checked seven ways |
+| prompt 110 | `test:unit` | 630 → **631** | `nav.test.mjs` (+1): `.mgrid-only` and `.deskgrid-only` read off the stylesheet and held to the SAME condition set, which must be exactly `(max-width: 699px)` and `(pointer: coarse)`, with opposite base rules. `restcap.test.mjs` (−1, +1): the REPORTED-list test went with the mechanism when `gridIndex` was paged, and a `gridIndex`-uses-`restAll`-with-a-total-order pin took its place. Mutation-checked four ways, each failing: coarse removed from either selector alone, `gridIndex` back to bare `rest()`, its tiebreaker dropped |
 | prompt 109 block F | `pytest` | 619 → **626** | `tests/test_agent_instruction_files.py` (7): no `AGENTS.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `.github/copilot-instructions.md` or `CONVENTIONS.md` at the root, and `CLAUDE.md` present. The failure message is the deliverable — it names the file, says `CLAUDE.md` is the only one, why a copy is dangerous, that the fix is delete-and-find-the-writer, and that the known cause is a stray write from another project. Mutation-checked six ways, each recreated file failing it |
 | prompt 109 | `test:unit` | 624 → **630** | six in `web/test/restcap.test.mjs`: every `rest()` call in `queries.js` is paged, limited, or allowlisted with a written reason; `standingsFor` pages with `restAll` over a total order; the allowlists name only functions that exist; every entry carries a reason; and the REPORTED list is exactly `gridIndex`. Mutation-checked five ways, each failing: bare `rest()` restored, a new unbounded call, the tiebreakers dropped, `gridIndex` unlisted, a stale allowlist name |
 | prompt 106 | `test:unit` | 609 → **624** | fifteen in `web/test/simulcastmark.test.mjs`: the four mark states Joe named, an inactive row not counting, the service set read off the GAME rather than the announcement file, the grid's lane rule (three lanes for a both-station game, ONE block for every other game in the app), and the three facts that keep a composite off the rail - it is in no `row_order.json` band, in no access profile, and named in no component |
@@ -471,7 +480,7 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 | gate | run from | floor |
 |---|---|---|
 | `pytest` | repo root | **626 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **630** |
+| `npm run test:unit` | `web/` | **631** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **121/121** |
 | `npm run geometry` | `web/` | all hard stops |

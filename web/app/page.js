@@ -95,8 +95,8 @@ const SPORT_EMPTY = {
 function DesktopGridPerLeague() {
   return (
     <p className="gridnone">
-      The desktop grid is rendered per league — pick one above to see it. On a phone, GRID VIEW shows
-      every sport on one timeline.
+      The desktop grid is rendered per league — pick one above to see it. On a phone or a tablet, GRID
+      VIEW shows every sport on one timeline.
     </p>
   );
 }
@@ -364,8 +364,8 @@ export default async function HubPage({ searchParams }) {
     // THE WEEK'S ARCHIVED PC GRIDS, RESOLVED ONCE, UP FRONT (prompt 54 stage 2).
     //
     // Desktop GRID VIEW promotes the archived render, per day, exactly as prompt 53 stage 3 settled
-    // it for day mode - the mobile grid stays phone-only, because the Mobile Grid Addendum's
-    // deviations are phone-only and M5 says "PC keeps v1.2 labels".
+    // it for day mode - the mobile grid is a TOUCH artefact (prompt 110; it was phone-only until
+    // then), and the archived render is what a fine pointer sees. Addendum M5 as amended by v2.4.
     //
     // WHY THE LOOKUP IS HOISTED HERE RATHER THAN LEFT INSIDE EACH DAY'S <ArchivedGrid>. That
     // component renders its own honest one-liner when a day has no render, which is right for ONE
@@ -611,9 +611,10 @@ export default async function HubPage({ searchParams }) {
 
       {/* GRID VIEW ON DESKTOP: the archived PC grid is the grid, and it is promoted to the TOP.
        *
-       * THE MOBILE GRID STAYS PHONE-ONLY and is deliberately not lifted here. The Mobile Grid
-       * Addendum's deviations are phone-only - M5 is explicit that "PC keeps v1.2 labels" - so above
-       * 699px the desktop grid is the archived PC render and nothing else.
+       * THE MOBILE GRID IS A TOUCH ARTEFACT and is deliberately not lifted here. It was phone-only
+       * until prompt 110 (Joe's ruling 2026-09-22, register §55): now `.mgrid-only` shows it below
+       * 699px OR on a coarse pointer, and a fine pointer - a desktop, a trackpad - gets the archived
+       * PC render and nothing else. Addendum M5 as amended by v2.4.
        *
        * CSS-GATED, NOT JS-GATED. Both this and the phone grid are rendered and one is hidden by a
        * media query, because every breakpoint in this app is CSS-gated at 699px precisely so there

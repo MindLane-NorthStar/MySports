@@ -20,12 +20,17 @@
 //   (b) carries an explicit `limit=`      - bounded by construction (`odds.limit=` does not count -
 //                                           that bounds an embed, not the response);
 //   (c) named in BOUNDED below            - a filter whose row count cannot grow with the season,
-//                                           with the reason written down;
-//   (d) named in REPORTED below           - known UNBOUNDED, measured, and awaiting Joe's ruling.
+//                                           with the reason written down.
 //
-// The value is in (c) and (d): someone has to write the reason, the same way railmark.test.mjs
-// makes a new mark impossible to add unnoticed. Adding a function to either list to make this test
-// go green IS the defect this file exists to catch - the fix for a read that can grow is restAll().
+// The value is in (c): someone has to write the reason, the same way railmark.test.mjs makes a new
+// mark impossible to add unnoticed. Adding a function to the list to make this test go green IS the
+// defect this file exists to catch - the fix for a read that can grow is restAll().
+//
+// THERE USED TO BE A (d), and it is gone on purpose. Prompt 109 carried a REPORTED list for reads
+// known to be unbounded and awaiting Joe's ruling; it had one member, gridIndex (94 of 1,000, no
+// filter), and prompt 110 paged it. An empty exception list is an invitation, so the mechanism was
+// removed rather than kept warm: a read that needs an exception in future gets a decision written
+// into the register and a restAll(), not a place to wait.
 //
 // WHY THE CALL SITE AND NOT A ROW COUNT (working rule 19): a test that fetched the week's standings
 // and asserted 2,820 rows would pass today and rot by November. What must not regress is the QUERY.
@@ -60,18 +65,6 @@ const BOUNDED = {
     'page asks for its own clubs only (24 of 24 measured in prompt 108)',
 };
 
-// (d) KNOWN UNBOUNDED, REPORTED, NOT FIXED HERE. Each entry is a defect in waiting with a measured
-// distance from the cap. Prompt 109 block C's instruction was to report gridIndex and fix it only if
-// it was already over the cap; it was not, and the decision is Joe's. THIS LIST IS NOT WHERE A NEW
-// UNBOUNDED READ GOES - it is where one already reported to Joe waits for his ruling.
-const REPORTED = {
-  gridIndex:
-    'NO FILTER AT ALL - one row per (sport, day) render, ordered generated_at.desc, so truncation ' +
-    'drops the OLDEST and fails benignly: an archived day past the horizon renders as "no grid" with ' +
-    'no error. 94 of 1,000 on 2026-09-22. Reported by prompt 109 block C; the eventual fix is ' +
-    'restAll() or a filter, and the ruling is Joe’s',
-};
-
 /** Every rest()/restAll() call in the file, with the function it sits in and its argument text. */
 function callSites() {
   const fns = [...code.matchAll(/function\s+(\w+)\s*\(/g)].map((m) => ({ name: m[1], at: m.index }));
@@ -93,7 +86,6 @@ const classify = (c) => {
   // `odds.limit=1` bounds the EMBED and says nothing about the number of games.
   if (/(?<![.\w])limit=/.test(c.text)) return 'limited';
   if (Object.hasOwn(BOUNDED, c.fn)) return 'bounded';
-  if (Object.hasOwn(REPORTED, c.fn)) return 'reported';
   return 'UNBOUNDED';
 };
 
@@ -112,7 +104,7 @@ test('EVERY rest() call in lib/queries.js is paged, limited, or bounded with a w
     'an unbounded PostgREST read: it will return at most 1,000 rows and say nothing.\n' +
     '  If its row count can grow with the season, the fix is restAll() (lib/rest.js).\n' +
     '  If a filter genuinely caps it, add it to BOUNDED in test/restcap.test.mjs with the reason.\n' +
-    '  Do NOT add it to REPORTED to make this pass - that list is for reads already reported to Joe.\n' +
+    '  There is no exception list, on purpose (prompt 110).\n' +
     bad.map((c) => `    ${c.fn}: ${c.text.slice(0, 120).replace(/\s+/g, ' ')}`).join('\n'));
 });
 
@@ -125,22 +117,20 @@ test('standingsFor pages with restAll, over a total order, so offset paging is s
   assert.match(s[0].text, /order=as_of\.asc,team_id\.asc,season\.asc/);
 });
 
-test('the allowlists name only functions that exist - a stale entry is a lie about the file', () => {
+test('gridIndex pages with restAll - no filter, and the archive grows every night (prompt 110)', () => {
+  const g = callSites().filter((c) => c.fn === 'gridIndex');
+  assert.equal(g.length, 1);
+  assert.equal(g[0].kind, 'restAll', 'a bare rest() here would drop the OLDEST archives first, silently');
+  assert.match(g[0].text, /order=generated_at\.desc,id\.desc/, 'a total order, so offset paging is stable');
+});
+
+test('the allowlist names only functions that exist - a stale entry is a lie about the file', () => {
   const names = new Set(callSites().map((c) => c.fn));
   for (const k of Object.keys(BOUNDED)) assert.ok(names.has(k), `BOUNDED names ${k}, which makes no rest() call`);
-  for (const k of Object.keys(REPORTED)) assert.ok(names.has(k), `REPORTED names ${k}, which makes no rest() call`);
-  // and no function is in both, because they mean opposite things
-  for (const k of Object.keys(REPORTED)) assert.ok(!Object.hasOwn(BOUNDED, k), `${k} is both bounded and reported`);
 });
 
 test('every allowlist entry carries a reason, not a bare name', () => {
-  for (const [k, why] of Object.entries({ ...BOUNDED, ...REPORTED })) {
+  for (const [k, why] of Object.entries(BOUNDED)) {
     assert.ok(typeof why === 'string' && why.length >= 40, `${k}: write the reason down`);
   }
-});
-
-test('the REPORTED list is exactly the reads Joe has been told about, and nothing has crept in', () => {
-  // Stated, not derived, on purpose (railmark.test.mjs's shape): growing this list is a decision
-  // that gets written into docs/enhancement-register.md, never a tidy-up.
-  assert.deepEqual(Object.keys(REPORTED), ['gridIndex']);
 });

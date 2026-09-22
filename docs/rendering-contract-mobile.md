@@ -1,5 +1,16 @@
 # Mobile Grid Addendum — v2.1 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04 · per-team cap surface and art, candidate D, 2026-09-04)
 
+> **v2.4 (2026-09-22, prompt 110, Joe's ruling).** **M5 IS AMENDED, AND WITH IT THE SCOPE OF THIS
+> ADDENDUM: the deviations apply to TOUCH surfaces, not only to phones.** The mobile grid is gated on
+> `max-width: 699px` OR `pointer: coarse`, at any width and in either orientation; the archived PC
+> render remains what a fine pointer sees, so "PC keeps v1.2 labels" still holds for a PC. Decided on
+> prompt 107's measurements (`assets/p107-tablet-grid/`): at 820 portrait the archived render is
+> amputated mid-line with 508px of pan and at ALL SPORTS it does not exist, while the mobile grid is
+> complete at every tablet width with geometry identical to the phone's. **The ~230px of empty lane
+> to the right on a landscape iPad is an accepted cost, not a defect** - the grid's width derives
+> from the data, never from the viewport, and using the extra width would change the geometry M1–M6
+> govern and the hard stops pin. Register §55. Nothing else in M1–M23 changes.
+>
 > **v2.3 (2026-09-15, prompt 99).** **M22 IS AMENDED.** The installed app's status bar is iOS's own
 > `black` bar now, not the translucent one, so the banner starts below it and M22's rules fall to 0 on
 > their own guards. M22's measured table was also stale before this change: `d24e8e0` (2026-09-07)
@@ -99,7 +110,7 @@
 > **The gain:** the visible schedule at a 390px viewport goes 295px → 304px, **+9px / +3.1%**
 > (measured against the scroller's 364px client width, not the 390px viewport).
 
-**M5. Axis labels — hour-only shorthand, Style B, MOBILE ONLY.** Labels only on the hour: Noon, 1pm … 11pm, Midnight, 1am. Style B: Barlow Condensed 700 ~17px design, gold **#C6AF7A** (was #F0C850; prompt 52 stage 3 moved `--gold` to the metallic family, handoff §4 — the labels read the token and moved with it), UPPERCASE (NOON · 1PM), letter-spacing 1.2. Gridlines and block placement keep :15 granularity; exact kickoffs stay in card trays. PC/archival keeps v1.2 block-start/end labels.
+**M5. Axis labels — hour-only shorthand, Style B, ~~MOBILE ONLY~~ TOUCH SURFACES ONLY (v2.4: a coarse pointer at any width; a fine pointer keeps the archived PC render).** Labels only on the hour: Noon, 1pm … 11pm, Midnight, 1am. Style B: Barlow Condensed 700 ~17px design, gold **#C6AF7A** (was #F0C850; prompt 52 stage 3 moved `--gold` to the metallic family, handoff §4 — the labels read the token and moved with it), UPPERCASE (NOON · 1PM), letter-spacing 1.2. Gridlines and block placement keep :15 granularity; exact kickoffs stay in card trays. PC/archival keeps v1.2 block-start/end labels.
 
 > **v2.2 AMENDMENT (2026-09-10, prompt 86 block C, Joe's Route A). THE AXIS PINS UNDER THE PICKER.**
 >
@@ -130,7 +141,7 @@
 > `.mgrid-axis-track`, which is no longer an ancestor of `.mrail-cell` — the rail lives in
 > `.mgrid-row` inside the scroller. `web/test/stickytimes.test.mjs` pins the source relationship and
 > qa-shots walks the live DOM from the rail to the scroller and finds no transform (rail delta 0px).
-> **PC is untouched** — this grid is phone-only, and PC keeps v1.2 labels.
+> **PC is untouched** — this grid is ~~phone-only~~ touch-only (v2.4), and PC keeps v1.2 labels.
 
 **M6. Pinch-to-zoom.** Enabled, clamped to [0.6, 2.5]; rail pinned per M4. Zoom stretches the TIME axis through layout rather than magnifying the painted canvas, so block widths and axis ticks grow while the rail, the lane heights and the type stay put. Two consequences, both accepted: the dashed cut seam (M3) is a fixed marker and does not stretch, and `scrollWidth` now tracks the canvas at every level - which also closed the ~418px of dead scroll past the end at zoom 0.6 that prompt 25 measured.
 
@@ -352,7 +363,8 @@ Joe's own model, and the only shape the M2 scale model permits. An empty day con
 no heading, no grid. The now marker is server-computed and lands on **exactly one day**, only when
 the week contains today.
 
-The mobile grid stays PHONE-ONLY, per M5's "PC keeps v1.2 labels". On desktop the week promotes the
+The mobile grid stays ~~PHONE-ONLY~~ **TOUCH-ONLY (v2.4)**, per M5's "PC keeps v1.2 labels" — a fine
+pointer is what "PC" means. On desktop the week promotes the
 **archived PC render per day**, and reports the days that have none in ONE line for the week rather
 than one apology per day. ALL SPORTS on desktop has nothing to promote - an archived grid is per
 `(sport, day)` by construction - and says so in the same sentence day mode uses.

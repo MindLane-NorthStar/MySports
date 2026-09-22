@@ -294,3 +294,28 @@ test('standalone display is retained, and now the DEFAULTS are what make it safe
   // start_url '/' resolves to the default state, asserted above.
   assert.equal(hubHref({}, { today: TODAY }), '/');
 });
+
+// ---------------------------------------------------------------- TWO GRIDS, ONE SURFACE (prompt 110)
+test('.mgrid-only and .deskgrid-only are exact mirrors, and the touch condition is on both', () => {
+  // GRID VIEW renders BOTH grids and CSS hides one, so a surface shows exactly one grid only while
+  // the two selectors are keyed off the SAME condition list. Joe's ruling (2026-09-22, register §55)
+  // made the mobile grid a TOUCH artefact: it is shown below 699px OR on a coarse pointer, at any
+  // width and in either orientation, and the archived PC render is what a fine pointer sees. This
+  // reads the conditions off each rule and requires them to be the same SET - a condition added to
+  // one and not the other is exactly the change that would show an iPad both grids, or neither.
+  const css = src('app/globals.css');
+  const conditions = (selector, decl) => {
+    const re = new RegExp(`@media ([^{]+)\\{\\s*\\${selector} \\{ display: ${decl}; \\}\\s*\\}`);
+    const m = css.match(re);
+    assert.ok(m, `no @media block sets ${selector} { display: ${decl} }`);
+    return m[1].split(',').map((c) => c.trim()).sort();
+  };
+  const show = conditions('.mgrid-only', 'block');
+  const hide = conditions('.deskgrid-only', 'none');
+  assert.deepEqual(show, hide, '.deskgrid-only must hide under EXACTLY the conditions .mgrid-only shows');
+  assert.deepEqual(show, ['(max-width: 699px)', '(pointer: coarse)'],
+    'the two ways in: the phone breakpoint, and any coarse pointer - a trackpad is fine, and stays PC');
+  // and the bases are opposite, so outside the media block exactly one grid is visible
+  assert.match(css, /\n\.mgrid-only \{ display: none; \}\n/);
+  assert.match(css, /\n\.deskgrid-only \{ display: block; \}\n/);
+});

@@ -119,9 +119,9 @@ test('R3: the week names its league - the weekday row carries the mark, and it i
 });
 
 test('the desktop week promotes archived grids and never falls back to the phone grid', () => {
-  // The mobile grid is phone-only: the Mobile Grid Addendum's deviations are phone-only and M5 says
-  // "PC keeps v1.2 labels". Both grids are in the DOM and a media query at 699px chooses - never a
-  // JS width state, which would put a hydration mismatch back.
+  // The mobile grid is a TOUCH artefact (prompt 110; phone-only before it): both grids are in the
+  // DOM and a media query chooses - below 699px OR a coarse pointer - never a JS width state, which
+  // would put a hydration mismatch back. nav.test.mjs holds the two selectors to one condition list.
   assert.match(page, /<ArchivedGridFigure grid=\{weekGrids\.get\(d\)\} sport=\{P\.sport\} day=\{d\}/);
   assert.match(page, /className="deskgrid-only"/);
   const css = src('app/globals.css');

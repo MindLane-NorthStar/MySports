@@ -107,10 +107,11 @@ for (const z of [1, 2.5, 0.6]) {
 // ------------------------------------------------------------------ 3. THE WEEK'S OWN CHECK
 //
 // A grid inside a week must produce IDENTICAL geometry to the same day rendered in day mode - same
-// component, same data, same everything. That comparison is COMPLETELY IMMUNE to data drift, because
-// both sides see the same standings on the same run. It is the strongest check available here and is
-// the week grid's primary guard: if the two differ, the week path is handing MobileGrid different
-// input, and that is the bug.
+// component, same data, same everything. It holds only while both sides READ the same standings:
+// prompt 108 found the week's read truncated at PostgREST's row cap, and this check is what noticed
+// (prompt 109 fixed the read). It is the strongest check available here and is the week grid's
+// primary guard: if the two differ, the week path is handing MobileGrid different input, and that
+// is the bug.
 console.log('');
 console.log('DAY / WEEK GEOMETRY EQUALITY - both sides must READ the same standings; a truncated read is a different input (prompt 108)');
 console.log('');
