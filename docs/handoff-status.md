@@ -10,7 +10,7 @@ sections, and the older measurement records. **This file stays the authority for
 repo state, gate floors, open items; since prompt 89 the working rules are `CLAUDE.md`'s alone. Read
 the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§53 — this said §1–§39 until prompt 99 corrected it, counted; all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§56 — this said §1–§39 until prompt 99 corrected it and §1–§53 until prompt 111 did, counted both times; all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -23,9 +23,9 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **107 briefs, covering 01–102, counted 2026-09-16 by prompt 102
-(106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - five numbers (13, 23, 26, 43, 86) carry more than one file, which is why the file
-count runs ahead of the highest number. **39 and 42 are the
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **116 briefs, covering 01–111, counted 2026-09-22 by prompt 111
+(107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - six numbers (13, 23, 26, 43, 48, 86) carry more than one file, which is why the file
+count runs ahead of the highest number (this said five until prompt 111 counted the directory; 48 has carried two since prompt 93). **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
 reconstructed and no placeholder was written for either. Prompts are the as-run record of why a
@@ -53,7 +53,11 @@ the count line is now page-level at the foot of the page rather than per band.
 
 ## Repo state
 
-main, HEAD is prompt 101. **THIS IS THE ONLY PLACE THE GATE FLOORS ARE RECORDED.** `CLAUDE.md`
+main. **The tree's position is read from `git log`, never from this sentence** — it said "HEAD is
+prompt 66" for thirty-five prompts and then "HEAD is prompt 101" for nine more, stale both times by
+the same mechanism (a run appends its dated line below and never touches the sentence above), so
+prompt 111 removed the claim rather than reset it. The dated measurement lines below carry the
+history, each with its own prompt number attached. **THIS IS THE ONLY PLACE THE GATE FLOORS ARE RECORDED.** `CLAUDE.md`
 carried a second copy and it was wrong four times in one week (prompts 62, 63, 64, and again between
 `9a69810` and `5c5f63d`); prompt 66 replaced it with a pointer here. Rule 10 already made this file
 the winner — do not put a number back there, and do not add a third copy anywhere else.
@@ -62,6 +66,11 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > appended a `Re-measured … prompt NN` line beneath it without touching the sentence above them, so
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
+
+**Re-measured 2026-09-22, prompt 111 — no count moved; documents only, and nine briefs filed.** Written after
+the last gate run: pytest 626 + 1 skipped, test:unit 631, smoke 33/33, qa-shots 121/121, geometry all hard
+stops. The HEAD clause above is deleted rather than reset (register §56); the push state is corrected from a
+real fetch; `docs/prompts/` is 116 covering 01–111.
 
 **Measured 2026-09-22, prompt 110 — `test:unit` 630 → 631** (the `.mgrid-only`/`.deskgrid-only` mirror
 test in `nav.test.mjs`, +1; `restcap.test.mjs` −1 +1 as its REPORTED mechanism went and a `gridIndex`
@@ -77,13 +86,15 @@ qa-shots and geometry did not move. Written after the last gate run of the secon
 with `geometry.mjs` untouched:** the three ALL SPORTS failures prompt 108 measured were the week view's
 standings read truncated at 1,000 of 2,820 rows, and `standingsFor` now pages (register §54). cfb 64 / 15,
 mlb 3 / 2, nfl 18 / 4 and the ALL SPORTS 14 / 9 are identical on both sides. **NOT PUSHED** — the tree is
-now FIVE commits ahead of `origin/main` (`192677f`); Joe authorizes the push.
+now FIVE commits ahead of `origin/main` (`192677f`); Joe authorizes the push. *(Superseded: pushed the same
+day by prompt 109's follow-up, `192677f..506f081`, Vercel READY — see prompt 110's paragraph above.)*
 
 **Measured 2026-09-16, prompt 106 — `pytest` 612 → 619 and `test:unit` 609 → 624** (the simulcast rows,
 the list collapse and the grid lanes); smoke, qa-shots and geometry did not move. Written after the last
 gate run. **The geometry figures are the point of that last clause:** the lane rule is scoped to the
 fifteen games, and cfb 64 blocks / 15 rows, mlb 3 / 2 and nfl 18 / 4 are unchanged. **NOT PUSHED** — the
-tree is now THREE commits ahead of `origin/main`.
+tree is now THREE commits ahead of `origin/main`. *(Superseded: pushed 2026-09-22 with `192677f..506f081` —
+see prompt 110's paragraph above.)*
 
 **Measured 2026-09-16, prompt 105 — `pytest` 609 → 612** (the width-match ruling, three tests); the other
 four did not move.
@@ -99,7 +110,8 @@ four did not move. Written after the last gate run. **`test:unit` held at 609 on
 counts were bumped:** `railmark.test.mjs` states the manifest size and the on-target count rather than
 deriving them, exactly so a mark cannot appear unnoticed — 33 → 35 and 32 → 34 for the two new
 composites, which land ON the 600px² rail target (30.00 × 20.00 and 27.21 × 22.05) rather than being
-excepted from it. **NOT PUSHED** — the brief withheld the push; see the open item below.
+excepted from it. **NOT PUSHED** — the brief withheld the push; see the open item below. *(Superseded:
+pushed 2026-09-22 with `192677f..506f081`; the open item is closed — see prompt 110's paragraph above.)*
 
 **Re-measured 2026-09-16, prompt 102 — no count moved; two device items closed and CSS comments.** Written
 after the last gate run. **One gate caught a real thing mid-run and is worth the line:** `test:unit` failed
@@ -930,9 +942,15 @@ before touching any count line.
   fallback is better than bad art.
 - **`unverified` is load-bearing semantics** — now documented in `data/authority_rules.json` `_about`
   and `adapters/README.md`.
-- **OPEN — PROMPTS 104, 105 AND 106 ARE COMMITTED BUT NOT PUSHED: the tree is THREE commits ahead of
-  `origin/main` (2026-09-16, register §51, §52 and §53).** **Vercel has compile-checked none of it**,
-  which is worth knowing before the next prompt stacks a fourth. Both briefs withheld the push deliberately: the
+- ~~**OPEN — PROMPTS 104, 105 AND 106 ARE COMMITTED BUT NOT PUSHED: the tree is THREE commits ahead of
+  `origin/main` (2026-09-16, register §51, §52 and §53).**~~ **CLOSED 2026-09-22 — pushed, and measured
+  rather than inferred by prompt 111:** Joe authorized the push in prompt 109's follow-up, which sent
+  `192677f..506f081` (prompts 104–106, 109 and the geometry heading) at 16:21 UTC; prompt 110 pushed
+  `506f081..69616fe`. A real `git fetch origin` on 2026-09-22 read `origin/main` at `69616fe` with the
+  tree zero commits ahead, and Vercel built `69616fe` **READY** on production (deployment
+  `dpl_2tCTCbjBFPzMs7E4Eb8shjhMzct6`, GitHub commit status success 16:21:02 UTC). The text below is the
+  record of the question as it stood. ~~**Vercel has compile-checked none of it**,
+  which is worth knowing before the next prompt stacks a fourth.~~ Both briefs withheld the push deliberately: the
   work changes in-season broadcast data and publishes new artwork, and Joe authorizes the deploy
   himself after looking at the rendered samples — `assets/p104-composite-marks/` for the marks as
   first built, and **`assets/p105-composite-width-match/` for the before/after of his width-match

@@ -13,7 +13,7 @@ and they are not going to be found** — see "The two gaps" below.
 
 **UPDATED 2026-09-10 BY PROMPT 87: 91 briefs, covering 01–87 — 92 covering 01–88 since prompt 88,
 93 covering 01–89 since prompt 89, 94 covering 01–91 with 90 to follow since prompt 91, 95 covering
-01–91 since prompt 90, 96 covering 01–92 since prompt 92, 98 covering 01–93 since prompt 93, 99 covering 01–94 since prompt 94, 100 covering 01–95 since prompt 95, 101 covering 01–96 since prompt 96, 102 covering 01–97 since prompt 97, 103 covering 01–98 since prompt 98, 104 covering 01–99 since prompt 99, 105 covering 01–100 since prompt 100, 106 covering 01–101 since prompt 101, 107 covering 01–102 since prompt 102 — and 39 and 42 are still the only permanent gaps.** The count above was a timestamp twice over: prompt 81 had filed itself without the
+01–91 since prompt 90, 96 covering 01–92 since prompt 92, 98 covering 01–93 since prompt 93, 99 covering 01–94 since prompt 94, 100 covering 01–95 since prompt 95, 101 covering 01–96 since prompt 96, 102 covering 01–97 since prompt 97, 103 covering 01–98 since prompt 98, 104 covering 01–99 since prompt 99, 105 covering 01–100 since prompt 100, 106 covering 01–101 since prompt 101, 107 covering 01–102 since prompt 102, 116 covering 01–111 since prompt 111 — and 39 and 42 are still the only permanent gaps.** **The count stood at 107 for eight prompts** (103–110, 2026-09-16 to 2026-09-22) because the briefs stopped reaching `Claude outputs\` after 102 and lived only in the Project; prompt 111 filed all nine, with the weaker provenance the table below states. The count above was a timestamp twice over: prompt 81 had filed itself without the
 count moving, and 61–80 and 82–87 were never filed at all. Prompt 87 copied those 28 files from
 `Claude outputs\` (see Provenance), and **86 carries three** — see "Duplicate numbers".
 
@@ -37,8 +37,8 @@ with `-superseded` in the name.
 
 ## What is here
 
-One hundred and seven briefs, `NN-slug.md` (this line said fifty-one until prompt 87, ninety-one until 88,
-ninety-two until 89, ninety-three until 91, ninety-four until 90, ninety-five until 92, ninety-six until 93, ninety-eight until 94, ninety-nine until 95, one hundred until 96, one hundred and one until 97, one hundred and two until 98, one hundred and three until 99, one hundred and four until 100, one hundred and five until 101, one hundred and six until 102 — counted from the directory each time, not incremented). Numbers in **bold** carry
+One hundred and sixteen briefs, `NN-slug.md` (this line said fifty-one until prompt 87, ninety-one until 88,
+ninety-two until 89, ninety-three until 91, ninety-four until 90, ninety-five until 92, ninety-six until 93, ninety-eight until 94, ninety-nine until 95, one hundred until 96, one hundred and one until 97, one hundred and two until 98, one hundred and three until 99, one hundred and four until 100, one hundred and five until 101, one hundred and six until 102, one hundred and seven until 111 — counted from the directory each time, not incremented). Numbers in **bold** carry
 more than one file or are otherwise not what the number alone suggests; everything else is one brief,
 one file.
 
@@ -153,6 +153,15 @@ one file.
 | 100 | `100-remove-agents-md.md` — *filed by the run it describes; the first three-digit number* |
 | 101 | `101-banner-pin-and-scroll-recovery.md` — *filed by the run it describes; block B ships PROVISIONAL, pending Joe's device* |
 | 102 | `102-close-device-confirmations.md` — *filed by the run it describes; closes prompts 99 and 101's device items* |
+| **103** | `103-refresh-latency-measurement.md` — *read-only measurement; its own text says "no code changes, no commits, no pushes", and no commit carries it. Filed by prompt 111 (see Provenance: no second copy)* |
+| 104 | `104-cavs-ota-simulcast-data-and-marks.md` — *`55b946c`; filed by prompt 111* |
+| 105 | `105-composite-width-match.md` — *`875a50b`; filed by prompt 111* |
+| 106 | `106-simulcast-rows-list-collapse-grid-lanes.md` — *`322b38f`; filed by prompt 111* |
+| **107** | `107-mobile-grid-at-tablet-widths.md` — *read-only measurement; its own text says "no tracked file changes, no commits, no push, no gates", and no commit carries it; its output is untracked `assets/p107-tablet-grid/`. Filed by prompt 111* |
+| **108** | `108-standings-row-truncation-check.md` — *read-only diagnostic; its own text says "no fix, no gate edit, no commit, no push", and no commit carries it — prompt 109 is the fix. Filed by prompt 111* |
+| 109 | `109-standings-pagination-and-the-cap-guard.md` — *`37f5d3f` and `dde41c7`; its push follow-up is `506f081`; filed by prompt 111* |
+| 110 | `110-tablet-grid-band-and-gridindex.md` — *`69616fe`; filed by prompt 111* |
+| 111 | `111-handoff-corrections-and-prompt-archive.md` — *filed by the run it describes* |
 
 ## What is NOT here — the two gaps
 
@@ -212,6 +221,17 @@ objectives reappear later — the chronological band and the favourite mark in p
 dead Guardians link and the MLB game-specific question in prompts 78 and 81. That is a reading of the
 briefs' titles against later ones, not a record anybody wrote at the time.
 
+## 103, 107 and 108 — filed, and no commit carries them
+
+All three were read-only runs by their own text: 103 (*"Read-only. No code changes, no commits, no
+pushes."*), 107 (*"Read-only measurement. No tracked file changes, no commits, no push, no gates."*)
+and 108 (*"Read-only diagnostic. No fix, no gate edit, no commit, no push, no gates run."*).
+`docs/handoff-status.md` carries no measurement paragraph for 103 or 107 and names 108 only inside
+prompt 109's paragraph, as the run that measured what 109 fixed; that is consistent with the briefs
+and is the same standing 75 and 76 have above. Their outputs live elsewhere: 107's under untracked
+`assets/p107-tablet-grid/`, 108's in prompt 109's register entry (§54), and 103's in the run report
+only.
+
 ## Provenance
 
 | range | came from |
@@ -237,6 +257,7 @@ briefs' titles against later ones, not a record anybody wrote at the time.
 | 100 | `Claude outputs\prompt-100-remove-agents-md-2026-09-15.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`508abf19…fbbe4`, 6,569 bytes), LF |
 | 101 | `Claude outputs\prompt-101-banner-pin-and-scroll-recovery.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`ba82cc55…34f4`, 13,371 bytes), LF |
 | 102 | `Claude outputs\prompt-102-close-device-confirmations.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`795359ce…709f`, 8,294 bytes), LF |
+| **103–111** | **NO SECOND COPY, and this row is weaker than every other row in this table.** `Claude outputs\` stops at prompt 102 (its newest brief is `prompt-102-close-device-confirmations.md`, verified 2026-09-22; the only later object there is `prompt-archive-delta.zip` from 2026-09-05, which holds 01–44 and none of these). The source is the Claude.ai Project document, transcribed through a Cowork session into the tree as untracked files; prompt 111 verified each by `sha256` and `stat` against Cowork's table — 103 `3a509237…` 6,176 bytes; 104 `ee21a52c…` 8,776; 105 `ba187750…` 6,103; 106 `39188566…` 8,171; 107 `0f8558a6…` 6,536; 108 `4b80a830…` 7,309; 109 `992efa62…` 11,251; 110 `0389b8d7…` 6,186; 111 `b67f0541…` 12,348 — all LF, each ending in a newline, none colliding with a tracked name. **Those hashes prove the container→laptop transfer was clean. They prove nothing about Project→container fidelity, because there is nothing to compare against.** Every other row here has a surviving second copy; these nine do not, and a reader should weight them accordingly |
 | 48 (second file) | `handoff/project-mirror/claude_phase4-claude-code-prompt-48-programs-live.md` (gitignored, deleted by prompt 93 after this copy) — copied with `shutil.copyfile`, whole file byte-identical by `sha256` (`84358ed7…366b`, 9,684 bytes), LF, nothing added |
 
 The fifteen filed by prompt 49 were copied with `shutil.copyfile` and verified byte-identical to

@@ -4680,3 +4680,38 @@ implements the grid's look, and nothing about the look changed (rule 23 does not
 
 **Rule 25's second half is open until Joe opens the app on his iPad.** Nothing in this repo can
 confirm what a one-timeline grid looks like in his hands; the push is what puts it there.
+
+## 56. THE STALE CLAUSES COME OUT, AND THE PROMPT ARCHIVE CATCHES UP — 2026-09-22, prompt 111
+
+**Numbered by count:** §1–§55 each appear exactly once and there was no §56.
+
+A correction, not a ruling. No code changed and no gate moved.
+
+**The HEAD clause went stale a second time by the identical mechanism.** `docs/handoff-status.md`'s
+"Repo state" opened with *"main, HEAD is prompt 101"* while HEAD was prompt 110 (`69616fe`). The block
+quote beneath it records that the same clause read *"HEAD is prompt 66"* for thirty-five prompts;
+prompt 101 reset it on 2026-09-16, and it was stale again nine prompts and six days later, because
+every run appends its dated line below and never touches the sentence above. **Decided: the claim is
+deleted, not reset** (Cowork's recommendation, taken). Resetting restarts a clock prompt 101 already
+ran; the tree's position is read from `git log`, and the dated measurement lines carry the history
+with their prompt numbers attached. The block quote quoting "prompt 66" is untouched — it is history.
+
+**The push state was stated in four places and corrected from a measurement, not an inference.** Three
+dated paragraphs and one live OPEN item said the tree was unpushed. Measured: a real `git fetch
+origin`, then `HEAD` = `origin/main` = `69616fe`, zero commits ahead; GitHub's commit status for
+`69616fe` is `success` from Vercel at 16:21:02 UTC, and the deployment is READY on production. So
+prompt 110's `PUSHED` was true; the OPEN item is closed in the file's own struck style with the push
+and the Vercel result, and the three dated lines are marked superseded in place rather than erased.
+
+**The prompt archive fell eight behind.** Briefs stopped reaching `Claude outputs\` after prompt 102
+on 2026-09-16 and lived only in the Project — the failure `docs/prompts/` exists to prevent, running
+for six days. Cowork transcribed 103–111 into the tree; prompt 111 verified all nine by `sha256`,
+`stat`, zero CR bytes and no tracked-name collision, and filed them by explicit path. **The provenance
+is weaker than every other row and the README says so in those terms:** there is no second copy, so
+the hashes prove the container→laptop transfer and nothing about Project→container fidelity. The
+count is 116 covering 01–111, counted from the directory; 39 and 42 remain the only gaps; and the
+directory count also corrected a smaller stale claim in passing — six numbers carry more than one
+file (48 has since prompt 93), not five. Rule 32 sweep for the brief count, the covered range and the
+register range: `git grep` over the whole repo excluding `docs/prompts/`, `handoff-archive.md` and
+`Claude outputs` found `CLAUDE.md:23` and `:26`, `handoff-status.md:13` and `:26`, and nothing in the
+rendering contracts or the casebook; register entries quoting old counts are history and stand.
