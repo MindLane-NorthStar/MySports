@@ -4533,3 +4533,59 @@ data it was handed was wrong.
 - **Rule 19 was sharpened**, by one sentence: a filter bounds a read only when its row count cannot
   grow with the season. The old wording said "unbounded select" and this read had a filter — the rule
   as written did not obviously apply, which is exactly how it was missed.
+
+### `AGENTS.md` came back, and `git status` was not a guard — Joe's ruling, 2026-09-22 (block F)
+
+**JOE'S RULING, 2026-09-22:** *`CLAUDE.md` is the only agent-instruction file this repo has, and a
+reappearance of any other must be a red gate rather than a line in `git status`.*
+
+**This amends §49; it does not contradict it.** §49 deleted the first stray `AGENTS.md` (2026-09-14)
+and chose visibility as the protection: *"if it comes back it shows as `?? AGENTS.md`."* It came back
+on **2026-09-16 at 23:31 UTC** (19:31 EDT) and was not noticed until **2026-09-22** — six days and
+three commits later (`55b946c`, `875a50b`, `322b38f` each ran `git status` with `?? AGENTS.md` in it).
+**Visibility is only a guard if someone looks**, and a stray write is exactly the case nobody is
+looking for. §49's other two decisions stand: it is still deliberately NOT gitignored (an ignored file
+is invisible to both the gate and the eye), and there is still no new working rule.
+
+**THE CAUSE, CORRECTED — record this version.** Cowork first inferred from §49's precedent that a
+recreated `AGENTS.md` meant Codex had been run against this repo again. **Joe corrected that on
+2026-09-22: the file was Codex output generated for an entirely different project that landed in this
+folder.** A stray write, not a second agent working this repo. The register does not record a
+deliberate second agent, because that is not what happened.
+
+**What it was, verified by this prompt rather than carried from §49:** untracked (`git ls-files
+--error-unmatch` failed; `git log --all -- AGENTS.md` empty), **22,540 bytes**, sha256
+`b5f61ffe…51a4`, and **`CLAUDE.md` with "Claude Code" replaced by "Codex" and "Claude.ai" by
+"Codex.ai" — the substitution reproduces it byte for byte** (`diff` exit 0). Five mentions of Codex,
+zero of Claude Code; its "Read first" table cites the register as `§1–§53`, so it was generated from
+a `CLAUDE.md` that already included prompt 106. One byte larger than §49's copy, which is `§48` → `§53`
+and the brief count moving.
+
+**Why it is worth guarding even as an accident.** A divergent copy of the rules is dangerous
+regardless of how it arrived: the September 14 copy had drifted two rows from `CLAUDE.md` within a day
+of being written, and a rules copy includes the unwaivable stop list and the push authorization. This
+is the same second-copy failure that made `docs/handoff-status.md` the only home for the gate floors
+(§38). A file that arrives by accident can be read on purpose.
+
+**What was done.**
+
+1. **Deleted** (`rm`, proved by a directory listing — `git grep` cannot see an untracked file, §49's
+   own lesson).
+2. **Not gitignored**, per §49.
+3. **`tests/test_agent_instruction_files.py`** — a repo-root `pytest` test, because `test:unit` runs
+   from `web/` and cannot see the root. It fails when any agent-instruction file other than `CLAUDE.md`
+   exists there, covering the conventions that exist today: `AGENTS.md`, `GEMINI.md`, `.cursorrules`,
+   `.windsurfrules`, `.github/copilot-instructions.md`, `CONVENTIONS.md`. **Verified 2026-09-22: none
+   of the six existed except `AGENTS.md`**, so it went green the moment that file was gone. A seventh
+   test requires `CLAUDE.md` itself to exist, so the rule is not satisfied vacuously by a checkout
+   that lost it. **The gate fired on the real file before the deletion** — run with `AGENTS.md`
+   present: 1 failed, 6 passed, the message naming it at 22,540 bytes.
+4. **The failure message is the deliverable.** It says what was found, that `CLAUDE.md` is the only
+   agent-instruction file this repo has, that a copy of the rules is dangerous because it drifts, that
+   the fix is to delete the file and find out what created it — **not** to add it to an allowlist,
+   of which there is none — and that the known cause is a stray write from another project, so the
+   next reader does not go hunting for an intruder.
+5. **Mutation-checked six ways:** each of the six files recreated in turn, and the test failed on
+   every one; removed, and it passed.
+
+`pytest` 619 → 626 (+ 1 skipped).
