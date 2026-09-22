@@ -23,6 +23,20 @@ entry; do not rewrite a past one.
 > Pin regression tests to the **call site**, never a row
 > count, or the test rots as the season grows.
 
+**Second incident, 2026-09-22 (prompts 108–109), and the reason the rule gained a sentence.** The
+first incident was `weekIndexRows` reading `games` bare — a read with no filter, the shape the rule's
+first sentence names. The second was `standingsFor` reading `team_records` filtered by `team_id=in.(…)`
+and `season=in.(…)`: it LOOKED bounded, and nobody applied the rule to it, because it had a filter.
+But `team_records` keeps one row per club per day, so the filter's row count grows every night; the
+week view's 210 clubs stood at 2,820 rows against 1,000 returned, ordered `as_of.asc`, so the rows
+that fell off were the newest and `indexStandings` faithfully picked the newest of what survived.
+Every week card carried a record up to eight days stale; the day view (660 rows) fitted, so the two
+disagreed, and `npm run geometry`'s day/week equality was what noticed — eight days after the cap was
+crossed. `rest.js` had carried the lesson from the first incident (*"use it for any read whose row
+count grows with the season"*) since before the second happened: **a note beside the fix does not
+reach the next call site.** `web/test/restcap.test.mjs` now walks every `rest()` call in `queries.js`
+and fails any it cannot classify. Register §54.
+
 ### Rule 21 — the retired stub
 
 ~~`git diff --ignore-cr-at-eol`~~ **RETIRED** — the condition it waited on was met. Kept as a

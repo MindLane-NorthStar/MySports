@@ -4425,3 +4425,111 @@ loader has not run, and **nothing was written to the database**.
 `pytest` 612 → 619, `test:unit` 609 → 624. **Seven mutation checks, each failing the assertion that
 guards it** — including one that initially did NOT: dropping the national-exclusive gate left the
 whole suite green, so a guard for it was added and the mutation then failed.
+
+## 54. THE WEEK'S STANDINGS WERE TRUNCATED AT 1,000 ROWS, AND THE CAP NOW HAS A GUARD — 2026-09-22, prompt 109
+
+**Numbered by count:** §1–§53 each appear exactly once and there was no §54.
+
+### The measured truncation
+
+`standingsFor` (`web/lib/queries.js`) issued one bare `rest()` read of `team_records` filtered by team
+ids and seasons, ordered `as_of.asc`. Prompt 108 measured it and prompt 109 reproduced it exactly
+before touching anything:
+
+| | day 2026-09-03 | week 2026-08-31 |
+|---|---|---|
+| games / unique clubs | 20 / 40 | 187 / 210 |
+| rows returned | 660 | **1,000** |
+| rows available | 660 | **2,820** |
+| newest `as_of` seen | 2026-09-22 | 2026-09-14 |
+
+1,820 rows dropped, and because the order was ascending the rows that fell off were the NEWEST.
+`indexStandings` then faithfully picked the newest of what survived, so all forty `(team, season)`
+pairs the day and week share carried an older record on the week — up to eight days older — with no
+error anywhere. **This was live in production on every week view, not only in the gate.** It was
+`npm run geometry`'s day/week equality that noticed (three failing checks on the ALL SPORTS case),
+because the day view's 660 rows fitted under the cap and the week's did not.
+
+### The second occurrence of a lesson already written down
+
+`web/lib/rest.js:53-54` had carried the lesson since the Weeks picker lost a third of the season:
+*"Use it for any read whose row count grows with the season — a bigger magic limit only moves the
+cliff to next year."* `restAll()` existed beside it. `standingsFor` called `rest()` anyway, and the
+reason is worth recording: **the read had a filter, so it looked bounded.** `team_id=in.(…)` bounds
+the set of clubs; it does not bound the rows, because `team_records` keeps one row per club per day
+and the filter's row count grows every night. Rule 19 gained one sentence for exactly this shape, and
+the casebook's rule 19 entry carries the incident.
+
+### The four options, and why `restAll` won
+
+| option | verdict |
+|---|---|
+| **`restAll()`** — page at 1,000 until a short page | **Taken.** The repo's own prescription; correct at any row count; the week costs three round trips |
+| `order=as_of.desc` alone | Rejected. Hides the truncation — the newest rows survive, the response is still short, and a club whose rows all sit past the cap loses its record silently |
+| a bounded `as_of` window | Rejected. Drops the record line for any club whose newest row predates the window. NHL and NBA `team_records` are season 2025 by design (prompt 37), and the Cavaliers' over-the-air games begin 2026-10-26 with sparse early standings — it would strip records off exactly the cards prompts 104–106 built |
+| a `latest_team_records` view or `distinct on` | **The eventual answer, not built here.** About 210 rows for the week instead of 2,820, but it is a migration (rule 14, S2) and is not needed to stop the bleeding. `docs/queue.md` item 10 |
+
+**Measured after the change:** day — 1 round trip, 660 rows; week — **3 round trips, 2,820 rows**;
+newest `as_of` 2026-09-22 on both; **0** pairs differ.
+
+**The order gained two tiebreakers, and that is part of the fix rather than a flourish.** `restAll`
+pages by `LIMIT`/`OFFSET`, and Postgres promises nothing about the order of ties between one page and
+the next — many clubs share an `as_of`, so a paged read over `as_of` alone can return one row twice
+and another not at all. `(team_id, season, as_of)` is the table's unique key (migration 0003), so
+`order=as_of.asc,team_id.asc,season.asc` is total and every page is stable. The guard pins the order.
+
+### The cap guard — so there is no third time
+
+`web/test/restcap.test.mjs` walks **every** `rest()` and `restAll()` call in `queries.js` (comments
+stripped, the enclosing function named) and requires each to be one of: `restAll()`; an explicit
+`limit=` (`odds.limit=` does not count — it bounds an embed, not the response); named in **`BOUNDED`**
+with a written reason that the filter cannot grow with the season; or named in **`REPORTED`**, which
+is a stated list of reads already reported to Joe and awaiting a ruling. Anything else fails, with a
+message that names the function and says the fix is `restAll()`, not the allowlist. **The value is in
+having to write the reason** — `railmark.test.mjs`'s shape. A stale allowlist entry fails too.
+
+Mutation-checked five ways, each failing the suite: `standingsFor` reverted to bare `rest()`; a new
+unbounded call added; the tiebreakers dropped from the order; `gridIndex` removed from `REPORTED`;
+and a `BOUNDED` entry naming a function that makes no call.
+
+### The audit (block C), measured 2026-09-22 against the cap
+
+| read | bound | rows today | of 1,000 |
+|---|---|---|---|
+| `gridIndex` | **none** — `generated_grids` with no filter, `generated_at.desc` | **94** | under; NOT fixed, per the brief — Joe rules |
+| `gamesForDay` | one viewing day | 95 (2026-09-12, the heaviest) | under |
+| `gamesForRange` | one calendar week (its only caller) | 229 (w/c 2026-09-21) | under |
+| `gamesForSeasonWeek` | one (sport, season, week) | 99 (CFB week 1) | under |
+| `programsForDay` | one viewing day | 6 | under |
+| `rankingsFor` | team ids + season + week + poll | 25 per week; 24 of 24 on a page (prompt 108) | under |
+| `standingsFor` | *was* team ids + seasons | 2,820 for the week | **over — fixed** |
+
+`gridIndex` is the one to watch: descending order means it fails benignly (the oldest grids drop
+first), but an archived day past the horizon would render as "no grid" with no error. It sits in
+`REPORTED` with that measurement and this entry as its reason. The eventual fix is `restAll()` or a
+filter; **that is Joe's call and this prompt did not make it.**
+
+### The gate went green on its own (block E)
+
+`npm run geometry` after the change, `geometry.mjs` untouched: **ALL HARD STOPS PASSED.** The ALL
+SPORTS case — 14 blocks, 9 rows, widths {268, 249, 229}, `scrollWidth` 855, `widest` 87.48 — identical
+on both sides. cfb 64 / 15, mlb 3 / 2 and nfl 18 / 4 unchanged; spans 1040.98, 393.54 and 830.38
+minutes against pins of 1042.4, 393.4 and 830.4. **The pinned-week change proposed in the earlier
+report was never needed, and would have masked a live production bug** — the gate was right and the
+data it was handed was wrong.
+
+### The corrections this commit owed (rule 30)
+
+- **`CLAUDE.md` said day/week equality was "immune to drift, because both sides see the same standings
+  on the same run." It is immune to the standings MOVING, not to one side reading fewer of them**, and
+  both sides read different standings for eight days. Corrected in `CLAUDE.md` and in the Mobile
+  Addendum's copy of the same sentence. **The same claim stands in `geometry.mjs`'s own comment and
+  its console line, and is NOT corrected**, because the brief forbids touching that file — rule 32
+  says so out loud rather than leaving it to be found. The register's earlier text is history and
+  stands as written.
+- **`docs/deployment-contract.md` never mentioned `db-max-rows`.** It now records the 1,000-row cap as
+  a deployment property under §2.2, with `rest.js`'s prescription and the two defects it has caused,
+  and a v1.0.5 change-log line.
+- **Rule 19 was sharpened**, by one sentence: a filter bounds a read only when its row count cannot
+  grow with the season. The old wording said "unbounded select" and this read had a filter — the rule
+  as written did not obviously apply, which is exactly how it was missed.

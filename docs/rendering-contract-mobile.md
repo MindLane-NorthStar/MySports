@@ -380,9 +380,13 @@ thing and is just the minutes the day spans.
 *The one derived check that stays a hard stop:* when `--rail-w` changes by N, `scrollWidth` must
 change by exactly N.
 
-**DAY / WEEK EQUALITY is the week grid's primary guard**, and it is immune to drift because both
-sides see the same standings on the same run. A day inside a week must render geometry IDENTICAL to
-that day in day mode. Verified across four cases and two weeks, including a multi-sport day:
+**DAY / WEEK EQUALITY is the week grid's primary guard**. ~~It is immune to drift because both
+sides see the same standings on the same run.~~ **Corrected by prompt 109 (2026-09-22): it is immune
+to the standings MOVING, not to one side reading fewer of them.** Prompt 108 found the week view's
+standings read truncated at PostgREST's 1,000-row cap (1,000 of 2,820 rows, newest dropped) while the
+day's 660 fitted, so the two sides carried different records for eight days and this check is what
+caught it. A day inside a week must render geometry IDENTICAL to that day in day mode. Verified across
+four cases and two weeks, including a multi-sport day:
 
 | day | in week | blocks | rows | widths | scrollWidth | `widest` |
 |---|---|---|---|---|---|---|

@@ -110,6 +110,10 @@ even around the retired stub.
     canonical names are nickname-only, so cross-check a second key such as `abbreviation`.
 19. Never issue an unbounded PostgREST select — it silently caps at 1,000 rows with no error. Use
     the paginating `restAll()`. Pin regression tests to the **call site**, never a row count.
+    **A filter bounds a read only when its row count cannot grow with the season** (prompt 109):
+    `standingsFor`'s `team_id=in.(…)` looked bounded and was not, because `team_records` keeps one
+    row per club per day, and it crossed the cap in production after this rule was written.
+    `web/test/restcap.test.mjs` walks every `rest()` call and makes each one say how it is bounded.
 20. Never edit a source file with a bare repeated string replace. Use line-anchored surgery or a
     parser, and assert only the intended region changed.
 21. *(retired stub — kept so rules are never renumbered)*
@@ -237,7 +241,11 @@ tripwire that fires on the standings gets ignored, and an ignored tripwire catch
 - rail delta **0.0px** at every zoom after panning fully right (M4)
 - no block below the 46px floor; no team name wrapped or truncated
 - **day/week equality** — a day inside a week must render geometry identical to that day in day
-  mode. Immune to drift, because both sides see the same standings on the same run.
+  mode. **NOT immune to drift, and this line said it was until prompt 109.** It is immune to the
+  standings *moving*, because both sides move together — but only when both sides READ the same
+  rows. Prompt 108 found the week's standings read truncated at PostgREST's 1,000-row cap while the
+  day's was not, so the two sides carried different records for eight days, and this check is what
+  noticed. It guards the week path's INPUT, and a truncated read is a different input.
 
 **REPORTED, not asserted — data-derived and legitimately drifting.** Block widths and `scrollWidth`,
 recorded **with `widest` and the ratio** beside them. `.mgrid-canvas` carries `data-widest`,

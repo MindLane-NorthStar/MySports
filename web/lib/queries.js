@@ -206,14 +206,29 @@ export async function gridIndex() {
  * A club with no row comes back with nothing, and the card omits its record line entirely. That is
  * the correct answer before a season starts: pipeline/standings.py files the NBA and NHL tables under
  * the season they actually describe, so a 2026-27 game has no 2026-27 standings until games are played.
+ *
+ * restAll, NOT rest, AND THIS IS THE SECOND TIME THE CAP WAS CROSSED (prompt 109; the first was
+ * weekIndexRows above). A filter on team ids LOOKS bounded, and it is not: the table grows by one row
+ * per club per day, so the week view's 210 clubs stood at 2,820 rows on 2026-09-22 and a bare rest()
+ * returned the first 1,000. Ordered as_of.asc, the rows that fell off were the NEWEST, and
+ * indexStandings() then faithfully picked the newest of what survived - every week card carried a
+ * record up to eight days stale, with no error anywhere. The day view (40 clubs, 660 rows) was under
+ * the cap, so the two views disagreed and npm run geometry's day/week equality was what noticed.
+ *
+ * THE ORDER CARRIES TWO TIEBREAKERS BECAUSE restAll PAGES BY OFFSET. Many clubs share an as_of, and
+ * Postgres promises nothing about the order of ties between one LIMIT/OFFSET page and the next, so a
+ * paged read over as_of alone can hand back a row twice and another not at all. (team_id, season,
+ * as_of) is the table's unique key (migration 0003), so this order is total and every page is stable.
+ * test/restcap.test.mjs holds every rest() call in this file to one of: limit=, a season-proof
+ * filter written into its allowlist with a reason, or restAll.
  */
 export async function standingsFor(teamIds, seasons) {
   const ids = [...new Set((teamIds || []).filter(Boolean))];
   const yrs = [...new Set((seasons || []).filter((s) => Number.isInteger(s)))];
   if (!ids.length || !yrs.length) return [];
-  return rest(
+  return restAll(
     `team_records?select=team_id,season,as_of,wins,losses,ties,ot_losses,points,division_rank,games_back,source` +
-      `&team_id=in.${inList(ids)}&season=in.(${yrs.join(',')})&order=as_of.asc`
+      `&team_id=in.${inList(ids)}&season=in.(${yrs.join(',')})&order=as_of.asc,team_id.asc,season.asc`
   );
 }
 

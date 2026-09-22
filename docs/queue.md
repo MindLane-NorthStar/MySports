@@ -167,3 +167,23 @@ not a speed one. **What remains is the cache and the render-side pull:** a cache
 `refresh` and `render` can share, and whether either should pull the whole bucket at all (brief 96),
 proved by dispatches rather than by any local gate; the job split after that, if it is still wanted. **A
 description of a problem, not an approved plan.**
+
+## 10. A `latest_team_records` view, so the week reads 210 rows instead of 2,820
+
+**What.** `standingsFor` (`web/lib/queries.js`) reads every `team_records` row for a page's clubs and
+seasons and lets `indexStandings` keep the newest `as_of` per `(team, season)`. The table keeps one
+row per club per day, so the week view read 2,820 rows on 2026-09-22 to use 210 of them — and until
+prompt 109 it read only the first 1,000 (register §54). It pages now, three round trips for a week,
+and that is correct at any row count. The better shape is a view — `distinct on (team_id, season)
+… order by team_id, season, as_of desc` — exposed to anon under the same RLS, so the read is one
+round trip of exactly the rows the page uses, and `indexStandings` becomes a formality.
+
+**Why not yet.** It is DDL: a file in `db/migrations/`, applied through the connector under rule 14's
+four conditions, and S2 makes it Joe's approval and nobody else's. Nothing is bleeding — the paged
+read is correct — so this is a cost-and-tidiness change, not a fix.
+
+**Where it starts.** `db/migrations/0003_games.sql:150` (the table and its unique key
+`(team_id, season, as_of)`), `web/lib/queries.js` `standingsFor`, `web/lib/standings.js`
+`indexStandings`, and `web/test/restcap.test.mjs`, whose `standingsFor` assertion pins the paged read
+and would be rewritten to pin the view. **Size:** one migration, one query, one test, an afternoon.
+**A description, not an approved plan.**

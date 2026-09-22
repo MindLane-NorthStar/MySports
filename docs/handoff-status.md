@@ -63,6 +63,13 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
 
+**Measured 2026-09-22, prompt 109 — `test:unit` 624 → 630** (`web/test/restcap.test.mjs`, the cap guard);
+`pytest`, smoke, qa-shots and geometry did not move. Written after the last gate run. **Geometry went green
+with `geometry.mjs` untouched:** the three ALL SPORTS failures prompt 108 measured were the week view's
+standings read truncated at 1,000 of 2,820 rows, and `standingsFor` now pages (register §54). cfb 64 / 15,
+mlb 3 / 2, nfl 18 / 4 and the ALL SPORTS 14 / 9 are identical on both sides. **NOT PUSHED** — the tree is
+now FIVE commits ahead of `origin/main` (`192677f`); Joe authorizes the push.
+
 **Measured 2026-09-16, prompt 106 — `pytest` 612 → 619 and `test:unit` 609 → 624** (the simulcast rows,
 the list collapse and the grid lanes); smoke, qa-shots and geometry did not move. Written after the last
 gate run. **The geometry figures are the point of that last clause:** the lane rule is scoped to the
@@ -186,6 +193,7 @@ line claims to do.
 | prompt 94 | `pytest` | 569 → **585** | `tests/test_sync_assets.py` (16): the byte comparison's order and its request count (a single-part ETag costs no `head_object`; a size difference costs no hashing), the multipart and absent-ETag fallback, `test_pull_retakes_a_cached_file_whose_bytes_differ_from_the_bucket`, a `grids/` key compared at its derived path, mixed-case filenames, `--force` and `--existing-only` unchanged. Mutation-checked: the free ETag step removed fails 7; a key-only pull restored fails 2 |
 | prompt 95 | `pytest` | 585 → **591** | `PushGuard` in `tests/test_sync_assets.py` (6), driven through the real `main()` with `_put` counted: a push that would create an object refuses and uploads nothing; `--allow-new` publishes; a push with nothing new proceeds unflagged; `--existing-only` creates nothing; `--force` does not bypass the guard; the nightly's logo push carries the flag. Mutation-checked: the guard moved after the first upload fails 2; the guard removed fails 2 |
 | prompt 106 | `pytest` | 612 → **619** | seven in `tests/test_cavs_simulcast.py` for the emitted rows: a WOIO game emits ONE row and it is CBS with the station kept in the label; a both-station game emits TWO, one per outlet; a WUAB-only game emits its own; a game outside the package emits none; availability is ANY outlet, driven through `outlet_access`; WOIO resolves through the alias table and stays out of `access_profile.json`; and BOTH call sites gate the rows on national exclusivity. Mutation-checked seven ways |
+| prompt 109 | `test:unit` | 624 → **630** | six in `web/test/restcap.test.mjs`: every `rest()` call in `queries.js` is paged, limited, or allowlisted with a written reason; `standingsFor` pages with `restAll` over a total order; the allowlists name only functions that exist; every entry carries a reason; and the REPORTED list is exactly `gridIndex`. Mutation-checked five ways, each failing: bare `rest()` restored, a new unbounded call, the tiebreakers dropped, `gridIndex` unlisted, a stale allowlist name |
 | prompt 106 | `test:unit` | 609 → **624** | fifteen in `web/test/simulcastmark.test.mjs`: the four mark states Joe named, an inactive row not counting, the service set read off the GAME rather than the announcement file, the grid's lane rule (three lanes for a both-station game, ONE block for every other game in the app), and the three facts that keep a composite off the rail - it is in no `row_order.json` band, in no access profile, and named in no component |
 | prompt 105 | `pytest` | 609 → **612** | three in `tests/test_cavs_simulcast.py` for Joe's width-match ruling: both composites' halves share a width in the PUBLISHED bitmap (measured off the ink, split on the seam, so `wuab-43`'s own internal row gap cannot fool it), and `stack()` reads the BOTTOM part rather than the widest. Mutation-checked four ways, each failing: the ink-area balance restored (in-memory AND with the marks rebuilt, where CBS comes back 192px over a 150px mark), matched to the widest part, and matched to the top part |
 | prompt 104 | `pytest` | 598 → **609** | `tests/test_cavs_simulcast.py` (11): the fifteen announced games; the outlet is PER GAME and the package-level `outlet` survives only under `superseded`; the 9/2/4 split and the 13/6 totals; date+tricode is the key, proved on the two Detroit games whose outlets differ; `simulcast_outlets()` matching and its three misses (wrong opponent, wrong day, team with no package); that `_simulcast_row` still emits NOTHING, which is prompt 105's boundary; and both composite marks published, recipe-backed and inside the hf bounds. Mutation-checked five ways, each failing the assertion that guards it: the date check dropped from the matcher, `_simulcast_row` made to emit, a composite dropped from the recipe table, the two Detroit games flattened to the same outlets, and the package-level `outlet` restored |
@@ -461,7 +469,7 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 | gate | run from | floor |
 |---|---|---|
 | `pytest` | repo root | **619 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **624** |
+| `npm run test:unit` | `web/` | **630** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **121/121** |
 | `npm run geometry` | `web/` | all hard stops |
