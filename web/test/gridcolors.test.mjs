@@ -169,8 +169,9 @@ test('a ruled team\'s cap is untinted, so the band paints as chosen', () => {
 });
 
 test('the cap ART is left as the cap table measured it', () => {
-  // Deliberately NOT changed: 'dark' was chosen from the pixels at render size against the tinted
-  // surface. Re-measuring it needs scripts/build_cap_table.py, not a runtime rule.
+  // Deliberately NOT changed at runtime: the art is chosen from the pixels at render size by
+  // scripts/build_cap_table.py, and since prompt 113 a ruled team's is scored on the flat band Joe
+  // chose - the band the block paints - rather than on band_for()'s. capFor() only forces the tint.
   const rows = Object.entries(CAP_TABLE.teams).filter(([id]) => TABLE[id]);
   assert.ok(rows.length >= 100, `expected the ruled teams in the cap table, got ${rows.length}`);
   for (const [id, row] of rows) assert.equal(capFor(id).art, row.art, id);

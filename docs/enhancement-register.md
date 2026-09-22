@@ -4775,3 +4775,84 @@ would move both**, and that is the cost of option (b) below, not a reason agains
 against the ruled band, an interior measure in the build, new art or a band change — and Joe rules
 from `assets/p112-dark-band-logos/`'s pictures. Nothing in `build_cap_table.py`, `cap-table.json`,
 `grid_colors_pro.json`, `logo_conditioning.json`, the tests or any logo file was touched.
+
+## 58. THE CAP TABLE IS SCORED AGAINST THE BAND THAT ACTUALLY PAINTS — 2026-09-22, prompt 113
+
+**Numbered by count:** §1–§57 each appear exactly once and there was no §58.
+
+**JOE'S RULING, 2026-09-22: option (b) of queue item 11.** Regenerate `web/lib/cap-table.json` so that
+every ruled team's art is chosen against the band it actually paints. §57 is the diagnosis; this is
+the implementation, and nothing broader.
+
+**The implementation, and why `decide()` was the wrong vehicle.** `scripts/build_cap_table.py` reads
+`data/grid_colors_pro.json`; a team listed there goes through a new `decide_ruled()`, which scores the
+raw and `_dark` files on that band, **flat**, writes `tint: 1.0`, and applies the unchanged 0.05 margin
+rule to those two flat scores. `decide()` was not reused because it picks the art on the TINTED
+surface whenever the best flat score is under 0.85 — and `capFor()` never paints a tinted cap for a
+ruled team, so that surface does not exist for them. Run through `decide()` the 76ers flip to dark on
+a surface nobody paints, which is the stale-surface error prompt 68 corrected by hand. Unruled teams
+keep `band_for()` + `decide()` exactly as before; the ruled/unruled split lives in one function,
+`row_for()`, and `tests/test_cap_table.py` pins both branches with the same synthetic files.
+`LUM_CRISP`, `FLAT_MIN`, `DARK_MARGIN` and `CAP_TINT` are untouched.
+
+**The regeneration** used `--teams-csv` fed from `web/test/fixtures/team-colours.json` — **the colours
+are the 2026-09-04 SELECT**, re-read from the fixture, because the database path needs the writer
+credential rule 14 forbids a session to use. The fixture itself was rewritten with a fresh `_generated`
+and restored with `git checkout --`, because that timestamp would have claimed a pull that never
+happened. A scratch regeneration reproduces the tracked table's `teams` exactly.
+
+**The change table, verified against Cowork's numbers before the build changed:**
+
+| class | rows | what |
+|---|---|---|
+| raw → dark | **13** | Reds, Royals, Dodgers, Padres, Rays, Twins, Yankees, Jazz, Rams, Giants (NY), Jets, Chargers, Lightning — the visible fix; on the ruled band raw scores 0.000 for eight of them and the `_dark` file 0.94–1.000 |
+| dark → raw, files tie | **24** | the two files are byte-identical in `assets/logos/` **and as served from R2** (24 of 24 checked by sha256 over the public URL), so the scores tie exactly and the rule's tie goes to raw; no pixel changes |
+| dark → raw, files differ | **1** | the Rockets (`nba-HOU`): both files score 1.000 on black and the tie goes to raw. **A visible change Joe did not see when he ruled**; pictured, and it follows the rule unless he says otherwise at review |
+| tint label only | **27** | ruled rows at `0.72` become `1.0`; `capFor()` already forced this at runtime, so nothing paints differently |
+| `mlb-137` | 1 | the Giants' `art: 'cap'`, hand-set in `b98a696`, is now produced by the build's `CAP_ART_OVERRIDES` and scored from the `_cap` file itself on the ruled band (1.000); the `nba-PHI` override is gone because on the flat band raw scores 0.599 against dark's 0.005 and the build chooses raw unaided |
+
+**Seven UNRULED rows moved, the run stopped, and Joe ruled: keep them.** The brief said an unruled row
+moving meant a logo file had changed after 2026-09-04, and it had: no unruled raw file postdates the
+table, but **83 unruled `_dark` files do** (the 2026-09-07 rebuild and the 2026-09-08
+`logo_conditioning.json` ruling), and for seven the new file changes the answer — Oklahoma St (`197`,
+dark/1.0 → raw/0.72, its `_dark` now a byte copy of raw under `skip_derive`), Nicholls (`2447`), N
+Arizona (`2464`), James Madison (`256`), Tarleton St (`2627`), Tulane (`2655`) and Texas St (`326`), all
+raw → dark on their rebuilt files. The table describes the files that exist; the seven are declared
+with date and cause in `captable.test.mjs`'s `FILE_CHANGED` and in the build's
+`FILE_CHANGED_SINCE_STUDY`, and a declared row that stops differing from the study fails both. The
+acceptance now pins the unruled rows at **104 / 17 / 54 / 11** (the study said 105 / 14 / 58 / 9 over
+the same 186).
+
+**Point 5, tested:** of the 26 rows whose table score reproduced on neither surface, 24 are dark-art
+rows whose `_dark` file is a byte copy of raw today — the file the score described no longer exists —
+and the other two are hand-set rows carrying the score of the file they replaced (the Giants,
+`b98a696`; the 76ers, prompt 68). Nothing is left unexplained.
+
+**The tests moved on purpose and none was loosened.** `captable.test.mjs`'s study match is restricted
+to the 186 unruled ids (the study scored on `band_for()`'s band and cannot describe a ruled row), and a
+new test pins the 124 ruled rows against the regenerated table: every tint 1, art 106 raw / 17 dark /
+1 cap, the Giants cap, the Padres and Rams dark. **`renderInk()` now takes tint and art from the study
+fixture row, not the live table** — the regeneration moved 46 of the 307 study teams' tint, and the
+helper's own comment says a later ruling must not rewrite the study's counts; 191/116, 56/20/33 and the
+26 stay exactly where they were measured. `gridcolors.test.mjs`'s assertion still holds and its
+"chosen against the tinted surface" comment is corrected. `tests/test_cap_table.py` gains six: the
+ruled branch takes the dark file its band needs where `band_for()` would refuse it; a ruled team is
+never tinted; an unruled team keeps the two-level rule; the cap override is applied by the build and
+scored on the ruled band; the override table names the Giants and nothing else; a missing ruled file
+rules nobody. **Mutation-checked six ways, each going red:** `renderInk()` pointed back at
+`table.teams`; a file-changed row left undeclared; a declared row set to the study's values; the
+Padres set back to raw in the table; the ruled branch reverted in `row_for()`; the `--check`
+acceptance with a declaration that matches the study.
+
+**Rule 23, which the original brief said did not apply.** `docs/design/mobile_demo.html` embeds its
+own `CAPTABLE`, read by `capOf`, which forces `t:1` for a ruled team exactly as `capFor()` does; twelve
+of the 38 art changes are in it and those twelve rows now match the regenerated table (`mlb-110`,
+`-113`, `-118`, `-119`, `-121`, `-133`, `-135`, `-136`, `-139`, `-142`, `-146`, `-147`). Nothing else in
+the reference changed; none of the seven unruled ids is in it.
+
+**The pictures, which are what Joe rules from** (`assets/p113-cap-regen/`, untracked): the 14 visible
+ruled changes and the 7 unruled ones before and after, at true grid size and at 4×, on the surface
+each paints; the Rams beside the Padres, both after — the Rams' `_dark` reads but is a lighter blue on
+navy, softer than the Padres' white on brown; and two of the 24 ties rendered before and after,
+pixel-identical by byte comparison (`nba-CLE`, `mlb-110`). **Not pushed:** Joe reviews the 21 pairs
+first, and the push is his.

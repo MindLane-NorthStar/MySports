@@ -198,6 +198,22 @@ and would be rewritten to pin the view. **Size:** one migration, one query, one 
 
 ## 11. The grid endcap paints a logo that was scored against a band it no longer paints
 
+> **OPTION (b) IS DONE — prompt 113, Joe's ruling 2026-09-22.** `scripts/build_cap_table.py` scores a
+> ruled team's two files on the flat band from `data/grid_colors_pro.json`, and `web/lib/cap-table.json`
+> is regenerated: 13 raw→dark (the Padres and the Rams among them), 25 dark→raw (24 ties between
+> byte-identical files, and the Rockets), 27 tint labels to 1.0, and seven unruled college rows whose
+> `_dark` files were rebuilt after the study — all kept, all pictured under `assets/p113-cap-regen/`.
+> Register §58. **The item stays open for the rim-only class below**, where a file swap does not help;
+> the options for those are still (c) and (d), and they are Joe's.
+>
+> **A correction to the paragraph below (prompt 113):** it said the Blues and the Flames "reach neither
+> 50% on either file" and "need new art or a band change". At true size and at 4× both read well — the
+> Blues' (`nhl-19`, 24% interior) and the Flames' (`nhl-20`, 28%) gold elements carry the mark — while
+> the Rays (`mlb-139`, 25%) did not read and prompt 113 fixes it by the file swap. **The interior-share
+> figure produces false positives:** it ranks by the share of contrasting ink, but legibility depends on
+> whether a coherent shape survives, and a gold outline on navy is a coherent shape. It stays a rejected
+> proposal, not a metric.
+
 **What.** Joe, on the device, 2026-09-22: on the GRID the Padres mark renders brown on brown and the
 Rams mark dark on dark, both illegible. **Measured (prompt 112, `assets/p112-dark-band-logos/`,
 untracked): the cause is not the one the handoff or the brief proposed.** The grid's endcap art comes

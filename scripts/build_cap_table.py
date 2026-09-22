@@ -19,10 +19,28 @@ is the outer silhouette and the only place the logo actually meets the surface. 
 share of edge pixels whose WCAG luminance ratio against the surface is >= 1.5:1 - luminance contrast
 is what makes an edge look sharp, where chroma alone makes a shape visible but soft.
 
-THE TWO-LEVEL RULE:
+THE TWO-LEVEL RULE (unruled teams):
   * tint = 1.0 when the better of the two files reaches edge_crisp >= 0.85 on the flat band, else 0.72
   * on the chosen surface, art = dark only when the _dark file beats raw by MORE than 0.05, else raw
   * a team with no raw file gets no row; a raw file with no _dark is scored raw-only
+
+WHICH SURFACE EACH TEAM IS SCORED ON (prompt 113, Joe's ruling 2026-09-22, register section 58):
+  * A RULED team - one listed in data/grid_colors_pro.json - is scored on the flat band Joe chose
+    there, and on nothing else. Prompt 66 made capFor() paint that band UNTINTED for every ruled
+    team, so the tinted surface never exists for them and decide()'s tinted branch is the wrong
+    vehicle: run through decide(), the 76ers flip to dark on a surface that is never painted, which
+    is the stale-surface error prompt 68 corrected by hand. tint is written 1.0 and the art is the
+    same margin rule applied to the two FLAT scores (decide_ruled).
+    WHY: this script used to score every team on band_for()'s band from the database colours, and
+    for 80 of the 124 ruled teams that is a different colour from the band the block paints. The
+    Padres' raw file scores 1.000 on the rule's gold and 0.000 on Joe's brown; the Rams' 1.000 on
+    gold and 0.000 on navy; both painted raw and were illegible on the device (prompt 112). Re-scored
+    on the painted band, 38 ruled rows change art - 13 raw->dark, 24 dark->raw where the two files
+    are now byte-identical, and the Rockets - and 27 more change only their tint label to 1.0.
+  * An UNRULED team keeps band_for() + decide() exactly as before; the 2026-09-04 study still
+    describes those rows and web/test/captable.test.mjs pins them against it.
+  * CAP_ART_OVERRIDES holds the rulings no measurement can produce, applied AFTER scoring so a
+    regeneration reproduces them instead of depending on someone re-patching the output by hand.
 
 The colour maths, band_for() and ink_for() are ports of web/lib/gridmodel.js, kept here rather than
 imported so the numbers can be checked against the app independently. `ink_for(band, ...)` MUST equal
@@ -54,6 +72,34 @@ LUM_CRISP = 1.5            # a crisp edge
 FLAT_MIN = 0.85            # tint 1.0 when the band itself carries the logo this well
 DARK_MARGIN = 0.05         # _dark must beat raw by MORE than this to be chosen
 CAP_TINT = 0.72            # the tinted level
+RULED_PATH = ROOT / "data" / "grid_colors_pro.json"   # Joe's per-team bands (prompt 66); see the docstring
+
+# Rulings the measurement cannot produce, applied AFTER scoring so a regeneration reproduces them.
+# `cap` names a THIRD art file, logos/{id}_cap.png, read only by the grid endcap (teamLogoCapUrl).
+# UNRULED rows whose _dark file was rebuilt AFTER the 2026-09-04 study was scored, so the study no
+# longer describes them and --check compares them against the values declared here instead (Joe's
+# ruling, prompt 113 rev B: the table describes the files that exist, not the files the study saw).
+# 83 unruled _dark files postdate the study; these seven are the ones where the new file changes the
+# answer. A declared row that stops differing from the study fails the acceptance - delete its entry.
+FILE_CHANGED_SINCE_STUDY = {
+    "197": {"tint": 0.72, "art": "raw"},   # Oklahoma St: 2026-09-08, skip_derive: _dark is now a byte copy of raw
+    "2447": {"tint": 1.0, "art": "dark"},   # Nicholls: 2026-09-07 20:29, _dark rebuilt
+    "2464": {"tint": 1.0, "art": "dark"},   # N Arizona: 2026-09-07 20:29, _dark rebuilt
+    "256": {"tint": 0.72, "art": "dark"},   # James Madison: 2026-09-07 20:29, _dark rebuilt
+    "2627": {"tint": 1.0, "art": "dark"},   # Tarleton St: 2026-09-07 20:29, _dark rebuilt
+    "2655": {"tint": 0.72, "art": "dark"},   # Tulane: 2026-09-07 20:29, _dark rebuilt
+    "326": {"tint": 1.0, "art": "dark"},   # Texas St: 2026-09-07 20:29, _dark rebuilt
+}
+
+CAP_ART_OVERRIDES = {
+    # Joe's ruling 2026-09-08 (b98a696): the Giants' SF mark goes BLACK on their orange band #fd5a1e,
+    # and the band does not change. Neither existing file can do it - raw and _dark both score
+    # edge_crisp 0.000 on that orange, and the black silhouette that scores 1.000 there scores 0.000
+    # on the charcoal the listings card floats a logo on - so the endcap got its own file. The table
+    # carried `art: 'cap'` by hand from b98a696 until prompt 113 moved the ruling here. The score
+    # written is the _cap file's own on the ruled band, measured like everything else.
+    "mlb-137": "cap",
+}
 
 
 # ----------------------------------------------------------------------------- colour maths
@@ -188,6 +234,59 @@ def decide(raw_path: Path, dark_path: Path | None, band_hex: str):
     return level, art, float(scores[art])
 
 
+def ruled_bands(path: Path = RULED_PATH) -> dict:
+    """{team id: band hex} for every team Joe ruled a band for. No file -> nobody is ruled."""
+    p = Path(path)
+    if not p.exists():
+        return {}
+    doc = json.loads(p.read_text(encoding="utf-8"))
+    return {tid: row["band"] for tid, row in doc.get("teams", {}).items()
+            if hex2rgb(row.get("band")) is not None}
+
+
+def decide_ruled(raw_path: Path, dark_path: Path | None, band_hex: str):
+    """A RULED team (prompt 113): both files scored on the FLAT ruled band, tint 1.0, and the same
+    margin rule on those two flat scores. decide()'s tinted branch is never consulted, because
+    capFor() never paints a tinted cap for a ruled team. Returns (tint, art, edge_crisp) or None."""
+    band_rgb = hex2rgb(band_hex)
+    r = measure(load_logo(raw_path), band_rgb)
+    if r is None:
+        return None
+    d = None
+    if dark_path is not None and dark_path.exists():
+        d = measure(load_logo(dark_path), band_rgb)
+    art = "dark" if (d is not None and d - r > DARK_MARGIN) else "raw"
+    return 1.0, art, float(d if art == "dark" else r)
+
+
+def row_for(team_id: str, logo_dir: Path, ruled: dict, primary=None, secondary=None):
+    """One team's table row, or None when it has no usable art. The ruled/unruled split lives HERE
+    and nowhere else: a ruled team is scored on its ruled band by decide_ruled(); an unruled one on
+    band_for()'s band by decide(). CAP_ART_OVERRIDES is applied last."""
+    raw = logo_dir / ("%s.png" % team_id)
+    if not raw.exists():
+        return None
+    dark = logo_dir / ("%s_dark.png" % team_id)
+    dark = dark if dark.exists() else None
+    if team_id in ruled:
+        got = decide_ruled(raw, dark, ruled[team_id])
+    else:
+        got = decide(raw, dark, band_for(primary, secondary)["band"])
+    if got is None:
+        return None
+    level, art, crisp = got
+    if CAP_ART_OVERRIDES.get(team_id) == "cap":
+        cap = logo_dir / ("%s_cap.png" % team_id)
+        if cap.exists():
+            surface_hex = ruled.get(team_id) or band_for(primary, secondary)["band"]
+            surface = hex2rgb(surface_hex) if level == 1.0 else tint(hex2rgb(surface_hex), CAP_TINT)
+            s = measure(load_logo(cap), surface)
+            art, crisp = "cap", float(s if s is not None else crisp)
+        else:
+            print("WARNING: %s is ruled art 'cap' but %s is missing - scored art kept" % (team_id, cap))
+    return {"tint": level, "art": art, "edge_crisp": round(crisp, 3)}
+
+
 # ----------------------------------------------------------------------------- team sources
 def teams_from_db():
     from pipeline.db import DB
@@ -222,23 +321,17 @@ def main(argv=None) -> int:
 
     teams = teams_from_csv(Path(a.teams_csv)) if a.teams_csv else teams_from_db()
     logo_dir = Path(a.logos)
-    print("teams: %d | logos: %s" % (len(teams), logo_dir))
+    ruled = ruled_bands()
+    print("teams: %d | logos: %s | ruled bands: %d (%s)" % (len(teams), logo_dir, len(ruled), RULED_PATH.name))
 
     out = {}
     skipped_no_art = 0
     for t in teams:
-        raw = logo_dir / ("%s.png" % t["id"])
-        if not raw.exists():
+        row = row_for(t["id"], logo_dir, ruled, t["primary"], t["secondary"])
+        if row is None:
             skipped_no_art += 1
             continue
-        dark = logo_dir / ("%s_dark.png" % t["id"])
-        band = band_for(t["primary"], t["secondary"])["band"]
-        got = decide(raw, dark if dark.exists() else None, band)
-        if got is None:
-            skipped_no_art += 1
-            continue
-        level, art, crisp = got
-        out[t["id"]] = {"tint": level, "art": art, "edge_crisp": round(crisp, 3)}
+        out[t["id"]] = row
 
     counts = {}
     for v in out.values():
@@ -281,6 +374,11 @@ def main(argv=None) -> int:
         # The study's `teams` is a LIST of rows carrying their own id, not an id-keyed object.
         fixraw = json.loads(Path(a.check).read_text(encoding="utf-8"))["teams"]
         fix = {r["id"]: r for r in fixraw} if isinstance(fixraw, list) else fixraw
+        # The 2026-09-04 study scored every team on band_for()'s band. Since prompt 113 a RULED team
+        # is scored on Joe's band instead, so the study describes only the unruled rows now.
+        fix = {tid: r for tid, r in fix.items() if tid not in ruled}
+        print("(study rows for ruled teams excluded from the acceptance: %d of %d remain)"
+              % (len(fix), len(fixraw)))
         bad = []
         fcounts = {}
         for tid, row in sorted(fix.items()):
@@ -289,15 +387,22 @@ def main(argv=None) -> int:
                 bad.append("%s: missing from generated table" % tid)
                 continue
             fcounts[(mine["tint"], mine["art"])] = fcounts.get((mine["tint"], mine["art"]), 0) + 1
-            if mine["tint"] != row["tint"] or mine["art"] != row["art"]:
-                bad.append("%s (%s): fixture tint=%.2f art=%s | generated tint=%.2f art=%s"
-                           % (tid, row.get("name", "?"), row["tint"], row["art"], mine["tint"], mine["art"]))
+            want_row = FILE_CHANGED_SINCE_STUDY.get(tid, row)
+            if tid in FILE_CHANGED_SINCE_STUDY and (row["tint"], row["art"]) == (want_row["tint"], want_row["art"]):
+                bad.append("%s (%s): declared file-changed but matches the study - delete its entry"
+                           % (tid, row.get("name", "?")))
+            if mine["tint"] != want_row["tint"] or mine["art"] != want_row["art"]:
+                bad.append("%s (%s): expected tint=%.2f art=%s | generated tint=%.2f art=%s"
+                           % (tid, row.get("name", "?"), want_row["tint"], want_row["art"], mine["tint"], mine["art"]))
         print("")
         print("ACCEPTANCE against %d fixture rows: %s" % (len(fix), "PASS" if not bad else "FAIL"))
         # Counts are restricted to the fixture's ids. The generated table also carries teams the
         # study left out (they have art but no 2026 game rows), which must not be counted against
         # the ruling's 170 / 28 / 84 / 25.
-        want = {(1.0, "raw"): 170, (1.0, "dark"): 28, (0.72, "raw"): 84, (0.72, "dark"): 25}
+        # The UNRULED rows as generated today: 104 / 17 / 54 / 11. The study said 105 / 14 / 58 / 9
+        # over the same 186 (and 170 / 28 / 84 / 25 over all 307 until prompt 113 took the 121 ruled
+        # rows out of the acceptance); the seven FILE_CHANGED_SINCE_STUDY rows move the counts.
+        want = {(1.0, "raw"): 104, (1.0, "dark"): 17, (0.72, "raw"): 54, (0.72, "dark"): 11}
         for k in sorted(want, key=lambda x: (-x[0], x[1])):
             got = fcounts.get(k, 0)
             ok = "OK" if got == want[k] else "MISMATCH (want %d)" % want[k]

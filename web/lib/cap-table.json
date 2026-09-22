@@ -1,5 +1,5 @@
 {
- "_generated": "2026-09-04T21:09:03+00:00",
+ "_generated": "2026-09-22T19:08:36+00:00",
  "_rule": {
   "render_px": 138,
   "lum_crisp": 1.5,
@@ -140,9 +140,9 @@
    "edge_crisp": 0.96
   },
   "197": {
-   "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 1.0
+   "tint": 0.72,
+   "art": "raw",
+   "edge_crisp": 0.876
   },
   "2": {
    "tint": 1.0,
@@ -445,9 +445,9 @@
    "edge_crisp": 1.0
   },
   "2447": {
-   "tint": 0.72,
-   "art": "raw",
-   "edge_crisp": 0.236
+   "tint": 1.0,
+   "art": "dark",
+   "edge_crisp": 0.938
   },
   "2448": {
    "tint": 0.72,
@@ -480,9 +480,9 @@
    "edge_crisp": 0.945
   },
   "2464": {
-   "tint": 0.72,
-   "art": "raw",
-   "edge_crisp": 0.571
+   "tint": 1.0,
+   "art": "dark",
+   "edge_crisp": 1.0
   },
   "2466": {
    "tint": 0.72,
@@ -551,8 +551,8 @@
   },
   "256": {
    "tint": 0.72,
-   "art": "raw",
-   "edge_crisp": 0.578
+   "art": "dark",
+   "edge_crisp": 0.867
   },
   "2567": {
    "tint": 1.0,
@@ -596,8 +596,8 @@
   },
   "2627": {
    "tint": 1.0,
-   "art": "raw",
-   "edge_crisp": 0.94
+   "art": "dark",
+   "edge_crisp": 1.0
   },
   "2628": {
    "tint": 1.0,
@@ -656,8 +656,8 @@
   },
   "2655": {
    "tint": 0.72,
-   "art": "raw",
-   "edge_crisp": 0.743
+   "art": "dark",
+   "edge_crisp": 0.959
   },
   "2678": {
    "tint": 0.72,
@@ -770,9 +770,9 @@
    "edge_crisp": 1.0
   },
   "326": {
-   "tint": 0.72,
-   "art": "raw",
-   "edge_crisp": 0.075
+   "tint": 1.0,
+   "art": "dark",
+   "edge_crisp": 1.0
   },
   "328": {
    "tint": 1.0,
@@ -940,9 +940,9 @@
    "edge_crisp": 0.924
   },
   "mlb-108": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.933
+   "edge_crisp": 0.975
   },
   "mlb-109": {
    "tint": 1.0,
@@ -950,9 +950,9 @@
    "edge_crisp": 0.969
   },
   "mlb-110": {
-   "tint": 0.72,
-   "art": "dark",
-   "edge_crisp": 1.0
+   "tint": 1.0,
+   "art": "raw",
+   "edge_crisp": 0.0
   },
   "mlb-111": {
    "tint": 1.0,
@@ -966,8 +966,8 @@
   },
   "mlb-113": {
    "tint": 1.0,
-   "art": "raw",
-   "edge_crisp": 1.0
+   "art": "dark",
+   "edge_crisp": 0.961
   },
   "mlb-114": {
    "tint": 1.0,
@@ -982,21 +982,21 @@
   "mlb-116": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.892
+   "edge_crisp": 0.876
   },
   "mlb-117": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 1.0
+   "edge_crisp": 0.0
   },
   "mlb-118": {
    "tint": 1.0,
-   "art": "raw",
-   "edge_crisp": 1.0
+   "art": "dark",
+   "edge_crisp": 0.941
   },
   "mlb-119": {
    "tint": 1.0,
-   "art": "raw",
+   "art": "dark",
    "edge_crisp": 1.0
   },
   "mlb-120": {
@@ -1005,34 +1005,34 @@
    "edge_crisp": 0.995
   },
   "mlb-121": {
-   "tint": 0.72,
-   "art": "dark",
-   "edge_crisp": 0.982
-  },
-  "mlb-133": {
-   "tint": 0.72,
-   "art": "dark",
+   "tint": 1.0,
+   "art": "raw",
    "edge_crisp": 1.0
   },
-  "mlb-134": {
-   "tint": 0.72,
+  "mlb-133": {
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.946
+   "edge_crisp": 0.954
+  },
+  "mlb-134": {
+   "tint": 1.0,
+   "art": "raw",
+   "edge_crisp": 1.0
   },
   "mlb-135": {
    "tint": 1.0,
-   "art": "raw",
+   "art": "dark",
    "edge_crisp": 1.0
   },
   "mlb-136": {
    "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 0.976
+   "art": "raw",
+   "edge_crisp": 0.147
   },
   "mlb-137": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "cap",
-   "edge_crisp": 0.989
+   "edge_crisp": 1.0
   },
   "mlb-138": {
    "tint": 1.0,
@@ -1040,27 +1040,27 @@
    "edge_crisp": 0.889
   },
   "mlb-139": {
-   "tint": 0.72,
-   "art": "raw",
-   "edge_crisp": 0.912
+   "tint": 1.0,
+   "art": "dark",
+   "edge_crisp": 1.0
   },
   "mlb-140": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "dark",
-   "edge_crisp": 0.924
+   "edge_crisp": 0.658
   },
   "mlb-141": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.944
+   "edge_crisp": 0.996
   },
   "mlb-142": {
-   "tint": 0.72,
-   "art": "raw",
-   "edge_crisp": 0.976
+   "tint": 1.0,
+   "art": "dark",
+   "edge_crisp": 1.0
   },
   "mlb-143": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
    "edge_crisp": 0.961
   },
@@ -1070,69 +1070,69 @@
    "edge_crisp": 1.0
   },
   "mlb-145": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
    "edge_crisp": 1.0
   },
   "mlb-146": {
-   "tint": 0.72,
-   "art": "dark",
-   "edge_crisp": 0.779
+   "tint": 1.0,
+   "art": "raw",
+   "edge_crisp": 0.357
   },
   "mlb-147": {
    "tint": 1.0,
-   "art": "raw",
+   "art": "dark",
    "edge_crisp": 1.0
   },
   "mlb-158": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.932
+   "edge_crisp": 1.0
   },
   "nba-ATL": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.91
+   "edge_crisp": 1.0
   },
   "nba-BKN": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 1.0
+   "edge_crisp": 0.0
   },
   "nba-BOS": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 1.0
+   "edge_crisp": 0.0
   },
   "nba-CHA": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.88
+   "edge_crisp": 0.652
   },
   "nba-CHI": {
-   "tint": 0.72,
-   "art": "dark",
-   "edge_crisp": 1.0
+   "tint": 1.0,
+   "art": "raw",
+   "edge_crisp": 0.617
   },
   "nba-CLE": {
-   "tint": 0.72,
-   "art": "dark",
-   "edge_crisp": 0.995
+   "tint": 1.0,
+   "art": "raw",
+   "edge_crisp": 1.0
   },
   "nba-DAL": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.943
+   "edge_crisp": 0.935
   },
   "nba-DEN": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.948
+   "edge_crisp": 1.0
   },
   "nba-DET": {
    "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 0.9
+   "art": "raw",
+   "edge_crisp": 0.822
   },
   "nba-GSW": {
    "tint": 1.0,
@@ -1140,14 +1140,14 @@
    "edge_crisp": 1.0
   },
   "nba-HOU": {
-   "tint": 0.72,
-   "art": "dark",
-   "edge_crisp": 0.998
+   "tint": 1.0,
+   "art": "raw",
+   "edge_crisp": 1.0
   },
   "nba-IND": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.926
+   "edge_crisp": 1.0
   },
   "nba-LAC": {
    "tint": 1.0,
@@ -1157,62 +1157,62 @@
   "nba-LAL": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.891
+   "edge_crisp": 1.0
   },
   "nba-MEM": {
    "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 0.923
+   "art": "raw",
+   "edge_crisp": 0.021
   },
   "nba-MIA": {
    "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 1.0
+   "art": "raw",
+   "edge_crisp": 0.818
   },
   "nba-MIL": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.772
+   "edge_crisp": 0.87
   },
   "nba-MIN": {
    "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 0.919
+   "art": "raw",
+   "edge_crisp": 0.927
   },
   "nba-NOP": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.847
+   "edge_crisp": 0.687
   },
   "nba-NYK": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.901
+   "edge_crisp": 0.991
   },
   "nba-OKC": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.763
+   "edge_crisp": 0.63
   },
   "nba-ORL": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.999
+   "edge_crisp": 0.6
   },
   "nba-PHI": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.906
+   "edge_crisp": 0.599
   },
   "nba-PHX": {
    "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 0.971
+   "art": "raw",
+   "edge_crisp": 1.0
   },
   "nba-POR": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 1.0
+   "edge_crisp": 0.0
   },
   "nba-SAC": {
    "tint": 1.0,
@@ -1220,18 +1220,18 @@
    "edge_crisp": 1.0
   },
   "nba-SAS": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.909
+   "edge_crisp": 0.65
   },
   "nba-TOR": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "dark",
    "edge_crisp": 1.0
   },
   "nba-UTA": {
    "tint": 1.0,
-   "art": "raw",
+   "art": "dark",
    "edge_crisp": 1.0
   },
   "nba-WAS": {
@@ -1247,17 +1247,17 @@
   "nfl-10": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.891
+   "edge_crisp": 0.999
   },
   "nfl-11": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.905
+   "edge_crisp": 1.0
   },
   "nfl-12": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.945
+   "edge_crisp": 0.959
   },
   "nfl-13": {
    "tint": 1.0,
@@ -1266,18 +1266,18 @@
   },
   "nfl-14": {
    "tint": 1.0,
-   "art": "raw",
-   "edge_crisp": 1.0
-  },
-  "nfl-15": {
-   "tint": 0.72,
    "art": "dark",
    "edge_crisp": 1.0
   },
-  "nfl-16": {
-   "tint": 0.72,
+  "nfl-15": {
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.926
+   "edge_crisp": 0.718
+  },
+  "nfl-16": {
+   "tint": 1.0,
+   "art": "raw",
+   "edge_crisp": 0.898
   },
   "nfl-17": {
    "tint": 1.0,
@@ -1291,8 +1291,8 @@
   },
   "nfl-19": {
    "tint": 1.0,
-   "art": "raw",
-   "edge_crisp": 1.0
+   "art": "dark",
+   "edge_crisp": 0.97
   },
   "nfl-2": {
    "tint": 1.0,
@@ -1301,28 +1301,28 @@
   },
   "nfl-20": {
    "tint": 1.0,
-   "art": "raw",
+   "art": "dark",
    "edge_crisp": 1.0
   },
   "nfl-21": {
    "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 1.0
+   "art": "raw",
+   "edge_crisp": 0.822
   },
   "nfl-22": {
    "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 0.995
+   "art": "raw",
+   "edge_crisp": 0.985
   },
   "nfl-23": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.615
+   "edge_crisp": 0.535
   },
   "nfl-24": {
-   "tint": 0.72,
-   "art": "raw",
-   "edge_crisp": 0.816
+   "tint": 1.0,
+   "art": "dark",
+   "edge_crisp": 1.0
   },
   "nfl-25": {
    "tint": 1.0,
@@ -1332,22 +1332,22 @@
   "nfl-26": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.94
+   "edge_crisp": 0.974
   },
   "nfl-27": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.901
+   "edge_crisp": 0.889
   },
   "nfl-28": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.946
+   "edge_crisp": 1.0
   },
   "nfl-29": {
    "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 0.925
+   "art": "raw",
+   "edge_crisp": 0.629
   },
   "nfl-3": {
    "tint": 1.0,
@@ -1357,7 +1357,7 @@
   "nfl-30": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.979
+   "edge_crisp": 0.973
   },
   "nfl-33": {
    "tint": 1.0,
@@ -1382,22 +1382,22 @@
   "nfl-6": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 1.0
+   "edge_crisp": 0.0
   },
   "nfl-7": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.947
+   "edge_crisp": 0.153
   },
   "nfl-8": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.893
+   "edge_crisp": 0.222
   },
   "nfl-9": {
-   "tint": 0.72,
-   "art": "dark",
-   "edge_crisp": 0.989
+   "tint": 1.0,
+   "art": "raw",
+   "edge_crisp": 0.859
   },
   "nhl-1": {
    "tint": 1.0,
@@ -1407,22 +1407,22 @@
   "nhl-10": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 1.0
+   "edge_crisp": 0.618
   },
   "nhl-12": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.885
+   "edge_crisp": 1.0
   },
   "nhl-13": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.923
+   "edge_crisp": 0.683
   },
   "nhl-14": {
    "tint": 1.0,
-   "art": "raw",
-   "edge_crisp": 1.0
+   "art": "dark",
+   "edge_crisp": 0.956
   },
   "nhl-15": {
    "tint": 1.0,
@@ -1431,23 +1431,23 @@
   },
   "nhl-16": {
    "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 1.0
+   "art": "raw",
+   "edge_crisp": 0.37
   },
   "nhl-17": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.756
+   "edge_crisp": 0.619
   },
   "nhl-18": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.782
+   "edge_crisp": 0.741
   },
   "nhl-19": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.965
+   "edge_crisp": 0.077
   },
   "nhl-2": {
    "tint": 1.0,
@@ -1461,18 +1461,18 @@
   },
   "nhl-21": {
    "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 1.0
+   "art": "raw",
+   "edge_crisp": 0.726
   },
   "nhl-22": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.999
+   "edge_crisp": 1.0
   },
   "nhl-23": {
-   "tint": 0.72,
-   "art": "dark",
-   "edge_crisp": 0.986
+   "tint": 1.0,
+   "art": "raw",
+   "edge_crisp": 0.99
   },
   "nhl-24": {
    "tint": 1.0,
@@ -1481,8 +1481,8 @@
   },
   "nhl-25": {
    "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 1.0
+   "art": "raw",
+   "edge_crisp": 0.186
   },
   "nhl-26": {
    "tint": 1.0,
@@ -1495,19 +1495,19 @@
    "edge_crisp": 0.891
   },
   "nhl-29": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.9
+   "edge_crisp": 0.881
   },
   "nhl-3": {
-   "tint": 0.72,
-   "art": "dark",
-   "edge_crisp": 0.972
+   "tint": 1.0,
+   "art": "raw",
+   "edge_crisp": 0.696
   },
   "nhl-30": {
    "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 1.0
+   "art": "raw",
+   "edge_crisp": 0.912
   },
   "nhl-4": {
    "tint": 1.0,
@@ -1515,14 +1515,14 @@
    "edge_crisp": 0.982
   },
   "nhl-5": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.947
+   "edge_crisp": 1.0
   },
   "nhl-52": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.974
+   "edge_crisp": 1.0
   },
   "nhl-54": {
    "tint": 1.0,
@@ -1532,22 +1532,22 @@
   "nhl-55": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 1.0
+   "edge_crisp": 0.0
   },
   "nhl-6": {
    "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 1.0
+   "edge_crisp": 0.0
   },
   "nhl-68": {
-   "tint": 0.72,
-   "art": "dark",
-   "edge_crisp": 0.942
+   "tint": 1.0,
+   "art": "raw",
+   "edge_crisp": 0.092
   },
   "nhl-7": {
-   "tint": 0.72,
+   "tint": 1.0,
    "art": "raw",
-   "edge_crisp": 0.957
+   "edge_crisp": 1.0
   },
   "nhl-8": {
    "tint": 1.0,

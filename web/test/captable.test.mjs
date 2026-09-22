@@ -83,49 +83,86 @@ test('every row in the shipped table is one of the two levels and one of the two
   }
 });
 
-/**
- * ROWS DELIBERATELY EDITED AWAY FROM THE STUDY, each with the reason it was.
- *
- * The test below exists to catch hand-editing drift, so an override is declared HERE rather than
- * softened into the assertion: any row that differs and is not named fails, and a named row that
- * stops differing fails too. Reverting one means deleting its entry, which is the point.
- */
-const OVERRIDES = {
-  // Prompt 68 stage 4. The study chose `dark` measured against tint 0.72; prompt 66 gave every
-  // ruled team tint 1, so that surface no longer exists. Re-measured on the band as it now paints
-  // (#e01234, Joe's chosen 76ers band): raw scores edge_crisp 0.599 and the dark lockup 0.005 - not
-  // a close call about which reads better, a lockup that has stopped rendering as a shape. A stale
-  // input rather than a preference, so it is corrected. One row, reversible by deleting this entry.
-  'nba-PHI': { art: 'raw' },
+// Joe's per-team bands (prompt 66). A team listed here is RULED: since prompt 113 the build scores it
+// on that band, flat, and the 2026-09-04 study no longer describes its row.
+const gridColours = JSON.parse(readFileSync(join(HERE, '..', '..', 'data', 'grid_colors_pro.json'), 'utf8')).teams;
+const RULED = new Set(Object.keys(gridColours));
 
-  // Prompt 69 stage 3. Joe ruled the Giants' SF mark black on their orange band. Measured with the
-  // builder's own edge_crisp at render size: on #fd5a1e the raw file scores 0.000, the dark file
-  // 0.000 and a black silhouette 1.000 - and on charcoal that silhouette scores 0.000, where the raw
-  // and dark files both score 1.000. The two contexts want opposite art for this team, so it gets a
-  // THIRD file rather than a different one of the two: `logos/{id}_cap.png`, read only by the grid
-  // endcap through teamLogoCapUrl(). `art: 'cap'` is what selects it.
-  'mlb-137': { art: 'cap' },
+/**
+ * UNRULED ROWS WHOSE _dark FILE WAS REBUILT AFTER THE STUDY WAS SCORED, each with the date and cause.
+ *
+ * The study scored the files as they stood on 2026-09-04. 83 unruled `_dark` files postdate it (the
+ * 2026-09-07 rebuild and the 2026-09-08 `logo_conditioning.json` ruling), and for these seven the
+ * new file changes the answer. Joe's ruling, prompt 113 rev B: the table describes the files that
+ * EXIST, so the seven are kept as regenerated and declared here rather than pinned back. The test
+ * below still fails on any undeclared drift, and on a declared row that stops differing from the
+ * study - reverting one means deleting its entry, which is the point.
+ *
+ * THE TWO ENTRIES THAT USED TO LIVE HERE ARE GONE FOR GOOD REASONS. `nba-PHI` (prompt 68) is ruled,
+ * so it left the study match; on its flat band raw scores 0.599 against dark's 0.005 and the build
+ * chooses raw by itself. `mlb-137` (prompt 69, `art: 'cap'`) is produced by the build's own
+ * CAP_ART_OVERRIDES now, and the ruled pin below holds it.
+ */
+const FILE_CHANGED = {
+  '197': { tint: 0.72, art: 'raw' },   // Oklahoma St: 2026-09-08, skip_derive: _dark is now a byte copy of raw
+  '2447': { tint: 1.0, art: 'dark' },   // Nicholls: 2026-09-07 20:29, _dark rebuilt
+  '2464': { tint: 1.0, art: 'dark' },   // N Arizona: 2026-09-07 20:29, _dark rebuilt
+  '256': { tint: 0.72, art: 'dark' },   // James Madison: 2026-09-07 20:29, _dark rebuilt
+  '2627': { tint: 1.0, art: 'dark' },   // Tarleton St: 2026-09-07 20:29, _dark rebuilt
+  '2655': { tint: 0.72, art: 'dark' },   // Tulane: 2026-09-07 20:29, _dark rebuilt
+  '326': { tint: 1.0, art: 'dark' },   // Texas St: 2026-09-07 20:29, _dark rebuilt
 };
 
-test('the shipped table matches the study field for field on tint and art', () => {
-  let flatRaw = 0, flatDark = 0, tintRaw = 0, tintDark = 0;
+test('the shipped table matches the study field for field on tint and art - the UNRULED rows', () => {
+  // RESTRICTED TO UNRULED IDS (prompt 113). The study scored every team on band_for()'s band; a
+  // ruled team is scored on Joe's band now, and for 80 of the 124 that is a different colour, so the
+  // study cannot describe those rows any more. It still describes the other 186 exactly, seven
+  // declared file changes aside.
+  let flatRaw = 0, flatDark = 0, tintRaw = 0, tintDark = 0, checked = 0;
   for (const row of fixture.teams) {
+    if (RULED.has(row.id)) continue;
     const mine = table.teams[row.id];
     assert.ok(mine, `${row.id} missing from the shipped table`);
-    const over = OVERRIDES[row.id] || {};
-    assert.equal(mine.tint, 'tint' in over ? over.tint : row.tint, `${row.id} tint`);
-    assert.equal(mine.art, 'art' in over ? over.art : row.art, `${row.id} art`);
-    for (const [field, want] of Object.entries(over)) {
-      assert.notEqual(row[field], want,
-        `${row.id} ${field} is declared an override but matches the study - delete the entry`);
+    const want = FILE_CHANGED[row.id] || row;
+    if (FILE_CHANGED[row.id]) {
+      assert.ok(row.tint !== want.tint || row.art !== want.art,
+        `${row.id} is declared file-changed but matches the study - delete the entry`);
     }
-    if (row.tint === 1 && row.art === 'raw') flatRaw++;
-    else if (row.tint === 1) flatDark++;
-    else if (row.art === 'raw') tintRaw++;
+    assert.equal(mine.tint, want.tint, `${row.id} tint`);
+    assert.equal(mine.art, want.art, `${row.id} art`);
+    checked++;
+    if (mine.tint === 1 && mine.art === 'raw') flatRaw++;
+    else if (mine.tint === 1) flatDark++;
+    else if (mine.art === 'raw') tintRaw++;
     else tintDark++;
   }
+  assert.equal(checked, 186, 'the study describes 186 unruled teams');
+  // 105 / 14 / 58 / 9 in the study; the seven file changes move it to this.
   assert.deepEqual({ flatRaw, flatDark, tintRaw, tintDark },
-                   { flatRaw: 170, flatDark: 28, tintRaw: 84, tintDark: 25 });
+                   { flatRaw: 104, flatDark: 17, tintRaw: 54, tintDark: 11 });
+});
+
+test('every RULED row is scored on its own flat band: tint 1, and the art the build chose (prompt 113)', () => {
+  // The ruled rows are pinned against the regenerated table's own counts, not the study. tint is
+  // 1.0 for all of them because capFor() paints a ruled band untinted and the build now writes what
+  // it paints. The art split is what scoring on the RULED band gave: 13 raw->dark and 25 dark->raw
+  // against the study (24 of them ties between byte-identical files, plus the Rockets).
+  let raw = 0, dark = 0, cap = 0, checked = 0;
+  for (const id of RULED) {
+    const mine = table.teams[id];
+    assert.ok(mine, `${id} is ruled but has no cap-table row`);
+    assert.equal(mine.tint, 1, `${id} tint`);
+    if (mine.art === 'raw') raw++; else if (mine.art === 'dark') dark++; else cap++;
+    checked++;
+  }
+  assert.equal(checked, 124);
+  assert.deepEqual({ raw, dark, cap }, { raw: 106, dark: 17, cap: 1 });
+  // The one 'cap' is the Giants (prompt 69): black silhouette on the orange band, written by the
+  // build's CAP_ART_OVERRIDES rather than by hand.
+  assert.equal(table.teams['mlb-137'].art, 'cap');
+  // The two Joe reported (prompt 112): raw scored 0.000 on brown and navy, dark 1.000.
+  assert.equal(table.teams['mlb-135'].art, 'dark');
+  assert.equal(table.teams['nfl-14'].art, 'dark');
 });
 
 test('the two cap surfaces are the band itself and its 0.72 tint, and they differ', () => {
@@ -214,10 +251,17 @@ const colours = JSON.parse(
  * including the JS/Python agreement that bf5a297 broke. Routing it through capFor() would let the
  * pro override rewrite the study's counts, which would be measuring the override, not the rule.
  * `gridcolors.test.mjs` pins the override; this file pins what it overrides.
+ *
+ * AND IT READS THE STUDY'S OWN tint AND art, NOT THE LIVE TABLE'S (prompt 113 rev B). The table is
+ * regenerated against Joe's ruled bands now, which moved 46 of the 307 study teams' tint - a later
+ * ruling of exactly the kind this comment says must not rewrite the study's counts. The frozen
+ * fixture carries each team's tint and art as scored on 2026-09-04, so the 191/116, 56/20/33 and 26
+ * below stay what they were measured to be, whatever the live table does.
  */
+const studyRow = new Map(fixture.teams.map((r) => [r.id, r]));
 function renderInk(id) {
   const c = colours[id];
-  const row = table.teams[id];
+  const row = studyRow.get(id);
   const cap = row ? { tint: row.tint, art: row.art } : { tint: CAP_TINT, art: 'raw' };
   const b = bandFor(c.primary, c.secondary);
   const surface = cap.tint === 1 ? b.band : tint(b.band, CAP_TINT);

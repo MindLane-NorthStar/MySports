@@ -424,10 +424,12 @@ export function capFor(teamId) {
   // The usual objection to mixing cap levels does not apply: a grid renders one sport, every pro
   // team is ruled and no college team is, so no single view mixes a tinted cap with an untinted one.
   //
-  // `art` IS LEFT AS THE TABLE MEASURED IT, and that is a known loose end rather than an oversight:
-  // 16 of the 42 carry `art: 'dark'`, chosen because the dark lockup read better on the TINTED
-  // surface, and the surface under them has just changed. Re-measuring it needs the pixels at render
-  // size (scripts/build_cap_table.py), which is not a runtime rule and not this change.
+  // `art` IS LEFT AS THE TABLE MEASURED IT - and since prompt 113 the table measures it on THIS
+  // band. The loose end that stood here (rows scored on a surface that prompt 66 had moved from
+  // under them) is closed by register §58: scripts/build_cap_table.py scores a ruled team's two
+  // files on the flat band from grid_colors_pro.json, which is what this function paints, and 38
+  // ruled rows changed art when it first did. It is still not a runtime rule - the measurement
+  // needs the pixels at render size - which is why this function forces only the tint.
   return gridColourFor(teamId) ? { tint: 1, art: cap.art } : cap;
 }
 

@@ -21,8 +21,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402
 
+from unittest import mock  # noqa: E402
+
+import scripts.build_cap_table as bct  # noqa: E402
 from scripts.build_cap_table import (  # noqa: E402
-    CAP_TINT, DARK_MARGIN, FLAT_MIN, band_for, decide, hex2rgb, ink_for, tint,
+    CAP_TINT, DARK_MARGIN, FLAT_MIN, band_for, decide, decide_ruled, hex2rgb, ink_for, row_for, tint,
 )
 
 
@@ -92,6 +95,68 @@ class DarkMargin(unittest.TestCase):
         self.assertEqual(DARK_MARGIN, 0.05)
         self.assertEqual(FLAT_MIN, 0.85)
         self.assertEqual(CAP_TINT, 0.72)
+
+
+class RuledTeamsAreScoredOnTheirOwnBand(unittest.TestCase):
+    """Prompt 113 (Joe's ruling, 2026-09-22): a RULED team is scored on the flat band it paints,
+    tint 1.0; an UNRULED team keeps band_for() + decide(). Same files, two answers, and the answer
+    must depend on WHICH branch row_for() takes - revert the ruled branch and these go red."""
+
+    def _files(self, d, raw_hex, dark_hex=None):
+        raw = square(Path(d) / "t.png", raw_hex)
+        if dark_hex:
+            square(Path(d) / "t_dark.png", dark_hex)
+        return raw
+
+    def test_a_ruled_team_takes_the_dark_file_its_ruled_band_needs(self):
+        # raw is WHITE; the ruled band is white, so raw scores 0.0 there and the charcoal dark 1.0.
+        # band_for() on the team's colours would give a navy band, where raw is perfect and dark is
+        # refused - the exact shape of the Padres and the Rams (prompt 112).
+        with tempfile.TemporaryDirectory() as d:
+            self._files(d, "#ffffff", "#101214")
+            ruled = row_for("t", Path(d), {"t": "#ffffff"}, "#1b3a6b", None)
+            unruled = row_for("t", Path(d), {}, "#1b3a6b", None)
+        self.assertEqual(ruled, {"tint": 1.0, "art": "dark", "edge_crisp": 1.0})
+        self.assertEqual(unruled["art"], "raw")
+        self.assertEqual(unruled["tint"], 1.0)
+
+    def test_a_ruled_team_is_never_tinted_even_when_nothing_reads_on_its_band(self):
+        # decide() would fall to 0.72 here (best flat score 0.0 < 0.85); the ruled branch writes 1.0
+        # because capFor() paints a ruled band untinted whatever the table says.
+        with tempfile.TemporaryDirectory() as d:
+            self._files(d, "#ffffff")
+            got = row_for("t", Path(d), {"t": "#ffffff"}, "#1b3a6b", None)
+            level, art, crisp = decide_ruled(Path(d) / "t.png", None, "#ffffff")
+        self.assertEqual(got["tint"], 1.0)
+        self.assertEqual(got["art"], "raw")
+        self.assertEqual(got["edge_crisp"], 0.0)
+        self.assertEqual((level, art, crisp), (1.0, "raw", 0.0))
+
+    def test_an_unruled_team_still_takes_the_two_level_rule(self):
+        with tempfile.TemporaryDirectory() as d:
+            self._files(d, "#1b3a6b")
+            got = row_for("t", Path(d), {}, "#1b3a6b", None)
+        self.assertEqual(got["tint"], CAP_TINT, "a logo in the band's own colour falls to the tint")
+        self.assertEqual(got["art"], "raw")
+
+    def test_the_cap_override_is_applied_by_the_build_and_scored_on_the_ruled_band(self):
+        # The Giants' ruling (prompt 69): a third file the measurement cannot choose. With the
+        # override the row says 'cap' and carries the _cap file's own score on the ruled band.
+        with tempfile.TemporaryDirectory() as d:
+            self._files(d, "#fd5a1e", "#fd5a1e")          # both files vanish on the orange band
+            square(Path(d) / "t_cap.png", "#000000")     # the silhouette reads on it
+            with mock.patch.dict(bct.CAP_ART_OVERRIDES, {"t": "cap"}):
+                got = row_for("t", Path(d), {"t": "#fd5a1e"}, "#fd5a1e", "#000000")
+            plain = row_for("t", Path(d), {"t": "#fd5a1e"}, "#fd5a1e", "#000000")
+        self.assertEqual(got, {"tint": 1.0, "art": "cap", "edge_crisp": 1.0})
+        self.assertEqual(plain["art"], "raw", "without the override the margin rule ties to raw")
+
+    def test_the_shipped_override_names_the_giants_and_nothing_else(self):
+        self.assertEqual(bct.CAP_ART_OVERRIDES, {"mlb-137": "cap"})
+
+    def test_a_missing_ruled_file_means_nobody_is_ruled(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(bct.ruled_bands(Path(d) / "absent.json"), {})
 
 
 class TintPort(unittest.TestCase):
