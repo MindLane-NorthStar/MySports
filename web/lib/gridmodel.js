@@ -350,7 +350,8 @@ export function bandFor(primaryHex, secondaryHex, teamId = null) {
  * is the band on some teams and tint(band, 0.72) on others - the same question has to be answerable
  * for whichever of the two a team actually got. This is that function, and on `surface === band` it
  * reproduces bandFor().ink exactly. `tests/test_cap_table.py` pins that over every real colour pair
- * and cap-table.test.mjs pins it again here; if the two ever drift, the name row and the cap stop
+ * and web/test/captable.test.mjs pins it again here (gridcolors.test.mjs reads the table too; there
+ * is no `cap-table.test.mjs`, and that misnaming misled prompt 112); if the two ever drift, the name row and the cap stop
  * agreeing about the text colour and a block renders unreadable ink on a surface that measured fine.
  *
  * Of the team's two colours take the one with the higher ratio against the surface; use it when that

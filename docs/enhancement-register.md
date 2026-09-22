@@ -4711,7 +4711,67 @@ is weaker than every other row and the README says so in those terms:** there is
 the hashes prove the container→laptop transfer and nothing about Project→container fidelity. The
 count is 116 covering 01–111, counted from the directory; 39 and 42 remain the only gaps; and the
 directory count also corrected a smaller stale claim in passing — six numbers carry more than one
-file (48 has since prompt 93), not five. Rule 32 sweep for the brief count, the covered range and the
+file (48 has since prompt 93), not five. *(Prompt 112: `docs/prompts/README.md` "Duplicate numbers"
+owns that count and says five, excluding `13-14-combined` with its reason; six is the same arithmetic
+with 13 counted. The handoff now points at the README instead of carrying a number.)* Rule 32 sweep for the brief count, the covered range and the
 register range: `git grep` over the whole repo excluding `docs/prompts/`, `handoff-archive.md` and
 `Claude outputs` found `CLAUDE.md:23` and `:26`, `handoff-status.md:13` and `:26`, and nothing in the
 rendering contracts or the casebook; register entries quoting old counts are history and stand.
+
+## 57. THE DARK-BAND LOGO CLASS IS A SURFACE ERROR, NOT A RIM-MEASURE BLIND SPOT — 2026-09-22, prompt 112
+
+**Numbered by count:** §1–§56 each appear exactly once and there was no §57.
+
+**A diagnosis, not a ruling. Nothing that paints a block changed, and the ruling is Joe's.**
+
+**What Joe saw, 2026-09-22, on the device:** the Padres' mark brown on brown and the Rams' mark dark
+on dark on the grid, both illegible.
+
+**Where the grid's art comes from.** `capFor()` in `web/lib/gridmodel.js` reads `web/lib/cap-table.json`
+and `MobileGrid.js`'s `capArt()` maps the row's `art` to the raw, `_dark` or `_cap` file. Neither path
+the 2026-09-22 handoff proposed is involved: `team_dark_variants()` builds `_dark` files for charcoal
+contexts and does not choose what a block paints, and `team_cap_art()` is reached by exactly one
+team's `art: 'cap'`. Verified in the component, not carried from the brief.
+
+**What `edge_crisp` measures, and what it is silent about.** `scripts/build_cap_table.py:17-20`: ink
+within 2 device px of a non-ink pixel, the share of it clearing 1.5:1 luminance against the surface.
+It says nothing about the interior mass, and `:24` makes a raw score of 1.000 unbeatable by the dark
+file's 0.05 margin. Both statements are true. **Neither is why the Padres and the Rams are illegible.**
+
+**The measurement, and it contradicts the brief's mechanism.** The table scores every logo against
+`band_for(primary, secondary)["band"]`, the rule's band from the database colours; prompt 66 then made
+every ruled team paint the band Joe chose in `data/grid_colors_pro.json`. For **80 of the 124 ruled
+teams that is a different colour**, and the table was never re-measured. The Padres' rule band is
+gold `#ffc425` — the raw file genuinely scores 1.000 there; the ruled band is brown `#2f241d`, where it
+scores **0.000** and the `_dark` file 1.000. The Rams: rule band gold `#ffd100`, ruled navy `#003594`,
+raw **0.000**, dark 1.000. On the painted band the table's number reproduces for **38 of 124** ruled
+rows (98 of 124 on the rule's surface, the other 26 unexplained by this run), and the script's own
+margin rule, run on the painted band, would flip **13 of the 94 raw-art teams** to `_dark`: Dodgers,
+Padres, Rays, Reds, Royals, Twins, Yankees, Jazz, Chargers, Rams, Giants, Jets, Lightning. The
+pictures agree: at 4× the Padres' and Rams' raw marks are ghost outlines and their `_dark` files read.
+
+**The rim-only class exists too, and is smaller.** Cowork's proposed interior figures (the share of
+all ink pixels clearing 1.5:1; the median ratio of the ink mass) rank the 94 raw-art teams with the
+Rams first-worst and the Padres fourth — consistent with, not explanatory of, the surface error. The
+teams only an interior measure catches have a bright rim and a dark body: Colts (rim 1.000, interior
+29%), Guardians (1.000, 35%), Red Sox (1.000, 39%), Sabres, Brewers, Commanders, Braves, Pacers; for
+those the `_dark` file scores the same, and the Blues and Flames reach neither 50% on either file, so
+a swap cannot help them. The figures are a proposal, not a decided metric.
+
+**On the "adjacent, not identical" loose end.** `capFor()`'s comment says 16 of 42 dark-art teams
+were scored on a tinted surface that moved. The measurement says the surface moved under every ruled
+row — flat or tinted — because the band itself moved, so the two are one mechanism at different
+scopes. Cowork's brief asked for them not to be conflated; on the evidence this entry conflates them
+deliberately and says so.
+
+**What the tests pin, reported and unchanged.** `tests/test_cap_table.py` pins the table's shape, the
+margin constant and the two-level rule on synthetic logos — nothing an interior measure would
+contradict. `web/test/captable.test.mjs` pins the shipped table field for field against the study
+fixture with two named overrides and the 170/28/84/25 counts, and `gridcolors.test.mjs` pins that
+`capFor().art` is the table's `art` for every ruled team; **a regeneration against the ruled band
+would move both**, and that is the cost of option (b) below, not a reason against it.
+
+**No fix was chosen.** Queue item 11 lays out the four shapes — a per-team re-ruling, a regeneration
+against the ruled band, an interior measure in the build, new art or a band change — and Joe rules
+from `assets/p112-dark-band-logos/`'s pictures. Nothing in `build_cap_table.py`, `cap-table.json`,
+`grid_colors_pro.json`, `logo_conditioning.json`, the tests or any logo file was touched.

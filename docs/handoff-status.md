@@ -10,7 +10,7 @@ sections, and the older measurement records. **This file stays the authority for
 repo state, gate floors, open items; since prompt 89 the working rules are `CLAUDE.md`'s alone. Read
 the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§56 — this said §1–§39 until prompt 99 corrected it and §1–§53 until prompt 111 did, counted both times; all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§57 — this said §1–§39 until prompt 99 corrected it and §1–§53 until prompt 111 did, counted both times; all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -23,9 +23,9 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **116 briefs, covering 01–111, counted 2026-09-22 by prompt 111
-(107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - six numbers (13, 23, 26, 43, 48, 86) carry more than one file, which is why the file
-count runs ahead of the highest number (this said five until prompt 111 counted the directory; 48 has carried two since prompt 93). **39 and 42 are the
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **117 briefs, covering 01–112, counted 2026-09-22 by prompt 112
+(116 after prompt 111; 107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - **`docs/prompts/README.md` "Duplicate numbers" owns this count**: five numbers as the README counts them (23, 26, 43 and 48 two each, 86 three; `13-14-combined` has its own row and is deliberately not counted under 13), six if it is — which is why the file
+count runs ahead of the highest number. (Prompt 111 wrote "six" here after counting the directory; the old "five" it replaced was (13, 23, 26, 43, 86), wrong in both directions — it counted 13 and omitted 48, which has carried two since prompt 93 — and prompt 112 pointed this line at the README rather than keep a second copy.) **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
 reconstructed and no placeholder was written for either. Prompts are the as-run record of why a
@@ -66,6 +66,12 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > appended a `Re-measured … prompt NN` line beneath it without touching the sentence above them, so
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
+
+**Re-measured 2026-09-22, prompt 112 — no count moved; documents only, plus one comment.** Written after
+the last gate run: pytest 626 + 1 skipped, test:unit 631, smoke 33/33, qa-shots 121/121, geometry all hard
+stops. Block A measured the dark-band logo class and found the cap table scored against the rule's band,
+not the ruled band the block paints (register §57, queue item 11); nothing that paints a block changed.
+**NOT PUSHED** — one commit ahead of `origin/main`; Joe authorizes.
 
 **Re-measured 2026-09-22, prompt 111 — no count moved; documents only, and nine briefs filed.** Written after
 the last gate run: pytest 626 + 1 skipped, test:unit 631, smoke 33/33, qa-shots 121/121, geometry all hard

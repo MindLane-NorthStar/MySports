@@ -101,6 +101,14 @@ days) rather than typed.
 
 **Size.** Large, and mostly decisions.
 
+## 8. *(retired — closed, not missing)*
+
+Two entries carried this number and both were closed on the day they were taken, which is this
+file's convention: `3ebc4d0` filed *"Building the schedule out to April 2027"* as 8 and prompt 88
+(`8f3b3c1`) moved it — it is item 7 above; `09dcf72` filed *"The working rules exist in two copies"*
+as 8 and prompt 89 (`44d7d7c`) closed it with register §38, which says so in its own text. The number
+is retired rather than reused. Verified by `git log -S'## 8.' -- docs/queue.md` (prompt 112).
+
 ## 9. Split the `refresh` job
 
 **Numbered 9, not 8:** "queue item 8" already names the working-rules entry that register §38 closed and
@@ -187,3 +195,59 @@ read is correct — so this is a cost-and-tidiness change, not a fix.
 `indexStandings`, and `web/test/restcap.test.mjs`, whose `standingsFor` assertion pins the paged read
 and would be rewritten to pin the view. **Size:** one migration, one query, one test, an afternoon.
 **A description, not an approved plan.**
+
+## 11. The grid endcap paints a logo that was scored against a band it no longer paints
+
+**What.** Joe, on the device, 2026-09-22: on the GRID the Padres mark renders brown on brown and the
+Rams mark dark on dark, both illegible. **Measured (prompt 112, `assets/p112-dark-band-logos/`,
+untracked): the cause is not the one the handoff or the brief proposed.** The grid's endcap art comes
+from `capFor()` (`web/lib/gridmodel.js`) reading `web/lib/cap-table.json`, and `MobileGrid.js`
+`capArt()` maps the row's `art` to the raw file, the `_dark` file or the `_cap` file — not from
+`logo_conditioning.json`'s `team_dark_variants()` (a charcoal-context tool) and not from
+`team_cap_art()` (reached by exactly one team's `art: 'cap'`). Those two are ruled out; do not
+re-tread them.
+
+**The table's score was taken on the wrong surface.** `scripts/build_cap_table.py` scores every logo
+against `band_for(primary, secondary)["band"]` — the RULE's band from the database colours. Prompt
+66 then made every ruled team paint the band Joe chose in `data/grid_colors_pro.json`, and for
+**80 of the 124 ruled teams that band is a different colour**. The Padres' rule band is gold
+`#ffc425`, where the brown-and-gold raw file scores `edge_crisp` 1.000; Joe's ruled band is brown
+`#2f241d`, where the same file scores **0.000** and the `_dark` file 1.000. The Rams: rule band gold
+`#ffd100` (raw 1.000); ruled navy `#003594` (raw **0.000**, dark 1.000). The table's 1.000 was never
+a rim-versus-interior artefact — it was a true score on a band the block stopped painting. Re-run on
+the painted band, the table's `edge_crisp` reproduces for only **38 of 124** ruled rows (98 of 124 on
+the rule's own surface), and the script's own dark-margin rule would flip **13 of the 94 raw-art
+teams to `_dark`** — Dodgers, Padres, Rays, Reds, Royals, Twins, Yankees, Jazz, Chargers, Rams,
+Giants, Jets, Lightning. The "1.000 locks out the dark file" arithmetic is true and is not what
+happened here.
+
+**A second, smaller class is real and the instrument cannot see it.** `edge_crisp` measures the
+2-device-px outer rim at 1.5:1 (`build_cap_table.py:17-20`) and says nothing about the interior
+mass. Cowork's proposed figures — the share of ALL ink pixels clearing 1.5:1, and the median ratio
+of the ink mass — rank the 94 raw-art teams with the Rams 1st-worst and the Padres 4th, but those two
+are explained by the surface error above. The teams the rim measure misses are the ones with a bright
+rim and a dark body on a dark band: Colts (`edge_crisp` 1.000, interior 29%), Guardians (1.000, 35%),
+Red Sox (1.000, 39%), Sabres, Brewers, Commanders, Braves, Pacers — and for those, **the `_dark` file
+scores the same interior**, so a file swap does not help; the Blues and the Flames reach neither 50%
+on either file. Those need new art or a band change. The figures are a proposal, not a decided metric.
+
+**This is the loose end `gridmodel.js` `capFor()` already names, at its true size.** That comment
+says 16 of 42 dark-art teams were scored against a *tinted* surface that prompt 66 changed. The
+measurement says the surface moved under every ruled row, tinted or flat, because the band itself
+moved — same mechanism, wider scope. Cowork's brief asked that the two not be conflated; on the
+evidence they are one thing.
+
+**Why not yet.** The art a ruled team paints is Joe's ruling (prompts 66 and 69, register §21-era).
+Every fix is a re-ruling he makes by eye from the pictures: (a) a per-team re-ruling of `art` for
+the 13; (b) regenerating the cap table against the RULED band — one flag on `build_cap_table.py` to
+read `grid_colors_pro.json` — which also changes `web/test/captable.test.mjs`'s study-match test and
+its 170/28/84/25 counts, and `gridcolors.test.mjs`'s "the cap ART is left as the cap table measured
+it"; (c) a second, interior measure added to the table build for the rim-only class; (d) new art or
+a band change for the teams neither file serves. **None of these is chosen.** `tests/test_cap_table.py`
+pins only the table's shape and the margin constant, and would not object to any of them.
+
+**Where it starts.** `scripts/build_cap_table.py:96-111` (`band_for`) and `:169-190` (`decide`),
+`web/lib/gridmodel.js` `capFor()` and its prompt-66 comment, `web/components/MobileGrid.js:691`
+(`capArt`), `data/grid_colors_pro.json`, `web/lib/cap-table.json`, and the three tests named above.
+**Size.** Small once ruled — a flag, a regeneration, a test update — but the ruling is per team and
+by eye. **A description of a problem, not an approved plan.**
