@@ -112,7 +112,7 @@ for (const z of [1, 2.5, 0.6]) {
 // the week grid's primary guard: if the two differ, the week path is handing MobileGrid different
 // input, and that is the bug.
 console.log('');
-console.log('DAY / WEEK GEOMETRY EQUALITY - immune to drift: both sides see the same standings');
+console.log('DAY / WEEK GEOMETRY EQUALITY - both sides must READ the same standings; a truncated read is a different input (prompt 108)');
 console.log('');
 
 const gridFor = (day) => page.evaluate((dd) => {
