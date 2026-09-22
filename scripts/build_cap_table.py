@@ -82,13 +82,31 @@ RULED_PATH = ROOT / "data" / "grid_colors_pro.json"   # Joe's per-team bands (pr
 # 83 unruled _dark files postdate the study; these seven are the ones where the new file changes the
 # answer. A declared row that stops differing from the study fails the acceptance - delete its entry.
 FILE_CHANGED_SINCE_STUDY = {
-    "197": {"tint": 0.72, "art": "raw"},   # Oklahoma St: 2026-09-08, skip_derive: _dark is now a byte copy of raw
-    "2447": {"tint": 1.0, "art": "dark"},   # Nicholls: 2026-09-07 20:29, _dark rebuilt
-    "2464": {"tint": 1.0, "art": "dark"},   # N Arizona: 2026-09-07 20:29, _dark rebuilt
     "256": {"tint": 0.72, "art": "dark"},   # James Madison: 2026-09-07 20:29, _dark rebuilt
-    "2627": {"tint": 1.0, "art": "dark"},   # Tarleton St: 2026-09-07 20:29, _dark rebuilt
-    "2655": {"tint": 0.72, "art": "dark"},   # Tulane: 2026-09-07 20:29, _dark rebuilt
     "326": {"tint": 1.0, "art": "dark"},   # Texas St: 2026-09-07 20:29, _dark rebuilt
+    # 197, 2447, 2464, 2627 and 2655 stood here in rev B; Joe's review (rev C) pinned them back to the
+    # pre-113 rendering, which is what the study recorded, so they match the study again and are
+    # declared ONCE, in REVIEW_PINS below, for the reason that actually holds them.
+}
+
+# JOE'S REVIEW PINS (prompt 113 rev C, 2026-09-22). Joe reviewed the 21 before/after pairs the
+# regeneration produced, at 4x, and kept the OLD rendering for six rows. These are rulings from the
+# pictures, not scores: the build applies them AFTER scoring and never re-derives them. The
+# edge_crisp written is the pinned art's own score on the pinned surface, so the number stays honest.
+# --check requires every pin to still be load-bearing - the unpinned score must differ from it - so a
+# pin that stops changing anything fails the acceptance; delete its entry then.
+REVIEW_PINS = {
+    # Joe's review of the p113 sheets, 2026-09-22: keeps the pre-113 rendering.
+    # Oklahoma St: raw and _dark are byte-identical (skip_derive, 2026-09-08), so what this pin keeps
+    # is the FLAT band the left panel showed - the art label is the study's, the pixels are the tint's.
+    "197": {"tint": 1.0, "art": "dark"},
+    "2447": {"tint": 0.72, "art": "raw"},   # Nicholls
+    "2464": {"tint": 0.72, "art": "raw"},   # N Arizona
+    "2627": {"tint": 1.0, "art": "raw"},    # Tarleton St
+    "2655": {"tint": 0.72, "art": "raw"},   # Tulane
+    # The Chargers are RULED: capFor() paints the flat band whatever the table says, so the pin is
+    # tint 1.0 and not the pre-113 row's 0.72 - that 0.72 never painted. Only the art is the ruling.
+    "nfl-24": {"tint": 1.0, "art": "raw"},
 }
 
 CAP_ART_OVERRIDES = {
@@ -259,10 +277,11 @@ def decide_ruled(raw_path: Path, dark_path: Path | None, band_hex: str):
     return 1.0, art, float(d if art == "dark" else r)
 
 
-def row_for(team_id: str, logo_dir: Path, ruled: dict, primary=None, secondary=None):
+def row_for(team_id: str, logo_dir: Path, ruled: dict, primary=None, secondary=None, apply_pins=True):
     """One team's table row, or None when it has no usable art. The ruled/unruled split lives HERE
     and nowhere else: a ruled team is scored on its ruled band by decide_ruled(); an unruled one on
-    band_for()'s band by decide(). CAP_ART_OVERRIDES is applied last."""
+    band_for()'s band by decide(). CAP_ART_OVERRIDES is applied next, then REVIEW_PINS - unless
+    `apply_pins` is False, which is how --check learns whether a pin is still load-bearing."""
     raw = logo_dir / ("%s.png" % team_id)
     if not raw.exists():
         return None
@@ -284,6 +303,14 @@ def row_for(team_id: str, logo_dir: Path, ruled: dict, primary=None, secondary=N
             art, crisp = "cap", float(s if s is not None else crisp)
         else:
             print("WARNING: %s is ruled art 'cap' but %s is missing - scored art kept" % (team_id, cap))
+    pin = REVIEW_PINS.get(team_id) if apply_pins else None
+    if pin is not None:
+        level, art = pin["tint"], pin["art"]
+        f = logo_dir / ("%s.png" % team_id if art == "raw" else "%s_%s.png" % (team_id, art))
+        surface_hex = ruled.get(team_id) or band_for(primary, secondary)["band"]
+        surface = hex2rgb(surface_hex) if level == 1.0 else tint(hex2rgb(surface_hex), CAP_TINT)
+        s = measure(load_logo(f), surface) if f.exists() else None
+        crisp = float(s) if s is not None else crisp
     return {"tint": level, "art": art, "edge_crisp": round(crisp, 3)}
 
 
@@ -380,6 +407,20 @@ def main(argv=None) -> int:
         print("(study rows for ruled teams excluded from the acceptance: %d of %d remain)"
               % (len(fix), len(fixraw)))
         bad = []
+        # Every REVIEW_PIN must still change something: score the team WITHOUT the pin and require
+        # the answer to differ. A pin the measurement now agrees with is dead weight, and the
+        # acceptance says so rather than letting it sit.
+        by_id = {t["id"]: t for t in teams}
+        for tid, pin in sorted(REVIEW_PINS.items()):
+            t = by_id.get(tid)
+            free = row_for(tid, logo_dir, ruled, t["primary"], t["secondary"], apply_pins=False) if t else None
+            if free is None:
+                bad.append("%s: pinned but has no usable art" % tid)
+            elif (free["tint"], free["art"]) == (pin["tint"], pin["art"]):
+                bad.append("%s: REVIEW_PIN is no longer load-bearing - the build chooses it unaided; delete the entry" % tid)
+            mine = out.get(tid)
+            if mine and (mine["tint"], mine["art"]) != (pin["tint"], pin["art"]):
+                bad.append("%s: generated tint=%.2f art=%s does not carry its REVIEW_PIN" % (tid, mine["tint"], mine["art"]))
         fcounts = {}
         for tid, row in sorted(fix.items()):
             mine = out.get(tid)
@@ -399,10 +440,13 @@ def main(argv=None) -> int:
         # Counts are restricted to the fixture's ids. The generated table also carries teams the
         # study left out (they have art but no 2026 game rows), which must not be counted against
         # the ruling's 170 / 28 / 84 / 25.
-        # The UNRULED rows as generated today: 104 / 17 / 54 / 11. The study said 105 / 14 / 58 / 9
-        # over the same 186 (and 170 / 28 / 84 / 25 over all 307 until prompt 113 took the 121 ruled
-        # rows out of the acceptance); the seven FILE_CHANGED_SINCE_STUDY rows move the counts.
-        want = {(1.0, "raw"): 104, (1.0, "dark"): 17, (0.72, "raw"): 54, (0.72, "dark"): 11}
+        # The UNRULED rows as generated today: 105 / 15 / 56 / 10 (Joe's review pins, prompt 113 rev
+        # C). Rev B had 104 / 17 / 54 / 11 with seven file-changed rows; the five pins move 197 back
+        # from 0.72-raw to 1.0-dark (+1 flat dark, -1 tint raw), 2447 and 2464 from 1.0-dark to
+        # 0.72-raw (-2 flat dark, +2 tint raw), 2627 from 1.0-dark to 1.0-raw (-1 flat dark, +1 flat
+        # raw) and 2655 from 0.72-dark to 0.72-raw (-1 tint dark, +1 tint raw). The study said
+        # 105 / 14 / 58 / 9 over the same 186.
+        want = {(1.0, "raw"): 105, (1.0, "dark"): 15, (0.72, "raw"): 56, (0.72, "dark"): 10}
         for k in sorted(want, key=lambda x: (-x[0], x[1])):
             got = fcounts.get(k, 0)
             ok = "OK" if got == want[k] else "MISMATCH (want %d)" % want[k]

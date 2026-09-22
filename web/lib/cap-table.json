@@ -1,5 +1,5 @@
 {
- "_generated": "2026-09-22T19:08:36+00:00",
+ "_generated": "2026-09-22T19:57:10+00:00",
  "_rule": {
   "render_px": 138,
   "lum_crisp": 1.5,
@@ -140,9 +140,9 @@
    "edge_crisp": 0.96
   },
   "197": {
-   "tint": 0.72,
-   "art": "raw",
-   "edge_crisp": 0.876
+   "tint": 1.0,
+   "art": "dark",
+   "edge_crisp": 0.0
   },
   "2": {
    "tint": 1.0,
@@ -445,9 +445,9 @@
    "edge_crisp": 1.0
   },
   "2447": {
-   "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 0.938
+   "tint": 0.72,
+   "art": "raw",
+   "edge_crisp": 0.236
   },
   "2448": {
    "tint": 0.72,
@@ -480,9 +480,9 @@
    "edge_crisp": 0.945
   },
   "2464": {
-   "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 1.0
+   "tint": 0.72,
+   "art": "raw",
+   "edge_crisp": 0.571
   },
   "2466": {
    "tint": 0.72,
@@ -596,8 +596,8 @@
   },
   "2627": {
    "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 1.0
+   "art": "raw",
+   "edge_crisp": 0.94
   },
   "2628": {
    "tint": 1.0,
@@ -656,8 +656,8 @@
   },
   "2655": {
    "tint": 0.72,
-   "art": "dark",
-   "edge_crisp": 0.959
+   "art": "raw",
+   "edge_crisp": 0.743
   },
   "2678": {
    "tint": 0.72,
@@ -1321,8 +1321,8 @@
   },
   "nfl-24": {
    "tint": 1.0,
-   "art": "dark",
-   "edge_crisp": 1.0
+   "art": "raw",
+   "edge_crisp": 0.733
   },
   "nfl-25": {
    "tint": 1.0,

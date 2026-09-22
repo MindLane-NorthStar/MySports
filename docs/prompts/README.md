@@ -13,7 +13,7 @@ and they are not going to be found** — see "The two gaps" below.
 
 **UPDATED 2026-09-10 BY PROMPT 87: 91 briefs, covering 01–87 — 92 covering 01–88 since prompt 88,
 93 covering 01–89 since prompt 89, 94 covering 01–91 with 90 to follow since prompt 91, 95 covering
-01–91 since prompt 90, 96 covering 01–92 since prompt 92, 98 covering 01–93 since prompt 93, 99 covering 01–94 since prompt 94, 100 covering 01–95 since prompt 95, 101 covering 01–96 since prompt 96, 102 covering 01–97 since prompt 97, 103 covering 01–98 since prompt 98, 104 covering 01–99 since prompt 99, 105 covering 01–100 since prompt 100, 106 covering 01–101 since prompt 101, 107 covering 01–102 since prompt 102, 116 covering 01–111 since prompt 111, 117 covering 01–112 since prompt 112, 118 covering 01–113 since prompt 113 — and 39 and 42 are still the only permanent gaps.** **The count stood at 107 for eight prompts** (103–110, 2026-09-16 to 2026-09-22) because the briefs stopped reaching `Claude outputs\` after 102 and lived only in the Project; prompt 111 filed all nine, with the weaker provenance the table below states. The count above was a timestamp twice over: prompt 81 had filed itself without the
+01–91 since prompt 90, 96 covering 01–92 since prompt 92, 98 covering 01–93 since prompt 93, 99 covering 01–94 since prompt 94, 100 covering 01–95 since prompt 95, 101 covering 01–96 since prompt 96, 102 covering 01–97 since prompt 97, 103 covering 01–98 since prompt 98, 104 covering 01–99 since prompt 99, 105 covering 01–100 since prompt 100, 106 covering 01–101 since prompt 101, 107 covering 01–102 since prompt 102, 116 covering 01–111 since prompt 111, 117 covering 01–112 since prompt 112, 118 covering 01–113 since prompt 113, 120 covering 01–113 since prompt 113 rev C filed rev B and itself — and 39 and 42 are still the only permanent gaps.** **The count stood at 107 for eight prompts** (103–110, 2026-09-16 to 2026-09-22) because the briefs stopped reaching `Claude outputs\` after 102 and lived only in the Project; prompt 111 filed all nine, with the weaker provenance the table below states. The count above was a timestamp twice over: prompt 81 had filed itself without the
 count moving, and 61–80 and 82–87 were never filed at all. Prompt 87 copied those 28 files from
 `Claude outputs\` (see Provenance), and **86 carries three** — see "Duplicate numbers".
 
@@ -37,8 +37,8 @@ with `-superseded` in the name.
 
 ## What is here
 
-One hundred and eighteen briefs, `NN-slug.md` (this line said fifty-one until prompt 87, ninety-one until 88,
-ninety-two until 89, ninety-three until 91, ninety-four until 90, ninety-five until 92, ninety-six until 93, ninety-eight until 94, ninety-nine until 95, one hundred until 96, one hundred and one until 97, one hundred and two until 98, one hundred and three until 99, one hundred and four until 100, one hundred and five until 101, one hundred and six until 102, one hundred and seven until 111, one hundred and sixteen until 112, one hundred and seventeen until 113 — counted from the directory each time, not incremented). Numbers in **bold** carry
+One hundred and twenty briefs, `NN-slug.md` (this line said fifty-one until prompt 87, ninety-one until 88,
+ninety-two until 89, ninety-three until 91, ninety-four until 90, ninety-five until 92, ninety-six until 93, ninety-eight until 94, ninety-nine until 95, one hundred until 96, one hundred and one until 97, one hundred and two until 98, one hundred and three until 99, one hundred and four until 100, one hundred and five until 101, one hundred and six until 102, one hundred and seven until 111, one hundred and sixteen until 112, one hundred and seventeen until 113, one hundred and eighteen until 113 rev C — counted from the directory each time, not incremented). Numbers in **bold** carry
 more than one file or are otherwise not what the number alone suggests; everything else is one brief,
 one file.
 
@@ -163,7 +163,9 @@ one file.
 | 110 | `110-tablet-grid-band-and-gridindex.md` — *`69616fe`; filed by prompt 111* |
 | 111 | `111-handoff-corrections-and-prompt-archive.md` — *filed by the run it describes* |
 | 112 | `112-dark-band-logo-class.md` — *filed by the run it describes; its block A measurement contradicts the mechanism the brief states, and queue item 11 records what was measured* |
-| 113 | `113-cap-table-on-the-ruled-band.md` — *filed by the run it describes; the run stopped on seven unruled rows and a rev B ruling (Joe: keep them) finished it — rev B is not filed separately, its text is in register §58* |
+| **113** | `113-cap-table-on-the-ruled-band.md` — *filed by the run it describes; the run stopped on seven unruled rows* |
+| | `113-cap-table-on-the-ruled-band-rev-B.md` — *Joe's ruling on the seven (keep them) and three things the brief missed; filed by rev C, which found rev B unfiled* |
+| | `113-cap-table-on-the-ruled-band-rev-C.md` — *Joe's review of the 21 pairs: six pins; filed by the run it describes* |
 
 ## What is NOT here — the two gaps
 
@@ -180,8 +182,8 @@ a gap and a placeholder is not.
 
 ## Duplicate numbers
 
-Five numbers carry more than one file — 23, 26, 43 and 48 two each, 86 three — and each is a different
-situation (86 added by prompt 87, 48 by prompt 93; `13-14-combined-…` is the merged run of two numbers and
+Six numbers carry more than one file — 23, 26, 43 and 48 two each, 86 and 113 three — and each is a different
+situation (86 added by prompt 87, 48 by prompt 93, 113's two revisions by prompt 113 rev C; `13-14-combined-…` is the merged run of two numbers and
 has its own row, so it is not counted here):
 
 - **23** — two versions of one brief, ninety minutes apart on 2026-09-03. The later
@@ -260,7 +262,7 @@ only.
 | 101 | `Claude outputs\prompt-101-banner-pin-and-scroll-recovery.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`ba82cc55…34f4`, 13,371 bytes), LF |
 | 102 | `Claude outputs\prompt-102-close-device-confirmations.md` — copied by the run it describes with `shutil.copyfile`, byte-identical by `sha256` (`795359ce…709f`, 8,294 bytes), LF |
 | **103–111** | **NO SECOND COPY, and this row is weaker than every other row in this table.** `Claude outputs\` stops at prompt 102 (its newest brief is `prompt-102-close-device-confirmations.md`, verified 2026-09-22; the only later object there is `prompt-archive-delta.zip` from 2026-09-05, which holds 01–44 and none of these). The source is the Claude.ai Project document, transcribed through a Cowork session into the tree as untracked files; prompt 111 verified each by `sha256` and `stat` against Cowork's table — 103 `3a509237…` 6,176 bytes; 104 `ee21a52c…` 8,776; 105 `ba187750…` 6,103; 106 `39188566…` 8,171; 107 `0f8558a6…` 6,536; 108 `4b80a830…` 7,309; 109 `992efa62…` 11,251; 110 `0389b8d7…` 6,186; 111 `b67f0541…` 12,348 — all LF, each ending in a newline, none colliding with a tracked name. **Those hashes prove the container→laptop transfer was clean. They prove nothing about Project→container fidelity, because there is nothing to compare against.** Every other row here has a surviving second copy; these nine do not, and a reader should weight them accordingly |
-| 113 | typed into `docs/prompts/` by the run itself from the brief as delivered in the session, so it is the run's own transcription; rev B's continuation is recorded in register §58 rather than filed. No `Claude outputs\` copy — the same limitation as 103–112 |
+| 113, rev B, rev C | typed into `docs/prompts/` by the runs themselves from the briefs as delivered in the session, so they are the runs' own transcriptions (rev B filed by rev C, from the session text). No `Claude outputs\` copy — the same limitation as 103–112 |
 | 112 | written into `docs/prompts/` by Cowork before the run, as 88 was; no `Claude outputs\` copy exists, so the same limitation as the 103–111 row applies. Verified by the run: 13,403 bytes, `sha256` `a260938d…`, LF, zero CR bytes |
 | 48 (second file) | `handoff/project-mirror/claude_phase4-claude-code-prompt-48-programs-live.md` (gitignored, deleted by prompt 93 after this copy) — copied with `shutil.copyfile`, whole file byte-identical by `sha256` (`84358ed7…366b`, 9,684 bytes), LF, nothing added |
 

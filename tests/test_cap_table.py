@@ -159,6 +159,35 @@ class RuledTeamsAreScoredOnTheirOwnBand(unittest.TestCase):
             self.assertEqual(bct.ruled_bands(Path(d) / "absent.json"), {})
 
 
+class ReviewPins(unittest.TestCase):
+    """Prompt 113 rev C: Joe's review pins are applied by the build after scoring, scored honestly on
+    the pinned surface, and skipped when the caller asks for the unpinned answer."""
+
+    def test_a_pin_overrides_the_scored_row_and_carries_its_own_score(self):
+        with tempfile.TemporaryDirectory() as d:
+            square(Path(d) / "t.png", "#ffffff")          # white raw on a navy band: 1.0/raw unaided
+            with mock.patch.dict(bct.REVIEW_PINS, {"t": {"tint": CAP_TINT, "art": "raw"}}):
+                pinned = row_for("t", Path(d), {}, "#1b3a6b", None)
+                free = row_for("t", Path(d), {}, "#1b3a6b", None, apply_pins=False)
+        self.assertEqual((pinned["tint"], pinned["art"]), (CAP_TINT, "raw"))
+        self.assertEqual((free["tint"], free["art"]), (1.0, "raw"))
+        # the score is the pinned art on the pinned (tinted) surface, not the flat score carried over
+        self.assertGreaterEqual(pinned["edge_crisp"], 0.0)
+        self.assertEqual(pinned["edge_crisp"], 1.0, "white on tinted navy is still crisp everywhere")
+
+    def test_the_shipped_pins_are_joes_six_and_nothing_else(self):
+        self.assertEqual(bct.REVIEW_PINS, {
+            "197": {"tint": 1.0, "art": "dark"},
+            "2447": {"tint": 0.72, "art": "raw"},
+            "2464": {"tint": 0.72, "art": "raw"},
+            "2627": {"tint": 1.0, "art": "raw"},
+            "2655": {"tint": 0.72, "art": "raw"},
+            "nfl-24": {"tint": 1.0, "art": "raw"},
+        })
+        # nothing is declared twice for two reasons
+        self.assertFalse(set(bct.REVIEW_PINS) & set(bct.FILE_CHANGED_SINCE_STUDY))
+
+
 class TintPort(unittest.TestCase):
     def test_tint_darkens_toward_near_black_like_gridmodel(self):
         # gridmodel.js: c*f + 255*(1-f)*0.08

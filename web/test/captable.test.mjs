@@ -104,14 +104,47 @@ const RULED = new Set(Object.keys(gridColours));
  * CAP_ART_OVERRIDES now, and the ruled pin below holds it.
  */
 const FILE_CHANGED = {
-  '197': { tint: 0.72, art: 'raw' },   // Oklahoma St: 2026-09-08, skip_derive: _dark is now a byte copy of raw
-  '2447': { tint: 1.0, art: 'dark' },   // Nicholls: 2026-09-07 20:29, _dark rebuilt
-  '2464': { tint: 1.0, art: 'dark' },   // N Arizona: 2026-09-07 20:29, _dark rebuilt
   '256': { tint: 0.72, art: 'dark' },   // James Madison: 2026-09-07 20:29, _dark rebuilt
-  '2627': { tint: 1.0, art: 'dark' },   // Tarleton St: 2026-09-07 20:29, _dark rebuilt
-  '2655': { tint: 0.72, art: 'dark' },   // Tulane: 2026-09-07 20:29, _dark rebuilt
   '326': { tint: 1.0, art: 'dark' },   // Texas St: 2026-09-07 20:29, _dark rebuilt
+  // 197, 2447, 2464, 2627 and 2655 stood here in rev B. Joe's review (rev C) pinned them back to the
+  // pre-113 rendering, which is what the study recorded, so they match the study again and are
+  // declared once, in REVIEW_PINS below, for the reason that actually holds them.
 };
+
+/**
+ * JOE'S REVIEW PINS (prompt 113 rev C, 2026-09-22): "Joe's review of the p113 sheets, 2026-09-22:
+ * keeps the pre-113 rendering". He reviewed all 21 before/after pairs at 4x and kept the OLD
+ * rendering for six rows; the other fifteen, the Rams and the Rockets included, stand as regenerated.
+ * These are rulings from the pictures, not scores. `scripts/build_cap_table.py` REVIEW_PINS applies
+ * them after scoring, and its --check proves each is still load-bearing by scoring the team without
+ * it. This file cannot score, so each entry carries `regenerated` - what the build produced unpinned
+ * in rev B - and a pin equal to its own regenerated value fails: it would be holding nothing.
+ */
+const REVIEW_PINS = {
+  // Oklahoma St: raw and _dark are byte-identical (skip_derive, 2026-09-08), so the pin keeps the FLAT
+  // band the left panel showed; the art label is the study's and the pixels are the tint's.
+  '197':  { tint: 1.0, art: 'dark', regenerated: { tint: 0.72, art: 'raw' } },
+  '2447': { tint: 0.72, art: 'raw', regenerated: { tint: 1.0, art: 'dark' } },   // Nicholls
+  '2464': { tint: 0.72, art: 'raw', regenerated: { tint: 1.0, art: 'dark' } },   // N Arizona
+  '2627': { tint: 1.0, art: 'raw', regenerated: { tint: 1.0, art: 'dark' } },    // Tarleton St
+  '2655': { tint: 0.72, art: 'raw', regenerated: { tint: 0.72, art: 'dark' } },  // Tulane
+  // The Chargers are RULED: capFor() paints the flat band whatever the table says, so the pin is
+  // tint 1.0 and not the pre-113 row's 0.72, which never painted. Only the art is the ruling.
+  'nfl-24': { tint: 1.0, art: 'raw', regenerated: { tint: 1.0, art: 'dark' } },
+};
+
+test('every REVIEW_PIN is in the table as pinned, and holds something (prompt 113 rev C)', () => {
+  for (const [id, pin] of Object.entries(REVIEW_PINS)) {
+    const mine = table.teams[id];
+    assert.ok(mine, `${id} is pinned but has no cap-table row`);
+    assert.equal(mine.tint, pin.tint, `${id} tint`);
+    assert.equal(mine.art, pin.art, `${id} art`);
+    assert.ok(pin.tint !== pin.regenerated.tint || pin.art !== pin.regenerated.art,
+      `${id} is pinned to what the build produces anyway - delete the entry`);
+    assert.ok(!FILE_CHANGED[id], `${id} is declared twice, as a pin and as a file change`);
+  }
+  assert.deepEqual(Object.keys(REVIEW_PINS).sort(), ['197', '2447', '2464', '2627', '2655', 'nfl-24']);
+});
 
 test('the shipped table matches the study field for field on tint and art - the UNRULED rows', () => {
   // RESTRICTED TO UNRULED IDS (prompt 113). The study scored every team on band_for()'s band; a
@@ -123,7 +156,7 @@ test('the shipped table matches the study field for field on tint and art - the 
     if (RULED.has(row.id)) continue;
     const mine = table.teams[row.id];
     assert.ok(mine, `${row.id} missing from the shipped table`);
-    const want = FILE_CHANGED[row.id] || row;
+    const want = REVIEW_PINS[row.id] || FILE_CHANGED[row.id] || row;
     if (FILE_CHANGED[row.id]) {
       assert.ok(row.tint !== want.tint || row.art !== want.art,
         `${row.id} is declared file-changed but matches the study - delete the entry`);
@@ -137,9 +170,12 @@ test('the shipped table matches the study field for field on tint and art - the 
     else tintDark++;
   }
   assert.equal(checked, 186, 'the study describes 186 unruled teams');
-  // 105 / 14 / 58 / 9 in the study; the seven file changes move it to this.
+  // 105 / 14 / 58 / 9 in the study. Rev B's seven file changes made it 104 / 17 / 54 / 11; Joe's
+  // review pins (rev C) put five of those back: 197 to 1.0-dark (+1 flat dark, -1 tint raw), 2447
+  // and 2464 to 0.72-raw (-2 flat dark, +2 tint raw), 2627 to 1.0-raw (-1 flat dark, +1 flat raw),
+  // 2655 to 0.72-raw (-1 tint dark, +1 tint raw).
   assert.deepEqual({ flatRaw, flatDark, tintRaw, tintDark },
-                   { flatRaw: 104, flatDark: 17, tintRaw: 54, tintDark: 11 });
+                   { flatRaw: 105, flatDark: 15, tintRaw: 56, tintDark: 10 });
 });
 
 test('every RULED row is scored on its own flat band: tint 1, and the art the build chose (prompt 113)', () => {
@@ -156,7 +192,9 @@ test('every RULED row is scored on its own flat band: tint 1, and the art the bu
     checked++;
   }
   assert.equal(checked, 124);
-  assert.deepEqual({ raw, dark, cap }, { raw: 106, dark: 17, cap: 1 });
+  // 106 / 17 / 1 as regenerated; Joe's review pin puts the Chargers back on raw (rev C).
+  assert.deepEqual({ raw, dark, cap }, { raw: 107, dark: 16, cap: 1 });
+  assert.equal(table.teams['nfl-24'].art, 'raw', 'the Chargers keep raw by Joe\'s review, tint 1 because ruled');
   // The one 'cap' is the Giants (prompt 69): black silhouette on the orange band, written by the
   // build's CAP_ART_OVERRIDES rather than by hand.
   assert.equal(table.teams['mlb-137'].art, 'cap');

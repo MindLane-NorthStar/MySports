@@ -4856,3 +4856,48 @@ each paints; the Rams beside the Padres, both after — the Rams' `_dark` reads 
 navy, softer than the Padres' white on brown; and two of the 24 ties rendered before and after,
 pixel-identical by byte comparison (`nba-CLE`, `mlb-110`). **Not pushed:** Joe reviews the 21 pairs
 first, and the push is his.
+
+### Joe's review of the 21 pairs — 2026-09-22, prompt 113 rev C (same ruling, six pins)
+
+Joe reviewed every before/after pair at 4× and **kept the old rendering for six rows; the other
+fifteen stand as regenerated, the Rams and the Rockets included** — both had been flagged for him and
+he accepted them as they are. The six are rulings from the pictures, not scores, and the build never
+re-derives them: `scripts/build_cap_table.py`'s `REVIEW_PINS` applies them after scoring, with the
+reason *"Joe's review of the p113 sheets, 2026-09-22: keeps the pre-113 rendering"*, and writes the
+pinned art's own `edge_crisp` on the pinned surface so the number stays honest. The `--check`
+acceptance scores each pinned team WITHOUT its pin and fails if the answer no longer differs, so a
+pin that has stopped holding anything is reported rather than left to sit.
+
+| id | team | regenerated | pinned |
+|---|---|---|---|
+| `197` | Oklahoma St | raw / 0.72 | **dark / 1.0** |
+| `2447` | Nicholls | dark / 1.0 | **raw / 0.72** |
+| `2464` | N Arizona | dark / 1.0 | **raw / 0.72** |
+| `2627` | Tarleton St | dark / 1.0 | **raw / 1.0** |
+| `2655` | Tulane | dark / 0.72 | **raw / 0.72** |
+| `nfl-24` | Chargers | dark / 1.0 | **raw / 1.0** |
+
+**Oklahoma State, resolved.** Rev B's report said its cap "moves from the flat band to its 0.72 tint
+with the same art" and the id list said `dark/1.0 → raw/0.72`; both were true at once. `197.png` and
+`197_dark.png` are byte-identical (`skip_derive`, 2026-09-08), so the art label flipped while the
+pixels moved only with the tint — and the current `197_dark.png` IS the file the left panel was drawn
+from. The pin is `dark / 1.0`, which reproduces that panel exactly; nothing was substituted.
+
+**The Chargers' tint was never what painted.** The pre-113 row said `raw / 0.72`, but the Chargers are
+ruled and `capFor()` paints a ruled band untinted whatever the table says, so the app always drew
+raw on the flat band. The pin is `art: raw, tint: 1.0`; only the art is the ruling. The rev B sheet
+drew the left panel on the flat band (its renderer ignores a ruled row's tint, as `capFor()` does),
+so the panel Joe approved is what ships; it was re-rendered from the pinned row anyway.
+
+**The five college pins left `FILE_CHANGED` / `FILE_CHANGED_SINCE_STUDY`** (James Madison and Texas
+St remain there): pinned back to the pre-113 rendering they match the study again, so they are
+declared once, as pins, for the reason that actually holds them. The unruled acceptance moves from
+104 / 17 / 54 / 11 to **105 / 15 / 56 / 10** — 197 back to 1.0-dark (+1 flat dark, −1 tint raw), 2447
+and 2464 to 0.72-raw (−2 flat dark, +2 tint raw), 2627 to 1.0-raw (−1 flat dark, +1 flat raw), 2655
+to 0.72-raw (−1 tint dark, +1 tint raw) — and the ruled split from 106 / 17 / 1 to 107 / 16 / 1. The
+study-ink counts did not move. Regenerated against `e9d5ccd` the change table is exactly these six
+rows; the pinned caps rendered from the shipped rows are pixel-identical to the original left panels
+(`assets/p113-cap-regen/pins/`). The four rev B omissions, confirmed: the R2 byte-compare ran in rev B
+(24 of 24 served pairs identical, `verify_changes.json`); the two spot checks are `nba-CLE` and
+`mlb-110`; §1–§57 each appeared exactly once before §58 was written and still do; the handoff and the
+README carry 113, and rev B and rev C are now filed beside it.

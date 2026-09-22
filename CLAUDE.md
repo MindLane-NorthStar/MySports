@@ -23,7 +23,7 @@ they live here and nowhere else.
 | why a decision was made, and whether it is already settled | `docs/enhancement-register.md` (§1–§58) |
 | what a card, block or grid is supposed to look like | `docs/rendering-contract.md` + `docs/rendering-contract-mobile.md` (the Mobile Grid Addendum) |
 | the locked visual reference the app must match | `docs/design/mobile_demo.html` |
-| what a past run was actually asked to do | `docs/prompts/` — 118 briefs covering 01–113, verbatim; 39 and 42 are the only permanent gaps (numbers are identifiers, not run order: 90 ran after 91), and 86 carries three revisions (see its README). 103–113 have no second copy and say so in the README's provenance table |
+| what a past run was actually asked to do | `docs/prompts/` — 120 briefs covering 01–113, verbatim; 39 and 42 are the only permanent gaps (numbers are identifiers, not run order: 90 ran after 91), and 86 and 113 carry three revisions each (see its README). 103–113 have no second copy and say so in the README's provenance table |
 | deploy, environment, what is publishable | `docs/deployment-contract.md` |
 | the first build specs — superseded, do not build from them | `docs/archive/` (moved out of the repo root by prompt 87) |
 

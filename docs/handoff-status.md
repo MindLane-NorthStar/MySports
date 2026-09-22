@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **118 briefs, covering 01–113, counted 2026-09-22 by prompt 113
-(117 after prompt 112; 116 after prompt 111; 107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - **`docs/prompts/README.md` "Duplicate numbers" owns this count**: five numbers as the README counts them (23, 26, 43 and 48 two each, 86 three; `13-14-combined` has its own row and is deliberately not counted under 13), six if it is — which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **120 briefs, covering 01–113, counted 2026-09-22 by prompt 113 rev C
+(118 after prompt 113; 117 after prompt 112; 116 after prompt 111; 107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - **`docs/prompts/README.md` "Duplicate numbers" owns this count**: six numbers as the README counts them (23, 26, 43 and 48 two each, 86 and 113 three; `13-14-combined` has its own row and is deliberately not counted under 13), seven if it is — which is why the file
 count runs ahead of the highest number. (Prompt 111 wrote "six" here after counting the directory; the old "five" it replaced was (13, 23, 26, 43, 86), wrong in both directions — it counted 13 and omitted 48, which has carried two since prompt 93 — and prompt 112 pointed this line at the README rather than keep a second copy.) **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -66,6 +66,14 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > appended a `Re-measured … prompt NN` line beneath it without touching the sentence above them, so
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
+
+**Measured 2026-09-22, prompt 113 rev C — `pytest` 632 → 634 and `test:unit` 632 → 633** (the review-pin
+tests); smoke, qa-shots and geometry did not move. Written after the last gate run. **Joe reviewed the 21
+pairs and kept the old rendering for six** — Oklahoma St, Nicholls, N Arizona, Tarleton St, Tulane and the
+Chargers — pinned in the build's `REVIEW_PINS` and declared in the tests; the Rams and the Rockets stand as
+regenerated (register §58's dated subsection). The pinned caps render pixel-identical to the panels he
+approved (`assets/p113-cap-regen/pins/`). **NOT PUSHED** — two commits ahead of `origin/main`; Joe
+reviews Block C and Block D, then authorizes.
 
 **Measured 2026-09-22, prompt 113 — `pytest` 626 → 632 and `test:unit` 631 → 632** (the ruled-branch pins in
 `tests/test_cap_table.py`, six; the ruled-rows pin in `captable.test.mjs`, one); smoke, qa-shots and geometry did
@@ -229,6 +237,8 @@ line claims to do.
 | prompt 94 | `pytest` | 569 → **585** | `tests/test_sync_assets.py` (16): the byte comparison's order and its request count (a single-part ETag costs no `head_object`; a size difference costs no hashing), the multipart and absent-ETag fallback, `test_pull_retakes_a_cached_file_whose_bytes_differ_from_the_bucket`, a `grids/` key compared at its derived path, mixed-case filenames, `--force` and `--existing-only` unchanged. Mutation-checked: the free ETag step removed fails 7; a key-only pull restored fails 2 |
 | prompt 95 | `pytest` | 585 → **591** | `PushGuard` in `tests/test_sync_assets.py` (6), driven through the real `main()` with `_put` counted: a push that would create an object refuses and uploads nothing; `--allow-new` publishes; a push with nothing new proceeds unflagged; `--existing-only` creates nothing; `--force` does not bypass the guard; the nightly's logo push carries the flag. Mutation-checked: the guard moved after the first upload fails 2; the guard removed fails 2 |
 | prompt 106 | `pytest` | 612 → **619** | seven in `tests/test_cavs_simulcast.py` for the emitted rows: a WOIO game emits ONE row and it is CBS with the station kept in the label; a both-station game emits TWO, one per outlet; a WUAB-only game emits its own; a game outside the package emits none; availability is ANY outlet, driven through `outlet_access`; WOIO resolves through the alias table and stays out of `access_profile.json`; and BOTH call sites gate the rows on national exclusivity. Mutation-checked seven ways |
+| prompt 113 rev C | `pytest` | 632 → **634** | `ReviewPins` in `tests/test_cap_table.py` (2): a pin overrides the scored row and carries the pinned art's own score on the pinned surface, and `apply_pins=False` returns the unpinned answer; the shipped pins are Joe's six and nothing else, with no id declared twice. Mutation-checked: a pin removed from `REVIEW_PINS` fails 1 |
+| prompt 113 rev C | `test:unit` | 632 → **633** | `captable.test.mjs` (+1): every `REVIEW_PIN` is in the table as pinned, differs from what the build produces unpinned, and is not also in `FILE_CHANGED`; the unruled counts re-pinned 104/17/54/11 → 105/15/56/10 and the ruled split 106/17/1 → 107/16/1 with the arithmetic in the comment. Mutation-checked four ways, each failing: the Nicholls pin removed from the build and the table regenerated (JS and `--check` both red); `197` set back to its regenerated row in the table; `renderInk()` back on the live table; a pin removed from `REVIEW_PINS` (pytest) |
 | prompt 113 | `pytest` | 626 → **632** | six in `tests/test_cap_table.py`, `RuledTeamsAreScoredOnTheirOwnBand`: a ruled team takes the dark file its ruled band needs where `band_for()` would refuse it (the Padres/Rams shape, on synthetic squares); a ruled team is never tinted; an unruled team keeps the two-level rule; the Giants' cap override is applied by the build and scored on the ruled band; the override table names the Giants and nothing else; a missing ruled file rules nobody. Mutation-checked: the ruled branch reverted in `row_for()` fails 3 |
 | prompt 113 | `test:unit` | 631 → **632** | `captable.test.mjs`: the study match is RESTRICTED to the 186 unruled ids and pins 104/17/54/11 with seven file-changed rows declared (date and cause each); a new test pins the 124 ruled rows against the regenerated table (all tint 1, art 106/17/1, the Giants cap, the Padres and Rams dark); `renderInk()` reads the frozen study's tint and art so 191/116, 56/20/33 and the 26 did not move. Mutation-checked five ways, each failing: `renderInk()` back on the live table, a file-changed row undeclared, a declared row matching the study, the Padres set to raw in the table, and the `--check` acceptance with a matching declaration |
 | prompt 110 | `test:unit` | 630 → **631** | `nav.test.mjs` (+1): `.mgrid-only` and `.deskgrid-only` read off the stylesheet and held to the SAME condition set, which must be exactly `(max-width: 699px)` and `(pointer: coarse)`, with opposite base rules. `restcap.test.mjs` (−1, +1): the REPORTED-list test went with the mechanism when `gridIndex` was paged, and a `gridIndex`-uses-`restAll`-with-a-total-order pin took its place. Mutation-checked four ways, each failing: coarse removed from either selector alone, `gridIndex` back to bare `rest()`, its tiebreaker dropped |
@@ -508,8 +518,8 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 
 | gate | run from | floor |
 |---|---|---|
-| `pytest` | repo root | **632 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **632** |
+| `pytest` | repo root | **634 passed + 1 skipped** (36 subtests) |
+| `npm run test:unit` | `web/` | **633** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **121/121** |
 | `npm run geometry` | `web/` | all hard stops |
