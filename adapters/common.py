@@ -162,17 +162,26 @@ def _backoff(attempt: int) -> float:
 
 
 def http_json(url: str, headers: dict[str, str] | None = None, params: dict[str, Any] | None = None,
-              timeout: int = 45, attempts: int = ATTEMPTS, sleep=time.sleep) -> Any:
-    """GET JSON with a bounded, escalating retry. `sleep` is injectable so tests do not actually wait."""
+              timeout: int = 45, attempts: int = ATTEMPTS, sleep=time.sleep,
+              method: str = "GET", data: Any = None) -> Any:
+    """GET JSON with a bounded, escalating retry. `sleep` is injectable so tests do not actually wait.
+
+    `method` and `data` (prompt 117): Schedules Direct's API takes its token, schedules and programs
+    requests as JSON POSTs, so a JSON body rides on the SAME retry policy rather than a second helper
+    growing beside this one. A body is only sent with a non-GET method; `data` is JSON-encoded here."""
     if params:
         q = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None}, doseq=True)
         url = f"{url}?{q}"
     hdrs = {"Accept": "application/json", "User-Agent": ua_for(url)}
     hdrs.update(headers or {})
+    payload = None
+    if data is not None and method.upper() != "GET":
+        payload = json.dumps(data).encode("utf-8")
+        hdrs.setdefault("Content-Type", "application/json")
     bare = url.split("?")[0]
     last: Exception | None = None
     for attempt in range(1, max(1, attempts) + 1):
-        req = urllib.request.Request(url, headers=hdrs, method="GET")
+        req = urllib.request.Request(url, data=payload, headers=hdrs, method=method.upper())
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return json.loads(resp.read().decode("utf-8"))
