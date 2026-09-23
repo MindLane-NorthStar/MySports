@@ -267,3 +267,19 @@ pins only the table's shape and the margin constant, and would not object to any
 (`capArt`), `data/grid_colors_pro.json`, `web/lib/cap-table.json`, and the three tests named above.
 **Size.** Small once ruled — a flag, a regeneration, a test update — but the ruling is per team and
 by eye. **A description of a problem, not an approved plan.**
+
+## 12. Smoke will go red when the Division Series placeholders load, and that red is deliberate
+
+**What.** `web/lib/placeholders.js` exempts a `-TBD` id or an MLB row named in one of the two forms
+MLB has published — `AL|NL #N Seed`, `AL|NL Wild Card #N` — and nothing else, by ruling (register
+§60). When the 6-day MLB window reaches the Division Series, LCS and World Series rows, their
+placeholder names will be a form nobody has ruled on ("ALDS Winner A" or whatever MLB publishes), and
+`smoke.mjs`'s *"the only unruled pro rows are TBD placeholders"* will go red naming them.
+
+**That is the check working.** It needs a ruling on the new name form — widen the pattern to the
+form as published, or rule the row something else — **not a code workaround** that guesses the
+form ahead of time. Whoever hits it: read the names off the smoke detail, put the form in front of
+Joe, add it to the pattern with its own test, and record the ruling as a dated line under §60.
+
+**Where it starts.** `web/lib/placeholders.js`, `web/test/placeholders.test.mjs`, `web/scripts/smoke.mjs`.
+**Size.** Small once ruled. **A description of a problem, not an approved plan.**

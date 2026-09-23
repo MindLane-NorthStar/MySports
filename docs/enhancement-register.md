@@ -5017,3 +5017,52 @@ anchor dropped; the `$` anchor dropped; `#\d+` widened to `.*`; the suffix branc
 **How the four games render today, reported and not fixed:** see the run report and
 `assets/p114-ipad-scrim/placeholders-0929/`. Whatever they show is Joe's next decision; 2026-09-29
 is six days out.
+
+## 61. POSTSEASON GAMES TAKE THEIR REAL TEAMS, AND PLACEHOLDERS SHOW A TBD BADGE — 2026-09-23, prompt 116
+
+**Numbered by count:** §1–§60 each appear exactly once and there was no §61.
+
+**The loader gap.** `pipeline/load.py`'s games upsert updated `season, week, neutral_site` on conflict
+and nothing else, so `home_team_id` and `away_team_id` were written ONCE, at the row's first insert,
+and never again — nothing else in `pipeline/`, `adapters/`, `scripts/` or the migrations writes them.
+`docs/research/mlb-adapter-brief.md` §7.4 said that once MLB fills in the participants "the same
+`gamePk` rows update in place"; that was true of the kickoff and the broadcasts, which are
+observations the reconciler re-decides every run, and **false of the teams**. When MLB replaces "AL
+Wild Card #2" with a club, `adapters/mlb.py`'s `side()` emits the new id and the loader dropped it.
+Four 2026-09-29 Wild Card games carry the placeholders today (`mlb-849843`, `-849845`, `-849849`,
+`-849851` at the Yankees); the seeds clinch after Sunday 2026-09-27, and the first refresh after that
+is 2026-09-28 07:37 UTC — the deadline this shipped against.
+
+**The fix.** The two team columns join the update list, PRESERVED (`coalesce(excluded.c, games.c)`):
+a real id lands, placeholder or club; a null — the source gave no id — keeps the stored value rather
+than erasing it. The loader reads the stored pair before it writes and logs every flip to the run's
+notes as `"<gid>: home <old> -> <new>"` (`refresh_runs.notes.team_changes`), counted under
+`team_changes`, so a change is visible in the ledger and never silent. **What a `None` side did
+before:** `str(None)` — the stub loop upserted a TEAM with id `"None"` and the game referenced it.
+That never happened in production (no such row exists), and it cannot now: a side with no id is
+skipped in the stub loop, noted under `team_missing`, and a NEW game with a missing side is skipped
+rather than inserted. The adapter is the authority on who plays in a given external game id, as it
+already was for every other identity field it emits. Nine tests in `tests/test_postseason_teams.py`
+run the two-step load (placeholder, then club) through a DB that remembers its upserts; mutation-
+checked five ways, each red: each team column dropped from the update list, the note dropped, the
+`None` guard dropped (three tests fail), the new-game skip dropped.
+
+**The badge — Joe's ruling, 2026-09-23: a grey "TBD" badge, in the same box as the logo it replaces,
+so names stay aligned with every other card.** A placeholder id has no logo on R2, and every one of
+the five team-mark sites — the list row, the slot's favoured mark, the detail panel's two, the grid
+endcap — drew the browser's broken-image icon for it. `web/components/TeamMark.js` renders the badge
+when `isPlaceholderTeam` (register §60's predicate, with the game's `sport` passed in because the
+embed does not carry it) says so, and the `<img>` otherwise; every site goes through it, and a test
+forbids a bare team-mark `<img>` in those three files. Fill `--spot-0`, text `--dim`, Barlow
+Condensed 700, sized by one rule per box it stands in (20 / 44 / 34 px, and 78% of the endcap).
+
+**The error fallback, and why it exists.** The name pattern is narrow on purpose (§60), so a later
+round's placeholder — a Division Series winner — will miss it and still have no logo. So the `<img>`
+swaps to the badge on `onError`, and on mount when `img.complete && img.naturalWidth === 0`: a
+server-rendered image that errored BEFORE hydration has no handler attached when it fails, and
+without the mount check the broken icon would stay. Verified in Chromium on a cold load with the
+Yankees' logo made to 404: the badge shows and no broken image is painted (qa-shots, +3). The
+locked reference draws no placeholder team and is unchanged.
+
+**Out of scope, deliberately:** `reconcile.py`, the kickoff and broadcast paths, every adapter, and
+the seven placeholder rows in `teams`, which stay.
