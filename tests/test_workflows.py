@@ -150,6 +150,37 @@ def test_nfl_refresh_covers_every_game_day_not_only_sunday():
     assert "--no-logos" not in steps[art[0]]["run"], "the teams-only step is the one that fetches logos"
 
 
+def test_nfl_listings_step_feeds_the_nfl_step_and_can_never_fail_the_run():
+    """PROMPT 117, Joe's ruling 2026-09-23: a CBS/FOX Sunday-afternoon row is decided by what WOIO and
+    WJW actually air, read from Schedules Direct by `adapters/sd_listings.py` into one JSON file the NFL
+    step reads through MYSPORTS_NFL_LISTINGS. Walked by STEP (rule 28), not by substring.
+
+    What is pinned: the listings step runs BEFORE the NFL date step; both name the same file through
+    the same env var; the file lives in the runner's temp dir and nowhere the run archives or commits;
+    the three secrets are job env, from `secrets.*`, by name only; no `${{` inside the `run` (rule 28's
+    own defect); and the step is `python -m adapters.sd_listings --out ...`, whose contract is one log
+    line, no file and exit 0 on every failure - so the step needs no `continue-on-error`, and adding one
+    would hide a real crash in the module rather than a listings failure.
+    """
+    doc = yaml.safe_load((ROOT / ".github" / "workflows" / "schedule_refresh.yml").read_text(encoding="utf-8"))
+    job = doc["jobs"]["refresh"]
+    steps = job["steps"]
+    for name in ("SD_USERNAME", "SD_PASSWORD", "SD_POSTAL_CODE"):
+        assert job["env"].get(name) == "${{ secrets." + name + " }}", f"{name} is job env from the secret of the same name"
+    listings = [i for i, s in enumerate(steps) if "adapters.sd_listings" in str(s.get("run", ""))]
+    assert len(listings) == 1, "exactly one listings step"
+    nfl = [i for i, s in enumerate(steps) if str(s.get("name", "")).startswith("NFL") and "--date" in str(s.get("run", ""))]
+    assert len(nfl) == 1
+    assert listings[0] < nfl[0], "the listings are fetched before the NFL step that reads them"
+    lst, nfl_step = steps[listings[0]], steps[nfl[0]]
+    path = lst.get("env", {}).get("MYSPORTS_NFL_LISTINGS")
+    assert path and path.startswith("${{ runner.temp }}/"), "the file lives in the runner's temp dir"
+    assert nfl_step.get("env", {}).get("MYSPORTS_NFL_LISTINGS") == path, "the NFL step reads the same file"
+    assert "${{" not in lst["run"], "no Actions expression inside run (rule 28)"
+    assert '--out "$MYSPORTS_NFL_LISTINGS"' in lst["run"]
+    assert "continue-on-error" not in lst, "exit 0 on failure is the module's contract, not the workflow's"
+
+
 def test_cfbd_teams_fetch_is_not_restricted_to_the_week():
     """The other half of the same defect, and the half no workflow file can show.
 
