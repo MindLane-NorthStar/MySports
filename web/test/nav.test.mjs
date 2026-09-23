@@ -319,3 +319,30 @@ test('.mgrid-only and .deskgrid-only are exact mirrors, and the touch condition 
   assert.match(css, /\n\.mgrid-only \{ display: none; \}\n/);
   assert.match(css, /\n\.deskgrid-only \{ display: block; \}\n/);
 });
+
+// ---------------------------------------------------------------- THE iPAD'S HEADROOM (prompt 114)
+test('the iPad headroom block is scoped to a tablet-sized coarse pointer, and spends one token twice', () => {
+  // Joe's iPad shots (2026-09-22) showed the collapsed navbar and the restored banner under iOS 27's
+  // scroll-edge scrim; the phone was clean on the same build. The fix is 32px of headroom above the
+  // navbar's row and above the desktop banner, scoped so that it matches the iPad in both
+  // orientations and NEITHER phone orientation: `(pointer: coarse)` alone is prompt 110's touch band
+  // and matches the phone, and `(min-width: 700px)` with it still matches an iPhone in landscape
+  // (932 x 430). Three clauses, read off the block as a SET so a dropped or reworded clause fails.
+  const css = src('app/globals.css');
+  const m = css.match(/@media ([^{]+)\{\s*\.chdr::before \{ content: ''; display: block; height: var\(--ipad-top-clear\); \}\s*\.bn-pc \{ padding-top: var\(--ipad-top-clear\); \}\s*\}/);
+  assert.ok(m, 'the headroom block: a ::before spacer on .chdr and padding-top on .bn-pc, both var(--ipad-top-clear)');
+  const clauses = m[1].split(/\s+and\s+/).map((c) => c.trim()).sort();
+  assert.deepEqual(clauses, ['(min-height: 600px)', '(min-width: 700px)', '(pointer: coarse)']);
+  // the token is declared once, at 32px, with the other layout tokens
+  assert.equal((css.match(/--ipad-top-clear: 32px;/g) || []).length, 1, 'one declaration of the token, 32px');
+  // the navbar takes it as a SPACER inside its border box, never as padding: `.chdr`'s padding-top
+  // is one of the three inset tokens counted above, and the spacer is what lets the border-box
+  // `--stack-h` observer carry the headroom into the picker's offset with no arithmetic.
+  const chdr = css.match(/\.chdr \{[^}]*\}/)[0];
+  assert.doesNotMatch(chdr, /ipad-top-clear/, '.chdr itself must not spend the token');
+  assert.equal((css.match(/safe-area-inset-top/g) || []).length, 3, 'the inset token count is unchanged by the headroom');
+  // and nothing under the phone breakpoint spends it
+  for (const block of css.match(/@media \(max-width: ?699px\)[^{]*\{[\s\S]*?\n\}/g) || []) {
+    assert.doesNotMatch(block, /ipad-top-clear/, 'the phone band never spends the iPad token');
+  }
+});

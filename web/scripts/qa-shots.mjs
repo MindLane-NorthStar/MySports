@@ -1270,6 +1270,111 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
+// ------------------------------------------ THE iPAD'S HEADROOM, MEASURED AT FIVE VIEWPORTS (prompt 114)
+//
+// On the iPad the collapsed navbar and the tap-restored banner sit under iOS 27's scroll-edge scrim
+// (Joe's shots, 2026-09-22); the phone is clean. globals.css spends `--ipad-top-clear` (32px) as a
+// `::before` spacer inside `.chdr` and as padding on `.bn-pc`, scoped to
+// `(min-width: 700px) and (min-height: 600px) and (pointer: coarse)`. Chromium matches that with
+// `hasTouch: true` (measured, prompt 114 block B.1), so the geometry is provable here even though the
+// scrim itself is not: THESE ROWS PROVE GEOMETRY AND SAY NOTHING ABOUT LEGIBILITY. The phone rows
+// are the other half of the guard - every one must read exactly as it did before the block existed.
+{
+  const VPS = [
+    { key: 'iPad 1366x1024 coarse', w: 1366, h: 1024, coarse: true, clear: 32 },
+    { key: 'iPad 1024x1366 coarse', w: 1024, h: 1366, coarse: true, clear: 32 },
+    { key: 'phone 390x844 coarse', w: 390, h: 844, coarse: true, clear: 0 },
+    { key: 'phone 932x430 coarse', w: 932, h: 430, coarse: true, clear: 0 },
+    { key: 'desktop 1440x900 fine', w: 1440, h: 900, coarse: false, clear: 0 },
+  ];
+  const read = () => ({
+    beforeH: (() => { const st = getComputedStyle(document.querySelector('.chdr'), '::before'); return st.content === 'none' ? 0 : parseFloat(st.height) || 0; })(),
+    chdrH: Math.round(document.querySelector('.chdr').getBoundingClientRect().height * 100) / 100,
+    innerTop: Math.round(document.querySelector('.chdr-inner').getBoundingClientRect().top * 100) / 100,
+    stackH: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--stack-h')),
+    pickTop: Math.round(document.querySelector('.pickrow').getBoundingClientRect().top * 100) / 100,
+    bnPcPad: parseFloat(getComputedStyle(document.querySelector('.bn-pc')).paddingTop),
+    bnPcSvgTop: Math.round(document.querySelector('.bn-pc svg').getBoundingClientRect().top * 100) / 100,
+  });
+  for (const vp of VPS) {
+    const ctx = await browser.newContext({
+      viewport: { width: vp.w, height: vp.h }, deviceScaleFactor: 2,
+      ...(vp.coarse ? { isMobile: true, hasTouch: true } : {}),
+    });
+    const page = await ctx.newPage();
+    await page.goto(`${base}/?day=2026-09-05&sport=cfb`, { waitUntil: 'networkidle' });
+    const fresh = await page.evaluate(read);
+    record(`${vp.key}: the desktop banner carries ${vp.clear}px of headroom on .bn-pc`,
+           fresh.bnPcPad === vp.clear && fresh.bnPcSvgTop === vp.clear,
+           `padding ${fresh.bnPcPad}, svg top ${fresh.bnPcSvgTop}`);
+    await page.evaluate(() => window.scrollTo(0, 900));
+    await hdrIs(page, 'collapsed');
+    await stackSynced(page);
+    const c = await page.evaluate(read);
+    record(`${vp.key}: the navbar's ::before spacer is ${vp.clear}px and the row sits below it`,
+           c.beforeH === vp.clear && c.innerTop === vp.clear, `spacer ${c.beforeH}, .chdr-inner top ${c.innerTop}`);
+    record(`${vp.key}: .chdr is ${44 + vp.clear}px and --stack-h carries it`,
+           c.chdrH === 44 + vp.clear && c.stackH === 44 + vp.clear, `.chdr ${c.chdrH}, --stack-h ${c.stackH}`);
+    if (vp.w !== 1024) {
+      // At 1024 wide the picker's offset under the bar was seen at both 44 and 52 before this block
+      // existed (the live day and an archived day differ there for a reason older than this change),
+      // so the flush pin is made only where it was constant. The +32 rows above still hold at 1024.
+      record(`${vp.key}: the picker is flush under the taller bar`, c.pickTop === c.stackH,
+             `picker top ${c.pickTop} vs --stack-h ${c.stackH}`);
+    }
+    await ctx.close();
+  }
+
+  // THE COLLAPSE STILL COMPENSATES ON THE iPAD, AND THE WORDMARK STILL RE-ARMS THE PIN. Prompt 60's
+  // promise - removing the header from the flow mid-scroll must not move the box the reader is
+  // looking at - has to hold with the taller bar, and register §50's Block B re-arm has to leave
+  // `data-pin` at `banner` one frame after the tap.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1366, height: 1024 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    const page = await ctx.newPage();
+    await page.goto(`${base}/?day=2026-09-05&sport=cfb`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(300);
+    const moved = await page.evaluate(async () => {
+      const card = () => document.querySelector('.mcard');
+      const frames = [];
+      let stop = false;
+      const tick = () => {
+        const el = card();
+        frames.push({ attr: document.documentElement.getAttribute('data-hdr'), scrollY: window.scrollY,
+                      top: el ? el.getBoundingClientRect().top : null });
+        if (!stop) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+      // two frames of the EXPANDED state first, so the collapsing frame always has a predecessor to
+      // be compared with - a scroll issued in the same task as the first sample can collapse at
+      // frame 0 and leave nothing to diff against.
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      window.scrollTo(0, 900);
+      await new Promise((r) => setTimeout(r, 900));
+      stop = true;
+      const i = frames.findIndex((f) => f.attr === 'collapsed');
+      if (i <= 0) return { moved: null, frames: frames.length, collapsedAt: i };
+      // On a tall viewport the programmatic scroll and the sentinel crossing land on the SAME frame,
+      // so the card's screen movement on that frame is the 900px the reader asked for PLUS whatever
+      // the collapse did. The compensation's promise is that the second term is zero: the header
+      // leaves the flow and scrollY is pulled back by the same height, so the card moves by exactly
+      // the requested scroll and not a pixel more. `scrolled` is what scrollY actually changed by,
+      // and 900 - scrolled is the header height the compensation absorbed.
+      const scrolled = frames[i].scrollY - frames[i - 1].scrollY;
+      return { moved: Math.round((frames[i].top - frames[i - 1].top) * 100) / 100,
+               scrolled, frames: frames.length, collapsedAt: i };
+    });
+    record('iPad 1366x1024: the collapse does not move the first card beyond the scroll asked for (prompt 60, taller bar)',
+           moved.moved !== null && Math.abs(moved.moved + 900) < 1.5,
+           `first card moved ${moved.moved}px for a 900px scroll on the collapsing frame; scrollY moved ${moved.scrolled}, so the compensation absorbed ${moved.scrolled === undefined ? '?' : 900 - moved.scrolled}px of header (frame ${moved.collapsedAt} of ${moved.frames})`);
+    await page.click('.chdr-wm');
+    await hdrIs(page, null);
+    const pin = await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(document.documentElement.getAttribute('data-pin')))));
+    record('iPad 1366x1024: tapping the wordmark re-arms the banner pin (register §50 block B)', pin === 'banner', `data-pin=${pin}`);
+    await ctx.close();
+  }
+}
+
 await browser.close();
 writeFileSync(join(outDir, 'assertions.json'), JSON.stringify(results, null, 2) + '\n', 'utf8');
 const failed = results.filter((r) => !r.pass).length;

@@ -164,6 +164,19 @@
      1282 -> 1273, MLB 2026-09-03 577 -> 568. BLOCK COUNTS AND BLOCK WIDTHS DO NOT MOVE, and if
      they ever do, that is a real regression rather than this re-baseline. */
   --rail-w: 60px;
+  /* THE iPAD'S HEADROOM BELOW iOS 27's SCROLL-EDGE SCRIM (prompt 114, register §59). Measured by
+     Cowork from Joe's three 2026-09-22 shots (2021 iPad Pro 12.9", iPadOS 27, standalone, landscape,
+     2732 x 2048 at DPR 2): the web view starts 32 CSS px below the screen top with
+     the top inset = 0 - INFERRED, from two fits that only agree on that geometry (the
+     navbar hairline at screen y 75 with a 44px .chdr-inner, and the desktop wordmark's first ink at
+     y 45 with the SVG's 12.5px of glyph headroom) - and the scrim's feather reaches ~36-40 CSS px
+     into the web view (fresh-open minus tap-restored: 1.09 gray at 64, 0.49 at 66, 0.07 at 68, 0.00
+     from 72). The navbar wordmark's first ink sat 14px in, the banner wordmark's 12.5px - both inside
+     it, at 0.29-0.57 of banner gold. 32px puts first ink 44-46px in, 4-10px clear of where the
+     difference reaches zero; 22-24 would be the minimum. The phone is untouched: its "no headroom"
+     ruling (prompt 102, register §50) stands, and the media block that spends this token excludes
+     both phone orientations. Used by the block after the banner-collapse rules. */
+  --ipad-top-clear: 32px;
 }
 
 * {
@@ -3193,9 +3206,11 @@ main > .hubctl:first-child { margin-top: 0; }
  * THE COLLAPSING HEADER (prompt 58). The wordmark and the current choices, once the banner has
  * scrolled away. components/CollapsedHeader.js carries the rulings and the hydration reasoning.
  *
- * FIXED, NOT STICKY, and the two are not interchangeable here. The expanded banner must scroll away
- * normally, and the bar must appear OVER the content without pushing it - a sticky element would
- * occupy a row in the flow and shove everything down by 44px the moment it engaged.
+ * FIXED, NOT STICKY - AS PROMPT 58 BUILT IT, AND NOT ANY MORE: the bar has been STICKY IN FLOW since
+ * prompt 62 (the next comment block says why), so read the two paragraphs below as the design that
+ * was superseded. Prompt 58's reasoning: the expanded banner must scroll away normally, and the bar
+ * must appear OVER the content without pushing it - a sticky element would occupy a row in the flow
+ * and shove everything down by 44px the moment it engaged. Prompt 62 accepted exactly that cost.
  *
  * IT COSTS THE READER 44px, not 44 + inset. The safe-area region was never usable screen: the
  * background bleeds up into it so there is no seam, and the content sits below it.
@@ -3237,6 +3252,11 @@ main > .hubctl:first-child { margin-top: 0; }
   padding-top: env(safe-area-inset-top, 0px);
   display: none;
 }
+/* ON AN iPAD THIS BAR ALSO CARRIES 32px OF HEADROOM ABOVE `.chdr-inner`, as a `::before` spacer set
+ * in the media block after the banner-collapse rules (prompt 114) - not here, and not as padding:
+ * this rule's `padding-top` is one of the three inset tokens nav.test.mjs counts, and the spacer
+ * must sit inside the border box so `--stack-h` (CollapsedHeader.js, a border-box observer) carries
+ * it into the picker's sticky offset with no arithmetic. */
 
 /* ONE ATTRIBUTE ON <html> DRIVES THE WHOLE COLLAPSE (prompt 60), and it is not a stylistic choice.
  * Three surfaces have to change together and one of them - the page's own control stack - is
@@ -3393,7 +3413,47 @@ html[data-hdr='collapsed'] .banner {
   display: none;
 }
 
-/* AND THE CONTENT CLEARS THE BAR. `.chdr` stays FIXED - see the note above the block - so with the
+/* ---- THE iPAD'S TOP EDGE GETS HEADROOM BELOW THE SCRIM (prompt 114, register §59) -----------------
+ *
+ * On the iPad the collapsed navbar and the tap-restored banner sit under iOS 27's scroll-edge scrim:
+ * the navbar wordmark read at 0.29-0.57 of banner gold, top to bottom, and the restored banner's
+ * wordmark at 0.55 -> 1.00 against a fresh open (Joe's shots, 2026-09-22). The phone is clean on
+ * the same build. Register §50's hypothesis - that an element holding the top edge suppresses the
+ * scrim - is FALSE here: `.chdr` holds the edge with an opaque ground and is scrimmed. The mechanism
+ * is unknown and this fix does not depend on it: whatever arms the scrim, it is a feather about
+ * 36px deep anchored to the web view's top edge, and ink placed below it cannot be dimmed by it.
+ *
+ * WHY HEADROOM AND NOT AN OPAQUE STRIP. Under `black` the page's highest paintable row IS the web
+ * view's top edge, and `.chdr` already paints opaque --spot-2 there; it is scrimmed anyway. Reaching
+ * above it means `black-translucent`, which reverses prompt 99 (iOS 27 composites the blur ABOVE the
+ * web view) and cannot be scoped to tablets, because it is one install-time meta tag.
+ *
+ * WHAT IT COSTS, PLAINLY: a 32px dark band above the navbar and the banner on the iPad, in every
+ * state, fresh open included - the navbar grows 44 -> 76px, ~3% of a 992px landscape web view. It
+ * gives back some of the space prompts 46, 50 and 51 removed, ON THE TABLET ONLY. Register §48's
+ * pull-up stays contraindicated: it moves ink UP, into a feather deeper than the phone's.
+ *
+ * THE SCOPE IS NOT PROMPT 110's TOUCH BAND. `(pointer: coarse)` alone matches the phone, and
+ * `(min-width: 700px)` with it still matches an iPhone in landscape (932 x 430). All three clauses
+ * match the iPad in both orientations (1366 x 992, 1024 x 1334) and exclude both phone orientations;
+ * measured in Chromium at all five viewports (assets/p114-ipad-scrim/). Deliberately NOT gated on
+ * `display-mode: standalone`: Chromium cannot match it, so it would be untestable in any gate, and
+ * the only cost outside the installed app is 32px of ground in an iPad Safari tab.
+ *
+ * THE NAVBAR takes it as a `::before` spacer, not as `padding-top`: the spacer is inside the border
+ * box, so it paints --spot-2 and the border-box `--stack-h` observer carries it into the picker's
+ * offset for free, and the inset token count nav.test.mjs pins stays at three. `.chdr-inner`'s
+ * hairline stays at the row's bottom. THE BANNER takes it as padding on `.bn-pc`, the element that
+ * shows at >= 700px; `.banner`'s own padding rules are untouched, and the band shows `.banner`'s
+ * gradient, whose first stop is the SVG stage's #272727. nav.test.mjs pins this block's condition
+ * set; qa-shots measures the geometry at five viewports and proves the phone's rows unchanged. */
+@media (min-width: 700px) and (min-height: 600px) and (pointer: coarse) {
+  .chdr::before { content: ''; display: block; height: var(--ipad-top-clear); }
+  .bn-pc { padding-top: var(--ipad-top-clear); }
+}
+
+/* AND THE CONTENT CLEARS THE BAR. `.chdr` WAS FIXED when this was written (prompt 60) and has been
+ * STICKY since prompt 62 - the rule below is deleted for that reason - so with the
  * banner gone there is nothing left in the flow to hold the first card below it. 8px is `.shell`'s
  * own padding-top, restated rather than added to, so the gap under the bar is the same gap that sat
  * under the banner. The inset is the bar's, painted but not counted: `.chdr` pads itself by it, so
@@ -3668,7 +3728,9 @@ button.chdr-wm:focus-visible {
  * gaps meet in the middle at 14.00 each at 390 and 15.375 at 360.
  *
  * THE 2:1 JOE IS SEEING IS THE SAFE-AREA BAND ABOVE, AND THAT SPACE IS NOT THIS ELEMENT'S. `.chdr`
- * takes the FULL inset at :3057 while `.banner` absorbs a net 10px of it (:1859 and :1882). The
+ * takes the FULL inset in its own `padding-top` rule while `.banner`
+ * absorbs a net 10px of it in its base rule and its `display-mode: standalone` override (the three
+ * top-inset tokens nav.test.mjs counts; the line numbers this used to cite rotted). The
  * banner was tuned and the navbar never was. That is a separate decision, it needs a phone, and
  * stage 5b deliberately does not take it - see the report's inset table.
  *
