@@ -47,11 +47,11 @@ WJW_LISTINGS = {
 }
 
 
-def event(eid, start, away, home, network, away_abbr, home_abbr, market="National"):
+def event(eid, start, away, home, network, away_abbr, home_abbr, market="National", week=3):
     """One scoreboard event in ESPN's shape, with one TV row."""
     def side(ha, nick, full, abbr, tid):
         return {"homeAway": ha, "team": {"id": tid, "name": nick, "displayName": full, "location": full.rsplit(" ", 1)[0], "abbreviation": abbr}, "records": []}
-    return {"id": eid, "date": start, "week": {"number": 3},
+    return {"id": eid, "date": start, "week": {"number": week},
             "competitions": [{"date": start, "timeValid": True, "neutralSite": False,
                               "competitors": [side("home", home[0], home[1], home_abbr, eid + "h"), side("away", away[0], away[1], away_abbr, eid + "a")],
                               "geoBroadcasts": [{"lang": "en", "region": "us", "media": {"shortName": network}, "market": {"type": market}}],
@@ -59,10 +59,29 @@ def event(eid, start, away, home, network, away_abbr, home_abbr, market="Nationa
                               "venue": {"fullName": "Somewhere"}}]}
 
 
-def build(events, listings=WJW_LISTINGS, root=ROOT):
+WINDOWS = {
+    "source": "entitledsports", "market": "Cleveland–Akron (Canton)",
+    "weeks": {
+        "3": {"updated": "Wed Sep 23, 5:30 AM ET", "windows": [
+            {"network": "CBS", "slot": "early", "station": "WOIO 19 (CBS)", "text": "CIN Bengals @ PIT Steelers",
+             "away": {"abbr": "CIN", "nick": "Bengals"}, "home": {"abbr": "PIT", "nick": "Steelers"}, "tbd": False},
+            {"network": "FOX", "slot": "early", "station": "WJW 8 (FOX)", "text": "CAR Panthers @ CLE Browns",
+             "away": {"abbr": "CAR", "nick": "Panthers"}, "home": {"abbr": "CLE", "nick": "Browns"}, "tbd": False},
+            {"network": "CBS", "slot": "late", "station": "WOIO 19 (CBS)", "text": "TBD", "away": None, "home": None, "tbd": True},
+            {"network": "FOX", "slot": "late", "station": "WJW 8 (FOX)", "text": "TBD", "away": None, "home": None, "tbd": True}]},
+        "4": {"updated": "Sun Sep 13, 10:22 PM ET", "windows": [
+            {"network": n, "slot": s, "station": st, "text": "TBD", "away": None, "home": None, "tbd": True}
+            for n, s, st in (("CBS", "early", "WOIO 19 (CBS)"), ("FOX", "early", "WJW 8 (FOX)"), ("CBS", "late", "WOIO 19 (CBS)"), ("FOX", "late", "WJW 8 (FOX)"))]},
+    },
+    "notes": [],
+}
+
+
+def build(events, listings=WJW_LISTINGS, root=ROOT, windows=None):
     raw = {"events": events}
     with redirect_stdout(io.StringIO()):
-        fx, notes = espn.build_nfl_fixture(raw, root, season=2026, week=3, day_filter=None, teams=[], listings=listings if listings is not None else {})
+        fx, notes = espn.build_nfl_fixture(raw, root, season=2026, week=3, day_filter=None, teams=[],
+                                           listings=listings if listings is not None else {}, windows=windows if windows is not None else {})
     return {g["id"]: g for g in fx["games"]}
 
 
@@ -174,6 +193,96 @@ class Rule6TodaysBehaviour(unittest.TestCase):
         m = fx["games"][0]["media"][0]
         self.assertEqual((m["access"], m["market"]), ("UNVERIFIED", "regional"))
         self.assertIsNone(espn.load_listings("/nowhere/nfl_listings.json"))
+
+
+class Rule4bTheCoverageWindow(unittest.TestCase):
+    """prompt 118: EntitledSports' window for the game's week decides when the listings do not."""
+
+    def test_week_3_cbs_early_is_the_bengals_at_the_steelers_and_every_other_cbs_early_game_is_out(self):
+        g = build([event("20", "2026-09-27T17:00:00Z", ("Bengals", "Cincinnati Bengals"), ("Steelers", "Pittsburgh Steelers"), "CBS", "CIN", "PIT")], listings=None, windows=WINDOWS)
+        self.assertEqual(row(g["nfl-20"]), ("AVAILABLE", "regional", "entitledsports week 3 (updated Wed Sep 23 5:30 AM ET): WOIO CBS early CIN @ PIT"))
+        others = [("21", ("Texans", "Houston Texans"), ("Colts", "Indianapolis Colts"), "HOU", "IND"),
+                  ("22", ("Chiefs", "Kansas City Chiefs"), ("Dolphins", "Miami Dolphins"), "KC", "MIA"),
+                  ("23", ("Patriots", "New England Patriots"), ("Jaguars", "Jacksonville Jaguars"), "NE", "JAX"),
+                  ("24", ("Titans", "Tennessee Titans"), ("Giants", "New York Giants"), "TEN", "NYG")]
+        g = build([event(i, "2026-09-27T17:00:00Z", a, h, "CBS", aa, ha) for i, a, h, aa, ha in others], listings=None, windows=WINDOWS)
+        for i, *_ in others:
+            acc, mk, src = row(g[f"nfl-{i}"])
+            self.assertEqual((acc, mk), ("OUT_OF_MARKET", "regional"), i)
+            self.assertIn("WOIO CBS early CIN @ PIT", src)
+
+    def test_the_late_windows_fall_through_to_unverified(self):
+        g = build([event("25", "2026-09-27T20:25:00Z", ("Chiefs", "Kansas City Chiefs"), ("Chargers", "Los Angeles Chargers"), "FOX", "KC", "LAC"),
+                  event("26", "2026-09-27T20:05:00Z", ("Ravens", "Baltimore Ravens"), ("Cowboys", "Dallas Cowboys"), "CBS", "BAL", "DAL")], listings=None, windows=WINDOWS)
+        for i in ("25", "26"):
+            acc, mk, src = row(g[f"nfl-{i}"])
+            self.assertEqual((acc, mk), ("UNVERIFIED", "regional"), i)
+            self.assertIn("neither the station listing nor the coverage window", src)
+
+    def test_week_4_falls_through_for_every_game(self):
+        g = build([event("27", "2026-10-04T17:00:00Z", ("Lions", "Detroit Lions"), ("Packers", "Green Bay Packers"), "FOX", "DET", "GB", week=4),
+                  event("28", "2026-10-04T20:25:00Z", ("Jets", "New York Jets"), ("Broncos", "Denver Broncos"), "CBS", "NYJ", "DEN", week=4)], listings=None, windows=WINDOWS)
+        for i in ("27", "28"):
+            self.assertEqual(row(g[f"nfl-{i}"])[0], "UNVERIFIED", i)
+
+    def test_the_early_late_cut_is_three_pm_eastern(self):
+        # the week-3 CBS early window names CIN @ PIT: a 1:00 kickoff reads it, a 4:05 or 4:25 kickoff reads the late window (TBD)
+        for start, expect in (("2026-09-27T17:00:00Z", "AVAILABLE"), ("2026-09-27T20:05:00Z", "UNVERIFIED"), ("2026-09-27T20:25:00Z", "UNVERIFIED")):
+            got = espn.windows_decision(WINDOWS, "CBS", 3, start, "steelers", "bengals")
+            self.assertEqual(got[0] if got else "UNVERIFIED", expect, start)
+        # the cut itself: 2:59 PM ET is early, 3:00 PM ET is late
+        self.assertIsNotNone(espn.windows_decision(WINDOWS, "CBS", 3, "2026-09-27T18:59:00Z", "steelers", "bengals"))
+        self.assertIsNone(espn.windows_decision(WINDOWS, "CBS", 3, "2026-09-27T19:00:00Z", "steelers", "bengals"))
+
+    def test_the_two_team_cities_resolve_by_nickname(self):
+        w = {"weeks": {"3": {"updated": "x", "windows": [
+            {"network": "FOX", "slot": "early", "station": "WJW 8 (FOX)", "text": "NYJ Jets @ DET Lions",
+             "away": {"abbr": "NYJ", "nick": "Jets"}, "home": {"abbr": "DET", "nick": "Lions"}, "tbd": False},
+            {"network": "CBS", "slot": "late", "station": "WOIO 19 (CBS)", "text": "LAR Rams @ SF 49ers",
+             "away": {"abbr": "LAR", "nick": "Rams"}, "home": {"abbr": "SF", "nick": "49ers"}, "tbd": False}]}}}
+        self.assertEqual(espn.windows_decision(w, "FOX", 3, "2026-09-27T17:00:00Z", "lions", "jets")[0], "AVAILABLE")
+        self.assertEqual(espn.windows_decision(w, "FOX", 3, "2026-09-27T17:00:00Z", "lions", "giants")[0], "OUT_OF_MARKET")
+        self.assertEqual(espn.windows_decision(w, "CBS", 3, "2026-09-27T20:25:00Z", "49ers", "rams")[0], "AVAILABLE")
+        self.assertEqual(espn.windows_decision(w, "CBS", 3, "2026-09-27T20:25:00Z", "49ers", "chargers")[0], "OUT_OF_MARKET")
+
+    def test_tbd_an_unrecognized_marker_and_no_file_each_fall_through(self):
+        self.assertIsNone(espn.windows_decision(WINDOWS, "CBS", 3, "2026-09-27T20:25:00Z", "cowboys", "ravens"))     # TBD
+        odd = {"weeks": {"3": {"windows": [{"network": "CBS", "slot": "early", "text": "No game", "away": None, "home": None, "tbd": True}]}}}
+        self.assertIsNone(espn.windows_decision(odd, "CBS", 3, "2026-09-27T17:00:00Z", "steelers", "bengals"))     # unrecognized marker
+        self.assertIsNone(espn.windows_decision(None, "CBS", 3, "2026-09-27T17:00:00Z", "steelers", "bengals"))    # no file
+        self.assertIsNone(espn.windows_decision(WINDOWS, "CBS", 7, "2026-10-25T17:00:00Z", "steelers", "bengals"))  # week not covered
+        self.assertIsNone(espn.load_windows("/nowhere/nfl_windows.json"))
+
+    def test_precedence_listings_beat_windows_and_a_hand_entry_beats_both(self):
+        # WOIO's listing carries CIN @ PIT at 1:00 and the window says the same: both agree, the listing is the source
+        acc, mk, src = espn.decide_regional(start_iso="2026-09-27T17:00:00Z", is_local=False, cov_game=None, week=3, listings=WJW_LISTINGS,
+                                            station="WOIO", home_nick="steelers", away_nick="bengals", windows=WINDOWS, network="CBS")
+        self.assertEqual(acc, "AVAILABLE"); self.assertTrue(src.startswith("listings:"), src)
+        # the listing carries a DIFFERENT game from the window: the listing wins
+        w = {"weeks": {"3": {"updated": "x", "windows": [{"network": "CBS", "slot": "early", "station": "WOIO 19 (CBS)", "text": "HOU Texans @ IND Colts",
+                                                            "away": {"abbr": "HOU", "nick": "Texans"}, "home": {"abbr": "IND", "nick": "Colts"}, "tbd": False}]}}}
+        acc, mk, src = espn.decide_regional(start_iso="2026-09-27T17:00:00Z", is_local=False, cov_game=None, week=3, listings=WJW_LISTINGS,
+                                            station="WOIO", home_nick="steelers", away_nick="bengals", windows=w, network="CBS")
+        self.assertEqual((acc, src.split(":")[0]), ("AVAILABLE", "listings"))
+        # no listing for the station: the window decides
+        acc, mk, src = espn.decide_regional(start_iso="2026-09-27T17:00:00Z", is_local=False, cov_game=None, week=3, listings=None,
+                                            station="WOIO", home_nick="steelers", away_nick="bengals", windows=w, network="CBS")
+        self.assertEqual((acc, src.split(" ")[0]), ("OUT_OF_MARKET", "entitledsports"))
+        # a hand entry beats both
+        acc, mk, src = espn.decide_regional(start_iso="2026-09-27T17:00:00Z", is_local=False, cov_game={"cleveland": False}, week=3, listings=WJW_LISTINGS,
+                                            station="WOIO", home_nick="steelers", away_nick="bengals", windows=WINDOWS, network="CBS")
+        self.assertEqual((acc, src), ("OUT_OF_MARKET", "market_coverage_nfl.json week 3"))
+
+    def test_the_fixture_builder_reads_the_windows_file_from_the_environment(self):
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "nfl_windows.json"
+            p.write_text(json.dumps(WINDOWS), encoding="utf-8")
+            with redirect_stdout(io.StringIO()):
+                fx, _ = espn.build_nfl_fixture({"events": [event("29", "2026-09-27T17:00:00Z", ("Bengals", "Cincinnati Bengals"), ("Steelers", "Pittsburgh Steelers"), "CBS", "CIN", "PIT")]},
+                                               ROOT, season=2026, week=3, day_filter=None, teams=[], listings={}, listings_path=None, windows=None, windows_path=str(p))
+            m = fx["games"][0]["media"][0]
+            self.assertEqual(m["access"], "AVAILABLE")
+            self.assertTrue(m["source"].startswith("entitledsports week 3"))
 
 
 class TheOrder(unittest.TestCase):

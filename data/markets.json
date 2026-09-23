@@ -1,7 +1,7 @@
 {
   "_about": "Market-of-one (spec 3.12, 7.17). One viewer market: Cleveland, DMA 510. localTeams are the clubs whose local feeds this market receives; postalCode drives the NHL postal-lookup territory check (adapters/nhl.py). Edit here; adapters read this file directly.",
   "market": {"id": "cleveland", "name": "Cleveland", "dma": 510, "isViewerMarket": true},
-  "nfl": {"localTeams": ["CLE"], "affiliates": {"CBS": "WOIO", "FOX": "WJW"}, "coverageSource": "the Cleveland affiliates' own TV listings - WOIO 19 (CBS) and WJW 8 (FOX) - read from Schedules Direct by adapters/sd_listings.py (prompt 117, register 62); data/market_coverage_nfl.json is a hand override that wins when an entry exists"},
+  "nfl": {"localTeams": ["CLE"], "affiliates": {"CBS": "WOIO", "FOX": "WJW"}, "coverageSource": "EntitledSports' weekly coverage pages (entitledsports.com/schedule/nfl/coverage-map/week-N/, read by adapters/es_windows.py; unofficial, prompt 118, register 63); then the Cleveland affiliates' own TV listings from Schedules Direct (adapters/sd_listings.py, dormant without the SD_* secrets, wins when present); then data/market_coverage_nfl.json, a hand override that wins over both when an entry exists"},
   "nhl": {"localTeams": ["CBJ"], "postalCode": "44221", "territorySource": "api-web.nhle.com/v1/postal-lookup (2026-09-01: Columbus Blue Jackets, Summit County OH, networkType Sphere)"},
   "nba": {"localTeams": ["CLE"]},
   "mlb": {"localTeams": ["CLE"]}

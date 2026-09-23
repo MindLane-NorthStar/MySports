@@ -14,16 +14,21 @@ Unauthenticated. Two jobs:
        python -m adapters.espn --league nhl --teams-only
 
 Market-of-one (spec §3.12): ESPN marks nearly every CBS/FOX Sunday game "National", which is not the
-truth for a viewer in Cleveland. SINCE PROMPT 117 (Joe's ruling 2026-09-23, register §62) a CBS/FOX TV
-row is decided by the first of six rules: (1) a kickoff outside the Sunday 12:00-17:00 ET window is
-NATIONAL - Thanksgiving, Christmas, Saturdays, international mornings, prime time; (2) a hand entry in
-data/market_coverage_nfl.json wins, as a manual override; (3) a Browns game is AVAILABLE; (4) the
-affiliate's own listing (WOIO for CBS, WJW for FOX, from Schedules Direct via adapters/sd_listings.py,
-read through MYSPORTS_NFL_LISTINGS) has an NFL-game airing within 30 minutes of kickoff - the same two
-teams is AVAILABLE, a different game is OUT_OF_MARKET, a game with no team names is UNVERIFIED; (5)
-the station has listings for the date but no game in the window - the WJW 4:25 case - is
-OUT_OF_MARKET; (6) otherwise UNVERIFIED, exactly as before. Every row's `source` names the rule that
-decided it. E5 stands: an UNVERIFIED game is always shown, with the "Market TBD" cue, never filtered.
+truth for a viewer in Cleveland. SINCE PROMPT 117 (register §62) and PROMPT 118 (Joe's ruling
+2026-09-23, register §63) a CBS/FOX TV row is decided by the first rule that applies, and `source`
+names it: (1) a kickoff outside the Sunday 12:00-17:00 ET window is NATIONAL - Thanksgiving, Christmas,
+Saturdays, international mornings, prime time; (2) a hand entry in data/market_coverage_nfl.json wins,
+as a manual override; (3) a Browns game is AVAILABLE; (4) the affiliate's own listing (WOIO for CBS,
+WJW for FOX, from Schedules Direct via adapters/sd_listings.py, read through MYSPORTS_NFL_LISTINGS -
+DORMANT without its secrets, and it wins when present) has an NFL-game airing within 30 minutes of
+kickoff - the same two teams is AVAILABLE, a different game is OUT_OF_MARKET, a game with no team
+names is UNVERIFIED; (5) the station has listings for the date but no game in the window is
+OUT_OF_MARKET; (4b) EntitledSports' weekly coverage page (adapters/es_windows.py, read through
+MYSPORTS_NFL_WINDOWS) names the game in the row's window - early before 3:00 PM ET, late otherwise -
+and the same two teams by nickname is AVAILABLE, different teams is OUT_OF_MARKET, and TBD or an
+unrecognized marker falls through; (6) otherwise UNVERIFIED, and its source says neither source
+decided the game. E5 stands: an UNVERIFIED game is always shown, with the "Market TBD" cue, never
+filtered.
 
 Verified against the live payload 2026-09-01 (events[].competitions[0].{date,timeValid,neutralSite,
 competitors[].{homeAway,team{id,abbreviation,displayName,color,alternateColor,logo}},broadcasts[{market,names}],
@@ -58,6 +63,8 @@ REGIONAL_NETWORKS = {"CBS", "FOX"}
 LISTING_WINDOW_MINUTES = 30
 # the Sunday-afternoon regional window, ET: kickoffs at or after 12:00 and before 17:00
 SUNDAY_WINDOW = (12, 17)
+# rule 4b: a kickoff before this hour (ET) is in the early window, at or after it the late window
+LATE_WINDOW_HOUR = 15
 
 
 def sunday_afternoon_window(start_iso: str | None) -> bool:
@@ -123,8 +130,43 @@ def listings_decision(listings: dict[str, Any] | None, station: str | None, star
     return "OUT_OF_MARKET", f"listings: {station} carries {' at '.join(teams[:2])} {day} {when}"
 
 
+def load_windows(path: str | None = None) -> dict[str, Any] | None:
+    """The coverage windows adapters/es_windows.py wrote, from MYSPORTS_NFL_WINDOWS. None when the
+    variable is unset or the file is absent - a failed reader must leave today's behaviour."""
+    p = path if path is not None else os.getenv("MYSPORTS_NFL_WINDOWS")
+    if not p or not Path(p).exists():
+        return None
+    try:
+        return json.loads(Path(p).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def windows_decision(windows: dict[str, Any] | None, network: str | None, week: Any, start_iso: str | None,
+                     home_nick: str, away_nick: str) -> tuple[str, str] | None:
+    """Rule 4b against EntitledSports' windows for the game's week. (access, source), or None when the
+    window is TBD, unrecognized, or the file does not cover the week - rule 6 then applies."""
+    if not windows or not network:
+        return None
+    wk = (windows.get("weeks") or {}).get(str(week))
+    kickoff = parse_iso(start_iso)
+    if not wk or kickoff is None:
+        return None
+    slot = "early" if kickoff.astimezone(ET).hour < LATE_WINDOW_HOUR else "late"
+    w = next((x for x in wk.get("windows") or [] if x.get("network") == network and x.get("slot") == slot), None)
+    if w is None or w.get("tbd") or not (w.get("home") and w.get("away")):
+        return None
+    away, home = w["away"], w["home"]
+    call = str(w.get("station") or "").split(" ")[0] or network
+    updated = str(wk.get("updated") or "unstamped").replace(",", "")
+    src = f"entitledsports week {week} (updated {updated}): {call} {network} {slot} {away.get('abbr')} @ {home.get('abbr')}"
+    teams = [f"{away.get('abbr')} {away.get('nick')}", f"{home.get('abbr')} {home.get('nick')}"]
+    return ("AVAILABLE" if _names_match(teams, home_nick, away_nick) else "OUT_OF_MARKET"), src
+
+
 def decide_regional(*, start_iso: str | None, is_local: bool, cov_game: dict[str, Any] | None, week: Any,
-                    listings: dict[str, Any] | None, station: str | None, home_nick: str, away_nick: str
+                    listings: dict[str, Any] | None, station: str | None, home_nick: str, away_nick: str,
+                    windows: dict[str, Any] | None = None, network: str | None = None
                     ) -> tuple[str, str, str]:
     """A CBS or FOX TV row's (access, market, source), by the first rule that applies."""
     if not sunday_afternoon_window(start_iso):                                   # 1
@@ -133,10 +175,13 @@ def decide_regional(*, start_iso: str | None, is_local: bool, cov_game: dict[str
         return ("AVAILABLE" if cov_game.get("cleveland") else "OUT_OF_MARKET"), "regional", f"market_coverage_nfl.json week {week}"
     if is_local:                                                                 # 3
         return "AVAILABLE", "regional", "market: local team"
-    got = listings_decision(listings, station, start_iso, home_nick, away_nick)  # 4 and 5
+    got = listings_decision(listings, station, start_iso, home_nick, away_nick)  # 4 and 5: the listings win when present
     if got is not None:
         return got[0], "regional", got[1]
-    return "UNVERIFIED", "regional", "regional feed - no station listing for this date"   # 6
+    got = windows_decision(windows, network, week, start_iso, home_nick, away_nick)   # 4b
+    if got is not None:
+        return got[0], "regional", got[1]
+    return "UNVERIFIED", "regional", "regional feed - neither the station listing nor the coverage window decided this game"   # 6
 
 
 # ----------------------------------------------------------------------------- teams
@@ -255,7 +300,8 @@ def _status_scores(comp: dict[str, Any], sides: dict[str, Any]) -> dict[str, Any
 
 def build_nfl_fixture(raw: dict[str, Any], root: Path, *, season: int, week: int | None, day_filter: str | None,
                       teams: list[dict[str, Any]], listings: dict[str, Any] | None = None,
-                      listings_path: str | None = None) -> tuple[dict[str, Any], list[str]]:
+                      listings_path: str | None = None, windows: dict[str, Any] | None = None,
+                      windows_path: str | None = None) -> tuple[dict[str, Any], list[str]]:
     available, unavailable = access_lookup(root)
     market = load_data(root, "markets.json", {}).get("nfl", {})
     local_abbrevs = set(market.get("localTeams", ["CLE"]))
@@ -263,6 +309,8 @@ def build_nfl_fixture(raw: dict[str, Any], root: Path, *, season: int, week: int
     coverage = load_data(root, "market_coverage_nfl.json", {})
     if listings is None:
         listings = load_listings(listings_path)
+    if windows is None:
+        windows = load_windows(windows_path)
     notes: list[str] = []
     games: list[dict[str, Any]] = []
     for ev in raw.get("events", []):
@@ -299,8 +347,9 @@ def build_nfl_fixture(raw: dict[str, Any], root: Path, *, season: int, week: int
                 # Sunday-afternoon CBS/FOX windows are regional whatever ESPN's market flag says (§3.12);
                 # the six rules (prompt 117) decide the row, and `source` says which one did.
                 acc, mk, src = decide_regional(
-                    start_iso=start, is_local=is_local, cov_game=cov_game, week=week, listings=listings,
-                    station=affiliates.get(outlet), home_nick=nickname(home["team"]), away_nick=nickname(away["team"]))
+                    start_iso=start, is_local=is_local, cov_game=cov_game, week=(ev.get("week") or {}).get("number", week),
+                    listings=listings, station=affiliates.get(outlet), home_nick=nickname(home["team"]), away_nick=nickname(away["team"]),
+                    windows=windows, network=outlet)
             media.append(media_row(mtype, outlet, acc, market=mk, certainty=cert, start_time=start, tbd=time_tbd, source=src))
         if not media:
             notes.append(f"{away['abbreviation']}@{home['abbreviation']}: no broadcast rows in payload")
