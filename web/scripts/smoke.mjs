@@ -20,6 +20,7 @@ import { rest, restAll, RestError } from '../lib/rest.js';
 import proColours from '../../data/grid_colors_pro.json' with { type: 'json' };
 import { SUPABASE_URL, ASSET_BASE_URL, gridAssetUrl } from '../lib/config.js';
 import { indexStandings, standingLine } from '../lib/standings.js';
+import { isPlaceholderTeam, placeholderReason } from '../lib/placeholders.js';
 
 let failures = 0;
 let checks = 0;
@@ -209,7 +210,7 @@ console.log('\n(f) standings, probables, display names, MLB short names');
   // the rule, and that team quietly stops being the colour Joe chose. Only live data can see it, so
   // it is a smoke check rather than a unit test. restAll, not rest: 809 teams is past the 1,000-row
   // cap today but the margin is one season of expansion, and rule 19 does not have exceptions.
-  const allTeams = await restAll('teams?select=id,sport&order=id.asc');
+  const allTeams = await restAll('teams?select=id,sport,canonical_name&order=id.asc');
   const known = new Map(allTeams.map((t) => [String(t.id), t.sport]));
   const ruledIds = Object.keys(proColours.teams);
   const unresolved = ruledIds.filter((id) => !known.has(id));
@@ -218,10 +219,18 @@ console.log('\n(f) standings, probables, display names, MLB short names');
   const wrongSport = ruledIds.filter((id) => known.get(id) !== proColours.teams[id].sport);
   assert(wrongSport.length === 0, 'every ruled team is in the sport the table says',
          wrongSport.length ? wrongSport.join(', ') : `${ruledIds.length} agree`);
+  // WHAT A PLACEHOLDER IS lives in lib/placeholders.js (prompt 114 rev B, Joe's ruling 2026-09-23):
+  // a `-TBD` id, or an MLB row named for a postseason seed or wild card slot in one of the two forms
+  // MLB has published. The 2026-09-23 refresh loaded seven of the latter and this check went red,
+  // which is what it is for - and a form nobody has ruled on yet is MEANT to turn it red again. The
+  // detail names every row this exempted and why, so a green run still shows the reader the seven.
   const proUnruled = allTeams.filter((t) => t.sport !== 'cfb' && !proColours.teams[String(t.id)]);
-  assert(proUnruled.every((t) => String(t.id).endsWith('-TBD')),
+  const exempt = proUnruled.filter(isPlaceholderTeam).map((t) => `${t.id} "${t.canonical_name}" (${placeholderReason(t)})`);
+  const notPlaceholder = proUnruled.filter((t) => !isPlaceholderTeam(t)).map((t) => `${t.id} "${t.canonical_name}"`);
+  assert(proUnruled.every(isPlaceholderTeam),
          'the only unruled pro rows are TBD placeholders',
-         proUnruled.map((t) => t.id).join(', ') || 'none');
+         `${exempt.length} placeholder${exempt.length === 1 ? '' : 's'} exempted: ${exempt.join('; ') || 'none'}`
+         + (notPlaceholder.length ? ` | NOT placeholders: ${notPlaceholder.join('; ')}` : ''));
 }
 
 console.log(`\n${failures === 0 ? 'OK' : 'FAILED'} - ${checks - failures}/${checks} checks passed`);
