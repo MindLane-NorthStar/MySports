@@ -20,10 +20,10 @@ they live here and nowhere else.
 | the closed history — past run narratives, superseded sections | `docs/handoff-archive.md` (split out by prompt 87; `handoff-status.md` wins on current state) |
 | the incidents behind the working rules — history, non-binding | `docs/rules-casebook.md` |
 | real work that is understood and not started, and decisions waiting on Joe | `docs/queue.md` |
-| why a decision was made, and whether it is already settled | `docs/enhancement-register.md` (§1–§64) |
+| why a decision was made, and whether it is already settled | `docs/enhancement-register.md` (§1–§65) |
 | what a card, block or grid is supposed to look like | `docs/rendering-contract.md` + `docs/rendering-contract-mobile.md` (the Mobile Grid Addendum) |
 | the locked visual reference the app must match | `docs/design/mobile_demo.html` |
-| what a past run was actually asked to do | `docs/prompts/` — 126 briefs covering 01–119, verbatim; 39 and 42 are the only permanent gaps and 115 is reserved for preemption (numbers are identifiers, not run order: 90 ran after 91), and 86 and 113 carry three revisions each (see its README). 103–112 and 113 rev C have no second copy and say so in the README's provenance table |
+| what a past run was actually asked to do | `docs/prompts/` — 127 briefs covering 01–120, verbatim; 39 and 42 are the only permanent gaps and 115 is reserved for preemption (numbers are identifiers, not run order: 90 ran after 91), and 86 and 113 carry three revisions each (see its README). 103–112 and 113 rev C have no second copy and say so in the README's provenance table |
 | deploy, environment, what is publishable | `docs/deployment-contract.md` |
 | the first build specs — superseded, do not build from them | `docs/archive/` (moved out of the repo root by prompt 87) |
 
@@ -187,6 +187,9 @@ even around the retired stub.
     rule and not a note. **Distinct from 20**, which is about editing a FILE with a bare repeated
     string replace: same failure of specificity, different blast radius — that one loses text a
     diff can recover, this one loses work that was never written down.
+    **Amendment, 2026-09-23:** A root `AGENTS.md` that `scripts/remove_codex_agents_md.py` verifies as
+    the Codex desktop app's copy of `CLAUDE.md` is removed by running that script before the gates; Joe
+    authorized this 2026-09-23 (register §65). An `AGENTS.md` the script does not verify is a stop.
 
 36. **Never run `next build` while `next dev` is running.** They share `web/.next`, and the build
     writes into the directory the dev server is serving from: after one such attempt the dev server

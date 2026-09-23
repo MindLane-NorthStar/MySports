@@ -4006,6 +4006,8 @@ has been 428 × 135.
 
 **Numbered by count:** §1–§48 each appear exactly once and there was no §49.
 
+**Pointer, 2026-09-23 (prompt 120, §65):** the cause is now measured — the Codex desktop app's "import from Claude Code" sync writes the file, not a second agent and not a stray write from another project — and `scripts/remove_codex_agents_md.py` removes a copy it verifies, under Joe's standing authorization in working rule 35's amendment. "Not gitignored" and "no allowlist" below still stand.
+
 **JOE'S RULING, 2026-09-15:** *"Codex got in this repo by accident. Remove the AGENTS.md file — it
 doesn't belong there."*
 
@@ -4539,6 +4541,8 @@ data it was handed was wrong.
   as written did not obviously apply, which is exactly how it was missed.
 
 ### `AGENTS.md` came back, and `git status` was not a guard — Joe's ruling, 2026-09-22 (block F)
+
+**Pointer, 2026-09-23 (prompt 120, §65):** "THE CAUSE, CORRECTED" below is corrected again. The file is written by the Codex desktop app's "import from Claude Code" sync, measured from Joe's `.codex` folder; it is not a stray write from another project. The test in item 3 stays and stays red while the file exists; its docstring and message now say the measured cause and tell the reader to run the script first.
 
 **JOE'S RULING, 2026-09-22:** *`CLAUDE.md` is the only agent-instruction file this repo has, and a
 reappearance of any other must be a red gate rather than a line in `git status`.*
@@ -5274,3 +5278,76 @@ and the commit held for Joe; whether the deletion happened is in the run's repor
 
 **Out of scope, deliberately:** loading playoff games any differently (queue item 14); the display;
 every other sport.
+
+## 65. THE CODEX COPY OF `CLAUDE.md` IS IDENTIFIED BY ITS CAUSE AND REMOVED ON SIGHT — 2026-09-23, prompt 120
+
+**Numbered by count:** §1–§64 each appear exactly once and there was no §65.
+
+**JOE'S RULING, 2026-09-23:** *keep Codex's import of his Claude Code conversations, and stop
+`AGENTS.md` from blocking runs. Claude Code handles it on its own.*
+
+**The cause, measured — this corrects §54 block F's "cause, corrected".** Cowork read Joe's
+`C:\Users\jlull\.codex` folder on 2026-09-23 (read-only, granted for the purpose) and the tree at
+`3938a57`. The stray root `AGENTS.md` (§49, §54 block F, §64's pre-check) is written by **the Codex
+desktop app's "import from Claude Code" sync**. It is not a second agent working this repo (§49's
+first inference) and not a stray write from another project (§54's correction, which this test's
+docstring carried from prompt 109 until this prompt).
+
+- **The setting is on for every item.** `.codex\config.toml`, under `[desktop]`, carries
+  `external-agent-import-sync-enabled = true` and `external-agent-import-sync-item-types = "all"`. The
+  app's persisted state (`.codex-global-state.json`, key `external-agent-import-sync-state`) records
+  provider `claude-code` with `projects: true, chats: true`, plus plugin migration.
+- **`AGENTS.md` is one of the item types it imports.** The app-server binary,
+  `.codex\plugins\.plugin-appserver\codex.exe`, lists the migration item types as `AGENTS_MD, CONFIG,
+  SKILLS, PLUGINS, MCP_SERVER_CONFIG, SUBAGENTS, HOOKS, COMMANDS, MEMORY, SESSIONS`.
+- **The timing matches.** Codex's log (`logs_2.sqlite`, covering 2026-09-14 20:00 UTC to 2026-09-23)
+  records `externalAgentConfig/import` runs at 2026-09-17 23:47, 2026-09-20 01:34 and **2026-09-23
+  16:26:17 UTC**; the copy §64 found was created at 16:26 UTC that day, the same minute. The first
+  arrival (§49) was written at 2026-09-14 20:00:15 UTC, two minutes after the app's `.desktop-created`
+  marker (19:58:19 UTC), which is its first-run import.
+- **The 2026-09-16 arrival is unexplained.** No import in the retained log matches it. It is recorded
+  as unexplained, not as explained.
+- **The 09-17 and 09-20 imports wrote no new file**, presumably because a copy already stood there
+  (from 09-16 until 09-22). Consistent, but inferred, and recorded as such.
+- **What each copy is.** `CLAUDE.md` as it stood when the import ran, with `Claude Code` → `Codex` and
+  `Claude.ai` → `Codex.ai` and nothing else — §49 measured the first against `d6cd7b2`, §54 the second,
+  and prompt 119's report measured the third against `5dc2087`.
+
+**What was built.**
+
+1. **`scripts/remove_codex_agents_md.py`.** When a root `AGENTS.md` exists it compares the file, byte
+   for byte with no line-ending normalisation, against the Codex rewrite of every `CLAUDE.md` in the
+   last 50 commits that touched it (`git log -50 --format=%H -- CLAUDE.md`, then `git show
+   <sha>:CLAUDE.md`; 48 commits reach back to `61469b6`, the file's creation) and of the working-tree
+   `CLAUDE.md`. Identical to one of them: deleted, with one line naming the matching commit, the size,
+   sha256, mtime and line endings, exit 0. Identical to none: **kept**, the nearest candidate named
+   and the diff printed, exit 1 — anything in that file that is not `CLAUDE.md` is unknown, and unknown
+   files are Joe's to judge. No file: exit 0, silent. The deletion is `os.remove` inside the script and
+   never a bare `rm`, so the permission classifier sees one named, repeatable command. **This run had
+   no `AGENTS.md` to remove** (Joe deleted the third copy by hand before prompt 119's commit), so the
+   script's first live run was the silent exit 0; the classifier did not refuse it.
+2. **Working rule 35's amendment** in `CLAUDE.md`, Joe's standing authorization: *"A root `AGENTS.md`
+   that `scripts/remove_codex_agents_md.py` verifies as the Codex desktop app's copy of `CLAUDE.md` is
+   removed by running that script before the gates; Joe authorized this 2026-09-23 (register §65). An
+   `AGENTS.md` the script does not verify is a stop."* It sits under rule 35 because that is the rule
+   governing what a run cleans up before its gates, and the brief did not name a rule.
+3. **`tests/test_agent_instruction_files.py` is not weakened.** It stays red while the file exists;
+   no allowlist, no gitignore (§49 stands). Its docstring's and failure message's "known cause" now
+   say the measured cause above and tell the reader to run the script first.
+4. **`tests/test_remove_codex_agents_md.py`** (9), each in its own temp git repo with four commits of
+   `CLAUDE.md` written and committed as LF under `core.autocrlf=false`: an exact rewrite of the current
+   `CLAUDE.md` deleted, naming HEAD; an exact rewrite of the copy three commits back deleted, naming
+   that commit; a rewrite of an uncommitted working-tree edit deleted; one extra line kept, exit 1, the
+   nearest candidate named and the line shown; a rewrite that missed the `Claude.ai` swap kept, exit 1;
+   no file exit 0 and silent; a CRLF copy of an LF `CLAUDE.md` kept and reported as CRLF; the rewrite
+   is both swaps; and `CLAUDE.md` carries the authorization line. **Four mutations each red:** compare
+   against the working tree only (the three-back copy is kept and the nearest candidate is misnamed,
+   3 failed); skip the `Claude.ai` swap (the missed-swap copy is deleted, and the rewrite predicate
+   itself, 2 failed — the exact-copy tests build their file through the same function, so they follow
+   the mutation, which is why the missed-swap case exists); delete on mismatch (3 failed); exit 0 on
+   mismatch (3 failed).
+
+**Out of scope, deliberately.** Anything outside the repo, including everything under `.codex`:
+stopping the import at its source is a setting in Joe's Codex app, the only value Cowork observed for
+the item-types key is `"all"`, and a guessed value in another app's config is not a fix. Removing any
+other foreign instruction file: the other five names in the guard stay as they are.
