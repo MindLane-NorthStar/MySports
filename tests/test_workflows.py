@@ -181,6 +181,35 @@ def test_nfl_listings_step_feeds_the_nfl_step_and_can_never_fail_the_run():
     assert "continue-on-error" not in lst, "exit 0 on failure is the module's contract, not the workflow's"
 
 
+def test_nfl_windows_step_feeds_the_nfl_step_and_the_listings_step_says_it_is_dormant():
+    """PROMPT 118, Joe's ruling 2026-09-23: no paid data. EntitledSports' coverage page is the source
+    (`adapters/es_windows.py`), read by the NFL step through MYSPORTS_NFL_WINDOWS; the Schedules Direct
+    step stays, named dormant, and its behaviour is unchanged. Walked by STEP (rule 28).
+
+    Pinned: the windows step runs before the NFL step and after the listings step (the order the rules
+    consult them in, so a reader sees the precedence in the file); both name the same temp-dir file;
+    no secret is added for it; no `${{` inside its `run`; no `continue-on-error`, because exit 0 on
+    failure is the module's contract.
+    """
+    doc = yaml.safe_load((ROOT / ".github" / "workflows" / "schedule_refresh.yml").read_text(encoding="utf-8"))
+    job = doc["jobs"]["refresh"]
+    steps = job["steps"]
+    windows = [i for i, s in enumerate(steps) if "adapters.es_windows" in str(s.get("run", ""))]
+    listings = [i for i, s in enumerate(steps) if "adapters.sd_listings" in str(s.get("run", ""))]
+    nfl = [i for i, s in enumerate(steps) if str(s.get("name", "")).startswith("NFL") and "--date" in str(s.get("run", ""))]
+    assert len(windows) == 1 and len(listings) == 1 and len(nfl) == 1
+    assert listings[0] < windows[0] < nfl[0], "listings, then windows, then the NFL step that reads both"
+    win, nfl_step = steps[windows[0]], steps[nfl[0]]
+    path = win.get("env", {}).get("MYSPORTS_NFL_WINDOWS")
+    assert path and path.startswith("${{ runner.temp }}/"), "the file lives in the runner's temp dir"
+    assert nfl_step.get("env", {}).get("MYSPORTS_NFL_WINDOWS") == path, "the NFL step reads the same file"
+    assert "${{" not in win["run"], "no Actions expression inside run (rule 28)"
+    assert '--out "$MYSPORTS_NFL_WINDOWS"' in win["run"]
+    assert "continue-on-error" not in win
+    assert not any(k.startswith("ES_") or "ENTITLED" in k for k in job["env"]), "no secret for the free source"
+    assert "dormant" in str(steps[listings[0]].get("name", "")).lower(), "the Schedules Direct step says it is dormant"
+
+
 def test_cfbd_teams_fetch_is_not_restricted_to_the_week():
     """The other half of the same defect, and the half no workflow file can show.
 

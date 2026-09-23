@@ -70,20 +70,33 @@ jobs:
             W=$(python -m pipeline.render_feed --sport cfb --latest-week || true)
             if [ -n "$W" ]; then python -m adapters.cfbd --week "$W"; fi
           fi
-      - name: NFL station listings (Schedules Direct) — WOIO and WJW, never fails the run
+      - name: NFL station listings (Schedules Direct) — dormant without the SD_* secrets, never fails the run
         # PROMPT 117, Joe's ruling 2026-09-23: a CBS/FOX Sunday-afternoon row is decided by what the
         # Cleveland affiliate actually airs. adapters/sd_listings.py writes one JSON file the NFL step
         # below reads through MYSPORTS_NFL_LISTINGS; the path is the runner's temp dir, so nothing is
         # archived or committed. Missing secrets, a 4xx/5xx or a timeout: one log line, no file, exit 0,
         # and the NFL step behaves exactly as it did before this step existed. No Actions expression
         # inside `run` (rule 28): the path is an env var, set from `runner.temp` in `env`.
+        # PROMPT 118, Joe's ruling 2026-09-23: no paid data. The secrets are not set and the step is
+        # DORMANT; it stays because it is the stronger source if Joe ever buys it, and it wins when present.
         env:
           MYSPORTS_NFL_LISTINGS: ${{ runner.temp }}/nfl_listings.json
         run: python -m adapters.sd_listings --out "$MYSPORTS_NFL_LISTINGS"
+      - name: NFL coverage windows (EntitledSports) — Cleveland's four Sunday windows, never fails the run
+        # PROMPT 118, Joe's ruling 2026-09-23: the free source. adapters/es_windows.py reads the coverage
+        # page for the NFL week containing today and the next one (two pages at most, the week from
+        # ESPN's calendar) and writes the Cleveland block's four windows to one JSON the NFL step reads
+        # through MYSPORTS_NFL_WINDOWS (adapters/espn.py rule 4b). No secrets. An HTTP error, a missing
+        # block or fewer than four windows: one log line, no file, exit 0 - the game stays Market TBD.
+        env:
+          MYSPORTS_NFL_WINDOWS: ${{ runner.temp }}/nfl_windows.json
+        run: python -m adapters.es_windows --out "$MYSPORTS_NFL_WINDOWS"
       - name: NFL (ESPN) — yesterday, today and the next 6 viewing days (every game day, not only Sunday)
         # PROMPT 117: the listings file from the step above, read by adapters/espn.py rules 4 and 5.
+        # PROMPT 118: the windows file, read by rule 4b after the listings.
         env:
           MYSPORTS_NFL_LISTINGS: ${{ runner.temp }}/nfl_listings.json
+          MYSPORTS_NFL_WINDOWS: ${{ runner.temp }}/nfl_windows.json
         # PROMPT 88, Joe's ruling 2026-09-10: the same rolling window NBA and MLB use. This fetched two
         # dates - yesterday and the coming Sunday - and `--date` holds ONLY that day's games
         # (adapters/espn.py:177), so Thursday and Monday games were never refreshed on the day they
