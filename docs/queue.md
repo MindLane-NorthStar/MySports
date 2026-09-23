@@ -283,3 +283,27 @@ Joe, add it to the pattern with its own test, and record the ruling as a dated l
 
 **Where it starts.** `web/lib/placeholders.js`, `web/test/placeholders.test.mjs`, `web/scripts/smoke.mjs`.
 **Size.** Small once ruled. **A description of a problem, not an approved plan.**
+
+## 13. If EntitledSports goes stale or changes shape, the grid falls back to Market TBD — and the options are Joe's
+
+**What.** Since prompt 118 (register §63) a CBS/FOX Sunday-afternoon row is decided by EntitledSports'
+weekly coverage page, an unofficial site that names no source. Three things can go wrong, and each
+one fails the same way: the page stops updating (the late windows stay TBD all week, or a week's page
+never appears), the markup changes (the reader finds no Cleveland block or fewer than four windows and
+writes nothing), or the site goes away. In every case rule 4b falls through, the game is `UNVERIFIED`,
+and the card shows "Market TBD" — E5, which is the design, not a fault. Nothing goes red: the
+windows step logs one line and exits 0, so the tell is the source strings on the CBS/FOX rows going
+back to "neither the station listing nor the coverage window decided this game", or the step's log
+saying `0 of 8 windows named` on a Saturday.
+
+**The options, all Joe's to choose.** (a) A hand entry in `data/market_coverage_nfl.json` for the
+week — it beats every source and takes one line per game. (b) Buying Schedules Direct: the client,
+its workflow step and rules 4–5 are in the tree dormant, and adding the three `SD_*` secrets turns
+them on with no code change; Joe ruled no paid data on 2026-09-23 and this item does not re-raise
+it, only records that the switch exists. (c) Another free source, which would need its own terms
+read and its own reader. Not an option: guessing a window from the network name, which is what
+ESPN's "National" flag amounts to and what §62 stopped.
+
+**Where it starts.** `adapters/es_windows.py` (the reader and its `PageError`s), `adapters/espn.py`
+`windows_decision`, `tests/fixtures/es_week3_cleveland.html` (the markup as it was). **Size.** Small
+if a hand entry; a session if the markup changed. **A description of a problem, not an approved plan.**

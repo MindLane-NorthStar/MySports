@@ -5145,3 +5145,68 @@ how many games stay `UNVERIFIED` once the listings reach the date — in a norma
 **Out of scope, deliberately:** the display and the E5 cue; NBC, ESPN, ABC, Prime and Netflix rows,
 which are national and already `AVAILABLE`; every other sport; any database write outside the
 nightly refresh.
+
+---
+
+## 63. THE FREE SOURCE DECIDES CLEVELAND'S CBS AND FOX WINDOWS, AND SCHEDULES DIRECT STAYS DORMANT — 2026-09-23, prompt 118
+
+**Numbered by count:** §1–§62 each appear exactly once and there was no §63.
+
+**Joe's ruling: no paid data.** Joe did not buy Schedules Direct and will not. The US$35 a year was
+never his decision — Cowork folded the cost into a source choice in prompt 117's brief instead of
+putting it to him separately, and that was Cowork's error. §62's mechanism is unchanged and its client
+stays in the tree, **dormant**: without the three `SD_*` secrets the step already writes nothing and
+the NFL step behaves as if it did not exist. If Joe ever buys it, it is the stronger source and it
+wins when present (rules 4 and 5 run before 4b below). Nothing was removed.
+
+**Why the free guides are out.** TV Passport's terms of service forbid *"any data mining, data
+gathering, scraping or extraction method"* and storing their content in any database
+(tvpassport.com/tos); the other free guides carry the same shape of term. A source whose terms forbid
+the read is not a source, whatever its data.
+
+**The source: EntitledSports' weekly coverage pages.**
+`entitledsports.com/schedule/nfl/coverage-map/week-<N>/` names, for each of the 210 markets, the game
+in each of the four Sunday-afternoon windows — **CBS Early, FOX Early, CBS Late, FOX Late** — with the
+market's station: WOIO 19 (CBS) and WJW 8 (FOX) for Cleveland–Akron (Canton). Its robots.txt (read
+2026-09-23) disallows `/api/`, `/v1/`, `/details/`, `/metadata/`, `/hub/`, `/coverage/`,
+`/conferences/` and `/regular-season-`, and does **not** disallow `/schedule/`; `/terms` is a 404, so
+there are no terms to read. **It is unofficial.** It names no source, the late windows often stay TBD
+until midweek (week 3 read 2026-09-23: CBS Early CIN @ PIT, FOX Early CAR @ CLE, both late windows
+TBD; week 4 all four TBD), and a redesign breaks the reader. **Every one of those limits fails safe:**
+a window the reader cannot decide is TBD, and TBD falls through to `UNVERIFIED` — E5's "Market TBD",
+which stands. The reader (`adapters/es_windows.py`) sends an honest User-Agent naming the project,
+fetches at most two pages a run — the NFL week containing today (Eastern) and the next — and parses
+only the Cleveland block, measured against the live markup: one `<details class="mkd">` per market,
+four `<div class="mw">` rows each labelled by window, the game as `AAA Nick @ HHH Nick` or `TBD`. Any
+other text is recorded verbatim, becomes TBD, and is noted in the output; nothing is guessed. A page
+with no Cleveland block or fewer than four windows is a failure, and a failure of any kind is one log
+line, no file, exit 0. **The week number comes from ESPN's own calendar** — `leagues[0].calendar` on
+the scoreboard payload the ESPN adapter already fetches, whose regular-season entries carry `value`,
+`startDate` and `endDate` (captured in `tests/fixtures/espn_nfl_scoreboard_raw.json`) — so it is the
+same number `adapters/espn.py` writes on every game; the test pins the calendar's number to the
+events' number on the captured payload. The committed fixtures are the Cleveland block and the stamp
+row only, hand-trimmed; the page itself is not copied into a public repository.
+
+**Rule 4b, and the precedence.** `decide_regional` gains one rule and nothing else in the order
+changes: (1) national window; (2) hand entry; (3) Browns; (4–5) the station listings, **which win when
+present**; **(4b) the EntitledSports window for the game's week** — the row's window is *early* when
+the kickoff is before 3:00 PM ET, *late* otherwise; the same two teams by nickname (the same
+`_names_match`, so the Los Angeles and New York pairs resolve) is `AVAILABLE`, named teams that differ
+are `OUT_OF_MARKET`, and TBD, an unrecognized marker or no file falls through; (6) `UNVERIFIED`, whose
+source now says neither source decided the game. The source string reads
+`entitledsports week 3 (updated Wed Sep 23 5:30 AM ET): WOIO CBS early CIN @ PIT`. Proven offline:
+week 3's CBS early is the Bengals at the Steelers and every other CBS early game is out; the late
+windows and all of week 4 fall through; the cut at 1:00, 2:59, 3:00, 4:05 and 4:25; the two-team
+cities; listings beat windows and a hand entry beats both; a garbled block, three windows, an HTTP
+500 and a missing block each write nothing and exit 0. Five mutations each go red: the cut moved,
+matching by city, TBD deciding `OUT_OF_MARKET`, the four-window check dropped, windows ahead of
+listings. The one live call of the run was the Block A fetch of weeks 3 and 4 the fixtures come from;
+the suite's guard against reaching the HTTP helper stays.
+
+**What the refresh does next.** The workflow's windows step runs after the dormant listings step and
+before the NFL step, with no secret, and the rule applies on the next scheduled run (07:37 or 11:37
+UTC). Joe decides any dispatch. If the site goes stale or changes shape the grid falls back to Market
+TBD and the options are Joe's (`docs/queue.md` item 13): a hand entry, or buying Schedules Direct.
+
+**Out of scope, deliberately:** the display and E5; removing any Schedules Direct code; every other
+sport; any database write outside the refresh.
