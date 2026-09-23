@@ -1270,6 +1270,42 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
+// ------------------------------------------ THE TBD BADGE, AFTER HYDRATION, AND A LOGO THAT 404s (prompt 116)
+//
+// A placeholder team (a postseason seed with no club yet) shows a grey TBD badge where its logo
+// would be; a REAL team whose logo fails to load gets the same badge from the <img>'s error path.
+// Both are checked on a COLD load, after server rendering and hydration, because an <img> that
+// errors before React attaches its handler would otherwise keep the browser's broken icon: the
+// component's mount check (`img.complete && img.naturalWidth === 0`) is what this proves.
+{
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  // the Yankees' logo is made to 404, so their card exercises the error path beside four placeholder cards
+  await page.route((u) => /\/logos\/mlb-147_dark\.png/.test(u.pathname), (route) => route.fulfill({ status: 404, body: '' }));
+  await page.goto(`${base}/?day=2026-09-29`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(600);
+  const r = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('.mcard')].filter((c) => /Wild Card|#3 Seed/.test(c.textContent));
+    // the badges on PLACEHOLDER rows only - the Yankees' row in the fourth card also carries one in
+    // this context, from the 404 route below, and is counted by the third check rather than here
+    const badges = cards.flatMap((c) => [...c.querySelectorAll('.tl1')].filter((row) => /Wild Card|#\d Seed/.test(row.textContent)).flatMap((row) => [...row.querySelectorAll('.tbd-mark')]));
+    const brokenImgs = [...document.querySelectorAll('.tl1 img, .dpanel-head img, .mslot img')].filter((i) => i.complete && i.naturalWidth === 0);
+    const yankees = [...document.querySelectorAll('.mcard')].find((c) => /Yankees/.test(c.textContent));
+    const yankeeBadge = yankees ? [...yankees.querySelectorAll('.tl1')].some((row) => /Yankees/.test(row.textContent) && row.querySelector('.tbd-mark')) : null;
+    const style = badges[0] ? getComputedStyle(badges[0]) : null;
+    return { cards: cards.length, badges: badges.length, brokenImgs: brokenImgs.length, yankeeBadge,
+             badgeBox: badges[0] ? [Math.round(badges[0].getBoundingClientRect().width), Math.round(badges[0].getBoundingClientRect().height)] : null,
+             badgeText: badges[0]?.textContent, fill: style?.backgroundColor, ink: style?.color };
+  });
+  record('TBD badge: every placeholder team on 2026-09-29 shows the badge in its logo box after hydration',
+         r.cards === 4 && r.badges === 7 && r.badgeText === 'TBD', `${r.cards} placeholder cards, ${r.badges} badges (7 placeholder sides), text ${r.badgeText}`);
+  record('TBD badge: it fills the 20px list logo box, from the neutral tokens', r.badgeBox && r.badgeBox[0] === 20 && r.badgeBox[1] === 20 && r.fill === 'rgb(59, 59, 59)' && r.ink === 'rgb(154, 160, 168)',
+         `box ${JSON.stringify(r.badgeBox)}, fill ${r.fill} (--spot-0), ink ${r.ink} (--dim)`);
+  record('TBD badge: a REAL team whose logo 404s swaps to the badge, and no broken image is painted',
+         r.yankeeBadge === true && r.brokenImgs === 0, `Yankees badge ${r.yankeeBadge}, broken <img> elements ${r.brokenImgs}`);
+  await ctx.close();
+}
+
 // ------------------------------------------ THE iPAD'S HEADROOM, MEASURED AT FIVE VIEWPORTS (prompt 114)
 //
 // On the iPad the collapsed navbar and the tap-restored banner sit under iOS 27's scroll-edge scrim

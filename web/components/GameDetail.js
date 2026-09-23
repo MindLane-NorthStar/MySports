@@ -12,6 +12,7 @@
 import { useEffect } from 'react';
 import { etTime, longDay, resultLabel, hasScore } from '../lib/format.js';
 import { teamLogoDarkUrl, watchUrl, mlbAppUrl, DIRECTV_STREAM } from '../lib/config.js';
+import TeamMark from './TeamMark.js';
 import { markStyle, hasMark } from '../lib/marks.js';
 import { standingLine, standingFor } from '../lib/standings.js';
 import { cardName } from './MatchupCard.js';
@@ -179,11 +180,11 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
             </>
           ) : (
             <>
-              <img src={teamLogoDarkUrl(away?.id)} alt="" />
+              <TeamMark team={away} sport={sport} src={teamLogoDarkUrl(away?.id)} loading={undefined} />
               <strong>
                 {cardName(away, game.away_team_id)} @ {cardName(home, game.home_team_id)}
               </strong>
-              <img src={teamLogoDarkUrl(home?.id)} alt="" />
+              <TeamMark team={home} sport={sport} src={teamLogoDarkUrl(home?.id)} loading={undefined} />
             </>
           )}
           <button type="button" className="dpanel-close" onClick={onClose} aria-label="Close">

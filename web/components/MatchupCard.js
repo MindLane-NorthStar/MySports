@@ -25,6 +25,7 @@
 import { useRef } from 'react';
 import { etTime, teamColor, dayParts, slotContent } from '../lib/format.js';
 import { teamLogoDarkUrl, markUrl } from '../lib/config.js';
+import TeamMark from './TeamMark.js';
 import { showsMark, cardMarkSlug } from '../lib/marks.js';
 import { standingParts, standingFor, rankFor } from '../lib/standings.js';
 import { useTextMeasurer, useElementWidth } from '../lib/useTextMeasurer.js';
@@ -105,7 +106,9 @@ function TeamStack({ team, teamId, sport, standings, rankings, season, week, pro
   return (
     <div className="tcol">
       <div className="tl1">
-        <img src={teamLogoDarkUrl(id)} alt="" loading="lazy" />
+        {/* A placeholder team - a postseason seed with no club yet - shows a TBD badge in this box
+            (prompt 116); the game's sport rides along because the embed does not carry it. */}
+        <TeamMark team={team} sport={sport} src={teamLogoDarkUrl(id)} />
         <b style={{ fontSize: `${fit.px}px` }}>{name}</b>
         {/* The record is DROPPED FROM THE FLOW when the name needs its room, never hidden in place:
             visibility:hidden would keep the box and the gap, so it would concede nothing. C2's
@@ -253,7 +256,8 @@ export default function MatchupCard({ game, standings, rankings, showDay = false
           render of `slot`; the decision itself is not made here. */}
       <div className="mslot" data-kind={slot.kind}>
         {slot.markSide ? (
-          <img src={teamLogoDarkUrl(slot.markSide === 'home' ? home?.id : away?.id)} alt="" loading="lazy" />
+          <TeamMark team={slot.markSide === 'home' ? home : away} sport={sport}
+                    src={teamLogoDarkUrl(slot.markSide === 'home' ? home?.id : away?.id)} />
         ) : slot.tied ? (
           // A word where every other card has a mark. Joe chose this over a blank row and over
           // showing both marks, with that cost named at decision time.

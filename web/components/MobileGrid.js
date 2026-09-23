@@ -48,6 +48,7 @@ import { useTextMeasurer } from '../lib/useTextMeasurer.js';
 // sportMarkUrl and SPORT_LABEL went with the grid's header (prompt 50 stage 5a): the tile row
 // above the grid is what states the sport now.
 import { teamLogoUrl, teamLogoDarkUrl, teamLogoCapUrl } from '../lib/config.js';
+import TeamMark from './TeamMark.js';
 import { markStyle, hasMark, railMark, simulcastLanes } from '../lib/marks.js';
 // longDay went with the header too - the picker directly above the grid carries the date.
 import { etTime } from '../lib/format.js';
@@ -769,8 +770,7 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
         >
           {/* THREE ART CONTEXTS since prompt 69, and this is the only place the third is chosen.
               A FALL-THROUGH ON PURPOSE: a row that does not say 'cap' behaves exactly as it did. */}
-          <img src={capArt(awayCap.art, away.id)}
-               alt="" loading="lazy" />
+          <TeamMark team={game.away} sport={game.sport} src={capArt(awayCap.art, away.id)} />
         </div>
         <div className="mnames">
           <div className="mname" style={{ fontSize: nameSize, background: awaySurface, color: awayInk }}>
@@ -810,8 +810,7 @@ function Block({ item, scale, top, blockH, trayH, standings, onOpen, measure }) 
         >
           {/* THREE ART CONTEXTS since prompt 69, and this is the only place the third is chosen.
               A FALL-THROUGH ON PURPOSE: a row that does not say 'cap' behaves exactly as it did. */}
-          <img src={capArt(homeCap.art, home.id)}
-               alt="" loading="lazy" />
+          <TeamMark team={game.home} sport={game.sport} src={capArt(homeCap.art, home.id)} />
         </div>
       </div>
       {/* D2 said this takes the BAND colours rather than the primaries, because the seam is the
