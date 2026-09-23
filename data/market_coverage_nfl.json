@@ -1,5 +1,5 @@
 {
-  "_about": "Cleveland (DMA 510) assignment for CBS/FOX regional windows, hand-entered weekly from 506sports.com/nfl.php?wk=N&yr=2026 (spec 7.17). Keyed by NFL week, then ESPN event id or 'AWAY@HOME'. cleveland=true -> the game is on the grid on that network; false -> OUT_OF_MARKET (Around the League strip). Browns games never need an entry (local team rule in adapters/espn.py). Games in a regional window with no entry render as UNVERIFIED and stay off the grid until entered.",
+  "_about": "MANUAL OVERRIDE since prompt 117 (register 62): a CBS/FOX regional row is decided by the Cleveland affiliates' own listings (adapters/sd_listings.py -> adapters/espn.py rules 4-5); an entry here wins over the listings, unchanged. Keyed by NFL week, then ESPN event id or 'AWAY@HOME'. cleveland=true -> the game is on the grid on that network; false -> OUT_OF_MARKET (Around the League strip). Browns games never need an entry (local team rule). Games outside the Sunday 12:00-17:00 ET window are national and never consult this file. Before prompt 117 this was the ONLY source, hand-entered weekly from 506sports, and the entry never happened - week 1 below is the whole history.",
   "1": {
     "asOf": "2026-09-01",
     "source": "506sports not yet checked - week 1 maps pending",

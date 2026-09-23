@@ -44,7 +44,7 @@ as scores, and for the same reason - the provider stops reporting a starter once
 Then render: `python scripts/render_day.py --sport nhl --date 2026-10-01` / `--sport nfl --date 2026-09-13` / `--week 1 --date 2026-09-05` (cfb, unchanged).
 
 Every adapter accepts `--from-file <raw.json>` to replay a saved payload offline. `--all-logos` (nhl, nba) fetches every team's logo instead of only the window's — the season bootstrap uses it. Data files the adapters read:
-`data/markets.json` (market-of-one), `data/market_coverage_nfl.json` (weekly 506sports hand entry),
+`data/markets.json` (market-of-one; `nfl.affiliates` names the CBS/FOX stations), `data/market_coverage_nfl.json` (hand override of the station listings, prompt 117),
 `data/local_rights.json` (late-binding local rows), `data/access_profile.json` (spec §3.2), `data/render_policies.json` (§7.19), `data/market_coverage_mlb.json` (FOX Saturday regionals).
 
 ## `access_status = 'unverified'` is load-bearing

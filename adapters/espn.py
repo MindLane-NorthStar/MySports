@@ -14,10 +14,16 @@ Unauthenticated. Two jobs:
        python -m adapters.espn --league nhl --teams-only
 
 Market-of-one (spec §3.12): ESPN marks nearly every CBS/FOX Sunday game "National", which is not the
-truth for a viewer in Cleveland. Regional windows are resolved by data/market_coverage_nfl.json —
-hand-entered weekly from 506sports. A regional game with no entry is written access=UNVERIFIED and the
-renderer keeps it OFF the grid (honesty rule, §11.8) until the entry exists. The local team's games are
-always AVAILABLE in their market.
+truth for a viewer in Cleveland. SINCE PROMPT 117 (Joe's ruling 2026-09-23, register §62) a CBS/FOX TV
+row is decided by the first of six rules: (1) a kickoff outside the Sunday 12:00-17:00 ET window is
+NATIONAL - Thanksgiving, Christmas, Saturdays, international mornings, prime time; (2) a hand entry in
+data/market_coverage_nfl.json wins, as a manual override; (3) a Browns game is AVAILABLE; (4) the
+affiliate's own listing (WOIO for CBS, WJW for FOX, from Schedules Direct via adapters/sd_listings.py,
+read through MYSPORTS_NFL_LISTINGS) has an NFL-game airing within 30 minutes of kickoff - the same two
+teams is AVAILABLE, a different game is OUT_OF_MARKET, a game with no team names is UNVERIFIED; (5)
+the station has listings for the date but no game in the window - the WJW 4:25 case - is
+OUT_OF_MARKET; (6) otherwise UNVERIFIED, exactly as before. Every row's `source` names the rule that
+decided it. E5 stands: an UNVERIFIED game is always shown, with the "Market TBD" cue, never filtered.
 
 Verified against the live payload 2026-09-01 (events[].competitions[0].{date,timeValid,neutralSite,
 competitors[].{homeAway,team{id,abbreviation,displayName,color,alternateColor,logo}},broadcasts[{market,names}],
@@ -28,11 +34,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from adapters.common import (ET, access_lookup, dump_json, et_date, et_display, fetch_logos, fixture_envelope,
+from adapters.common import (ET, access_lookup, clock, dump_json, et_date, et_display, fetch_logos, fixture_envelope,
                              hex6, http_json, load_data, load_raw_or_fetch, md_table, media_row, normalize_outlet,
                              outlet_access, parse_iso, team_record, write_text, now_et_iso, find_repo_root, result_status, score_int)
 
@@ -46,6 +54,89 @@ ESPN_OUTLETS = {"Prime Video": "Prime Video", "Amazon Prime": "Prime Video", "NF
 STREAM_ONLY = {"Prime Video", "Netflix", "YouTube", "Peacock", "ESPN+", "Paramount+", "HBO Max", "Disney+", "Hulu", "Apple TV"}
 # a "Regional" feed in ESPN's vocabulary; treated as needing a market decision
 REGIONAL_NETWORKS = {"CBS", "FOX"}
+# the listings decide a row when a game airing starts within this many minutes of the kickoff
+LISTING_WINDOW_MINUTES = 30
+# the Sunday-afternoon regional window, ET: kickoffs at or after 12:00 and before 17:00
+SUNDAY_WINDOW = (12, 17)
+
+
+def sunday_afternoon_window(start_iso: str | None) -> bool:
+    """Rule 1's test: is this kickoff inside the Sunday 12:00-17:00 ET regional window? Everything
+    else a CBS or FOX row carries - Thanksgiving, Christmas, a December Saturday, a London morning,
+    Sunday night - is a national telecast the regional rule never applied to."""
+    dt = parse_iso(start_iso)
+    if dt is None:
+        return False
+    et = dt.astimezone(ET)
+    return et.weekday() == 6 and SUNDAY_WINDOW[0] <= et.hour < SUNDAY_WINDOW[1]
+
+
+def nickname(name: str | None) -> str:
+    """The team's nickname, lower-cased, for matching a listing's team names: "Carolina Panthers" ->
+    "panthers". Nicknames are what tell the Los Angeles and New York pairs apart; cities do not."""
+    return str(name or "").strip().split(" ")[-1].lower()
+
+
+def _names_match(listing_teams: list[str], home_nick: str, away_nick: str) -> bool:
+    nicks = {nickname(t) for t in listing_teams}
+    return bool(home_nick) and bool(away_nick) and home_nick in nicks and away_nick in nicks
+
+
+def load_listings(path: str | None = None) -> dict[str, Any] | None:
+    """The station listings adapters/sd_listings.py wrote, from MYSPORTS_NFL_LISTINGS. None when the
+    variable is unset or the file is absent - the listings step failing must leave today's behaviour."""
+    p = path if path is not None else os.getenv("MYSPORTS_NFL_LISTINGS")
+    if not p or not Path(p).exists():
+        return None
+    try:
+        return json.loads(Path(p).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def listings_decision(listings: dict[str, Any] | None, station: str | None, start_iso: str | None,
+                      home_nick: str, away_nick: str) -> tuple[str, str] | None:
+    """Rules 4 and 5 against one station's listings. Returns (access, source), or None when the
+    listings say nothing about that station on that date (rule 6 then applies)."""
+    if not listings or not station:
+        return None
+    st = (listings.get("stations") or {}).get(station)
+    kickoff = parse_iso(start_iso)
+    if not st or kickoff is None:
+        return None
+    day = et_date(start_iso)
+    airings = [a for a in st.get("airings") or [] if a.get("start") and et_date(a["start"]) == day]
+    if not airings:
+        return None   # no listings for that station and date
+    window = timedelta(minutes=LISTING_WINDOW_MINUTES)
+    games = [a for a in airings if a.get("isNflGame") and parse_iso(a["start"]) is not None
+             and abs(parse_iso(a["start"]) - kickoff) <= window]
+    if not games:
+        return "OUT_OF_MARKET", f"listings: {station} carries no game in this window"
+    a = min(games, key=lambda x: abs(parse_iso(x["start"]) - kickoff))
+    when = clock(parse_iso(a["start"]).astimezone(ET))
+    teams = a.get("teams") or []
+    if not teams:
+        return "UNVERIFIED", f"listings: {station} {day} {when} NFL game, teams not named"
+    if _names_match(teams, home_nick, away_nick):
+        return "AVAILABLE", f"listings: {station} {day} {when}"
+    return "OUT_OF_MARKET", f"listings: {station} carries {' at '.join(teams[:2])} {day} {when}"
+
+
+def decide_regional(*, start_iso: str | None, is_local: bool, cov_game: dict[str, Any] | None, week: Any,
+                    listings: dict[str, Any] | None, station: str | None, home_nick: str, away_nick: str
+                    ) -> tuple[str, str, str]:
+    """A CBS or FOX TV row's (access, market, source), by the first rule that applies."""
+    if not sunday_afternoon_window(start_iso):                                   # 1
+        return "AVAILABLE", "national", "national window"
+    if cov_game is not None:                                                     # 2
+        return ("AVAILABLE" if cov_game.get("cleveland") else "OUT_OF_MARKET"), "regional", f"market_coverage_nfl.json week {week}"
+    if is_local:                                                                 # 3
+        return "AVAILABLE", "regional", "market: local team"
+    got = listings_decision(listings, station, start_iso, home_nick, away_nick)  # 4 and 5
+    if got is not None:
+        return got[0], "regional", got[1]
+    return "UNVERIFIED", "regional", "regional feed - no station listing for this date"   # 6
 
 
 # ----------------------------------------------------------------------------- teams
@@ -163,11 +254,15 @@ def _status_scores(comp: dict[str, Any], sides: dict[str, Any]) -> dict[str, Any
 
 
 def build_nfl_fixture(raw: dict[str, Any], root: Path, *, season: int, week: int | None, day_filter: str | None,
-                      teams: list[dict[str, Any]]) -> tuple[dict[str, Any], list[str]]:
+                      teams: list[dict[str, Any]], listings: dict[str, Any] | None = None,
+                      listings_path: str | None = None) -> tuple[dict[str, Any], list[str]]:
     available, unavailable = access_lookup(root)
     market = load_data(root, "markets.json", {}).get("nfl", {})
     local_abbrevs = set(market.get("localTeams", ["CLE"]))
+    affiliates = market.get("affiliates") or {}           # {"CBS": "WOIO", "FOX": "WJW"}
     coverage = load_data(root, "market_coverage_nfl.json", {})
+    if listings is None:
+        listings = load_listings(listings_path)
     notes: list[str] = []
     games: list[dict[str, Any]] = []
     for ev in raw.get("events", []):
@@ -201,15 +296,11 @@ def build_nfl_fixture(raw: dict[str, Any], root: Path, *, season: int, week: int
             mtype = "web" if outlet in STREAM_ONLY else "tv"
             mk, cert, src = "national", "CONFIRMED", "espn.scoreboard"
             if outlet in REGIONAL_NETWORKS and mtype == "tv":
-                # Sunday-afternoon CBS/FOX windows are regional whatever ESPN's market flag says (§3.12)
-                mk = "regional"
-                if is_local:
-                    acc, src = "AVAILABLE", "market: local team"
-                elif cov_game is not None:
-                    acc = "AVAILABLE" if cov_game.get("cleveland") else "OUT_OF_MARKET"
-                    src = f"market_coverage_nfl.json week {week}"
-                else:
-                    acc, src = "UNVERIFIED", "regional feed - Cleveland assignment not entered"
+                # Sunday-afternoon CBS/FOX windows are regional whatever ESPN's market flag says (§3.12);
+                # the six rules (prompt 117) decide the row, and `source` says which one did.
+                acc, mk, src = decide_regional(
+                    start_iso=start, is_local=is_local, cov_game=cov_game, week=week, listings=listings,
+                    station=affiliates.get(outlet), home_nick=nickname(home["team"]), away_nick=nickname(away["team"]))
             media.append(media_row(mtype, outlet, acc, market=mk, certainty=cert, start_time=start, tbd=time_tbd, source=src))
         if not media:
             notes.append(f"{away['abbreviation']}@{home['abbreviation']}: no broadcast rows in payload")
@@ -253,7 +344,7 @@ def report_md(fixture: dict[str, Any], notes: list[str], teams_missing: list[str
     unverified = [g for g in fixture["games"] if any(m["access"] == "UNVERIFIED" for m in g["media"])]
     if unverified:
         lines += [f"## Regional games awaiting a Cleveland coverage entry ({len(unverified)})", "",
-                  "Add each to `data/market_coverage_nfl.json` under this week (`\"cleveland\": true|false`) after checking 506sports.", ""]
+                  "The station listings (adapters/sd_listings.py) decide these once they cover the date; a hand entry in `data/market_coverage_nfl.json` under this week (`\"cleveland\": true|false`) overrides them.", ""]
         lines += [f"- `{g['id'][4:]}` {g['away']['abbreviation']}@{g['home']['abbreviation']} - {g['startTimeET']}" for g in unverified]
         lines.append("")
     if teams_missing:
