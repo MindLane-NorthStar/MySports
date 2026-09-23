@@ -169,10 +169,19 @@ def http_json(url: str, headers: dict[str, str] | None = None, params: dict[str,
     `method` and `data` (prompt 117): Schedules Direct's API takes its token, schedules and programs
     requests as JSON POSTs, so a JSON body rides on the SAME retry policy rather than a second helper
     growing beside this one. A body is only sent with a non-GET method; `data` is JSON-encoded here."""
+    return json.loads(http_text(url, headers=headers, params=params, timeout=timeout, attempts=attempts, sleep=sleep,
+                                method=method, data=data, accept="application/json"))
+
+
+def http_text(url: str, headers: dict[str, str] | None = None, params: dict[str, Any] | None = None,
+              timeout: int = 45, attempts: int = ATTEMPTS, sleep=time.sleep,
+              method: str = "GET", data: Any = None, accept: str = "text/html") -> str:
+    """The body as text, on the same bounded retry (prompt 118: EntitledSports' coverage pages are HTML,
+    and the retry policy, the 429 rule and the timeout are the helper's, not the caller's)."""
     if params:
         q = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None}, doseq=True)
         url = f"{url}?{q}"
-    hdrs = {"Accept": "application/json", "User-Agent": ua_for(url)}
+    hdrs = {"Accept": accept, "User-Agent": ua_for(url)}
     hdrs.update(headers or {})
     payload = None
     if data is not None and method.upper() != "GET":
@@ -184,7 +193,7 @@ def http_json(url: str, headers: dict[str, str] | None = None, params: dict[str,
         req = urllib.request.Request(url, data=payload, headers=hdrs, method=method.upper())
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return json.loads(resp.read().decode("utf-8"))
+                return resp.read().decode("utf-8")
         except urllib.error.HTTPError as e:      # MUST stay above URLError - HTTPError subclasses it
             body = e.read().decode("utf-8", errors="replace")[:500]
             last = RuntimeError(f"HTTP {e.code} for {bare}: {body}")
