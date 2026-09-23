@@ -5179,8 +5179,10 @@ fetches at most two pages a run — the NFL week containing today (Eastern) and 
 only the Cleveland block, measured against the live markup: one `<details class="mkd">` per market,
 four `<div class="mw">` rows each labelled by window, the game as `AAA Nick @ HHH Nick` or `TBD`. Any
 other text is recorded verbatim, becomes TBD, and is noted in the output; nothing is guessed. A page
-with no Cleveland block or fewer than four windows is a failure, and a failure of any kind is one log
-line, no file, exit 0. **The week number comes from ESPN's own calendar** — `leagues[0].calendar` on
+with no Cleveland block or fewer than four windows is a failure. **Corrected by §64:** this section
+first said "a failure of any kind is one log line, no file, exit 0", and the run built exactly that -
+one `try` around both weeks, so a next-week page that did not exist cost the current week its
+windows. Since prompt 119 each week's page stands alone; only every week failing writes no file. **The week number comes from ESPN's own calendar** — `leagues[0].calendar` on
 the scoreboard payload the ESPN adapter already fetches, whose regular-season entries carry `value`,
 `startDate` and `endDate` (captured in `tests/fixtures/espn_nfl_scoreboard_raw.json`) — so it is the
 same number `adapters/espn.py` writes on every game; the test pins the calendar's number to the
@@ -5210,3 +5212,65 @@ TBD and the options are Joe's (`docs/queue.md` item 13): a hand entry, or buying
 
 **Out of scope, deliberately:** the display and E5; removing any Schedules Direct code; every other
 sport; any database write outside the refresh.
+
+---
+
+## 64. EACH WEEK'S PAGE STANDS ALONE, AND PLAYOFF GAMES ARE NATIONAL — 2026-09-23, prompt 119
+
+**Numbered by count:** §1–§63 each appear exactly once and there was no §64.
+
+**Ruling 1 — each week's page is judged on its own.** Prompt 118's report flagged that a failed
+next-week fetch suppressed the current week too: `build(weeks, …)` and the week list sat in one `try`,
+so any exception wrote no file. Cowork's brief had asked for exactly that ("a failure of any kind")
+and it was wrong for this case — in the season's last regular week the next page does not exist, and
+a rule that fails safe for one week must not fail the other. Now `adapters/es_windows.py` fetches
+and parses each week independently: a week that fails (an HTTP error, a missing Cleveland block,
+fewer than four windows) is left out with one note naming the week and the reason —
+`week 4: left out (RuntimeError: HTTP 404 …)` — the file is written whenever at least one week
+succeeds, and no file is written only when every week fails, which is what the run did before. The
+log line names each week's result: `week 3 2 of 4 windows named; week 4 failed (RuntimeError)`.
+Prompt 118's test that pinned "a 404 on the next page writes nothing" is **replaced**, not kept
+beside the new one, because it asserted the behaviour this ruling reverses; four tests take its
+place (the next week 404ing, the current week failing, both failing, and a bad week's note beside a
+good week's silence). §63 is corrected in place where it described the all-or-nothing write.
+
+**Ruling 2 — NFL playoff games are national.** Rule 1, `sunday_afternoon_window`, looks only at day
+and hour, so a Wild Card, Divisional or Conference Championship game on CBS or FOX on a Sunday
+afternoon fell into the regional rules and would have shown "Market TBD". Every playoff game airs
+nationally. `decide_regional` now returns national for any postseason game **before any other
+rule** — rule 0 — so a hand entry cannot override it either; the source reads
+`"national window (postseason)"`.
+
+**How the adapter knows a game is postseason — measured, not assumed.** Three candidates were
+named and the tree was checked for each. (a) **The event's own `season.type`**: present on every
+event in the committed fixture (`tests/fixtures/espn_nfl_scoreboard_raw.json`, all `type: 2`,
+slug `regular-season`), and on the live scoreboard fetched through the adapter's own
+`fetch_scoreboard("nfl", date=…)` for the 2026-01-11 Wild Card Sunday every event carries
+`{"year": 2025, "type": 3, "slug": "post-season"}`, while the 2026-01-04 week 18 Sunday carries
+`type: 2`. (b) **`leagues[0].season.type`** describes the league's phase at the time of the call, not
+the game: the committed fixture's regular-season events sit under a league season typed Preseason,
+and the January date fetched today reads "Regular Season". Not evidence about the game. (c) **The
+`season_type` parameter of `fetch_scoreboard`** is only sent with `--week` (`espn.py:247-248`); a
+`--date` fetch sends no season type at all, and the January call proves ESPN then returns whatever is
+played that day, playoff games included. So `is_postseason(ev)` reads the event's `season.type == 3`
+and nothing else, and the call site passes it per event. **The date-based refresh therefore does
+load playoff games today** — nothing in `build_nfl_fixture` or `pipeline/load.py` filters by season
+type — but it loads them with ESPN's postseason `week.number`, which restarts at 1 for the Wild Card
+round, and with `competition_context` left at the table default `REGULAR`. That is `docs/queue.md`
+item 14, not this prompt: the fetch is unchanged by ruling.
+
+**Proven offline:** a postseason CBS game at Sunday 1:00 PM ET is `AVAILABLE`, national; a
+postseason FOX game at 4:30 PM ET is the same with a hand entry saying `cleveland: false`; a
+regular-season game at both times is unchanged; the predicate reads `3` and `"3"` and nothing else.
+Three mutations each go red: the `try` put back around both weeks, the postseason check dropped, the
+check moved after rule 2.
+
+**The pre-check, recorded.** The brief's pre-check failed: an untracked `AGENTS.md` (23,462 bytes,
+mtime 2026-09-23 12:26:17 EDT, sha256 `b923b2d7…6b46`) sat in the repo root — `CLAUDE.md` at `5dc2087`
+with "Claude Code" → "Codex" and "Claude.ai" → "Codex.ai", nothing unique, the third arrival of the
+file §49 and its 2026-09-22 amendment describe. `tests/test_agent_instruction_files.py` fired on it,
+as the amendment intended. This session was not permitted to delete it, so the work was completed
+and the commit held for Joe; whether the deletion happened is in the run's report, not here.
+
+**Out of scope, deliberately:** loading playoff games any differently (queue item 14); the display;
+every other sport.

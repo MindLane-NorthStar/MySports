@@ -47,11 +47,11 @@ WJW_LISTINGS = {
 }
 
 
-def event(eid, start, away, home, network, away_abbr, home_abbr, market="National", week=3):
+def event(eid, start, away, home, network, away_abbr, home_abbr, market="National", week=3, season_type=2):
     """One scoreboard event in ESPN's shape, with one TV row."""
     def side(ha, nick, full, abbr, tid):
         return {"homeAway": ha, "team": {"id": tid, "name": nick, "displayName": full, "location": full.rsplit(" ", 1)[0], "abbreviation": abbr}, "records": []}
-    return {"id": eid, "date": start, "week": {"number": week},
+    return {"id": eid, "date": start, "week": {"number": week}, "season": {"year": 2026, "type": season_type, "slug": "regular-season" if season_type == 2 else "post-season"},
             "competitions": [{"date": start, "timeValid": True, "neutralSite": False,
                               "competitors": [side("home", home[0], home[1], home_abbr, eid + "h"), side("away", away[0], away[1], away_abbr, eid + "a")],
                               "geoBroadcasts": [{"lang": "en", "region": "us", "media": {"shortName": network}, "market": {"type": market}}],
@@ -77,10 +77,10 @@ WINDOWS = {
 }
 
 
-def build(events, listings=WJW_LISTINGS, root=ROOT, windows=None):
+def build(events, listings=WJW_LISTINGS, root=ROOT, windows=None, week=3):
     raw = {"events": events}
     with redirect_stdout(io.StringIO()):
-        fx, notes = espn.build_nfl_fixture(raw, root, season=2026, week=3, day_filter=None, teams=[],
+        fx, notes = espn.build_nfl_fixture(raw, root, season=2026, week=week, day_filter=None, teams=[],
                                            listings=listings if listings is not None else {}, windows=windows if windows is not None else {})
     return {g["id"]: g for g in fx["games"]}
 
@@ -91,6 +91,42 @@ def row(g):
 
 
 # kickoffs, UTC: Sunday 2026-09-27 1:00 PM ET = 17:00Z; 4:25 PM ET = 20:25Z; Thanksgiving 2026-11-26 4:30 PM ET = 21:30Z
+class Rule0PostseasonIsNational(unittest.TestCase):
+    """prompt 119: every playoff game airs nationally, before any other rule - a hand entry cannot override it."""
+
+    def test_a_postseason_cbs_game_at_sunday_one_pm_is_national(self):
+        g = build([event("40", "2027-01-10T18:00:00Z", ("Bills", "Buffalo Bills"), ("Steelers", "Pittsburgh Steelers"), "CBS", "BUF", "PIT", week=1, season_type=3)], listings=None)
+        self.assertEqual(row(g["nfl-40"]), ("AVAILABLE", "national", "national window (postseason)"))
+
+    def test_a_postseason_fox_game_at_four_thirty_is_national_even_with_a_hand_entry_saying_no(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "data").mkdir()
+            for f in ("markets.json", "access_profile.json"):
+                (root / "data" / f).write_bytes((ROOT / "data" / f).read_bytes())
+            (root / "data" / "market_coverage_nfl.json").write_text(json.dumps({"1": {"games": {"GB@DET": {"cleveland": False}}}}), encoding="utf-8")
+            g = build([event("41", "2027-01-10T21:30:00Z", ("Packers", "Green Bay Packers"), ("Lions", "Detroit Lions"), "FOX", "GB", "DET", week=1, season_type=3),
+                      # the same game as a regular-season one proves the hand entry bites: rule 2 makes it OUT_OF_MARKET
+                      event("41r", "2027-01-10T21:30:00Z", ("Packers", "Green Bay Packers"), ("Lions", "Detroit Lions"), "FOX", "GB", "DET", week=1, season_type=2)],
+                      listings=None, root=root, week=1)
+        self.assertEqual(row(g["nfl-41r"]), ("OUT_OF_MARKET", "regional", "market_coverage_nfl.json week 1"))
+        self.assertEqual(row(g["nfl-41"]), ("AVAILABLE", "national", "national window (postseason)"))
+
+    def test_a_regular_season_game_at_the_same_times_is_unchanged(self):
+        # 1:00 PM ET Sunday: the regional rules; 4:30 PM ET Sunday: still the regional window (rule 1 is 12:00-17:00)
+        g = build([event("42", "2026-09-27T18:00:00Z", ("Bills", "Buffalo Bills"), ("Steelers", "Pittsburgh Steelers"), "CBS", "BUF", "PIT"),
+                  event("43", "2026-09-27T20:30:00Z", ("Packers", "Green Bay Packers"), ("Lions", "Detroit Lions"), "FOX", "GB", "DET")], listings=None)   # 4:30 PM EDT
+        self.assertEqual(row(g["nfl-42"])[1], "regional")
+        self.assertEqual(row(g["nfl-43"])[1], "regional")
+        self.assertNotIn("postseason", row(g["nfl-42"])[2])
+
+    def test_the_test_reads_the_events_own_season_type(self):
+        self.assertTrue(espn.is_postseason({"season": {"type": 3}}))
+        self.assertTrue(espn.is_postseason({"season": {"type": "3"}}))
+        for ev in ({"season": {"type": 2}}, {"season": {"type": 1}}, {"season": {}}, {}, {"season": {"type": "x"}}):
+            self.assertFalse(espn.is_postseason(ev), ev)
+
+
 class Rule1NationalWindow(unittest.TestCase):
     def test_a_thanksgiving_cbs_game_is_national_with_no_listings(self):
         g = build([event("1", "2026-11-26T21:30:00Z", ("Chiefs", "Kansas City Chiefs"), ("Cowboys", "Dallas Cowboys"), "CBS", "KC", "DAL")], listings=None)

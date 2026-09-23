@@ -16,7 +16,9 @@ Unauthenticated. Two jobs:
 Market-of-one (spec §3.12): ESPN marks nearly every CBS/FOX Sunday game "National", which is not the
 truth for a viewer in Cleveland. SINCE PROMPT 117 (register §62) and PROMPT 118 (Joe's ruling
 2026-09-23, register §63) a CBS/FOX TV row is decided by the first rule that applies, and `source`
-names it: (1) a kickoff outside the Sunday 12:00-17:00 ET window is NATIONAL - Thanksgiving, Christmas,
+names it: (0) a POSTSEASON game is NATIONAL before any other rule - every playoff game airs nationally,
+so a hand entry cannot override it either (prompt 119, register §64; the event's `season.type` is 3);
+(1) a kickoff outside the Sunday 12:00-17:00 ET window is NATIONAL - Thanksgiving, Christmas,
 Saturdays, international mornings, prime time; (2) a hand entry in data/market_coverage_nfl.json wins,
 as a manual override; (3) a Browns game is AVAILABLE; (4) the affiliate's own listing (WOIO for CBS,
 WJW for FOX, from Schedules Direct via adapters/sd_listings.py, read through MYSPORTS_NFL_LISTINGS -
@@ -65,6 +67,19 @@ LISTING_WINDOW_MINUTES = 30
 SUNDAY_WINDOW = (12, 17)
 # rule 4b: a kickoff before this hour (ET) is in the early window, at or after it the late window
 LATE_WINDOW_HOUR = 15
+# ESPN's season.type on an event: 1 preseason, 2 regular season, 3 postseason (measured on the live
+# scoreboard for the 2026-01-11 Wild Card Sunday, prompt 119; the committed fixture carries only 2)
+POSTSEASON_TYPE = 3
+
+
+def is_postseason(ev: dict[str, Any]) -> bool:
+    """Rule 0's test: the EVENT's own `season.type`, which every event carries. The payload's top-level
+    `season.type` and `leagues[0].season.type` describe the fetch, not the game - the committed fixture
+    has regular-season events under a league season typed Preseason."""
+    try:
+        return int((ev.get("season") or {}).get("type") or 0) == POSTSEASON_TYPE
+    except (TypeError, ValueError):
+        return False
 
 
 def sunday_afternoon_window(start_iso: str | None) -> bool:
@@ -166,9 +181,11 @@ def windows_decision(windows: dict[str, Any] | None, network: str | None, week: 
 
 def decide_regional(*, start_iso: str | None, is_local: bool, cov_game: dict[str, Any] | None, week: Any,
                     listings: dict[str, Any] | None, station: str | None, home_nick: str, away_nick: str,
-                    windows: dict[str, Any] | None = None, network: str | None = None
-                    ) -> tuple[str, str, str]:
+                    windows: dict[str, Any] | None = None, network: str | None = None,
+                    postseason: bool = False) -> tuple[str, str, str]:
     """A CBS or FOX TV row's (access, market, source), by the first rule that applies."""
+    if postseason:                                                               # 0: every playoff game is national
+        return "AVAILABLE", "national", "national window (postseason)"
     if not sunday_afternoon_window(start_iso):                                   # 1
         return "AVAILABLE", "national", "national window"
     if cov_game is not None:                                                     # 2
@@ -349,7 +366,7 @@ def build_nfl_fixture(raw: dict[str, Any], root: Path, *, season: int, week: int
                 acc, mk, src = decide_regional(
                     start_iso=start, is_local=is_local, cov_game=cov_game, week=(ev.get("week") or {}).get("number", week),
                     listings=listings, station=affiliates.get(outlet), home_nick=nickname(home["team"]), away_nick=nickname(away["team"]),
-                    windows=windows, network=outlet)
+                    windows=windows, network=outlet, postseason=is_postseason(ev))
             media.append(media_row(mtype, outlet, acc, market=mk, certainty=cert, start_time=start, tbd=time_tbd, source=src))
         if not media:
             notes.append(f"{away['abbreviation']}@{home['abbreviation']}: no broadcast rows in payload")

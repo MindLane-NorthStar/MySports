@@ -33,8 +33,15 @@ adapter already fetches, whose regular-season entries carry `value`, `startDate`
 (captured in tests/fixtures/espn_nfl_scoreboard_raw.json) - so the number here is the same number
 `adapters/espn.py` writes on every game. `--week` overrides it for a replay.
 
-FAILURE NEVER FAILS THE REFRESH. An HTTP error, a timeout, no Cleveland block, fewer than four windows,
-or a week the calendar cannot place: one log line, no file, exit 0, and the NFL step behaves as before.
+EACH WEEK'S PAGE STANDS ALONE (prompt 119, Joe's ruling 2026-09-23, register §64). The two pages are
+fetched and parsed independently: a week that fails - an HTTP error, a timeout, no Cleveland block,
+fewer than four windows - is left out with one note naming the week and the reason, and the file is
+written whenever at least one week succeeds. In the season's last regular week the next page does not
+exist, and that must not cost the current week its decisions. Prompt 118 wrapped both weeks in one
+try, so any failure wrote nothing; that was the brief's "a failure of any kind" and it was wrong here.
+
+FAILURE NEVER FAILS THE REFRESH. Every week failing, or a week the calendar cannot place: one log line,
+no file, exit 0, and the NFL step behaves as before.
 """
 from __future__ import annotations
 
@@ -122,17 +129,27 @@ def default_fetch_scoreboard(now: datetime) -> dict[str, Any]:
     return http_json(SCOREBOARD_URL, params={"dates": now.astimezone(ET).strftime("%Y%m%d")})
 
 
-def build(weeks: list[int], *, fetch_text: Callable[[str], str] = default_fetch_text) -> dict[str, Any]:
+def build(weeks: list[int], *, fetch_text: Callable[[str], str] = default_fetch_text) -> tuple[dict[str, Any], dict[int, str]]:
+    """(the output, {week: result}) - each week fetched and parsed on its own; a failed week is left out
+    of `weeks` and named in `notes`, and never costs another week its windows."""
     out: dict[str, Any] = {"source": "entitledsports", "market": None,
                            "fetchedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
                            "weeks": {}, "notes": []}
+    results: dict[int, str] = {}
     for wk in weeks:
         url = PAGE_URL.format(week=wk)
-        page = parse_page(fetch_text(url))
+        try:
+            page = parse_page(fetch_text(url))
+        except Exception as e:  # noqa: BLE001 - this week is left out; the others stand
+            out["notes"].append(f"week {wk}: left out ({type(e).__name__}: {e})")
+            results[wk] = f"failed ({type(e).__name__}: {e})"
+            continue
         out["market"] = page["market"]
         out["weeks"][str(wk)] = {"url": url, "updated": page["updated"], "windows": page["windows"]}
         out["notes"] += [f"week {wk}: {n}" for n in page["notes"]]
-    return out
+        named = sum(1 for x in page["windows"] if not x["tbd"])
+        results[wk] = f"{named} of 4 windows named"
+    return out, results
 
 
 def main(argv: list[str] | None = None, *, fetch_text: Callable[[str], str] | None = None,
@@ -153,15 +170,17 @@ def main(argv: list[str] | None = None, *, fetch_text: Callable[[str], str] | No
             cur, nxt = weeks_from_calendar(fetch_scoreboard(now), now)
             weeks = [cur] + ([nxt] if nxt is not None else [])
             how = "ESPN calendar"
-        out = build(weeks, fetch_text=fetch_text)
-    except Exception as e:  # noqa: BLE001 - one line, no file, exit 0: the refresh must not fail on windows
+    except Exception as e:  # noqa: BLE001 - no week to fetch: one line, no file, exit 0
         log(f"es_windows: failed ({type(e).__name__}: {e}) - no windows written, refresh continues")
+        return 0
+    out, results = build(weeks, fetch_text=fetch_text)   # each week on its own; never raises
+    per_week = "; ".join(f"week {wk} {results[wk]}" for wk in weeks)
+    if not out["weeks"]:
+        log(f"es_windows: every week failed ({how}: {per_week}) - no windows written, refresh continues")
         return 0
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
-    named = sum(1 for w in out["weeks"].values() for x in w["windows"] if not x["tbd"])
-    log(f"es_windows: weeks {', '.join(out['weeks'])} ({how}), {named} of {4 * len(out['weeks'])} windows named, "
-        f"{len(out['notes'])} note(s) -> {args.out}")
+    log(f"es_windows: {how}: {per_week}; {len(out['notes'])} note(s) -> {args.out}")
     return 0
 
 

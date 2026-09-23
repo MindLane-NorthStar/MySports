@@ -307,3 +307,24 @@ ESPN's "National" flag amounts to and what §62 stopped.
 **Where it starts.** `adapters/es_windows.py` (the reader and its `PageError`s), `adapters/espn.py`
 `windows_decision`, `tests/fixtures/es_week3_cleveland.html` (the markup as it was). **Size.** Small
 if a hand entry; a session if the markup changed. **A description of a problem, not an approved plan.**
+
+## 14. Playoff games load with the Wild Card round as `week 1` and `competition_context` REGULAR
+
+**What.** Prompt 119 measured (register §64) that the nightly's date-based ESPN fetch returns
+postseason games — the 2026-01-11 Wild Card Sunday came back with three events, each
+`season.type 3`, slug `post-season` — and nothing in `build_nfl_fixture` or `pipeline/load.py` filters
+them, so they load like any other game. Two things about how they load are wrong and harmless
+today: ESPN's postseason `week.number` restarts at 1 (Wild Card 1, Divisional 2, Championship 3,
+Super Bowl 5), so a January game lands in `games.week = 1` beside September's week 1; and the loader
+never sets `competition_context`, so the row keeps the table default `REGULAR`. The CBS/FOX access
+decision is unaffected (rule 0 fires on the event's `season.type` before the week is consulted), and
+`market_coverage_nfl.json` is keyed by week so a hand entry could collide, but rule 0 makes one moot.
+
+**What it would take.** Read `season.type` in the fixture builder and write a postseason marker the
+loader carries into `competition_context` (the enum exists since `0003_games.sql`), and decide what
+`week` means for a playoff game — ESPN's round number, or a continuation (19–22). Also whether the
+renderers group by week anywhere that would show a Wild Card game under "week 1".
+
+**Where it starts.** `adapters/espn.py` `build_nfl_fixture` (`"week": ev.week.number`), `pipeline/load.py:240-250`,
+`db/migrations/0003_games.sql` (`competition_context`). **Size.** Small to medium; needs a ruling on
+week numbering first. **A description of a problem, not an approved plan.**

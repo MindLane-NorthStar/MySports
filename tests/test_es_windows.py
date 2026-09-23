@@ -131,7 +131,7 @@ class TheRun(unittest.TestCase):
         self.assertEqual(data["weeks"]["3"]["windows"][0]["home"]["nick"], "Steelers")
         self.assertEqual(data["market"], "Cleveland–Akron (Canton)")
         self.assertIn("ESPN calendar", log)
-        self.assertIn("2 of 8 windows named", log)
+        self.assertIn("week 3 2 of 4 windows named; week 4 0 of 4 windows named", log)
 
     def test_weeks_named_on_the_command_line_fetch_no_calendar(self):
         rc, data, log = _main(PAGES, argv=["--week", "3"])
@@ -149,12 +149,15 @@ class TheRun(unittest.TestCase):
     def test_a_missing_cleveland_block_writes_nothing(self):
         rc, data, log = _main({k: v.replace("cleveland-akron-canton", "columbus") for k, v in PAGES.items()})
         self.assertEqual((rc, data), (0, None))
+        self.assertIn("every week failed", log)
         self.assertIn("no Cleveland", log)
 
     def test_three_windows_only_writes_nothing(self):
         cut = WEEK3.index('<div class="mw"><span class="lw">FOX Late')
         end = WEEK3.index("</div>", cut) + len("</div>")
-        pages = dict(PAGES); pages[es.PAGE_URL.format(week=3)] = WEEK3[:cut] + WEEK3[end:]
+        # both pages three windows only (prompt 119: one bad week alone leaves the other standing)
+        cut4 = WEEK4.index('<div class="mw"><span class="lw">FOX Late'); end4 = WEEK4.index("</div>", cut4) + len("</div>")
+        pages = {es.PAGE_URL.format(week=3): WEEK3[:cut] + WEEK3[end:], es.PAGE_URL.format(week=4): WEEK4[:cut4] + WEEK4[end4:]}
         rc, data, log = _main(pages)
         self.assertEqual((rc, data), (0, None))
         self.assertIn("four are required", log)
@@ -163,11 +166,37 @@ class TheRun(unittest.TestCase):
         rc, data, log = _main({k: v.replace('class="lw"', 'class="label"') for k, v in PAGES.items()})
         self.assertEqual((rc, data), (0, None))
 
-    def test_the_next_weeks_page_missing_is_a_failure_of_the_whole_run(self):
-        # the brief's contract is "a failure of any kind": a 404 on either page writes nothing
+    def test_a_next_week_that_404s_leaves_the_current_week_standing_with_one_note(self):
+        # prompt 119 REPLACES prompt 118's "a 404 on the next page writes nothing": in the season's last
+        # regular week the next page does not exist, and that must not cost the current week its windows
         rc, data, log = _main({es.PAGE_URL.format(week=3): WEEK3})
+        self.assertEqual(rc, 0)
+        self.assertEqual(list(data["weeks"]), ["3"])
+        self.assertEqual(data["weeks"]["3"]["windows"][0]["home"]["nick"], "Steelers")
+        self.assertEqual(len(data["notes"]), 1)
+        self.assertTrue(data["notes"][0].startswith("week 4: left out (RuntimeError: HTTP 404"), data["notes"][0])
+        self.assertIn("week 3 2 of 4 windows named; week 4 failed (RuntimeError: HTTP 404", log)
+
+    def test_a_current_week_that_fails_leaves_the_next_week_standing(self):
+        rc, data, log = _main({es.PAGE_URL.format(week=4): WEEK4})
+        self.assertEqual(rc, 0)
+        self.assertEqual(list(data["weeks"]), ["4"])
+        self.assertIn("week 3: left out", data["notes"][0])
+
+    def test_both_weeks_failing_writes_nothing_and_logs_one_line(self):
+        rc, data, log = _main({})
         self.assertEqual((rc, data), (0, None))
-        self.assertIn("404", log)
+        lines = [l for l in log.splitlines() if l.strip()]
+        self.assertEqual(len(lines), 1)
+        self.assertIn("every week failed", lines[0])
+        self.assertIn("week 3 failed (RuntimeError: HTTP 404", lines[0]); self.assertIn("week 4 failed (RuntimeError: HTTP 404", lines[0])
+
+    def test_a_bad_week_is_named_with_its_reason_and_the_good_week_has_no_note(self):
+        cut = WEEK4.index('<div class="mw"><span class="lw">FOX Late')
+        end = WEEK4.index("</div>", cut) + len("</div>")
+        rc, data, log = _main({es.PAGE_URL.format(week=3): WEEK3, es.PAGE_URL.format(week=4): WEEK4[:cut] + WEEK4[end:]})
+        self.assertEqual(list(data["weeks"]), ["3"])
+        self.assertEqual(data["notes"], ["week 4: left out (PageError: 3 window(s) parsed; four are required)"])
 
     def test_the_fixtures_are_the_cleveland_block_only(self):
         for name, text in (("week 3", WEEK3), ("week 4", WEEK4)):
