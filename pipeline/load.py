@@ -60,7 +60,28 @@ def viewing_day(dt_utc: datetime, cutover_hour: int = 3):
 # every counter load_fixture reports; the mysports-db skip path returns this zeroed so TOTAL still prints in full
 ZERO_COUNTS = {"games": 0, "broadcasts": 0, "odds": 0, "records": 0, "records_on_game": 0,
                "probables": 0, "observations": 0, "observations_seen": 0, "observations_closed": 0,
-               "team_refs": 0, "venues": 0, "programs": 0}
+               "team_refs": 0, "venues": 0, "programs": 0, "team_changes": 0, "team_missing": 0}
+
+# A GAME'S TEAMS FOLLOW THE SOURCE (prompt 116, register §61). Until 2026-09-23 the games upsert
+# updated `season, week, neutral_site` on conflict and nothing else, so `home_team_id` and
+# `away_team_id` were written ONCE, at the row's first insert, and never again. MLB's postseason
+# rows arrive with placeholder participants ("AL Wild Card #2", a team id that is not a club) and
+# are filled in as the seeds clinch - the same gamePk, a new team id - and the loader dropped that
+# correction on the floor. The adapter is the authority on who plays in a given external game id,
+# as it already is for every other identity field it emits. Every flip is written to the run's
+# notes (`refresh_runs.notes.team_changes`) as "<gid>: home <old> -> <new>", so it is never silent.
+TEAM_CHANGES: list[str] = []
+
+
+def _team_id(side: dict | None) -> str | None:
+    """The side's team id as a string, or None when the source gave none. `str(None)` would be the
+    literal text "None" - which is what the stub loop below used to insert as a TEAM."""
+    if not isinstance(side, dict):
+        return None
+    v = side.get("id")
+    if v is None or str(v).strip() == "":
+        return None
+    return str(v)
 # ONE GAME PAGE PER SPORT, and it follows the game's state on its own (prompt 86, Joe 2026-09-10).
 # ESPN's GAME page for cfb/nfl/nba (our ids ARE ESPN ids) - `/game/_/gameId/{n}` resolves preview ->
 # gamecast -> recap, where the `/boxscore/_/gameId/{n}` these used to be does not. League-native for
@@ -172,9 +193,33 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
         if start is None:
             continue
         home, away = g["home"], g["away"]
+        home_id, away_id = _team_id(home), _team_id(away)
+        # WHO THE ROW SAYS PLAYS TODAY, read before the write so a change can be logged (prompt 116).
+        # In emit mode there is nothing to read; the intent is emitted as a comment so the SQL file
+        # records that the loader looked, and the upsert below carries the columns regardless.
+        stored = db.fetch("select home_team_id, away_team_id from games where id = %s", (gid,))
+        if db.conn is None:
+            db.run(f"-- prompt 116: read games.home_team_id, games.away_team_id for {gid} to log a team change", tag="games.teams.read")
+        stored_home, stored_away = (str(stored[0][0]), str(stored[0][1])) if stored else (None, None)
+        # NEVER WRITE A MISSING ID. A side the source did not identify keeps the stored value (the
+        # upsert coalesces a null onto the stored column) and is noted; a NEW game with a side the
+        # source did not identify cannot be written at all, and is skipped with a note rather than
+        # inserted as team "None". Before prompt 116 that stub was exactly what happened.
+        for label, new, old in (("home", home_id, stored_home), ("away", away_id, stored_away)):
+            if new is None:
+                counts["team_missing"] += 1
+                TEAM_CHANGES.append(f"{gid}: {label} id missing from the source; kept {old or 'nothing (new game, skipped)'}")
+            elif old is not None and old != new:
+                counts["team_changes"] += 1
+                TEAM_CHANGES.append(f"{gid}: {label} {old} -> {new}")
+        if (home_id is None or away_id is None) and db.conn is not None and not stored:
+            print(f"  warn: {gid} has a side with no team id and no stored row - skipped")
+            continue
         # team stubs so FKs hold even before bootstrap ran for this sport (bootstrap refreshes the details)
-        for side in (home, away):
-            db.upsert("teams", [{"id": str(side["id"]), "sport": sport, "canonical_name": side.get("teamFull") or side.get("team"),
+        for side, sid in ((home, home_id), (away, away_id)):
+            if sid is None:
+                continue   # no id, no stub: a placeholder named "None" is never a team
+            db.upsert("teams", [{"id": sid, "sport": sport, "canonical_name": side.get("teamFull") or side.get("team"),
                                  "short_name": side.get("team"), "abbreviation": side.get("abbreviation"), "external_ids": {}}], "id", [], tag="teams.stub")
             counts["team_refs"] += 1   # FK-safety upserts attempted (DO NOTHING when the team exists), not new rows
         venue_id_sub = None
@@ -193,13 +238,17 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
         # time_and_network_tbd until reconciled. game_date/viewing_day are seeded on insert and moved by the reconciler.
         game = {"id": gid, "sport": sport, "external_primary_id": gid.split("-", 1)[-1] if sport != "cfb" else gid, "season": g.get("season") or meta.get("year"),
                 "week": g.get("week"), "game_date": et.date(), "viewing_day": viewing_day(start),
-                "home_team_id": str(home["id"]), "away_team_id": str(away["id"]), "neutral_site": bool(g.get("neutralSite"))}
+                "home_team_id": home_id, "away_team_id": away_id, "neutral_site": bool(g.get("neutralSite"))}
         for m in media:   # network stubs first: game_broadcasts.service_id references them
             outlet = m["outlet"]
             is_local_tba = (m.get("carriageCertainty") or "CONFIRMED") in ("UNANNOUNCED", "TBA_NO_RIGHTS_HOLDER")
             db.upsert("networks_services", [{"id": slug(outlet), "canonical_name": outlet, "type": "local_tba" if is_local_tba else ("streaming" if (m.get("mediaType") == "web" or outlet in STREAM_TYPES) else "linear_cable")}],
                       "id", [], tag="networks_services.stub")
-        db.upsert("games", [game], "id", ["season", "week", "neutral_site"], tag="games")
+        # THE TEAMS ARE IN THE UPDATE LIST (prompt 116), PRESERVED: a null side - the source gave no
+        # id - coalesces onto the stored column rather than erasing it; a real id, placeholder or
+        # club, lands. This is the write that lets "AL Wild Card #2" become a club on 2026-09-28.
+        db.upsert("games", [game], "id", ["season", "week", "neutral_site", "home_team_id", "away_team_id"],
+                  tag="games", preserve=["home_team_id", "away_team_id"])
         if venue_id_sub:
             db.run("update games set venue_id = (select id from venues where name = %s and city = '' limit 1) where id = %s", (venue_id_sub, gid), tag="games.venue")
         counts["games"] += 1
@@ -402,7 +451,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{f.name}: " + " · ".join(f"{k} {v}" for k, v in c.items()))
             for k, v in c.items():
                 totals[k] = totals.get(k, 0) + v
-        notes = json.dumps({**totals, **run_context()})
+        # team_changes: every "<gid>: side old -> new" this run made (prompt 116), so a flip is
+        # visible in refresh_runs and never silent. The counters beside it say how many.
+        notes = json.dumps({**totals, **run_context(), "team_changes": list(TEAM_CHANGES)})
         if run_id is not None:
             db.run("update refresh_runs set completed_at = now(), status = 'succeeded', games_checked = %s, notes = %s where run_id = %s",
                    (totals.get("games", 0), notes, run_id), tag="refresh_runs")
