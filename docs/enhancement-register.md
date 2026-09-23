@@ -4046,6 +4046,10 @@ never reach the index"*. There the risk worth guarding was committing it; here i
 
 **Numbered by count:** §1–§49 each appear exactly once and there was no §50.
 
+> **2026-09-23, prompt 114:** Block B's hypothesis — that an element holding the top edge suppresses
+> iOS 27's scroll-edge scrim — is **false on the iPad**, where an opaque sticky `.chdr` holds the edge
+> and is scrimmed. The phone confirmation above stands; the mechanism is recorded as unknown. §59.
+
 Two defects in one release path. **Block A is mechanism-proven, in the browser, in both directions.
 Block B's wiring is proven and its PREMISE IS A HYPOTHESIS about iOS 27.** It shipped provisional
 under rule 25.
@@ -4901,3 +4905,115 @@ rows; the pinned caps rendered from the shipped rows are pixel-identical to the 
 (24 of 24 served pairs identical, `verify_changes.json`); the two spot checks are `nba-CLE` and
 `mlb-110`; §1–§57 each appeared exactly once before §58 was written and still do; the handoff and the
 README carry 113, and rev B and rev C are now filed beside it.
+
+## 59. THE iPAD'S TOP EDGE GETS HEADROOM BELOW THE SCRIM — 2026-09-23, prompt 114
+
+**Numbered by count:** §1–§58 each appear exactly once and there was no §59.
+
+**What Joe saw, 2026-09-22, on a 2021 iPad Pro 12.9" (iPadOS 27, standalone, landscape):** the
+collapsed navbar and the tap-restored banner sit under iOS 27's scroll-edge scrim. Measured by Cowork
+from his three shots (2732 × 2048, DPR 2): the navbar wordmark reads at **0.29–0.57** of banner gold
+top to bottom, the restored banner's wordmark at 0.55 → 1.00 against the fresh open, and the date
+picker beneath the navbar is untouched. The phone is clean on the same build.
+
+**The iPad contradicts §50's hypothesis.** §50 Block B shipped on the premise that an element holding
+the top edge suppresses the scrim. `.chdr` holds the edge with an opaque `--spot-2` ground and is
+scrimmed regardless. **The mechanism is unknown, is recorded as unknown, and this fix does not
+depend on it:** whatever arms the scrim, it is a feather about 36 px deep anchored to the web view's
+top edge, and ink placed below it cannot be dimmed by it.
+
+**The web view starts 32 CSS px below the screen top, with `env(safe-area-inset-top)` = 0 — INFERRED,
+not read from the device, from two fits that only agree on that geometry.** In shot 2 the navbar's
+hairline is the row at y = 75.0 and `.chdr-inner` is 44 px border-box, so the row spans 32.0–76.0. In
+shot 1 the desktop wordmark's first ink is at y = 45.0; the 1400 × 200 SVG scales 0.9757 at 1366, the
+title baseline is 51.76 at 55 px (`banner-desktop-v2.json`), bold caps top out at 708/1000, so the
+first ink sits 12.51 CSS px below the SVG's top, which is therefore at 32.5. If the web view started
+at 0 with a 32 px inset, the banner's padding (32 + 4 − 14 = 22) would put its ink at 34.5, 21 device
+px off. Only "web view at 32, inset 0" fits both. The status-bar band (0–31) is flat `#272727`, the
+page's own top colour sampled by iOS, so `black` does not give the iPad an opaque black bar the way
+it gives the phone one — but the web view still starts below it. **The feather is 36–40 px deep
+inside the web view:** shot 1 minus shot 3 on empty ground, 1.09 gray at y = 64, 0.49 at 66, 0.07 at
+68, 0.01 at 70, 0.00 from 72; the navbar's opaque ground reaches flat at 67. The navbar wordmark's
+first ink sat 14 px into the web view, the banner wordmark's 12.5 — both inside the feather.
+
+**The shape chosen: headroom scoped to the tablet, and the opaque strip rejected.** Under `black` the
+page's highest paintable row IS the web view's top edge, and `.chdr` already paints opaque there — and
+is scrimmed. Reaching above it means `black-translucent`, which reverses prompt 99 (iOS 27 composites
+the blur above the web view) and cannot be scoped to tablets, being one install-time meta tag. So:
+`--ipad-top-clear: 32px`, spent as a `::before` spacer inside `.chdr` (not padding: the inset token
+count nav.test.mjs pins stays at three, and the spacer sits inside the border box so the border-box
+`--stack-h` observer carries it into the picker's offset with no arithmetic) and as `padding-top` on
+`.bn-pc`, the element that shows at ≥ 700 px. **32, not 24:** 22–24 is the minimum that clears both
+wordmarks; 32 puts first ink 44–46 px in, 4–10 px clear of where the difference reaches zero. The
+band under the banner's padding shows `.banner`'s gradient, whose first stop is the stage's
+`#272727`; measured at DPR 2 the seam steps by 1/255, so the band was not repainted. **What it costs,
+plainly:** a 32 px dark band above the navbar and the banner on the iPad in every state, fresh open
+included — the navbar 44 → 76 px, about 3% of a 992 px landscape web view. **The phone's "no headroom"
+ruling (prompt 102, §50) stands**, and §48's pull-up stays contraindicated: it moves ink UP, into a
+feather deeper than the phone's.
+
+**The scope condition, and why it is not prompt 110's.** `(pointer: coarse)` alone matches the phone;
+`(min-width: 700px)` with it still matches an iPhone in landscape (932 × 430). The block is
+`(min-width: 700px) and (min-height: 600px) and (pointer: coarse)`, which matches the iPad in both
+orientations and excludes both phone orientations and the desktop — measured in Chromium at all five,
+and Chromium matches `pointer: coarse` under `hasTouch: true` (with or without `isMobile`), so the
+geometry is provable in a gate. Not gated on `display-mode: standalone`: Chromium cannot match it,
+and the only cost outside the installed app is 32 px of ground in an iPad Safari tab.
+
+**Measured in Chromium, before → after** (`assets/p114-ipad-scrim/`): at 1366 × 1024 coarse, spacer
+0 → 32, `.chdr` 44 → 76, `.chdr-inner` top 0 → 32, `--stack-h` 44 → 76, picker top 44 → 76, `.bn-pc`
+padding and SVG top 0 → 32, banner wordmark ink and navbar wordmark ink both +32 (the navbar's gold
+rows begin at CSS 13.5 → 45.5). At 1024 × 1366 the same +32 on every row (its picker sits 8 px under
+the bar for a reason older than this change, 52 → 84). At 390 × 844, 932 × 430 and 1440 × 900:
+**zero change on every row**, and the phone's 23 qa-shots PNGs are byte-identical before and after.
+The collapse still does not move the first card on the iPad, and the wordmark tap still re-arms the
+pin. **Chromium has no scrim: these prove geometry and nothing about legibility.** The acceptance is
+Cowork's, from Joe's shots off a preview build; the predictions are the navbar hairline at screen
+y ≈ 107, the navbar wordmark's first ink at ≈ 78, the banner wordmark's at ≈ 77, every wordmark row
+≥ 0.98 of its reference. If the positions come in elsewhere, the 32 px inference was wrong, and that
+finding matters as much as the fix.
+
+**Comment-only elsewhere, proved:** with comments stripped and the token and block removed, the
+stylesheet is identical to `ec99819`'s (blank lines where comments were aside), and the delimiters
+balance 265/265. The three stale comments corrected: "FIXED, NOT STICKY" (prompt 58's text, sticky
+since 62), "`.chdr` stays FIXED", and three dead line references in the navbar's inset note.
+
+## 60. THE PLACEHOLDER RULE WIDENS TO MLB'S POSTSEASON SEEDS — 2026-09-23, prompt 114 rev B
+
+**Numbered by count:** §1–§59 each appear exactly once and there was no §60.
+
+**JOE'S RULING, 2026-09-23: widen the placeholder rule. Do not rule colours for these ids.** The
+seven are not teams: MLB replaces them with real clubs as the seeds clinch, then adds new placeholders
+for each later round, so a colour ruling per placeholder id would go stale every week of October.
+
+**What went red.** `smoke.mjs`'s *"the only unruled pro rows are TBD placeholders"* required every
+unruled pro id to end in `-TBD`. The 2026-09-23 08:00Z refresh (`schedule_refresh` run 35834681015)
+loaded seven MLB rows that do not — `mlb-4614` "AL #3 Seed", `mlb-4617` "NL #3 Seed", `mlb-4619`
+"NL Wild Card #1", `mlb-4944` "AL Wild Card #2", `mlb-4945` "NL Wild Card #2", `mlb-4946` "AL Wild
+Card #3", `mlb-4947` "NL Wild Card #3" — null colours, MLB abbreviations (`AL3`, `NLWC1`…), carried
+by four 2026-09-29 Wild Card games: `mlb-849843` (NL WC1 v NL WC2), `mlb-849845` (NL #3 v NL WC3),
+`mlb-849849` (AL #3 v AL WC3) and `mlb-849851` (Yankees v AL WC2). Prompt 114's gate run found it;
+Cowork confirmed the rows by a read-only SELECT. The only other non-CFB placeholder row is `nba-TBD`.
+
+**The predicate.** `web/lib/placeholders.js` exports `isPlaceholderTeam(team)`: true when the id
+ends in `-TBD` (the rule that stood alone), or when `sport === 'mlb'` and `canonical_name` matches
+`/^(AL|NL) (#\d+ Seed|Wild Card #\d+)$/`. **The pattern is narrow on purpose:** it covers the two
+forms MLB has actually published, and a later round's placeholder with a different name — a Division
+Series winner, say — is MEANT to turn the smoke check red so that someone looks at it and widens the
+pattern by a ruling. Nothing guesses at forms MLB has not published. `smoke.mjs` reads
+`canonical_name` in its teams select, applies the predicate, keeps the check's label, and its detail
+now names every row it exempted and why (`suffix` or `mlb-pattern`) and any unruled row that is not
+a placeholder, so a green run still shows the reader the seven.
+
+**Pinned in `web/test/placeholders.test.mjs`** (8): the seven names pass with the `mlb` sport and
+`nba-TBD` by the suffix; `Cleveland Guardians`, `AL #3 Seeds`, `AL Wild Card` with no number,
+`ALDS Winner A`, the name on a non-MLB sport, the id `mlb-TBDX` and a missing row all fail; and
+`smoke.mjs` imports the predicate, carries the name in its select and no longer tests the suffix
+itself. **Mutation-checked six ways, each red then restored:** the sport guard dropped; the `^`
+anchor dropped; the `$` anchor dropped; `#\d+` widened to `.*`; the suffix branch removed; and
+`smoke.mjs` pointed back at `endsWith('-TBD')`, which the unit pin catches AND the live smoke
+(32/33) catches.
+
+**How the four games render today, reported and not fixed:** see the run report and
+`assets/p114-ipad-scrim/placeholders-0929/`. Whatever they show is Joe's next decision; 2026-09-29
+is six days out.

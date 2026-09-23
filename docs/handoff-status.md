@@ -10,7 +10,7 @@ sections, and the older measurement records. **This file stays the authority for
 repo state, gate floors, open items; since prompt 89 the working rules are `CLAUDE.md`'s alone. Read
 the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§58 — this said §1–§39 until prompt 99 corrected it and §1–§53 until prompt 111 did, counted both times; all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§60 — this said §1–§39 until prompt 99 corrected it and §1–§53 until prompt 111 did, counted both times; all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **120 briefs, covering 01–113, counted 2026-09-22 by prompt 113 rev C
-(118 after prompt 113; 117 after prompt 112; 116 after prompt 111; 107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - **`docs/prompts/README.md` "Duplicate numbers" owns this count**: six numbers as the README counts them (23, 26, 43 and 48 two each, 86 and 113 three; `13-14-combined` has its own row and is deliberately not counted under 13), seven if it is — which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **122 briefs, covering 01–114, counted 2026-09-23 by prompt 114 rev B
+(121 after prompt 114; 120 after prompt 113 rev C; 118 after prompt 113; 117 after prompt 112; 116 after prompt 111; 107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - **`docs/prompts/README.md` "Duplicate numbers" owns this count**: seven numbers as the README counts them (23, 26, 43, 48 and 114 two each, 86 and 113 three; `13-14-combined` has its own row and is deliberately not counted under 13), eight if it is — which is why the file
 count runs ahead of the highest number. (Prompt 111 wrote "six" here after counting the directory; the old "five" it replaced was (13, 23, 26, 43, 86), wrong in both directions — it counted 13 and omitted 48, which has carried two since prompt 93 — and prompt 112 pointed this line at the README rather than keep a second copy.) **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -67,13 +67,27 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
 
+**Measured 2026-09-23, prompt 114 rev B — `test:unit` 634 → 642; smoke back to 33/33; `pytest` 634 + 1 and
+`qa-shots` 142 did not move; geometry all hard stops.** Written after the last gate run. Joe's ruling widened the
+placeholder rule (register §60): `web/lib/placeholders.js` exempts a `-TBD` id or an MLB row named for a postseason
+seed or wild card slot, and smoke names every row it exempts. Three commits, in order: Block E, then 114's A–C1,
+then 114's D with both briefs. **NOT PUSHED** — the preview branch waits for Joe's `preview`.
+
+**Measured 2026-09-23, prompt 114 — `test:unit` 633 → 634 and `qa-shots` 121 → 142; `pytest` did not move; smoke
+was RED, 32/33, for a reason that was not this change** (the 08:00Z refresh loaded MLB postseason placeholder
+teams whose ids do not end in `-TBD`; rev B widened the rule). Written after the last gate run. Nothing was
+committed by that run — S4 forbids committing over a red gate. The iPad gets 32px of headroom above the navbar row and the desktop banner under
+`(min-width: 700px) and (min-height: 600px) and (pointer: coarse)` (register §59); the phone renders
+byte-identically at 390 × 844 and 932 × 430 in all three header states, and so does the desktop at 1440 × 900.
+
 **Measured 2026-09-22, prompt 113 rev C — `pytest` 632 → 634 and `test:unit` 632 → 633** (the review-pin
 tests); smoke, qa-shots and geometry did not move. Written after the last gate run. **Joe reviewed the 21
 pairs and kept the old rendering for six** — Oklahoma St, Nicholls, N Arizona, Tarleton St, Tulane and the
 Chargers — pinned in the build's `REVIEW_PINS` and declared in the tests; the Rams and the Rockets stand as
 regenerated (register §58's dated subsection). The pinned caps render pixel-identical to the panels he
 approved (`assets/p113-cap-regen/pins/`). **NOT PUSHED** — two commits ahead of `origin/main`; Joe
-reviews Block C and Block D, then authorizes.
+reviews Block C and Block D, then authorizes. *(Superseded: pushed 2026-09-22 with `02e3a52..ec99819`,
+Vercel READY, the six pinned rows and `mlb-142` verified in the served bundle.)*
 
 **Measured 2026-09-22, prompt 113 — `pytest` 626 → 632 and `test:unit` 631 → 632** (the ruled-branch pins in
 `tests/test_cap_table.py`, six; the ruled-rows pin in `captable.test.mjs`, one); smoke, qa-shots and geometry did
@@ -82,13 +96,15 @@ option (b), register §58): 38 ruled rows change art, 27 change only their tint 
 rows follow their rebuilt `_dark` files (Joe's rev B ruling: keep them). **The study-ink counts did not move**
 because `renderInk()` now reads the frozen study's tint and art, as its own comment required. **NOT PUSHED** —
 one commit ahead of `origin/main`; Joe reviews the 21 before/after pairs under `assets/p113-cap-regen/` first,
-and a push is a deploy that changes what 21 grid endcaps paint.
+and a push is a deploy that changes what 21 grid endcaps paint. *(Superseded: pushed 2026-09-22 with
+`02e3a52..ec99819`, after rev C's pins.)*
 
 **Re-measured 2026-09-22, prompt 112 — no count moved; documents only, plus one comment.** Written after
 the last gate run: pytest 626 + 1 skipped, test:unit 631, smoke 33/33, qa-shots 121/121, geometry all hard
 stops. Block A measured the dark-band logo class and found the cap table scored against the rule's band,
 not the ruled band the block paints (register §57, queue item 11); nothing that paints a block changed.
-**NOT PUSHED** — one commit ahead of `origin/main`; Joe authorizes.
+**NOT PUSHED** — one commit ahead of `origin/main`; Joe authorizes. *(Superseded: pushed 2026-09-22 with
+`f4aab2c..02e3a52`, Vercel READY.)*
 
 **Re-measured 2026-09-22, prompt 111 — no count moved; documents only, and nine briefs filed.** Written after
 the last gate run: pytest 626 + 1 skipped, test:unit 631, smoke 33/33, qa-shots 121/121, geometry all hard
@@ -237,6 +253,9 @@ line claims to do.
 | prompt 94 | `pytest` | 569 → **585** | `tests/test_sync_assets.py` (16): the byte comparison's order and its request count (a single-part ETag costs no `head_object`; a size difference costs no hashing), the multipart and absent-ETag fallback, `test_pull_retakes_a_cached_file_whose_bytes_differ_from_the_bucket`, a `grids/` key compared at its derived path, mixed-case filenames, `--force` and `--existing-only` unchanged. Mutation-checked: the free ETag step removed fails 7; a key-only pull restored fails 2 |
 | prompt 95 | `pytest` | 585 → **591** | `PushGuard` in `tests/test_sync_assets.py` (6), driven through the real `main()` with `_put` counted: a push that would create an object refuses and uploads nothing; `--allow-new` publishes; a push with nothing new proceeds unflagged; `--existing-only` creates nothing; `--force` does not bypass the guard; the nightly's logo push carries the flag. Mutation-checked: the guard moved after the first upload fails 2; the guard removed fails 2 |
 | prompt 106 | `pytest` | 612 → **619** | seven in `tests/test_cavs_simulcast.py` for the emitted rows: a WOIO game emits ONE row and it is CBS with the station kept in the label; a both-station game emits TWO, one per outlet; a WUAB-only game emits its own; a game outside the package emits none; availability is ANY outlet, driven through `outlet_access`; WOIO resolves through the alias table and stays out of `access_profile.json`; and BOTH call sites gate the rows on national exclusivity. Mutation-checked seven ways |
+| prompt 114 rev B | `test:unit` | 634 → **642** | `web/test/placeholders.test.mjs` (8): the seven MLB postseason names and `nba-TBD` are placeholders; a real club, `AL #3 Seeds`, `AL Wild Card`, `ALDS Winner A`, the name on another sport, `mlb-TBDX` and a missing row are not; and `smoke.mjs` uses the predicate rather than its own suffix test. Mutation-checked six ways, each failing: the sport guard dropped, each anchor dropped, `#\d+` widened to `.*`, the suffix branch removed, smoke back on `endsWith('-TBD')` |
+| prompt 114 | `test:unit` | 633 → **634** | `nav.test.mjs` (+1): the iPad headroom block's condition list read off the stylesheet as a set and required to be exactly `(min-height: 600px)`, `(min-width: 700px)` and `(pointer: coarse)`; the token declared once at 32px; `.chdr` itself must not spend it; the inset-token count still 3; no `max-width: 699px` block spends it. Mutation-checked six ways, each failing: each clause dropped in turn, the token set to 0, the spacer moved onto `.chdr`'s padding, `.bn-pc`'s padding removed |
+| prompt 114 | `qa-shots` | 121 → **142** | the headroom measured at five viewports (+21): at 1366 × 1024 and 1024 × 1366 coarse the `.bn-pc` padding and SVG top are 32, the `::before` spacer is 32 with `.chdr-inner` at 32, `.chdr` is 76 and `--stack-h` carries it, the picker flush under it (landscape); at 390 × 844, 932 × 430 coarse and 1440 × 900 fine every one of those rows is 0 / 44 / 44, exactly as before; the collapse on the iPad moves the first card by the scroll asked for and nothing more, and the wordmark tap re-arms the pin. Chromium has no scrim: these prove geometry, not legibility |
 | prompt 113 rev C | `pytest` | 632 → **634** | `ReviewPins` in `tests/test_cap_table.py` (2): a pin overrides the scored row and carries the pinned art's own score on the pinned surface, and `apply_pins=False` returns the unpinned answer; the shipped pins are Joe's six and nothing else, with no id declared twice. Mutation-checked: a pin removed from `REVIEW_PINS` fails 1 |
 | prompt 113 rev C | `test:unit` | 632 → **633** | `captable.test.mjs` (+1): every `REVIEW_PIN` is in the table as pinned, differs from what the build produces unpinned, and is not also in `FILE_CHANGED`; the unruled counts re-pinned 104/17/54/11 → 105/15/56/10 and the ruled split 106/17/1 → 107/16/1 with the arithmetic in the comment. Mutation-checked four ways, each failing: the Nicholls pin removed from the build and the table regenerated (JS and `--check` both red); `197` set back to its regenerated row in the table; `renderInk()` back on the live table; a pin removed from `REVIEW_PINS` (pytest) |
 | prompt 113 | `pytest` | 626 → **632** | six in `tests/test_cap_table.py`, `RuledTeamsAreScoredOnTheirOwnBand`: a ruled team takes the dark file its ruled band needs where `band_for()` would refuse it (the Padres/Rams shape, on synthetic squares); a ruled team is never tinted; an unruled team keeps the two-level rule; the Giants' cap override is applied by the build and scored on the ruled band; the override table names the Giants and nothing else; a missing ruled file rules nobody. Mutation-checked: the ruled branch reverted in `row_for()` fails 3 |
@@ -519,9 +538,9 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 | gate | run from | floor |
 |---|---|---|
 | `pytest` | repo root | **634 passed + 1 skipped** (36 subtests) |
-| `npm run test:unit` | `web/` | **633** |
+| `npm run test:unit` | `web/` | **642** |
 | `npm run smoke` | `web/` | **33/33** |
-| `node scripts/qa-shots.mjs` | `web/` | **121/121** |
+| `node scripts/qa-shots.mjs` | `web/` | **142/142** |
 | `npm run geometry` | `web/` | all hard stops |
 
 They are a floor and may only go up — **with the one exception that a removed feature takes its
@@ -989,6 +1008,23 @@ before touching any count line.
   are tracked files that reach production with the deploy. `--check` confirms it: local-only still
   reads 29, the same set prompt 95 recorded, with neither composite among them. **Nothing renders from
   any of this yet**: prompt 105 owns the row and the card.
+- ~~**OPEN — SMOKE IS RED ON LIVE DATA, NOT ON CODE: THE 2026-09-23 08:00Z REFRESH LOADED MLB POSTSEASON
+  PLACEHOLDER TEAMS.**~~ **CLOSED 2026-09-23 by prompt 114 rev B — Joe's ruling: widen the placeholder rule, no
+  colour rulings for placeholder ids (register §60). Smoke 33/33 again, and it names the seven it exempts.** The
+  text below is the record of the finding. `smoke.mjs`'s *"the only unruled pro rows are TBD placeholders"* requires every unruled
+  pro id to end in `-TBD`; the refresh (`schedule_refresh` run 35834681015) loaded seven MLB rows that do not —
+  `mlb-4614` "AL #3 Seed", `mlb-4617` "NL #3 Seed", `mlb-4619` "NL Wild Card #1", `mlb-4944`–`mlb-4947` the
+  Wild Card #2/#3 seeds — with null colours, carried by four 2026-09-29 Wild Card games (`mlb-849843`,
+  `-849845`, `-849849`, `-849851`, the last against the Yankees). Found by prompt 114's gate run; the check reads
+  `teams` only and cannot be moved by a stylesheet. **Joe's ruling:** widen the placeholder rule (a name or a
+  null-colour test rather than the `-TBD` suffix), or rule these ids a colour. Until then every run's smoke is
+  red and nothing commits (S4). Prompt 114's own work sat uncommitted behind it until rev B.
+- **OPEN — 114 IS COMMITTED, AND AWAITS JOE'S iPAD SHOTS FROM THE PREVIEW (2026-09-23, register §59).**
+  The iPad headroom is in `main` locally and NOT pushed; the only push the run may make is a preview
+  branch (`p114-ipad-scrim-preview`) after Joe types `preview`. Milestone "iPad banner fixed" closes on
+  Cowork's measurement of Joe's three shots off that preview — the navbar hairline at screen y ≈ 107,
+  both wordmarks' first ink at ≈ 77–78, every wordmark row ≥ 0.98 of its reference — **not on a gate**:
+  Chromium has no scrim, so every gate here proves geometry and nothing about legibility.
 - **OPEN, FOR JOE — TWO OF THE FIFTEEN SIMULCAST GAMES COLLIDE WITH A NATIONALLY EXCLUSIVE ROW
   (prompt 106, register §53).** `nba-401910445` (2027-01-29 TOR, announced WOIO) carries **ESPN** and
   `nba-401910691` (2027-03-09 DET, announced WOIO **and** WUAB 43) carries **NBC**, both in

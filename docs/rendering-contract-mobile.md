@@ -1,5 +1,13 @@
 # Mobile Grid Addendum — v2.1 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04 · per-team cap surface and art, candidate D, 2026-09-04)
 
+> **v2.5 (2026-09-23, prompt 114).** **M22's top-edge treatment gains a TABLET clause.** On a
+> tablet-sized coarse pointer — `(min-width: 700px) and (min-height: 600px) and (pointer: coarse)`,
+> the iPad in both orientations and neither phone orientation — the collapsed navbar carries a 32 px
+> spacer above its row and the desktop banner 32 px of padding, so both wordmarks' first ink clears
+> iOS 27's scroll-edge feather (measured ~36–40 px deep on the iPad, register §59). M22's phone
+> rules, its measured table and the "no headroom" ruling are untouched; the phone renders
+> byte-identically. Amended by note; no frozen manifest value changes.
+>
 > **v2.4 (2026-09-22, prompt 110, Joe's ruling).** **M5 IS AMENDED, AND WITH IT THE SCOPE OF THIS
 > ADDENDUM: the deviations apply to TOUCH surfaces, not only to phones.** The mobile grid is gated on
 > `max-width: 699px` OR `pointer: coarse`, at any width and in either orientation; the archived PC
