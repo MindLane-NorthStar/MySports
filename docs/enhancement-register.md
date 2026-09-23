@@ -5066,3 +5066,82 @@ locked reference draws no placeholder team and is unchanged.
 
 **Out of scope, deliberately:** `reconcile.py`, the kickoff and broadcast paths, every adapter, and
 the seven placeholder rows in `teams`, which stay.
+
+---
+
+## 62. SUNDAY'S CBS AND FOX GAMES ARE DECIDED BY WHAT WOIO AND WJW ACTUALLY AIR — 2026-09-23, prompt 117
+
+**Numbered by count:** §1–§61 each appear exactly once and there was no §62.
+
+**The mechanism, and why it never resolved.** A CBS or FOX Sunday-afternoon NFL game is a REGIONAL
+feed: the network sends several games at once and each affiliate picks one, so "on CBS" says nothing
+about what a viewer in Cleveland gets. `adapters/espn.py` knew this since spec §3.12 — it marked every
+CBS/FOX TV row `regional` and looked up `data/market_coverage_nfl.json` for a `cleveland: true|false`
+entry, hand-entered weekly from 506sports' maps. That entry was made once, for week 1, as "not yet
+checked", and never again: the file's whole history is one empty week. So every CBS and FOX game
+without a Browns side has sat `UNVERIFIED`, shown with the "Market TBD" cue (E5, §11.8), every week
+of the season — and Joe's report of 2026-09-23 ("ALL Sunday NFL broadcasts appear as visible to me
+on FOX or CBS - even though they're determined by local DMA") is E5 doing exactly what §11.8 rules:
+an unverified game is SHOWN, never filtered, and the cue is the honesty. The mechanism was working.
+The data it waited for was a weekly chore nobody did, and a chore is not a source.
+
+**Joe's source ruling.** The stations' own listings answer the question the maps answer — and one the
+maps cannot: "WJW carries no late game today." Schedules Direct, the Gracenote guide feed licensed for
+personal open-source use (US$35 a year; JSON API 20141201, ~20 days of US listings), is the source.
+Its terms allow "individual use only and exclusively to Open Source software"; this repository is
+public, so the terms are met. `adapters/sd_listings.py` is the client: token (the password as a
+lowercase SHA-1 digest), the over-the-air lineup for the postal code chosen from `/headends` and
+added to the account ONCE only if absent (the API allows six adds a day), station ids looked up at
+run time by callsign from `data/markets.json` `nfl.affiliates` (`{"CBS": "WOIO", "FOX": "WJW"}`),
+`/schedules` for yesterday through today + 13 and `/programs` for every program id once, written to
+one JSON keyed by callsign. **The postal code and the lineup id appear in no log line, output,
+fixture or committed file** — the client redacts both, longest first, and refuses to write an output
+that carries either; Joe's postal code is a personal identifier. Credentials are `SD_USERNAME`,
+`SD_PASSWORD`, `SD_POSTAL_CODE`, from the environment only. **A failure never fails the refresh:**
+missing secrets, a 4xx or 5xx, a timeout — one line, no file, exit 0, and the NFL step behaves as it
+did before the step existed. The adapters' `http_json` gained `method` and `data` so a JSON POST rides
+the same bounded retry rather than a second helper growing beside the first.
+
+**The six rules.** A CBS or FOX TV row is decided by the FIRST that applies, and `source` names it:
+
+1. **Kickoff outside Sunday 12:00–17:00 ET → `AVAILABLE`, `market: national`, `"national window"`.**
+   Thanksgiving, Christmas, a December Saturday, a London morning, Sunday night: all national, all
+   were coming out `UNVERIFIED` because the regional rule fired on the network name alone. Independent
+   of the listings, which is why a Thanksgiving CBS game with no listings file resolves.
+2. **A hand entry in `data/market_coverage_nfl.json` wins.** The file is now a manual override, and
+   its `_about` says so; an entry beats a listing that disagrees.
+3. **A Browns game → `AVAILABLE`, `"market: local team"`.** Unchanged.
+4. **The affiliate has an NFL-game airing within ±30 minutes of kickoff.** The same two teams, matched
+   on NICKNAME (Rams/Chargers and Giants/Jets share a city; `at`, `vs.` and `@` all accepted) →
+   `AVAILABLE`, `"listings: WJW 2026-09-27 1:00 PM"`. A different game → `OUT_OF_MARKET`, naming what
+   the station carries. A game airing with no team names → `UNVERIFIED`.
+5. **Listings exist for the station and date, and no game airing sits in the window → `OUT_OF_MARKET`,
+   `"listings: WJW carries no game in this window"`.** This is the case no coverage map can state: on
+   2026-09-27 WJW airs the Panthers at the Browns at 1:00, the FOX postgame at 4:00 and *Doc* at 4:30.
+   There is no FOX late game in Cleveland that day, and the grid now says so.
+6. **Otherwise `UNVERIFIED`**, exactly as before — the listings failed, or do not reach the date.
+
+**Why the order is what it is.** The window test comes first because it is a fact about the telecast,
+not the market, and needs no data. The hand entry comes before the listings because it is the only
+thing Joe can set by hand when a listing is wrong, and an override that loses to the thing it
+overrides is not one. The Browns rule sits third only because a hand entry for a Browns game is a
+deliberate act.
+
+**Proven, and not.** Thirty-one offline tests (`tests/test_sd_listings.py`, `tests/test_nfl_market_rules.py`)
+drive the real client against fixtures in the API docs' shape — the real WJW sequence above, WOIO
+carrying Cincinnati at Pittsburgh, one "NFL Football" with no episode title — and the real fixture
+builder with a scoreboard payload in ESPN's shape. Six mutations each go red: the ±30-minute bound
+dropped, matching on city, rule 1 removed, rule 5 removed, rules 2 and 4 swapped, the client exiting
+non-zero on a 5xx. A guard fails any test that reaches `http_json`, so no live call is possible from
+the suite. **Unproven until the secrets exist and the workflow runs:** the live API's exact response
+shapes (the fixtures follow the docs, not a captured response), whether a bodiless `PUT` is accepted
+by the lineup add, and whether the program metadata carries `eventDetails.teams` for NFL games or
+only the episode title. `docs/handoff-status.md` carries the OPEN item: Joe adds the three secrets,
+dispatches the workflow, and Cowork reads week 4's (2026-10-04) CBS/FOX statuses.
+
+**E5 stands.** An `UNVERIFIED` game is still shown with its cue and never filtered; what changed is
+how many games stay `UNVERIFIED` once the listings reach the date — in a normal week, none.
+
+**Out of scope, deliberately:** the display and the E5 cue; NBC, ESPN, ABC, Prime and Netflix rows,
+which are national and already `AVAILABLE`; every other sport; any database write outside the
+nightly refresh.

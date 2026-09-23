@@ -67,6 +67,14 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
 
+**Measured 2026-09-23, prompt 117 — `pytest` 643 → 675 passed + 1 skipped; `test:unit` 650, smoke 33/33, `qa-shots` 145/145 and
+geometry all hard stops did not move.** Written after the last gate run. **A CBS or FOX Sunday-afternoon row is
+decided by what WOIO and WJW actually air** (register §62): `adapters/sd_listings.py` reads the two stations' listings
+from Schedules Direct into one JSON the NFL step reads through `MYSPORTS_NFL_LISTINGS`, and `adapters/espn.py` decides
+each row by the first of six rules — national window, hand override, Browns, the station's airing (same teams /
+different game / no names), no game in the window, else `UNVERIFIED` as before. Inert until Joe adds the three
+`SD_*` secrets; a failing listings step logs one line and changes nothing. No live call was made in the run.
+
 **Measured 2026-09-23, prompt 116 — `pytest` 634 → 643, `test:unit` 642 → 650, `qa-shots` 142 → 145; smoke 33/33 and
 geometry all hard stops did not move.** Written after the last gate run. **The loader now follows the source for a
 game's teams** (register §61): `home_team_id`/`away_team_id` join the games upsert's update list, preserved, every
@@ -260,6 +268,7 @@ line claims to do.
 | prompt 94 | `pytest` | 569 → **585** | `tests/test_sync_assets.py` (16): the byte comparison's order and its request count (a single-part ETag costs no `head_object`; a size difference costs no hashing), the multipart and absent-ETag fallback, `test_pull_retakes_a_cached_file_whose_bytes_differ_from_the_bucket`, a `grids/` key compared at its derived path, mixed-case filenames, `--force` and `--existing-only` unchanged. Mutation-checked: the free ETag step removed fails 7; a key-only pull restored fails 2 |
 | prompt 95 | `pytest` | 585 → **591** | `PushGuard` in `tests/test_sync_assets.py` (6), driven through the real `main()` with `_put` counted: a push that would create an object refuses and uploads nothing; `--allow-new` publishes; a push with nothing new proceeds unflagged; `--existing-only` creates nothing; `--force` does not bypass the guard; the nightly's logo push carries the flag. Mutation-checked: the guard moved after the first upload fails 2; the guard removed fails 2 |
 | prompt 106 | `pytest` | 612 → **619** | seven in `tests/test_cavs_simulcast.py` for the emitted rows: a WOIO game emits ONE row and it is CBS with the station kept in the label; a both-station game emits TWO, one per outlet; a WUAB-only game emits its own; a game outside the package emits none; availability is ANY outlet, driven through `outlet_access`; WOIO resolves through the alias table and stays out of `access_profile.json`; and BOTH call sites gate the rows on national exclusivity. Mutation-checked seven ways |
+| prompt 117 | `pytest` | 643 → **675** | `tests/test_sd_listings.py` (16): the SHA-1 password and the token on every later call, the OTA lineup chosen and never re-added when present, added once when absent, station ids by callsign, the 15-date window, each program id fetched once, the real WJW 2026-09-27 sequence and WOIO's Bengals at Steelers read back, a game with no episode title, the three episode-title forms, the narrow game title, no postal code / lineup id / station id in the output or a log line, missing secrets and a 5xx each writing nothing and exiting 0, a good run writing the file. `tests/test_nfl_market_rules.py` (15): the six rules through the real fixture builder — Thanksgiving CBS national with no listings, Sunday night and a December Saturday, the window edges, a hand entry beating a listing, the Browns, same-teams AVAILABLE with the station and time in `source`, a different game OUT_OF_MARKET naming it, no team names UNVERIFIED, the 30-minute bound both sides, Rams vs Chargers and Jets vs Giants by nickname, WJW's no-late-game day, no listings for the date, a failed client leaving today's behaviour, and the order. `tests/test_workflows.py` (+1): the listings step before the NFL step, both on the same temp-dir file, the three secrets as job env, no expression in `run`, no `continue-on-error`. Six mutations each red. |
 | prompt 116 | `pytest` | 634 → **643** | `tests/test_postseason_teams.py` (9): the games upsert's `DO UPDATE` carries both team columns, preserved; the loader reads before it writes; a placeholder becoming a club changes the stored id and writes `"mlb-849851: away mlb-4944 -> mlb-111"` to the notes; the same teams again note nothing; a `None` side keeps the stored value, is noted, and never reaches the row or a team stub; a NEW game with a `None` side is skipped live; the two new counters are in `ZERO_COUNTS`; `main` writes the notes. Mutation-checked five ways, each failing |
 | prompt 116 | `test:unit` | 642 → **650** | `web/test/teammark.test.mjs` (8): the badge for a placeholder and for a `-TBD` id, the `<img>` for a club and for the same name on another sport, the badge for no src, the two error paths pinned at the source, every mark site through `TeamMark` with no bare `<img>` left, and the badge styled from `--spot-0`/`--dim` with one size rule per box |
 | prompt 116 | `qa-shots` | 142 → **145** | the TBD badge on a cold load after hydration: seven badges on the four 2026-09-29 placeholder cards, the 20px box from the neutral tokens, and the Yankees' logo made to 404 swapping to the badge with no broken image painted |
@@ -547,7 +556,7 @@ Nothing was removed and no test was weakened. The other four gates are unchanged
 
 | gate | run from | floor |
 |---|---|---|
-| `pytest` | repo root | **643 passed + 1 skipped** (36 subtests) |
+| `pytest` | repo root | **675 passed + 1 skipped** (36 subtests) |
 | `npm run test:unit` | `web/` | **650** |
 | `npm run smoke` | `web/` | **33/33** |
 | `node scripts/qa-shots.mjs` | `web/` | **145/145** |
@@ -1029,6 +1038,14 @@ before touching any count line.
   `teams` only and cannot be moved by a stylesheet. **Joe's ruling:** widen the placeholder rule (a name or a
   null-colour test rather than the `-TBD` suffix), or rule these ids a colour. Until then every run's smoke is
   red and nothing commits (S4). Prompt 114's own work sat uncommitted behind it until rev B.
+- **OPEN — LIVE VERIFICATION OF THE STATION LISTINGS, AFTER JOE ADDS THE THREE SECRETS AND DISPATCHES THE
+  WORKFLOW (prompt 117, register §62).** `SD_USERNAME`, `SD_PASSWORD` and `SD_POSTAL_CODE` go in as GitHub Actions
+  secrets (deployment contract §4 and §7 step 6); until then the listings step logs "not set" and every CBS/FOX row
+  outside the national window is decided as it was before. Once dispatched, the step's log line should read `N
+  airings on WOIO, WJW (M NFL games)`, and **Cowork reads week 4's (2026-10-04) CBS and FOX statuses**: every
+  Sunday-afternoon row should carry a `listings:` source and be `AVAILABLE` or `OUT_OF_MARKET`, with `UNVERIFIED`
+  left only for a game airing the guide names without teams. Unproven offline: the live response shapes, the
+  bodiless `PUT` on the lineup add, and whether the guide carries `eventDetails.teams` or only the episode title.
 - **OPEN — CONFIRM ON 2026-09-28, AFTER THE 07:37 UTC REFRESH, THAT THE FOUR WILD CARD GAMES CARRY REAL TEAMS,
   TIMES AND NETWORKS (prompt 116, register §61).** `mlb-849843`, `-849845`, `-849849` and `-849851` carry MLB's
   placeholder seeds today; the seeds clinch after Sunday 2026-09-27 and the loader now follows the source for a
