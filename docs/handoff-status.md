@@ -67,6 +67,38 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
 
+**Measured 2026-09-25, a conversational run with no brief — `pytest` 717 → 718 passed + 1 skipped; `test:unit` 650, smoke
+33/33, `qa-shots` 145/145 and geometry all hard stops did not move.** Written after the last gate run. **The icon is v10 and
+v9 never shipped**: Joe supplied `assets/brand/icon_MySportsTV_v2.png`, v9's composition with a white mixed-case "MySports
+TV" in place of the gold caps, 1024×1024 RGB. It came with no smaller sizes, so they were made by the method that rebuilds
+Cowork's v9 set pixel for pixel (one Pillow LANCZOS resize from the 1024; the bytes differ only in PNG compression) into
+untracked `assets/brand/icon-v10/`. The five live files match it by md5 (`d7514236` 1024, `3e54b9be` 512, `348aec19` 192,
+`b398a47d` 180, `8d2af634` 48); v9's master is retired to `app-icon-mysports-tv-v9-retired.png` beside v5–v8;
+`manifest.js` needed no change. **The new wordmark is the element closest to the iOS mask**, 43.2 px, against v9's 57.9 and
+v8's 26.1 by one method (a superellipse, n = 5, that reproduces brief 122's v9 figures to 0.1 px on NASCAR, CFB and NBA);
+NASCAR is next at 46.2. Joe's art, shipped as supplied. **`AGENTS.md` is cleared at its cause** (register §65 addendum):
+the checker now knows Codex also renames `CLAUDE.md` → `AGENTS.md`, and removed prompt 122's copy. **qa-shots' TBD-badge
+check went red on data** — it hard-coded 7 placeholder sides on 2026-09-29, the Braves clinched and took one, 6 remained and
+all 6 were badged — and by Joe's call it now counts the sides it finds and needs at least one; **queue item 15: it goes red
+again when the last placeholder on that day resolves**, and that red is the check working. Its four runs: 144/145 on that
+check; a crash waiting for the detail panel after a block tap (M11); a crash on the first navigation, whose server render
+took 29.8 s while NHL live scores logged `fetch failed` (the same page rendered in under 1.5 s minutes later); then
+145/145, the fourth run by Joe's call after two timeouts.
+
+**Measured 2026-09-24, prompt 122 — `pytest` 716 passed + 1 failed + 1 skipped, `test:unit` 650, smoke 33/33, `qa-shots`
+145/145 and geometry all hard stops; no floor moves.** Written after the last gate run. The one failure is
+`tests/test_agent_instruction_files.py` on an `AGENTS.md` that `scripts/remove_codex_agents_md.py` **kept**: 23,770 bytes,
+sha256 `dc313359…a37e`, mtime 2026-09-24 00:26 EDT, the Codex rewrite of `CLAUDE.md` at `ab5e4f4` on every line but one —
+line 191, rule 35's own amendment, where "copy of `CLAUDE.md`" reads "copy of `AGENTS.md`". Rule 35 makes an unverified
+file a stop and S4 forbids committing over the red gate, so **icon v9 sits installed in the working tree and its commit
+waits on Joe's judgment of that file.** The five live icons match their `assets/brand/icon-v9/` sources by md5
+(`7a0e4aa3`, `92f48221`, `919ff052`, `18677b24`, `2b3e7fe4`), the master is the v9 1024 and v8 is retired beside v5, v6A
+and v7 in untracked `assets/brand/`; `manifest.js` needed no change. **Rule 12 has a second route, measured this run:**
+a direct request for `/apple-icon.png` or `/icon.png` on `next dev` fails in `next-metadata-route-loader` on the
+apostrophe exactly as the manifest does and every page 500s until `web/.next` is cleared. qa-shots' first run after
+that recovery exited 1 with its output uncaptured; the two runs after it passed 145/145. Port 3000 was Joe's
+`mylife-reader` dev server, left running; this repo's ran on 3001.
+
 **Measured 2026-09-23, prompt 120 — `pytest` 708 → 717 passed + 1 skipped; `test:unit` 650, smoke 33/33, `qa-shots` 145/145 and
 geometry all hard stops did not move.** Written after the last gate run. **The Codex copy of `CLAUDE.md` is identified
 by its cause and removed on sight** (register §65): the stray `AGENTS.md` is written by the Codex desktop app's "import

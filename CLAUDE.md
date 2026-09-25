@@ -23,7 +23,7 @@ they live here and nowhere else.
 | why a decision was made, and whether it is already settled | `docs/enhancement-register.md` (§1–§65) |
 | what a card, block or grid is supposed to look like | `docs/rendering-contract.md` + `docs/rendering-contract-mobile.md` (the Mobile Grid Addendum) |
 | the locked visual reference the app must match | `docs/design/mobile_demo.html` |
-| what a past run was actually asked to do | `docs/prompts/` — 127 briefs covering 01–120, verbatim; 39 and 42 are the only permanent gaps and 115 is reserved for preemption (numbers are identifiers, not run order: 90 ran after 91), and 86 and 113 carry three revisions each (see its README). 103–112 and 113 rev C have no second copy and say so in the README's provenance table |
+| what a past run was actually asked to do | `docs/prompts/` — 128 briefs covering 01–122 with 121 to follow, verbatim; 39 and 42 are the only permanent gaps and 115 is reserved for preemption (numbers are identifiers, not run order: 90 ran after 91), and 86 and 113 carry three revisions each (see its README). 103–112 and 113 rev C have no second copy and say so in the README's provenance table |
 | deploy, environment, what is publishable | `docs/deployment-contract.md` |
 | the first build specs — superseded, do not build from them | `docs/archive/` (moved out of the repo root by prompt 87) |
 
@@ -86,6 +86,12 @@ even around the retired stub.
     fault, one curl after the icons were swapped, and the icons were not the cause. Recovery is
     rule 36's: kill the dev server by path, `rm -rf web/.next`, restart. **Vercel is unaffected** — it
     builds at `/vercel/path0`, which has no apostrophe.
+    **"ONE ROUTE" WAS WRONG — there are two (prompt 122).** `web/app/icon.png` and
+    `web/app/apple-icon.png` are metadata routes through the same loader, and a direct request for
+    `/icon.png` or `/apple-icon.png` emits prompt 79's `throw new Error('File size for Open Graph
+    image "…Joe's Projects…"')` and poisons the module graph the same way; the public icons under
+    `web/public/` are plain files and safe to fetch. qa-shots has never requested the two, which is
+    why it passes. Recovery is the same as above.
 13. A numeric threshold is measured against the **local background**, never a global corner sample.
 14. **Database writes go through the Supabase connector, and only through it.** There is no direct
     Postgres connection and no writer credential in the repo or in any prompt. A `mysports_writer`
