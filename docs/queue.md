@@ -328,3 +328,21 @@ renderers group by week anywhere that would show a Wild Card game under "week 1"
 **Where it starts.** `adapters/espn.py` `build_nfl_fixture` (`"week": ev.week.number`), `pipeline/load.py:240-250`,
 `db/migrations/0003_games.sql` (`competition_context`). **Size.** Small to medium; needs a ruling on
 week numbering first. **A description of a problem, not an approved plan.**
+
+## 15. qa-shots' TBD-badge check reads live placeholders on 2026-09-29, and they are running out
+
+**What.** Prompt 116's check loads `/?day=2026-09-29` and asserts that every placeholder side of the
+MLB Wild Card games (`AL|NL Wild Card #N`, `AL|NL #3 Seed`) shows the TBD badge. It hard-coded 7
+sides, and went red on 2026-09-25 when the Braves clinched and took the NL #3 Seed side — 6 sides, all
+badged, the app correct. That run (Joe's call) made it count the sides it finds and require at least
+one. **When the last regular-season games resolve every side on that day, the check goes red again**,
+by design, because a check that passes on nothing proves nothing — and that red will look like a
+regression to whoever meets it first.
+
+**What it would take.** Point the check at something that keeps a placeholder: a later round's day
+once its placeholders are loaded (see item 12 — their name form is unruled), or a fixture the page can
+be served from so the badge is tested against known rows rather than the standings. The second is the
+durable one; the third check (the Yankees' 404) has the same dependence on who plays that day.
+
+**Where it starts.** `web/scripts/qa-shots.mjs`, the block headed "THE TBD BADGE, AFTER HYDRATION".
+**Size.** Small for a new date; a session for a fixture. **A description of a problem, not an approved plan.**

@@ -1280,25 +1280,34 @@ for (const dev of DEVICES) {
 {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
-  // the Yankees' logo is made to 404, so their card exercises the error path beside four placeholder cards
+  // the Yankees' logo is made to 404, so their card exercises the error path beside the placeholder cards
   await page.route((u) => /\/logos\/mlb-147_dark\.png/.test(u.pathname), (route) => route.fulfill({ status: 404, body: '' }));
   await page.goto(`${base}/?day=2026-09-29`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(600);
   const r = await page.evaluate(() => {
     const cards = [...document.querySelectorAll('.mcard')].filter((c) => /Wild Card|#3 Seed/.test(c.textContent));
-    // the badges on PLACEHOLDER rows only - the Yankees' row in the fourth card also carries one in
-    // this context, from the 404 route below, and is counted by the third check rather than here
-    const badges = cards.flatMap((c) => [...c.querySelectorAll('.tl1')].filter((row) => /Wild Card|#\d Seed/.test(row.textContent)).flatMap((row) => [...row.querySelectorAll('.tbd-mark')]));
+    // the badges on PLACEHOLDER rows only - the Yankees' row also carries one in this context, from
+    // the 404 route above, and is counted by the third check rather than here
+    const rows = cards.flatMap((c) => [...c.querySelectorAll('.tl1')].filter((row) => /Wild Card|#\d Seed/.test(row.textContent)));
+    const badges = rows.flatMap((row) => [...row.querySelectorAll('.tbd-mark')]);
+    const badged = rows.filter((row) => row.querySelector('.tbd-mark')).length;
     const brokenImgs = [...document.querySelectorAll('.tl1 img, .dpanel-head img, .mslot img')].filter((i) => i.complete && i.naturalWidth === 0);
     const yankees = [...document.querySelectorAll('.mcard')].find((c) => /Yankees/.test(c.textContent));
     const yankeeBadge = yankees ? [...yankees.querySelectorAll('.tl1')].some((row) => /Yankees/.test(row.textContent) && row.querySelector('.tbd-mark')) : null;
     const style = badges[0] ? getComputedStyle(badges[0]) : null;
-    return { cards: cards.length, badges: badges.length, brokenImgs: brokenImgs.length, yankeeBadge,
+    return { cards: cards.length, sides: rows.length, badged, badges: badges.length, brokenImgs: brokenImgs.length, yankeeBadge,
              badgeBox: badges[0] ? [Math.round(badges[0].getBoundingClientRect().width), Math.round(badges[0].getBoundingClientRect().height)] : null,
              badgeText: badges[0]?.textContent, fill: style?.backgroundColor, ink: style?.color };
   });
+  // THE PLACEHOLDER COUNT IS DATA, NOT CODE. Prompt 116 wrote `cards === 4 && badges === 7`, which was
+  // that week's standings: the Braves clinched and took the NL #3 Seed side, leaving 6, all badged, and
+  // the check went red on an app doing exactly what it asks (2026-09-25). So it counts the placeholder
+  // sides it finds and requires one badge on each. AT LEAST ONE MUST EXIST: once the regular season
+  // ends every side on this day resolves to a club, and a check that then passes on nothing proves
+  // nothing - it fails instead, and docs/queue.md carries the move to a date or fixture that keeps one.
   record('TBD badge: every placeholder team on 2026-09-29 shows the badge in its logo box after hydration',
-         r.cards === 4 && r.badges === 7 && r.badgeText === 'TBD', `${r.cards} placeholder cards, ${r.badges} badges (7 placeholder sides), text ${r.badgeText}`);
+         r.sides > 0 && r.badged === r.sides && r.badges === r.sides && r.badgeText === 'TBD',
+         `${r.cards} placeholder cards, ${r.sides} placeholder sides, ${r.badged} badged (${r.badges} badges), text ${r.badgeText}`);
   record('TBD badge: it fills the 20px list logo box, from the neutral tokens', r.badgeBox && r.badgeBox[0] === 20 && r.badgeBox[1] === 20 && r.fill === 'rgb(59, 59, 59)' && r.ink === 'rgb(154, 160, 168)',
          `box ${JSON.stringify(r.badgeBox)}, fill ${r.fill} (--spot-0), ink ${r.ink} (--dim)`);
   record('TBD badge: a REAL team whose logo 404s swaps to the badge, and no broken image is painted',
