@@ -9,7 +9,11 @@ setting is (Joe's is `true`).
 Mutation-checked four ways, each red: compare against the working tree only (the three-commits-back
 copy is kept); skip the `Claude.ai` swap (the copy that missed it is deleted, and the exact copies no
 longer match); delete on mismatch (the extra-line copy is gone); exit 0 on mismatch (the extra-line
-copy reports success).
+copy reports success). A fifth since 2026-09-25: skip the `CLAUDE.md` swap (the three-swaps test fails
+on the literal ab5e4f4 line, and the copy that missed the swap is deleted) - the fixture's CLAUDE.md
+names itself, as the real one has since `ab5e4f4`, or this swap would go untested exactly as it went
+unseen. The exact-copy tests stay green under that mutation because they build their AGENTS.md with
+`rm.codex_rewrite` itself; the literal line is what pins the swap.
 """
 from __future__ import annotations
 
@@ -23,7 +27,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts import remove_codex_agents_md as rm  # noqa: E402
 
-V1 = b"# The standing brief\n\nRead this in Claude Code first.\nThe Project lives on Claude.ai.\nrule one\n"
+V1 = (
+    b"# The standing brief\n\nRead this in Claude Code first.\nThe Project lives on Claude.ai.\n"
+    b"The Codex desktop app's copy of `CLAUDE.md` is removed by the script.\nrule one\n"
+)
 V2 = V1.replace(b"rule one", b"rule one\nrule two")
 V3 = V2.replace(b"rule two", b"rule two\nrule three")
 V4 = V3.replace(b"rule three", b"rule three\nrule four")
@@ -61,9 +68,15 @@ def _run(root: Path, capsys: pytest.CaptureFixture[str]) -> tuple[int, str]:
     return code, out.out + out.err
 
 
-def test_the_rewrite_is_both_swaps_in_order() -> None:
-    assert rm.codex_rewrite(V4) == V4.replace(b"Claude Code", b"Codex").replace(b"Claude.ai", b"Codex.ai")
-    assert b"Claude" not in rm.codex_rewrite(V4)
+def test_the_rewrite_is_the_three_swaps_in_order() -> None:
+    assert rm.codex_rewrite(V4) == (
+        V4.replace(b"Claude Code", b"Codex").replace(b"Claude.ai", b"Codex.ai").replace(b"CLAUDE.md", b"AGENTS.md")
+    )
+    assert b"Claude" not in rm.codex_rewrite(V4) and b"CLAUDE" not in rm.codex_rewrite(V4)
+    # the one line prompt 122's run found different, as it reads in CLAUDE.md at ab5e4f4
+    assert rm.codex_rewrite(b"the Codex desktop app's copy of `CLAUDE.md` is removed") == (
+        b"the Codex desktop app's copy of `AGENTS.md` is removed"
+    )
 
 
 def test_an_exact_rewrite_of_the_current_claude_md_is_removed(repo, capsys) -> None:
@@ -114,6 +127,15 @@ def test_a_rewrite_that_missed_the_claude_ai_swap_is_kept_and_exits_1(repo, caps
     assert code == 1
     assert (root / "AGENTS.md").is_file()
     assert "-The Project lives on Codex.ai." in out and "+The Project lives on Claude.ai." in out
+
+
+def test_a_rewrite_that_missed_the_claude_md_swap_is_kept_and_exits_1(repo, capsys) -> None:
+    root, _shas = repo
+    (root / "AGENTS.md").write_bytes(V4.replace(b"Claude Code", b"Codex").replace(b"Claude.ai", b"Codex.ai"))
+    code, out = _run(root, capsys)
+    assert code == 1
+    assert (root / "AGENTS.md").is_file()
+    assert "-The Codex desktop app's copy of `AGENTS.md`" in out and "+The Codex desktop app's copy of `CLAUDE.md`" in out
 
 
 def test_no_agents_md_exits_0_silently(repo, capsys) -> None:

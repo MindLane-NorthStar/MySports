@@ -5351,3 +5351,24 @@ docstring carried from prompt 109 until this prompt).
 stopping the import at its source is a setting in Joe's Codex app, the only value Cowork observed for
 the item-types key is `"all"`, and a guessed value in another app's config is not a fix. Removing any
 other foreign instruction file: the other five names in the guard stay as they are.
+
+**§65 addendum, 2026-09-25 — THE REWRITE HAS A THIRD SWAP, `CLAUDE.md` → `AGENTS.md`, AND IT WAS
+INVISIBLE UNTIL `CLAUDE.md` NAMED ITSELF.** The copy that arrived 2026-09-24 00:26 EDT (23,770 bytes,
+sha256 `dc313359…a37e`) was kept by the script and stopped prompt 122's commit: it differed from the
+two-swap rewrite of `CLAUDE.md` at `ab5e4f4` on one line, 191, rule 35's own amendment, where "copy of
+`CLAUDE.md`" read "copy of `AGENTS.md`". **Measured:** the file is byte-identical to `ab5e4f4`'s
+`CLAUDE.md` with `Claude Code` → `Codex`, `Claude.ai` → `Codex.ai` **and** `CLAUDE.md` → `AGENTS.md`;
+the literal `CLAUDE.md` occurs once in `ab5e4f4` and **zero times in the other 48 commits of
+`CLAUDE.md`, back to its creation**, so the three copies that defined the rewrite (§49, §54, §64)
+could not have shown it. The line that authorized the cleanup is
+the line that defeated it.
+
+**JOE'S RULING, 2026-09-25:** teach the checker the third swap rather than remove this one copy by
+hand. `codex_rewrite` now applies it last; no earlier `CLAUDE.md` changes verdict, since none contains
+the string. The script stays fail-safe in the direction that matters: a wrong model keeps a file, and
+it can only delete one byte-identical to a `CLAUDE.md` this repo has had. Its fixture `CLAUDE.md` now
+names itself, the swap test pins the literal `ab5e4f4` line, and a copy that skipped the third swap is
+kept (10 tests, from 9). Mutation-checked: dropping the swap fails those two, and the exact-copy tests
+stay green because they build their file through the same function — the literal line is the pin.
+Run after the fix, the script removed the copy, naming `ab5e4f4`, under rule 35's standing
+authorization.

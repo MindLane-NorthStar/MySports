@@ -6,8 +6,9 @@
 WHAT WRITES THE FILE (register §65, measured by Cowork on 2026-09-23 from Joe's `.codex` folder). The
 Codex desktop app's "import from Claude Code" sync is on for every item type, `AGENTS_MD` is one of the
 types it imports, and its log records an import in the same minute each copy appeared. Each copy is
-`CLAUDE.md` as it stood when the import ran, with `Claude Code` -> `Codex` and `Claude.ai` -> `Codex.ai`
-and nothing else (§49, §54 block F and §64 each measured one). Joe keeps the import on, so the file
+`CLAUDE.md` as it stood when the import ran, with `Claude Code` -> `Codex`, `Claude.ai` -> `Codex.ai` and
+`CLAUDE.md` -> `AGENTS.md`, and nothing else (§49, §54 block F and §64 each measured one; the third swap
+was first seen 2026-09-24, see `codex_rewrite`). Joe keeps the import on, so the file
 will keep arriving, and `tests/test_agent_instruction_files.py` keeps going red while it is there.
 
 WHAT THIS SCRIPT DOES ABOUT IT. It proves that shape before it deletes anything. The file must be
@@ -40,8 +41,18 @@ DIFF_LINES_SHOWN = 40
 
 
 def codex_rewrite(claude_md: bytes) -> bytes:
-    """The transformation the Codex import applies: `Claude Code` -> `Codex`, then `Claude.ai` -> `Codex.ai`."""
-    return claude_md.replace(b"Claude Code", b"Codex").replace(b"Claude.ai", b"Codex.ai")
+    """The transformation the Codex import applies: `Claude Code` -> `Codex`, `Claude.ai` -> `Codex.ai`,
+    then `CLAUDE.md` -> `AGENTS.md`.
+
+    The third swap was invisible until `ab5e4f4`, the first `CLAUDE.md` to contain its own name (rule
+    35's amendment, once); the copy of it that arrived 2026-09-24 renamed that one occurrence, and prompt
+    122's run kept it as unverified for want of this line.
+    """
+    return (
+        claude_md.replace(b"Claude Code", b"Codex")
+        .replace(b"Claude.ai", b"Codex.ai")
+        .replace(b"CLAUDE.md", b"AGENTS.md")
+    )
 
 
 def line_endings(data: bytes) -> str:
