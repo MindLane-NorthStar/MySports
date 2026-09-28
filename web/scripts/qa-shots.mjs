@@ -1280,38 +1280,52 @@ for (const dev of DEVICES) {
 {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
-  // the Yankees' logo is made to 404, so their card exercises the error path beside the placeholder cards
+  // the Yankees' logo is made to 404, so their card exercises the error path (checked on 2026-09-29 below)
   await page.route((u) => /\/logos\/mlb-147_dark\.png/.test(u.pathname), (route) => route.fulfill({ status: 404, body: '' }));
-  await page.goto(`${base}/?day=2026-09-29`, { waitUntil: 'networkidle' });
+  // THE PLACEHOLDER DAY MOVED TO 2026-10-03 (Joe's ruling 2026-09-28, prompt 123's gate run; docs/queue.md
+  // item 15). Every 2026-09-29 Wild Card side had resolved to a club, so the check below found nothing
+  // and failed as designed. 2026-10-03 carries the Division Series sides ("AL 3/6 Winner" and the like),
+  // badged since the same day's ruling widened lib/placeholders.js to that form. THEY RESOLVE IN THEIR
+  // TURN when the Wild Card series finish (by 2026-10-01), and this goes red again; the fixture the
+  // queue item names is the durable fix. The pattern here FINDS the rows; it decides nothing.
+  const PLACEHOLDER_TEXT = /Wild Card #\d|#\d+ Seed|\d+\/\d+ Winner/;
+  await page.goto(`${base}/?day=2026-10-03&sport=mlb`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(600);
-  const r = await page.evaluate(() => {
-    const cards = [...document.querySelectorAll('.mcard')].filter((c) => /Wild Card|#3 Seed/.test(c.textContent));
-    // the badges on PLACEHOLDER rows only - the Yankees' row also carries one in this context, from
-    // the 404 route above, and is counted by the third check rather than here
-    const rows = cards.flatMap((c) => [...c.querySelectorAll('.tl1')].filter((row) => /Wild Card|#\d Seed/.test(row.textContent)));
+  const r = await page.evaluate((src) => {
+    const re = new RegExp(src);
+    const cards = [...document.querySelectorAll('.mcard')].filter((c) => re.test(c.textContent));
+    const rows = cards.flatMap((c) => [...c.querySelectorAll('.tl1')].filter((row) => re.test(row.textContent)));
     const badges = rows.flatMap((row) => [...row.querySelectorAll('.tbd-mark')]);
     const badged = rows.filter((row) => row.querySelector('.tbd-mark')).length;
     const brokenImgs = [...document.querySelectorAll('.tl1 img, .dpanel-head img, .mslot img')].filter((i) => i.complete && i.naturalWidth === 0);
-    const yankees = [...document.querySelectorAll('.mcard')].find((c) => /Yankees/.test(c.textContent));
-    const yankeeBadge = yankees ? [...yankees.querySelectorAll('.tl1')].some((row) => /Yankees/.test(row.textContent) && row.querySelector('.tbd-mark')) : null;
     const style = badges[0] ? getComputedStyle(badges[0]) : null;
-    return { cards: cards.length, sides: rows.length, badged, badges: badges.length, brokenImgs: brokenImgs.length, yankeeBadge,
+    return { cards: cards.length, sides: rows.length, badged, badges: badges.length, brokenImgs: brokenImgs.length,
              badgeBox: badges[0] ? [Math.round(badges[0].getBoundingClientRect().width), Math.round(badges[0].getBoundingClientRect().height)] : null,
              badgeText: badges[0]?.textContent, fill: style?.backgroundColor, ink: style?.color };
+  }, PLACEHOLDER_TEXT.source);
+  // the 404 path stays where it was proven: the Yankees host the Red Sox on 2026-09-29
+  await page.goto(`${base}/?day=2026-09-29`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(600);
+  const y = await page.evaluate(() => {
+    const brokenImgs = [...document.querySelectorAll('.tl1 img, .dpanel-head img, .mslot img')].filter((i) => i.complete && i.naturalWidth === 0);
+    const yankees = [...document.querySelectorAll('.mcard')].find((c) => /Yankees/.test(c.textContent));
+    const yankeeBadge = yankees ? [...yankees.querySelectorAll('.tl1')].some((row) => /Yankees/.test(row.textContent) && row.querySelector('.tbd-mark')) : null;
+    return { brokenImgs: brokenImgs.length, yankeeBadge };
   });
   // THE PLACEHOLDER COUNT IS DATA, NOT CODE. Prompt 116 wrote `cards === 4 && badges === 7`, which was
   // that week's standings: the Braves clinched and took the NL #3 Seed side, leaving 6, all badged, and
   // the check went red on an app doing exactly what it asks (2026-09-25). So it counts the placeholder
-  // sides it finds and requires one badge on each. AT LEAST ONE MUST EXIST: once the regular season
-  // ends every side on this day resolves to a club, and a check that then passes on nothing proves
-  // nothing - it fails instead, and docs/queue.md carries the move to a date or fixture that keeps one.
-  record('TBD badge: every placeholder team on 2026-09-29 shows the badge in its logo box after hydration',
+  // sides it finds and requires one badge on each. AT LEAST ONE MUST EXIST: once every side on the day
+  // resolves to a club, a check that then passes on nothing proves nothing - it fails instead, and
+  // docs/queue.md carries the move to a date or fixture that keeps one.
+  record('TBD badge: every placeholder team on 2026-10-03 shows the badge in its logo box after hydration',
          r.sides > 0 && r.badged === r.sides && r.badges === r.sides && r.badgeText === 'TBD',
          `${r.cards} placeholder cards, ${r.sides} placeholder sides, ${r.badged} badged (${r.badges} badges), text ${r.badgeText}`);
   record('TBD badge: it fills the 20px list logo box, from the neutral tokens', r.badgeBox && r.badgeBox[0] === 20 && r.badgeBox[1] === 20 && r.fill === 'rgb(59, 59, 59)' && r.ink === 'rgb(154, 160, 168)',
          `box ${JSON.stringify(r.badgeBox)}, fill ${r.fill} (--spot-0), ink ${r.ink} (--dim)`);
   record('TBD badge: a REAL team whose logo 404s swaps to the badge, and no broken image is painted',
-         r.yankeeBadge === true && r.brokenImgs === 0, `Yankees badge ${r.yankeeBadge}, broken <img> elements ${r.brokenImgs}`);
+         y.yankeeBadge === true && y.brokenImgs === 0 && r.brokenImgs === 0,
+         `Yankees badge ${y.yankeeBadge} (2026-09-29), broken <img> elements ${y.brokenImgs} on 2026-09-29 and ${r.brokenImgs} on 2026-10-03`);
   await ctx.close();
 }
 

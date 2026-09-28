@@ -15,12 +15,19 @@
 // Division Series winner, say - is MEANT to turn the smoke check red, so that someone looks at it
 // and widens the pattern by a ruling. That is the check working, not a defect to design around, and
 // it is why this does not guess at forms MLB has not published.
-const MLB_POSTSEASON_PLACEHOLDER = /^(AL|NL) (#\d+ Seed|Wild Card #\d+)$/;
+//
+// AND IT DID, AND IT WAS (Joe's ruling 2026-09-28, prompt 123's gate run, register §60). The
+// Division Series rows loaded with sides named "AL 3/6 Winner", "AL 4/5 Winner", "NL 3/6 Winner" and
+// "NL 4/5 Winner" (`mlb-5528`, `-5529`, `-5532`, `-5533`; games on 2026-10-03 and -04), smoke went
+// red on them, and Joe widened the rule to that form as published: `AL|NL N/M Winner`, the winner of
+// the series between seeds N and M. The LCS and World Series rows will arrive in a form nobody has
+// seen yet, and they are meant to turn the check red in their turn.
+const MLB_POSTSEASON_PLACEHOLDER = /^(AL|NL) (#\d+ Seed|Wild Card #\d+|\d+\/\d+ Winner)$/;
 
 /**
  * True when a `teams` row is a placeholder rather than a club: its id ends in `-TBD` (the rule that
- * stood alone until prompt 114 rev B), or it is an MLB row named for a postseason seed or wild card
- * slot in one of the two published forms.
+ * stood alone until prompt 114 rev B), or it is an MLB row named for a postseason seed, wild card
+ * slot or series winner in one of the three published forms.
  */
 export function isPlaceholderTeam(team) {
   if (!team) return false;

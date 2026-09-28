@@ -5022,6 +5022,20 @@ anchor dropped; the `$` anchor dropped; `#\d+` widened to `.*`; the suffix branc
 `assets/p114-ipad-scrim/placeholders-0929/`. Whatever they show is Joe's next decision; 2026-09-29
 is six days out.
 
+**2026-09-28 — JOE'S RULING: THE SERIES-WINNER FORM IS IN (prompt 123's gate run).** The Division
+Series rows loaded with sides named `mlb-5528` "AL 3/6 Winner", `mlb-5529` "AL 4/5 Winner", `mlb-5532`
+"NL 3/6 Winner" and `mlb-5533` "NL 4/5 Winner", carried by six games on 2026-10-03 and 10-04, and
+smoke went red on them (32/33), as this section intended and `docs/queue.md` item 12 predicted. Joe
+widened the pattern to that form as published:
+`/^(AL|NL) (#\d+ Seed|Wild Card #\d+|\d+\/\d+ Winner)$/`, the winner of the series between seeds N and
+M. Pinned in `web/test/placeholders.test.mjs` (+2): the four names pass as `mlb-pattern`, and `AL 3/6
+Winners`, `AL 3-6 Winner`, lower-case `winner`, a missing seed, `AL Winner`, `ALCS 1/4 Winner`, both
+anchors and a non-MLB sport all fail. `ALDS Winner A` still fails; its message now says why. Two
+mutations, each red then restored: dropping the new alternative, and loosening the seeds to `.*`.
+The four sides render the TBD badge through `TeamMark`, since the same predicate decides it. **The LCS
+and World Series rows will arrive in a form nobody has seen yet**, and are meant to turn the check red
+in their turn.
+
 ## 61. POSTSEASON GAMES TAKE THEIR REAL TEAMS, AND PLACEHOLDERS SHOW A TBD BADGE — 2026-09-23, prompt 116
 
 **Numbered by count:** §1–§60 each appear exactly once and there was no §61.
