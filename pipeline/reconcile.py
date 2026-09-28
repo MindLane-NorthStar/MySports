@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Milestone 2 reconciliation — the only writer of canonical game facts (spec §6.1, §7.10-§7.11, §9, §10, §16).
 
-    python -m pipeline.reconcile                       # games with evidence newer than their last decision (default)
+    python -m pipeline.reconcile                       # games with evidence newer than their last decision (default),
+                                                       # plus eligibility for games whose broadcast rows moved since
     python -m pipeline.reconcile --all                 # every game (after a rule change: bump rule_version first)
     python -m pipeline.reconcile --programs             # every PROGRAM that is not a game (0014 eligibility)
     python -m pipeline.reconcile --all --programs       # both
@@ -80,6 +81,33 @@ CHANGED_WHERE = """where not exists (select 1 from canonical_decisions d where d
               and greatest(o.observed_at, coalesce(o.valid_to, o.observed_at)) >
                   (select max(d.decided_at) from canonical_decisions d where d.game_id = g.id))"""
 
+# ELIGIBILITY FOLLOWS ACCESS, NOT ONLY EVIDENCE (prompt 123, register §66). CHANGED_WHERE cannot see a
+# change in WHO CAN WATCH a game: the broadcast observation's value is `service|market|certainty`
+# (pipeline/load.py), so when an adapter re-decides a row's access - NFL rule 4b turning `unverified`
+# into `available` or `out_of_market` - the loader updates game_broadcasts.access_status in place, the
+# observation is a repeat sighting, and the game never re-enters the changed set. Every NFL row for
+# 2026-09-27 kept the eligibility computed on 2026-09-05, and Joe saw "Market TBD" all Sunday while
+# game_broadcasts had been right since Thursday.
+#
+# So default mode ALSO re-decides ELIGIBILITY, and nothing else, for every game whose broadcast rows
+# were seen after its eligibility was computed. The loader stamps last_seen_at on every row it writes,
+# so in steady state this is every game the load touched (168 on 2026-09-28's run); on the first run it
+# is every stale row in the table, whenever it was loaded, which is the backfill. No sport is named: the
+# rule is the table's. Canonical kickoff and network stay CHANGED_WHERE's alone - a repeat sighting
+# cannot change them, which is what the note above measured. Its own aliases (sb, ve) are distinct from
+# the `b` and `e` of the queries it is embedded in, so nothing here depends on how shadowing resolves.
+STALE_ELIGIBILITY_WHERE = f"""where exists (select 1 from game_broadcasts sb
+       left join viewer_game_eligibility ve on ve.game_id = sb.game_id and ve.viewer_profile_id = {PROFILE_ID}
+       where sb.game_id = g.id and (ve.computed_at is null or sb.last_seen_at > ve.computed_at))"""
+
+# What the eligibility-only pass needs about a game: its sport and the canonical state and network the
+# last decision STORED (the telecast ladder reads both), and the verdict it replaces, for the log.
+ELIG_SQL = f"""
+select g.id, g.sport::text, g.primary_network_id, g.canonical_state::text,
+       e.eligible, e.market_pending, e.reason
+from games g left join viewer_game_eligibility e on e.game_id = g.id and e.viewer_profile_id = {PROFILE_ID}
+{{where}} order by g.id"""
+
 
 def _ts(v: Any) -> datetime | None:
     if v is None or v == "":
@@ -133,7 +161,16 @@ def read_input(db: DB, game_ids: list[str] | None, all_games: bool) -> dict[str,
     games = [dict(zip(cols_g, r)) for r in db.fetch(GAMES_SQL.format(where=gw), p or None)]
     obs = [dict(zip(cols_o, r)) for r in db.fetch(OBS_SQL.format(where=ow), p or None)]
     bcs = [dict(zip(cols_b, r)) for r in db.fetch(BC_SQL.format(where=bw), p or None)]
-    return {"games": games, "observations": obs, "broadcasts": bcs}
+    data: dict[str, list[dict[str, Any]]] = {"games": games, "observations": obs, "broadcasts": bcs}
+    if not game_ids and not all_games:
+        # Prompt 123: the eligibility-only set, read in the same snapshot and before any write, so what
+        # it selects cannot depend on what the canonical pass is about to write. --all and --game need
+        # none: every game they select is reconciled in full, eligibility included.
+        cols_e = ["id", "sport", "primary_network_id", "canonical_state", "eligible", "market_pending", "reason"]
+        stale_ids = "where b.game_id in (select g.id from games g " + STALE_ELIGIBILITY_WHERE + ")"
+        data["eligibility_games"] = [dict(zip(cols_e, r)) for r in db.fetch(ELIG_SQL.format(where=STALE_ELIGIBILITY_WHERE))]
+        data["eligibility_broadcasts"] = [dict(zip(cols_b, r)) for r in db.fetch(BC_SQL.format(where=stale_ids))]
+    return data
 
 
 def to_observations(rows: list[dict[str, Any]], game: dict[str, Any]) -> tuple[list[Observation], list[Observation]]:
@@ -346,6 +383,16 @@ def reconcile_game(db: DB, game: dict[str, Any], rows: list[dict[str, Any]], bcs
 
     # viewer eligibility (spec 10) for profile 1 - decided above by telecast_verdict(), beside the
     # network_status it has to agree with.
+    write_eligibility(db, gid, active, rules, now, stats, eligible, via_net, via_srv, reason)
+
+
+def write_eligibility(db: DB, gid: str, active: list[dict[str, Any]], rules: dict[str, Any], now: datetime, stats: Counter,
+                      eligible: bool, via_net: Any, via_srv: list[str], reason: str) -> bool:
+    """The one writer of a game's viewer_game_eligibility row; returns market_pending.
+
+    Shared by the full reconcile and the eligibility-only pass (prompt 123), so the two cannot write
+    the row differently.
+    """
     # E5 market-pending. Computed HERE, beside eligibility, because it is the same decision seen from
     # the other side - and a second implementation in the app would drift from this one exactly as a
     # JS eligibility rule would have.
@@ -358,6 +405,33 @@ def reconcile_game(db: DB, game: dict[str, Any], rows: list[dict[str, Any]], bcs
     stats["eligible" if eligible else "not_eligible"] += 1
     if market_pending:
         stats["market_pending"] += 1
+    return market_pending
+
+
+def refresh_eligibility(db: DB, game: dict[str, Any], bcs: list[dict[str, Any]], rules: dict[str, Any], now: datetime,
+                        stats: Counter, log: list[str]) -> None:
+    """Re-decide ONE game's eligibility from its broadcast rows as they stand, and nothing else (prompt 123).
+
+    No canonical decision is made or recorded: kickoff and network are CHANGED_WHERE's business, and
+    this game is here because its access moved while its evidence did not. The verdict comes from the
+    same telecast_verdict() against the canonical state and network the last decision STORED, and is
+    written by the same write_eligibility(), so this path and reconcile_game() cannot disagree about a
+    game. The ladder's network_status twin is not written: it reads the network, the rows' presence
+    and the sport, never access, so it cannot have moved here (a row going inactive closes an
+    observation, which CHANGED_WHERE does see). stream_exclusive feeds only that twin.
+    """
+    gid = game["id"]
+    active = [b for b in bcs if b.get("active", True)]
+    reason, _network_status, eligible, via_net, via_srv = telecast_verdict(
+        game["sport"], active, rules, network_id=game.get("primary_network_id"), stream_exclusive=False,
+        canonical_state=game.get("canonical_state"))
+    market_pending = write_eligibility(db, gid, active, rules, now, stats, eligible, via_net, via_srv, reason)
+    stats["eligibility_only"] += 1
+    before = (game.get("eligible"), game.get("market_pending"), game.get("reason"))
+    if before != (eligible, market_pending, reason):
+        stats["eligibility_changes"] += 1
+        log.append(f"ELIGIBILITY {gid}: {before[2] or 'no verdict'}{' [market pending]' if before[1] else ''} -> "
+                   f"{reason}{' [market pending]' if market_pending else ''}")
 
 
 # ----------------------------------------------------------------------------- one program (0014)
@@ -483,6 +557,15 @@ def main(argv: list[str] | None = None) -> int:
         run_id = rows[0][0] if rows else None
         for g in data["games"]:
             reconcile_game(db, g, obs_by.get(g["id"], []), bc_by.get(g["id"], []), rules, rails, now, stats, log)
+        # Prompt 123: eligibility for every game whose access may have moved since it was last judged,
+        # minus the games reconcile_game() just judged in full - one eligibility write per game per run.
+        reconciled = {g["id"] for g in data["games"]}
+        ebc_by: dict[str, list[dict[str, Any]]] = {}
+        for r in data.get("eligibility_broadcasts") or []:
+            ebc_by.setdefault(r["game_id"], []).append(r)
+        for g in data.get("eligibility_games") or []:
+            if g["id"] not in reconciled:
+                refresh_eligibility(db, g, ebc_by.get(g["id"], []), rules, now, stats, log)
         pbc_by: dict[int, list[dict[str, Any]]] = {}
         for r in data.get("program_broadcasts") or []:
             pbc_by.setdefault(r["program_id"], []).append(r)
