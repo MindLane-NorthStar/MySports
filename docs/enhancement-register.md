@@ -5228,6 +5228,13 @@ before the NFL step, with no secret, and the rule applies on the next scheduled 
 UTC). Joe decides any dispatch. If the site goes stale or changes shape the grid falls back to Market
 TBD and the options are Joe's (`docs/queue.md` item 13): a hand entry, or buying Schedules Direct.
 
+**Corrected by §66 (prompt 123): "decides" was true of `game_broadcasts`, and until prompt 123 not of
+the app.** Rule 4b rewrote a row's `access_status` in place; the broadcast observation's value
+(`service|market|certainty`) did not change, so the reconciler never re-judged the game, and
+`viewer_game_eligibility` — what the app reads — kept the verdict computed on 2026-09-05. On Sunday
+2026-09-27 every CBS/FOX game this rule had decided still showed "Market TBD". Since prompt 123 the
+default reconcile re-decides eligibility for every game whose broadcast rows moved.
+
 **Out of scope, deliberately:** the display and E5; removing any Schedules Direct code; every other
 sport; any database write outside the refresh.
 
@@ -5258,6 +5265,13 @@ afternoon fell into the regional rules and would have shown "Market TBD". Every 
 nationally. `decide_regional` now returns national for any postseason game **before any other
 rule** — rule 0 — so a hand entry cannot override it either; the source reads
 `"national window (postseason)"`.
+
+**Corrected by §66 (prompt 123): both rulings reach `game_broadcasts`; before prompt 123, a change to a
+row that was already there did not reach the app.** Ruling 1's windows re-decide rows the grid has
+held since the schedule loaded, and the new access never reached `viewer_game_eligibility` (§66:
+Sunday 2026-09-27 showed "Market TBD" on games decided by Thursday). Ruling 2 was not affected in
+practice: a playoff game is new when it first loads, and a new game is reconciled in full, eligibility
+included. A playoff row that changed access after that first load would have had the same gap.
 
 **How the adapter knows a game is postseason — measured, not assumed.** Three candidates were
 named and the tree was checked for each. (a) **The event's own `season.type`**: present on every
@@ -5386,3 +5400,115 @@ kept (10 tests, from 9). Mutation-checked: dropping the swap fails those two, an
 stay green because they build their file through the same function — the literal line is the pin.
 Run after the fix, the script removed the copy, naming `ab5e4f4`, under rule 35's standing
 authorization.
+
+## 66. A CHANGE IN WHO CAN WATCH A GAME REACHES THE APP, NOT ONLY THE DATABASE — 2026-09-28, prompt 123
+
+**Numbered by count:** §1–§65 each appear exactly once and there was no §66. Prompt 123's brief asked
+for §67 on the expectation that prompt 121 (the Worker documentation) would take §66 first; 121 has not
+run, so this is §66 by the brief's own fallback. **121's brief names §66, so its run takes the next
+free number.**
+
+**Joe's report, 2026-09-28:** *"The TV listings for NFL yesterday never rectified. They showed 'Market
+TBD' all day."* That was Sunday 2026-09-27, and prompts 118 and 119 (§63, §64) had decided those games
+by Thursday.
+
+**What was measured.** Cowork read the database through the connector (SELECT only); prompt 123 re-read
+it through PostgREST with the publishable anon key on 2026-09-28, after the refresh dispatched at 08:01
+UTC (run 36394887115).
+
+- **`game_broadcasts` was right.** Of the 13 CBS/FOX rows on 2026-09-27: 3 `available` (Bengals @
+  Steelers CBS, Panthers @ Browns FOX, Ravens @ Cowboys CBS), 8 `out_of_market`, 2 `unverified` (the
+  two FOX late games).
+- **`viewer_game_eligibility`, which the app reads, was not.** All 14 NFL rows for the day carried
+  `computed_at` 2026-09-05 18:26:01 UTC. Twelve read `not receivable: cbs=unverified` or
+  `fox=unverified` with `market_pending = true`, which is the "Market TBD" cue (`isMarketPending`,
+  `web/lib/offservice.js:40-44`). The Browns row had been eligible since 09-05 by the local-team rule,
+  and the fourteenth is NBC's Sunday night game.
+- **Across sports**, for games within ±7 days, the rows older than 3 days were NFL 33 of 33, MLB 85 of
+  109, NHL 75 of 94 and CFB 130 of 130 (Cowork's read: 128).
+
+**The mechanism.** `pipeline/reconcile.py` writes eligibility only for the games `read_input` selects.
+The refresh runs default mode, whose set is `CHANGED_WHERE`: games with an observation newer than their
+last canonical decision. `pipeline/load.py` writes the broadcast observation as
+`service|market|certainty`, with no access in it. When rule 4b turned a row from `unverified` into
+`available` or `out_of_market`, the loader updated `game_broadcasts.access_status` in place, and
+`observe()` saw the same claim again: a repeat sighting, which bumps `last_seen_at` and supersedes
+nothing. The game never entered the changed set, and its eligibility stayed at its first value. The
+`local_carriage` observation does carry access, but only when the source names `market_coverage` or
+`market:` (rules 2 and 3). Rules 4, 4b, 5 and 6 write none. **Stale is not the same as wrong.** Of the
+802 games whose broadcast rows had been seen after their verdict was computed, re-running the same
+ladder over all of them changes 14, every one NFL. Ten are on 2026-09-27: Bengals @ Steelers and
+Ravens @ Cowboys become `linear cbs`, and eight become `out_of_market`. Four are on 2026-10-04: one
+becomes `linear fox` and three `out_of_market`. The mechanism affects every sport; this season, the
+measured damage was all NFL.
+
+**The fix: an eligibility pass for every game whose access may have moved (Cowork's option 1).**
+Before any write, default mode now also reads every game that has a `game_broadcasts` row seen after
+its eligibility's `computed_at`, or that has no eligibility row at all. For each one the canonical pass
+did not already reconcile, it re-decides **eligibility and nothing else**. The verdict comes from the
+same `telecast_verdict()`, run against the canonical state and network the last decision stored. It is
+written by the same `write_eligibility()`, lifted out of `reconcile_game()` so both paths write the row
+the same way. No canonical decision is made and the games row is not touched. `CHANGED_WHERE` is
+unchanged and still decides kickoff and network alone. The selection names no sport. `--all` and
+`--game` read no extra set, because every game they select is reconciled in full. Each changed verdict
+is logged (`ELIGIBILITY <game>: <old> -> <new>`), and `refresh_runs.notes` counts `eligibility_only`
+and `eligibility_changes`.
+
+**Why this and not option 2**, putting access into the observation's value:
+
+- Eligibility depends on `game_broadcasts` and the rules, not on canonical evidence. Option 2 would
+  make every access change re-decide the canonical fields, which turns `CHANGED_WHERE`'s purpose
+  inside out.
+- It would supersede every broadcast observation in every sport once. That rewrites evidence history
+  to carry a judgment about Cleveland, which the loader deliberately keeps apart from the feed's claim
+  (that is the `local_carriage` split).
+- Its backfill reaches only the games a load touches, so a stale row outside the fixture window would
+  stay stale.
+
+Option 1 changes no evidence, and it repairs whatever the table shows is stale.
+
+**The cost, measured.** The 2026-09-28 08:01 UTC load touched the broadcast rows of 168 games (CFB 72,
+NHL 34, MLB 32, NFL 30). That is under the 237 games `reconcile.py` records as acceptable for a full
+pass. Each costs one upsert, plus a map lookup only when a row is `unverified`. A full reconcile costs
+two decision inserts, a games update and a broadcast update.
+
+**The backfill needs no hand DML.** The first refresh after deploy, scheduled or dispatched, selects
+every stale row in the table, whenever its game was loaded. Read on 2026-09-28 against the rows as the
+08:01 refresh left them: **802 rows rewritten** (CFB 332, MLB 326, NHL 81, NFL 63) and **14 verdicts
+changed**, all NFL, as listed above. The load that runs before the reconcile will move both figures a
+little: it re-stamps the games it touches and can decide new windows. So they are a forecast, and the
+run's `eligibility_only` and `eligibility_changes` counters give the actual numbers. `market_coverage`
+returned zero rows to the anon key, so the forecast treats every `unverified` row as unmapped. That is
+what the reconciler finds if the table is empty.
+
+**Proven offline** by `tests/test_eligibility_follows_access.py` (10 tests). The real `load_fixture`
+and `reconcile.main()` run against an in-memory SQLite that executes the statements they issue.
+
+- A CBS row loaded `unverified` and reconciled is Market TBD. It is then loaded `available` with an
+  identical observation value, and the test pins that premise: one broadcast observation, seen twice,
+  nothing superseded, and the game absent from `CHANGED_WHERE`'s set. Reconciled again, it is
+  `eligible`, not pending, `linear cbs`, with a fresh `computed_at`.
+- The `out_of_market` twin is decided, not pending.
+- No canonical decision is written, and the games row is untouched.
+- The log names the change.
+- An MLB FOX row resolves the same way.
+- A game the load did not touch keeps its row.
+- A new game is written once, not twice.
+- `--all` and `--game` read no extra set.
+
+**Four mutations each go red:** removing the pass (6 tests fail), dropping the staleness term so only a
+missing verdict counts (7), restricting the selection to NFL in SQL (2), and restricting it to NFL in
+Python (1).
+
+**The guard is queued, not built.** The smoke check would fail any game in the next 7 days whose
+`computed_at` is more than 26 hours older than its newest broadcast `last_seen_at`. On live data it
+would be red until the first refresh after this push, and `CLAUDE.md` forbids committing over a red
+gate. Measured on 2026-09-28: **34 games fail it (NHL 18, NFL 16)**, out of 86 with broadcast rows
+among the 135 games on 2026-09-28 to 2026-10-04. It is `docs/queue.md` item 16, to be added once a
+production run has confirmed fresh rows.
+
+**Corrected in place:** §63's and §64's "decides" described `game_broadcasts`, and until this prompt
+not the app.
+
+**Out of scope, deliberately:** the display and E5; the FOX late-window TBD question; prompt 121; any
+hand DML.

@@ -10,7 +10,7 @@ sections, and the older measurement records. **This file stays the authority for
 repo state, gate floors, open items; since prompt 89 the working rules are `CLAUDE.md`'s alone. Read
 the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§61 — this said §1–§39 until prompt 99 corrected it and §1–§53 until prompt 111 did, counted both times; all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§66 — this said §1–§39 until prompt 99 corrected it, §1–§53 until prompt 111 did and §1–§61 until prompt 123 did, counted each time; all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **123 briefs, covering 01–116, counted 2026-09-23 by prompt 116 (115 reserved)
-(122 after prompt 114 rev B; 121 after prompt 114; 120 after prompt 113 rev C; 118 after prompt 113; 117 after prompt 112; 116 after prompt 111; 107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - **`docs/prompts/README.md` "Duplicate numbers" owns this count**: seven numbers as the README counts them (23, 26, 43, 48 and 114 two each, 86 and 113 three; `13-14-combined` has its own row and is deliberately not counted under 13), eight if it is — which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **129 briefs, covering 01–123 with 121 to follow, counted 2026-09-28 by prompt 123 (115 reserved)
+(123 after prompt 116, and prompts 117–122 did not move this line though the README's count did; 122 after prompt 114 rev B; 121 after prompt 114; 120 after prompt 113 rev C; 118 after prompt 113; 117 after prompt 112; 116 after prompt 111; 107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - **`docs/prompts/README.md` "Duplicate numbers" owns this count**: seven numbers as the README counts them (23, 26, 43, 48 and 114 two each, 86 and 113 three; `13-14-combined` has its own row and is deliberately not counted under 13), eight if it is — which is why the file
 count runs ahead of the highest number. (Prompt 111 wrote "six" here after counting the directory; the old "five" it replaced was (13, 23, 26, 43, 86), wrong in both directions — it counted 13 and omitted 48, which has carried two since prompt 93 — and prompt 112 pointed this line at the README rather than keep a second copy.) **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -66,6 +66,24 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > appended a `Re-measured … prompt NN` line beneath it without touching the sentence above them, so
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
+
+**Measured 2026-09-28, prompt 123: `pytest` 718 → 728 passed + 1 skipped and `test:unit` 650 → 652; smoke 33/33, `qa-shots`
+145/145 and geometry all hard stops did not move.** Written after the last gate run.
+
+- **A change in who can watch a game now reaches the app** (register §66). The default reconcile re-decides eligibility,
+  and nothing else, for every game whose broadcast rows were seen after its verdict was computed. So the way Sunday
+  2026-09-27 showed "Market TBD" on games rule 4b had decided by Thursday cannot happen again. The first refresh after
+  the push is also the backfill: the forecast is 802 rows rewritten and 14 verdicts changed, all NFL. Joe decides any
+  dispatch; the OPEN item below says what to confirm.
+- **Two gates were red on live data before anything was committed, both as the queue had predicted.** Smoke was
+  32/33 on the Division Series placeholders ("AL 3/6 Winner" and three more; queue item 12). `qa-shots` was 143/145
+  because its TBD-badge check found no placeholder left on 2026-09-29 (queue item 15). Joe ruled on both the same day:
+  the series-winner form joins the placeholder pattern (register §60), and the badge check moves to 2026-10-03. That
+  change is committed ahead of 123's two blocks. The badge check goes red again when the Wild Card series finish.
+- Block B's guard is queue item 16; 34 games fail it today.
+- `web/.next` was cleared before `next dev` started (rule 36; prompt 122's icon requests had left it behind).
+  `geometry.mjs` defaults to port 3001 and this run's server was on 3000, so geometry ran with that base passed in,
+  after a first attempt found nothing listening.
 
 **Measured 2026-09-25, a conversational run with no brief — `pytest` 717 → 718 passed + 1 skipped; `test:unit` 650, smoke
 33/33, `qa-shots` 145/145 and geometry all hard stops did not move.** Written after the last gate run. **The icon is v10 and
@@ -1109,6 +1127,18 @@ before touching any count line.
   should read `weeks 3, 4 (ESPN calendar), N of 8 windows named, 0 note(s)`; a note means the page carried a window
   text the reader has not seen, and the text is in the note. **Schedules Direct is dormant by ruling (no paid
   data)**; its prompt 117 OPEN item is closed unfulfilled, not carried.
+- **OPEN — AFTER THE FIRST PRODUCTION REFRESH, COWORK CONFIRMS `computed_at` IS FRESH FOR THE NEXT 7 DAYS' GAMES,
+  AND THAT 2026-10-04'S NFL ROWS RESOLVE (prompt 123, register §66).** The item above's rows reached
+  `game_broadcasts` and never reached `viewer_game_eligibility`, so Sunday 2026-09-27 showed "Market TBD" all day.
+  The default reconcile now re-decides eligibility for every game whose broadcast rows moved, so the first refresh
+  after the push, scheduled or dispatched (Joe decides any dispatch), is also the backfill. In that run's
+  `refresh_runs.notes` for the `reconcile` workflow row, expect `eligibility_only` near **802** and
+  `eligibility_changes` near **14**, all NFL (forecast from 2026-09-28's rows; the load before it moves both a
+  little). The reconcile log's `ELIGIBILITY` lines name each change. Then check two things with read-only
+  queries. First, `docs/queue.md` item 16's query returns **0** games (it returned 34 before the push). Second,
+  2026-10-04's NFL CBS/FOX rows carry the verdict their `game_broadcasts` access says: `linear cbs|fox` where
+  `available`, not pending where `out_of_market`, and "Market TBD" only where the row is still `unverified`.
+  Then queue item 16 can be built.
 - **OPEN — CONFIRM ON 2026-09-28, AFTER THE 07:37 UTC REFRESH, THAT THE FOUR WILD CARD GAMES CARRY REAL TEAMS,
   TIMES AND NETWORKS (prompt 116, register §61).** `mlb-849843`, `-849845`, `-849849` and `-849851` carry MLB's
   placeholder seeds today; the seeds clinch after Sunday 2026-09-27 and the loader now follows the source for a
