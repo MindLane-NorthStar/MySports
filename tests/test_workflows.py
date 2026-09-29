@@ -88,6 +88,66 @@ def test_schedule_refresh_is_still_scheduled():
     assert "schedule:" in text and "cron:" in text
 
 
+def _schedule_refresh():
+    doc = yaml.safe_load((ROOT / ".github" / "workflows" / "schedule_refresh.yml").read_text(encoding="utf-8"))
+    # PyYAML reads the bare key `on` as the boolean True (YAML 1.1); GitHub reads it as "on".
+    return doc, doc.get("on", doc.get(True))
+
+
+def test_schedule_refresh_has_one_backstop_cron():
+    """JOE'S RULING 2026-09-29 (prompt 125, register §69): the Worker's 4 a.m. dispatch is the primary
+    trigger and ONE cron, 11:37 UTC, is the backstop. The 07:37 run was removed for load on the
+    providers and noise in the run list - Actions is free on this public repo, so not for cost.
+    Walked by the parsed `on:` block, not by substring, so a cron left in a comment cannot pass."""
+    _doc, on = _schedule_refresh()
+    assert [c["cron"] for c in on["schedule"]] == ["37 11 * * *"]
+
+
+def test_schedule_refresh_publishes_no_artifact():
+    """JOE'S RULING 2026-09-29 (prompt 125; queue item 17 closed): the `validation-*` artifact is gone.
+    Since the repo went public any signed-in GitHub user could download it, and it carried the raw
+    provider payloads. Every job is walked, so an upload added to a different job fails too."""
+    doc, _on = _schedule_refresh()
+    for name, job in doc["jobs"].items():
+        for step in job.get("steps") or []:
+            assert "upload-artifact" not in str(step.get("uses", "")), f"{name}: {step}"
+
+
+def _archive_steps():
+    doc, _on = _schedule_refresh()
+    steps = doc["jobs"]["refresh"]["steps"]
+    return steps, [i for i, s in enumerate(steps) if "--push-data artifacts/validation" in str(s.get("run", ""))]
+
+
+def test_a_failed_run_archives_privately_under_its_own_prefix():
+    """JOE'S RULING 2026-09-29 (prompt 125): a failed run's payloads go to the PRIVATE bucket, under
+    `fixtures/<UTC date>/failed-<run id>/`. The `if` covers failure AND cancellation. The prefix is
+    separate so the step only ever creates keys: a failed run can never overwrite a good run's archive
+    for the same day (stop-list S7). It sits directly after the success-path step it complements."""
+    steps, idx = _archive_steps()
+    failed = [i for i in idx if "failed-" in steps[i]["run"]]
+    assert len(failed) == 1, f"exactly one failure-path archive step, found {len(failed)}"
+    step = steps[failed[0]]
+    cond = str(step.get("if", "")).replace(" ", "")
+    assert cond == "failure()||cancelled()", f"the step runs on failure or cancellation, got {step.get('if')!r}"
+    run = step["run"]
+    assert '--prefix "fixtures/$(date -u +%Y-%m-%d)/failed-$GITHUB_RUN_ID/"' in run, run
+    assert "${{" not in run, "the run id is the runner's GITHUB_RUN_ID, not an expression in `run` (rule 28)"
+    success = [i for i in idx if "failed-" not in steps[i]["run"]]
+    assert success and failed[0] == success[0] + 1, "directly after the success-path archive step"
+
+
+def test_the_success_path_archive_step_is_unchanged():
+    """Prompt 125 left the success path exactly as it was: same name, same command, same prefix,
+    and no `if` - so it still runs only when every step before it succeeded."""
+    steps, idx = _archive_steps()
+    success = [steps[i] for i in idx if "failed-" not in steps[i]["run"]]
+    assert success == [{
+        "name": "Archive fixtures + raw payloads (private bucket)",
+        "run": "python scripts/sync_assets.py --push-data artifacts/validation --prefix fixtures/$(date -u +%Y-%m-%d)/",
+    }]
+
+
 def test_schedule_refresh_conditions_logos_before_pushing():
     """The nightly push must build dark variants, not just upload whatever was fetched.
 

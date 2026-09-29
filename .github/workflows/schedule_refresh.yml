@@ -1,34 +1,36 @@
 # MySports — scheduled refresh (deployment contract v1.0 §5; spec §15.1)
-# THREE TRIGGERS (prompt 121, register §68; deployment contract §5, v1.0.6):
+# THREE TRIGGERS (prompts 121 and 125, register §68 and §69; deployment contract §5, v1.0.7):
 #   1. PRIMARY. A Cloudflare Worker outside this repo dispatches this workflow (workflow_dispatch) once a day
 #      at 4:00 a.m. Cleveland time, year round, with no edit at a daylight-saving change. It is Joe's; its
 #      source is not version-controlled, and its URL and account are deliberately not recorded in this public
-#      repo. Measured: a dispatch created 08:00-08:01 UTC every day from 2026-09-17. If its token expires, the
-#      dispatch fails inside Cloudflare and nothing in this repo shows it.
-#   2. BACKSTOP. The two crons under `on:`, 07:37 and 11:37 UTC, measured running hours late (register §46).
-#      A public repo's scheduled workflows are disabled after 60 days with no repository activity; the
-#      Worker's dispatch is not a schedule, so it is not.
+#      repo. Measured: a dispatch created 08:00-08:01 UTC every day from 2026-09-17. ITS TOKEN HAS NO
+#      EXPIRATION, BY JOE'S CHOICE (2026-09-29): an expiring token would stop the dispatch inside Cloudflare,
+#      where nothing in this repo can see it. The token is scoped to this repo, Actions read and write only,
+#      so it cannot change code or read secrets. The trade Joe accepted is that a leaked token stays valid
+#      until he revokes it.
+#   2. BACKSTOP. ONE cron under `on:`, 11:37 UTC, measured running hours late (register §46). A public repo's
+#      scheduled workflows are disabled after 60 days with no repository activity; the Worker's dispatch is
+#      not a schedule, so it is not.
 #   3. Manual dispatch, with an optional anchor date.
-# The refresh is idempotent, so the extra runs cost runner time and nothing else; Actions has been free for
+# The refresh is idempotent, so an extra run costs runner time and nothing else; Actions has been free for
 # this repo since it went public on 2026-09-29. Until prompt 121 this header read "DAILY 11:00 UTC ... One
-# refresh a day", untrue since prompt 97. The note under `on:` that points at that line is left byte-identical,
-# so this rewrite stays comment-only.
+# refresh a day", untrue since prompt 97.
 name: schedule_refresh
 on:
   schedule:
-    # TWO RUNS A DAY, BOTH AT :37 (prompt 97, Joe's ruling 2026-09-14; register §46). The header's
-    # "DAILY 11:00 UTC" line predates this.
+    # ONE BACKSTOP RUN A DAY, AT 11:37 UTC (Joe's ruling 2026-09-29, prompt 125; register §69).
+    # There were two, 07:37 and 11:37 (prompt 97, register §46). The Worker's 4 a.m. dispatch is the
+    # primary trigger now and has run every day since 2026-09-17; its one failure (#66) was the Actions
+    # minutes cap, not the Worker. Actions is free on this public repo, so the 07:37 run was removed for
+    # load on the providers and noise in the run list, not for cost.
     # 1. THE MINUTE IS DELIBERATE. Scheduled runs are best-effort and :00 is the platform's busiest
     #    minute. The old 11:00 UTC schedule was MEASURED (gh run list, 12 runs 2026-09-02..13) starting a
     #    median 3h44m late, worst 5h13m, and on 2026-09-14 it had not fired 5h22m after it was due.
     #    Moving off :00 usually helps; it is not a guaranteed cure.
-    # 2. THE SECOND RUN IS A BACKSTOP, NOT A SECOND OPINION. The loader is idempotent, so a second pass
-    #    costs runner minutes and nothing else, and a late or dropped early run no longer means a
-    #    wrong card all day.
-    # 3. DAYLIGHT SAVING: these times are UTC and have no DST awareness. 07:37 / 11:37 UTC land at 3:37 /
-    #    7:37 a.m. EDT until 2026-11-01, then at 2:37 / 6:37 a.m. EST until March. To keep the clock
-    #    times, shift BOTH lines by an hour - nothing in the repo will remind you.
-    - cron: "37 7 * * *"
+    # 2. IT IS A BACKSTOP, NOT A SECOND OPINION. The loader is idempotent, so a second pass costs runner
+    #    time and nothing else, and a missed dispatch no longer means a wrong card all day.
+    # 3. DAYLIGHT SAVING: the time is UTC and has no DST awareness. 11:37 UTC lands at 7:37 a.m. EDT until
+    #    2026-11-01, then at 6:37 a.m. EST until March. The Worker needs no edit; this line would.
     - cron: "37 11 * * *"
   workflow_dispatch:
     inputs:
@@ -340,12 +342,35 @@ jobs:
         run: node web/scripts/probes/watch-links.mjs
       - name: Archive fixtures + raw payloads (private bucket)
         run: python scripts/sync_assets.py --push-data artifacts/validation --prefix fixtures/$(date -u +%Y-%m-%d)/
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: validation-${{ steps.when.outputs.date }}
-          path: artifacts/validation
-          retention-days: 14
+      - name: Archive a FAILED run's fixtures + raw payloads (private bucket, its own prefix)
+        # JOE'S RULING 2026-09-29 (prompt 125, register §69): a failed run's payloads are kept, privately,
+        # and nothing is published. The step above runs only when every step before it succeeded, so
+        # until now the public `validation-*` artifact (removed, see below) was the only record of what
+        # the providers sent on a run that failed.
+        #
+        # ITS OWN PREFIX, `fixtures/<UTC date>/failed-<run id>/`, SO IT ONLY EVER CREATES KEYS. A failed run
+        # must never overwrite a good run's archive for the same day; with a separate prefix it cannot,
+        # which keeps it clear of stop-list item S7 (an R2 overwrite). The run id is the runner's own
+        # GITHUB_RUN_ID, not an Actions expression inside `run` (rule 28).
+        #
+        # WHAT IT COVERS, AS READ AND MEASURED:
+        # - a failed step before it: `failure()`. A cancelled run: `cancelled()`, which GitHub's
+        #   cancellation reference says lets a step whose `if` is true keep running.
+        # - A JOB-LEVEL TIMEOUT (`timeout-minutes: 35` above) is documented as GitHub "automatically
+        #   cancels it", but the docs do not say in so many words that steps are re-evaluated the same way
+        #   after a timeout. Probably covered, NOT proven; it will be known the first time a refresh
+        #   times out. The cancellation window is 5 minutes, after which GitHub kills what is left.
+        # - A run that failed before any adapter wrote: `artifacts/validation` does not exist, and
+        #   `--push-data` builds its file list with rglob, which yields nothing for a missing directory.
+        #   Measured locally on Python 3.13 with a fake client: "pushed 0 file(s)", return 0. The runner's
+        #   3.12 was not run here. A run that failed before `pip install` has no boto3, so this step
+        #   exits 2 on a job that has already failed.
+        if: failure() || cancelled()
+        run: python scripts/sync_assets.py --push-data artifacts/validation --prefix "fixtures/$(date -u +%Y-%m-%d)/failed-$GITHUB_RUN_ID/"
+      # THE PUBLIC `validation-*` ARTIFACT IS GONE (Joe's ruling 2026-09-29, prompt 125; queue item 17 closed).
+      # It was `actions/upload-artifact@v4` with `if: always()`, 14 days' retention, and since the repo went
+      # public on 2026-09-29 any signed-in GitHub user could download it. Nothing read it: no
+      # download-artifact, no `gh run download`. The two private steps above are the whole record now.
   render:
     needs: refresh
     uses: ./.github/workflows/render_all.yml
