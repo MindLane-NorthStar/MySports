@@ -5512,3 +5512,106 @@ not the app.
 
 **Out of scope, deliberately:** the display and E5; the FOX late-window TBD question; prompt 121; any
 hand DML.
+
+## 67. THE TBD-BADGE CHECK READS FIXTURE ROWS, NOT THE POSTSEASON STANDINGS — 2026-09-29, prompt 124
+
+**Numbered by count:** §1–§66 each appear exactly once and there was no §67. Prompt 121 has still not
+run. Its brief names §66, so its run takes the next free number, which is §68 unless something else
+lands first.
+
+**The finding** (Cowork, 2026-09-28). `qa-shots`' TBD-badge check (prompt 116, §61) loaded live
+postseason rows and needed placeholder sides on a named day. It moved twice in five days:
+
+- `cards === 4 && badges === 7` went red on 2026-09-25, when the Braves clinched a seed. Joe's call:
+  count the sides found, and require at least one.
+- "At least one on 2026-09-29" went red on 2026-09-28, when every Wild Card side resolved. Joe's call,
+  in prompt 123's gate run: move it to 2026-10-03.
+
+The 2026-10-03 Division Series sides resolve when the Wild Card series finish, by 2026-10-01. From
+then on, every run would have stopped on an app doing what it should. The Yankees' 404 check had the
+same dependence on a real game existing that day. From today, the only placeholder rows in the
+database are six NBA Cup knockout games with `nba-TBD` sides (December) and the Division Series rows,
+and neither lasts.
+
+**The fixture.** `web/app/qa/tbd/page.js` is a dev-only page built the way `app/qa/programs/page.js`
+is. Its first line is `notFound()` when `NODE_ENV === 'production'`. It renders the real `Listing`,
+and through it `MatchupCard` and `TeamMark`, with fixture rows. It runs them through the same
+`chronological()` and `splitHidden()` that Today's day mode uses, and passes the props Today passes
+for `/?day=…&sport=mlb` in LIST view.
+
+- **The rows have `gamesForDay()`'s output shape** (`lib/queries.js:88-90`: `GAME_SELECT` plus
+  `ODDS_NEWEST`). They were copied key for key from a live response for 2026-10-03 (`mlb-849829`), not
+  written from the select string.
+- They live in `web/app/qa/tbd/fixture.js`, a plain module beside the page, so a unit test can read
+  them. The brief named only the page; the module is the one file added beyond it.
+- **There are five games:**
+  - the three MLB name forms `lib/placeholders.js` recognizes, one side each, as their real rows:
+    `mlb-4944` "AL Wild Card #2", `mlb-4617` "NL #3 Seed" and `mlb-5528` "AL 3/6 Winner";
+  - an `mlb-TBD` side, on the home side;
+  - a real club on every card;
+  - the Red Sox at the Yankees, whose logo `qa-shots` makes 404.
+- Every game is watchable, so `splitHidden()` hides none of them.
+
+**The check now counts exactly.** `qa-shots` loads `/qa/tbd` and asserts:
+
+- 5 cards and 4 placeholder sides, all 4 badged;
+- 5 clubs painting a real logo;
+- 5 badges on the page: the four placeholders and the Yankees;
+- no broken image;
+- the badge's 20px box and neutral tokens.
+
+These are the same three assertions as before, so there are still 145 and the floor does not move.
+The placeholder names are typed into `qa-shots` by hand rather than imported from the fixture, because
+the count is the check, and a list derived from the fixture would shrink with it.
+
+**One thing was added, because without it two of the brief's four mutations could not go red.** Every
+placeholder id's logo 404s on R2 (measured 2026-09-29). So a placeholder the predicate *missed* would
+still get a badge, from the error path, and a badge count cannot tell the two apart. The check
+therefore records every logo request the page makes, and fails if:
+
+- any placeholder side requested a logo, since the predicate decides from the row before any request
+  is made (`TeamMark.js:12-13`); or
+- any of the six clubs' logos was not requested, so a recorder that saw nothing fails instead of
+  passing.
+
+**Mutation-checked through full `qa-shots` runs, each red and then restored byte for byte:**
+
+- **The `N/M Winner` form deleted from `lib/placeholders.js`:** 144/145. All four sides were still
+  badged. Only the request record caught it (`/logos/mlb-5528_dark.png`).
+- **`TeamMark` made to ignore `isPlaceholderTeam`:** 144/145. All four placeholder logos were
+  requested, and all four sides were still badged, by the error path.
+- **The Yankees' 404 route dropped:** 144/145. No Yankees badge, and 4 badges on the page instead of 5.
+- **One fixture side removed** (the NL #3 Seed card): 143/145. 4 cards, 3 sides, and 5 of 6 club logos.
+
+The first two are the reason for the request record: a badge count alone stays green on both.
+
+**`web/test/qatbd.test.mjs` (5 tests)** checks the rows themselves:
+
+- every row's keys, embeds included, equal `GAME_SELECT`'s as parsed from `queries.js`; an invented
+  `home_team_id` fails it;
+- the fixture covers each of the three forms once, plus the suffix, with a placeholder on each side;
+- every card has a real club, and the Yankees sit beside one;
+- Today's filters hide no fixture game;
+- both qa pages have the production guard as the component's first line.
+
+**Unreachable in production, and confirmed without a local `next build`** (rule 12 rules one out
+here). Block A was pushed ahead of this section so the production build could be read. Three checks:
+
+- **The route was built.** The Vercel build log for `22a1b30` (`dpl_9zERacj4jRQ7eYEE1YzJuUimGGqW`)
+  lists `├ ƒ /qa/tbd` in Next's route table, beside `├ ƒ /qa/programs`.
+- **The build is live.** `my-sports-xi.vercel.app` resolved to that deployment, target production,
+  READY.
+- **Production refuses both pages.** It answered `/` 200, `/qa/programs` 404 and `/qa/tbd` 404, and the
+  `/qa/tbd` body carried none of the fixture.
+
+So the page exists in the build and the guard is what refuses it. Before the push, `/qa/tbd` also
+answered 404, but only because the route did not exist yet.
+
+**Why smoke's placeholder guard stays live.** Smoke reads live `teams` rows on purpose (§60). Its job
+is to catch a placeholder name form nobody has ruled on, and only the database can deliver one. The
+badge check's job is to prove the component, and a fixture does that better. Until this prompt they
+were one question; now they are two. The LCS round will still turn smoke red, as queue item 12 says.
+
+**Closed:** `docs/queue.md` item 15, with a dated pointer here.
+
+**Out of scope, deliberately:** smoke and queue item 12; queue item 16; every other `qa-shots` block.

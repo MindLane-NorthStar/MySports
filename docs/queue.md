@@ -331,28 +331,16 @@ renderers group by week anywhere that would show a Wild Card game under "week 1"
 `db/migrations/0003_games.sql` (`competition_context`). **Size.** Small to medium; needs a ruling on
 week numbering first. **A description of a problem, not an approved plan.**
 
-## 15. qa-shots' TBD-badge check reads live placeholders on 2026-10-03, and they are running out
+## 15. *(closed 2026-09-29 by prompt 124 — register §67)*
 
-**What.** Prompt 116's check loaded `/?day=2026-09-29` and asserted that every placeholder side of the
-MLB Wild Card games (`AL|NL Wild Card #N`, `AL|NL #3 Seed`) shows the TBD badge. It hard-coded 7
-sides, and went red on 2026-09-25 when the Braves clinched and took the NL #3 Seed side — 6 sides, all
-badged, the app correct. That run (Joe's call) made it count the sides it finds and require at least
-one. **It went red again on 2026-09-28, exactly as this item said it would:** the regular season
-ended, every 2026-09-29 side resolved to a club, and the check found 0 (qa-shots 143/145 in prompt
-123's gate run). **Joe's call that day: point it at 2026-10-03** (`&sport=mlb`), where the Division
-Series sides ("AL 3/6 Winner" and the like, ruled placeholders the same day, register §60) are badged.
-The Yankees' 404 check stays on 2026-09-29, where the Yankees still host the Red Sox. **Those sides
-resolve in their turn when the Wild Card series finish (by 2026-10-01), and the check goes red again**,
-by design, because a check that passes on nothing proves nothing — and that red will look like a
-regression to whoever meets it first.
-
-**What it would take.** Point the check at something that keeps a placeholder: a later round's day
-once its placeholders are loaded (see item 12 — the LCS name form is unruled), or a fixture the page
-can be served from so the badge is tested against known rows rather than the standings. The second is
-the durable one; the third check (the Yankees' 404) has the same dependence on who plays that day.
-
-**Where it starts.** `web/scripts/qa-shots.mjs`, the block headed "THE TBD BADGE, AFTER HYDRATION".
-**Size.** Small for a new date; a session for a fixture. **A description of a problem, not an approved plan.**
+This item was *"qa-shots' TBD-badge check reads live placeholders, and they are running out."* The
+check read live postseason rows, and it went red twice as the seeds and series resolved: on
+2026-09-25 and on 2026-09-28. The second time it was moved from 2026-09-29 to 2026-10-03, which would
+have gone red too once the Wild Card series finished. It took the durable option this item named. It
+now loads `/qa/tbd`, a dev-only page that renders the real components with fixture rows, and counts
+them exactly, so who is still playing can no longer turn it red. The Yankees' 404 check moved with it.
+Smoke still reads live rows on purpose; item 12 stands. The number is retired rather than reused, as
+item 8's is.
 
 ## 16. Eligibility freshness smoke check (prompt 123 Block B), to be added after the first production run confirms fresh rows
 
