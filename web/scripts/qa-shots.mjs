@@ -1277,55 +1277,75 @@ for (const dev of DEVICES) {
 // Both are checked on a COLD load, after server rendering and hydration, because an <img> that
 // errors before React attaches its handler would otherwise keep the browser's broken icon: the
 // component's mount check (`img.complete && img.naturalWidth === 0`) is what this proves.
+//
+// THE ROWS ARE A FIXTURE NOW (prompt 124, register §67). This block read LIVE postseason rows and
+// moved twice in five days: `cards === 4 && badges === 7` went red on 2026-09-25 when the Braves
+// clinched a seed, and "at least one side on 2026-09-29" went red on 2026-09-28 when every Wild Card
+// side resolved. It was repointed to 2026-10-03, whose Division Series sides resolve when the Wild
+// Card series finish. A check that fails on who is still playing measures the standings, not the
+// badge. It now loads /qa/tbd (app/qa/tbd/page.js): the real Listing with fixture rows in
+// gamesForDay()'s exact shape, dev-only and a 404 in production. So THE COUNTS ARE CODE AND ARE
+// ASSERTED EXACTLY: five cards, four placeholder sides (one per MLB name form lib/placeholders.js
+// recognizes, plus a `-TBD` id), five clubs whose logos paint, and the Yankees. A fixture side
+// removed, or a badge painted on a club, moves a count.
+//
+// AND IT PROVES WHICH PATH PAINTED EACH BADGE. Every placeholder id's logo 404s on R2 (measured
+// 2026-09-29), so TeamMark's error path would badge a placeholder the predicate had MISSED. A badge
+// count alone cannot tell the two apart. So every logo the page requests is recorded, and a
+// placeholder side must have requested none: the predicate decides from the row before any request
+// is made (TeamMark.js:12-13). The six clubs' logos must all have been requested, so a zero from a
+// recorder that saw nothing proves nothing and fails instead.
+//
+// THE NAMES BELOW ARE TYPED BY HAND, NOT IMPORTED FROM THE FIXTURE, because the count is the check:
+// a list derived from the fixture would shrink with it.
 {
+  const PLACEHOLDER_NAMES = ['AL Wild Card #2', 'NL #3 Seed', 'AL 3/6 Winner', 'TBD'];
+  const PLACEHOLDER_LOGO = /\/logos\/(mlb-4944|mlb-4617|mlb-5528|mlb-tbd)_dark\.png$/;
+  const CLUB_LOGO = /\/logos\/mlb-(111|117|119|135|136|147)_dark\.png$/;
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
-  // the Yankees' logo is made to 404, so their card exercises the error path (checked on 2026-09-29 below)
+  const logoRequests = [];
+  page.on('request', (req) => {
+    const path = new URL(req.url()).pathname;
+    if (path.includes('/logos/')) logoRequests.push(path);
+  });
+  // the Yankees' logo is made to 404, so their card exercises the error path beside the Red Sox
   await page.route((u) => /\/logos\/mlb-147_dark\.png/.test(u.pathname), (route) => route.fulfill({ status: 404, body: '' }));
-  // THE PLACEHOLDER DAY MOVED TO 2026-10-03 (Joe's ruling 2026-09-28, prompt 123's gate run; docs/queue.md
-  // item 15). Every 2026-09-29 Wild Card side had resolved to a club, so the check below found nothing
-  // and failed as designed. 2026-10-03 carries the Division Series sides ("AL 3/6 Winner" and the like),
-  // badged since the same day's ruling widened lib/placeholders.js to that form. THEY RESOLVE IN THEIR
-  // TURN when the Wild Card series finish (by 2026-10-01), and this goes red again; the fixture the
-  // queue item names is the durable fix. The pattern here FINDS the rows; it decides nothing.
-  const PLACEHOLDER_TEXT = /Wild Card #\d|#\d+ Seed|\d+\/\d+ Winner/;
-  await page.goto(`${base}/?day=2026-10-03&sport=mlb`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/qa/tbd`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(600);
-  const r = await page.evaluate((src) => {
-    const re = new RegExp(src);
-    const cards = [...document.querySelectorAll('.mcard')].filter((c) => re.test(c.textContent));
-    const rows = cards.flatMap((c) => [...c.querySelectorAll('.tl1')].filter((row) => re.test(row.textContent)));
-    const badges = rows.flatMap((row) => [...row.querySelectorAll('.tbd-mark')]);
-    const badged = rows.filter((row) => row.querySelector('.tbd-mark')).length;
+  const r = await page.evaluate((names) => {
+    const rows = [...document.querySelectorAll('.mcard .tl1')];
+    const nameOf = (row) => row.querySelector('b')?.textContent.trim();
+    const placeholders = rows.filter((row) => names.includes(nameOf(row)));
+    const clubs = rows.filter((row) => !names.includes(nameOf(row)) && nameOf(row) !== 'Yankees');
+    const badges = placeholders.flatMap((row) => [...row.querySelectorAll('.tbd-mark')]);
+    const badged = placeholders.filter((row) => row.querySelector('.tbd-mark')).length;
+    const clubLogos = clubs.filter((row) => {
+      const img = row.querySelector('img');
+      return img && img.complete && img.naturalWidth > 0 && !row.querySelector('.tbd-mark');
+    }).length;
     const brokenImgs = [...document.querySelectorAll('.tl1 img, .dpanel-head img, .mslot img')].filter((i) => i.complete && i.naturalWidth === 0);
+    const yankees = rows.find((row) => nameOf(row) === 'Yankees');
     const style = badges[0] ? getComputedStyle(badges[0]) : null;
-    return { cards: cards.length, sides: rows.length, badged, badges: badges.length, brokenImgs: brokenImgs.length,
+    return { cards: document.querySelectorAll('.mcard').length, sides: placeholders.length, badged, badges: badges.length,
+             clubs: clubs.length, clubLogos, pageBadges: document.querySelectorAll('.tl1 .tbd-mark').length,
+             brokenImgs: brokenImgs.length, yankeeBadge: yankees ? Boolean(yankees.querySelector('.tbd-mark')) : null,
              badgeBox: badges[0] ? [Math.round(badges[0].getBoundingClientRect().width), Math.round(badges[0].getBoundingClientRect().height)] : null,
              badgeText: badges[0]?.textContent, fill: style?.backgroundColor, ink: style?.color };
-  }, PLACEHOLDER_TEXT.source);
-  // the 404 path stays where it was proven: the Yankees host the Red Sox on 2026-09-29
-  await page.goto(`${base}/?day=2026-09-29`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(600);
-  const y = await page.evaluate(() => {
-    const brokenImgs = [...document.querySelectorAll('.tl1 img, .dpanel-head img, .mslot img')].filter((i) => i.complete && i.naturalWidth === 0);
-    const yankees = [...document.querySelectorAll('.mcard')].find((c) => /Yankees/.test(c.textContent));
-    const yankeeBadge = yankees ? [...yankees.querySelectorAll('.tl1')].some((row) => /Yankees/.test(row.textContent) && row.querySelector('.tbd-mark')) : null;
-    return { brokenImgs: brokenImgs.length, yankeeBadge };
-  });
-  // THE PLACEHOLDER COUNT IS DATA, NOT CODE. Prompt 116 wrote `cards === 4 && badges === 7`, which was
-  // that week's standings: the Braves clinched and took the NL #3 Seed side, leaving 6, all badged, and
-  // the check went red on an app doing exactly what it asks (2026-09-25). So it counts the placeholder
-  // sides it finds and requires one badge on each. AT LEAST ONE MUST EXIST: once every side on the day
-  // resolves to a club, a check that then passes on nothing proves nothing - it fails instead, and
-  // docs/queue.md carries the move to a date or fixture that keeps one.
-  record('TBD badge: every placeholder team on 2026-10-03 shows the badge in its logo box after hydration',
-         r.sides > 0 && r.badged === r.sides && r.badges === r.sides && r.badgeText === 'TBD',
-         `${r.cards} placeholder cards, ${r.sides} placeholder sides, ${r.badged} badged (${r.badges} badges), text ${r.badgeText}`);
+  }, PLACEHOLDER_NAMES);
+  const placeholderRequests = logoRequests.filter((p) => PLACEHOLDER_LOGO.test(p));
+  const clubRequests = new Set(logoRequests.filter((p) => CLUB_LOGO.test(p)));
+  record('TBD badge: every placeholder team on /qa/tbd shows the badge in its logo box after hydration, decided before any logo request',
+         r.cards === 5 && r.sides === 4 && r.badged === 4 && r.badges === 4 && r.badgeText === 'TBD'
+           && placeholderRequests.length === 0 && clubRequests.size === 6 && r.clubs === 5 && r.clubLogos === 5,
+         `${r.cards} cards, ${r.sides} placeholder sides, ${r.badged} badged (${r.badges} badges), text ${r.badgeText}; `
+           + `${placeholderRequests.length} placeholder logo requests${placeholderRequests.length ? ` (${placeholderRequests.join(', ')})` : ''}, `
+           + `${clubRequests.size} of 6 club logos requested; ${r.clubLogos} of ${r.clubs} clubs painted a logo`);
   record('TBD badge: it fills the 20px list logo box, from the neutral tokens', r.badgeBox && r.badgeBox[0] === 20 && r.badgeBox[1] === 20 && r.fill === 'rgb(59, 59, 59)' && r.ink === 'rgb(154, 160, 168)',
          `box ${JSON.stringify(r.badgeBox)}, fill ${r.fill} (--spot-0), ink ${r.ink} (--dim)`);
   record('TBD badge: a REAL team whose logo 404s swaps to the badge, and no broken image is painted',
-         y.yankeeBadge === true && y.brokenImgs === 0 && r.brokenImgs === 0,
-         `Yankees badge ${y.yankeeBadge} (2026-09-29), broken <img> elements ${y.brokenImgs} on 2026-09-29 and ${r.brokenImgs} on 2026-10-03`);
+         r.yankeeBadge === true && r.brokenImgs === 0 && r.pageBadges === 5,
+         `Yankees badge ${r.yankeeBadge}, broken <img> elements ${r.brokenImgs}, ${r.pageBadges} badges on the page (4 placeholders + the Yankees)`);
   await ctx.close();
 }
 
