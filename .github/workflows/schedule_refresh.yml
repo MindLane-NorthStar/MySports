@@ -1,7 +1,18 @@
 # MySports — scheduled refresh (deployment contract v1.0 §5; spec §15.1)
-# DAILY 11:00 UTC = 07:00 EDT / 06:00 EST, plus manual dispatch. Inert until the repository secrets exist.
-# Daily since 2026-09-03: render_all already runs every day in season, so a Mon/Wed/Fri refresh meant four
-# days a week were rendered from stale rows. One refresh a day, and the render that follows it, stay in step.
+# THREE TRIGGERS (prompt 121, register §68; deployment contract §5, v1.0.6):
+#   1. PRIMARY. A Cloudflare Worker outside this repo dispatches this workflow (workflow_dispatch) once a day
+#      at 4:00 a.m. Cleveland time, year round, with no edit at a daylight-saving change. It is Joe's; its
+#      source is not version-controlled, and its URL and account are deliberately not recorded in this public
+#      repo. Measured: a dispatch created 08:00-08:01 UTC every day from 2026-09-17. If its token expires, the
+#      dispatch fails inside Cloudflare and nothing in this repo shows it.
+#   2. BACKSTOP. The two crons under `on:`, 07:37 and 11:37 UTC, measured running hours late (register §46).
+#      A public repo's scheduled workflows are disabled after 60 days with no repository activity; the
+#      Worker's dispatch is not a schedule, so it is not.
+#   3. Manual dispatch, with an optional anchor date.
+# The refresh is idempotent, so the extra runs cost runner time and nothing else; Actions has been free for
+# this repo since it went public on 2026-09-29. Until prompt 121 this header read "DAILY 11:00 UTC ... One
+# refresh a day", untrue since prompt 97. The note under `on:` that points at that line is left byte-identical,
+# so this rewrite stays comment-only.
 name: schedule_refresh
 on:
   schedule:

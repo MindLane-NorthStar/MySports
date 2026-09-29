@@ -10,7 +10,7 @@ sections, and the older measurement records. **This file stays the authority for
 repo state, gate floors, open items; since prompt 89 the working rules are `CLAUDE.md`'s alone. Read
 the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§67 — this said §1–§39 until prompt 99 corrected it, §1–§53 until prompt 111 did and §1–§61 until prompt 123 did, counted each time; all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§68 — this said §1–§39 until prompt 99 corrected it, §1–§53 until prompt 111 did and §1–§61 until prompt 123 did, counted each time; all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **130 briefs, covering 01–124 with 121 to follow, counted 2026-09-29 by prompt 124 (115 reserved)
-(129 after prompt 123; 123 after prompt 116, and prompts 117–122 did not move this line though the README's count did; 122 after prompt 114 rev B; 121 after prompt 114; 120 after prompt 113 rev C; 118 after prompt 113; 117 after prompt 112; 116 after prompt 111; 107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - **`docs/prompts/README.md` "Duplicate numbers" owns this count**: seven numbers as the README counts them (23, 26, 43, 48 and 114 two each, 86 and 113 three; `13-14-combined` has its own row and is deliberately not counted under 13), eight if it is — which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **131 briefs, covering 01–124, counted 2026-09-29 by prompt 121 rev B (115 reserved)
+(130 after prompt 124; 129 after prompt 123; 123 after prompt 116, and prompts 117–122 did not move this line though the README's count did; 122 after prompt 114 rev B; 121 after prompt 114; 120 after prompt 113 rev C; 118 after prompt 113; 117 after prompt 112; 116 after prompt 111; 107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - **`docs/prompts/README.md` "Duplicate numbers" owns this count**: seven numbers as the README counts them (23, 26, 43, 48 and 114 two each, 86 and 113 three; `13-14-combined` has its own row and is deliberately not counted under 13), eight if it is — which is why the file
 count runs ahead of the highest number. (Prompt 111 wrote "six" here after counting the directory; the old "five" it replaced was (13, 23, 26, 43, 86), wrong in both directions — it counted 13 and omitted 48, which has carried two since prompt 93 — and prompt 112 pointed this line at the README rather than keep a second copy.) **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -66,6 +66,20 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > appended a `Re-measured … prompt NN` line beneath it without touching the sentence above them, so
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
+
+**Measured 2026-09-29, prompt 121 rev B: `pytest` 728 passed + 1 skipped, `test:unit` 657, smoke 33/33, `qa-shots` 145/145
+and geometry all hard stops; no floor moves (documentation and comments only).** Written after the last gate run.
+
+- **The refresh's real trigger is written down** (register §68; deployment contract v1.0.6). Joe's Cloudflare Worker
+  dispatches `schedule_refresh.yml` at 4 a.m. Cleveland time. `gh` measured a `workflow_dispatch` created 08:00–08:01
+  UTC every day from 2026-09-17, by `MindLane-NorthStar`. The two crons are the backstop.
+- The Worker's URL and account are not recorded, because **the repo is public**: `gh` read `PUBLIC` on 2026-09-29.
+- **The account's 2,000 Actions minutes ran out on 2026-09-28 at about 19:01 UTC**, so #66 and #67 failed with no step
+  run. That is why the repo went public, and Actions is free on it now.
+- `schedule_refresh.yml`'s header comment names the three triggers. It was proved comment-only: the parsed YAML is
+  equal, the `on:` block is byte-identical, and `tests/test_workflows.py` passes 25/25.
+- Prompt 123's OPEN item is closed. Two OPEN items are added: the token's expiry date, and the 2026-11-01 check.
+  Queue item 16 is buildable, and item 17 (the public `validation-*` artifact) is Joe's call.
 
 **Measured 2026-09-29, prompt 124: `test:unit` 652 → 657; `pytest` 728 passed + 1 skipped, smoke 33/33, `qa-shots` 145/145
 and geometry all hard stops did not move.** Written after the last gate run.
@@ -1143,8 +1157,19 @@ before touching any count line.
   should read `weeks 3, 4 (ESPN calendar), N of 8 windows named, 0 note(s)`; a note means the page carried a window
   text the reader has not seen, and the text is in the note. **Schedules Direct is dormant by ruling (no paid
   data)**; its prompt 117 OPEN item is closed unfulfilled, not carried.
-- **OPEN — AFTER THE FIRST PRODUCTION REFRESH, COWORK CONFIRMS `computed_at` IS FRESH FOR THE NEXT 7 DAYS' GAMES,
-  AND THAT 2026-10-04'S NFL ROWS RESOLVE (prompt 123, register §66).** The item above's rows reached
+- ~~**OPEN — AFTER THE FIRST PRODUCTION REFRESH, COWORK CONFIRMS `computed_at` IS FRESH FOR THE NEXT 7 DAYS' GAMES,
+  AND THAT 2026-10-04'S NFL ROWS RESOLVE (prompt 123, register §66).**~~ **CLOSED 2026-09-29 by prompt 121 rev B
+  (register §68).**
+  - The first refresh after the push (09-28, `github_sha` `c561ba2`) logged `eligibility_only` **819** and
+    `eligibility_changes` **14** in its reconcile row, against a forecast of about 802 and 14. Those are Cowork's
+    SELECTs: `refresh_runs` answers 401 to the anon key.
+  - Re-read by prompt 121 through PostgREST: queue item 16's query returns **0** games for viewing days 2026-09-29
+    to 10-05 (146 games, 133 with broadcasts).
+  - Every 2026-10-04 NFL CBS/FOX row carries its access's verdict. It is market pending only on MIA @ MIN
+    (4:05 p.m. ET, FOX), the one `unverified` row.
+  - Queue item 16 is buildable.
+
+  The text below is the record of the item. The item above's rows reached
   `game_broadcasts` and never reached `viewer_game_eligibility`, so Sunday 2026-09-27 showed "Market TBD" all day.
   The default reconcile now re-decides eligibility for every game whose broadcast rows moved, so the first refresh
   after the push, scheduled or dispatched (Joe decides any dispatch), is also the backfill. In that run's
@@ -1155,6 +1180,17 @@ before touching any count line.
   2026-10-04's NFL CBS/FOX rows carry the verdict their `game_broadcasts` access says: `linear cbs|fox` where
   `available`, not pending where `out_of_market`, and "Market TBD" only where the row is still `unverified`.
   Then queue item 16 can be built.
+- **OPEN — JOE SUPPLIES THE WORKER TOKEN'S EXPIRY DATE (prompt 121 rev B, register §68; deployment contract §5).**
+  The refresh's primary trigger is Joe's Cloudflare Worker, which dispatches `schedule_refresh.yml` at 4 a.m.
+  Cleveland time using a fine-grained token scoped to this repo. If that token expires, the dispatch fails inside
+  Cloudflare and nothing in this repo goes red: no run is created, so there is no failed run to see. Only the
+  crons, measured hours late, would remain. The date goes in the contract's Worker row. The Worker's URL and
+  account stay out of this public repo.
+- **OPEN — ON 2026-11-01, CONFIRM THE WORKER'S DISPATCH MOVES TO 09:00 UTC (prompt 121 rev B, register §68).**
+  This is the Cleveland-clock guard's first run across a time change. Every dispatch since 2026-09-17 was
+  created at 08:00–08:01 UTC (4 a.m. EDT). From 2026-11-01 (EST) it should be created at 09:00 UTC, and never at
+  08:00. `gh run list --workflow schedule_refresh.yml --json event,createdAt` answers it. A dispatch at 08:00
+  UTC, or at both hours, means the guard is not doing what Cowork recorded.
 - **OPEN — CONFIRM ON 2026-09-28, AFTER THE 07:37 UTC REFRESH, THAT THE FOUR WILD CARD GAMES CARRY REAL TEAMS,
   TIMES AND NETWORKS (prompt 116, register §61).** `mlb-849843`, `-849845`, `-849849` and `-849851` carry MLB's
   placeholder seeds today; the seeds clinch after Sunday 2026-09-27 and the loader now follows the source for a

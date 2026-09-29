@@ -5615,3 +5615,111 @@ were one question; now they are two. The LCS round will still turn smoke red, as
 **Closed:** `docs/queue.md` item 15, with a dated pointer here.
 
 **Out of scope, deliberately:** smoke and queue item 12; queue item 16; every other `qa-shots` block.
+
+## 68. THE REFRESH'S REAL TRIGGER IS DOCUMENTED, AND THE REPO IS PUBLIC — 2026-09-29, prompt 121 rev B
+
+**Numbered by count:** §1–§67 each appear exactly once and there was no §68. Prompt 121's first brief
+(2026-09-23, revised 2026-09-28) named §66; prompts 123 and 124 took §66 and §67 while it waited, and
+rev B expected this number.
+
+**The trigger, measured with `gh` on 2026-09-29.** `gh run list --workflow schedule_refresh.yml --limit
+60` found:
+
+- A `workflow_dispatch` was created every day from 2026-09-17 (run #28) to 2026-09-29 (#66), thirteen
+  in all, between 08:00:10 and 08:01:20 UTC. That is 4:00 a.m. EDT.
+- `gh api …/actions/runs/<id>` on two of them, #28 and #62, gave `event` `workflow_dispatch`, and
+  `triggering_actor` and `actor` `MindLane-NorthStar`.
+- No dispatch was created at 09:00 UTC on any day.
+- The two crons (`schedule_refresh.yml`, 07:37 and 11:37 UTC) produced `schedule` runs created between
+  12:02 and 18:43 UTC. That is §46's lateness, unchanged.
+- So from 2026-09-17 the refresh ran at least three times a day, and on 09-23, 09-28 and 09-29 a manual
+  dispatch made a fourth.
+
+**This confirms Cowork's section 1, with two corrections:**
+
+- The latest 08:00 creation time is 08:01:20 (#56), not 08:01:26.
+- The latest cron run was created at 18:43 (#65, 09-28), not 17:10.
+
+**The Worker, as Cowork recorded it on 2026-09-22.** None of this is visible from the repo, and none of
+it was re-measured here, because this brief rules out any Cloudflare call.
+
+- It is Joe's Cloudflare Worker, in his personal Cloudflare account, which is not the account that
+  holds R2.
+- Its cron is `0 8,9 * * *` UTC, and the handler reads the Cleveland clock and dispatches only when it
+  is 4 a.m. there. So it fires once a day at 4 a.m. Eastern, year round, with no edit at the
+  daylight-saving change. The measured absence of any 09:00 UTC dispatch during EDT is consistent with
+  that guard.
+- It has two secrets. `GITHUB_TOKEN` is a fine-grained personal access token scoped to this repo, with
+  Actions read and write. `TEST_KEY` guards a manual-test endpoint that dispatches on demand.
+- Its source is not version-controlled.
+
+Its URL, which is also that endpoint, and its account are deliberately not recorded, because the repo
+is public. **Joe to supply: the token's expiry date.** The token is the one failure this repo cannot
+see: an expired token means no run is ever created, so there is nothing to go red.
+
+**Rev A's daylight-saving error.** The 2026-09-23 brief, as revised on 2026-09-28, said an 08:00 UTC
+trigger "fires at 3:00 AM EST after 2026-11-01". That is true of a bare cron and false of this Worker:
+the `0 8,9` pair plus the Cleveland-clock guard is exactly what keeps it at 4 a.m. It was not written.
+2026-11-01 is the guard's first real test: the dispatch should move to 09:00 UTC (an OPEN item in
+`docs/handoff-status.md`).
+
+**The minutes ran out, and that is why the repo went public.** The account's 2,000 included Actions
+minutes ran out on 2026-09-28 at about 19:01 UTC. Measured with `gh` job timings:
+
+- Run #65 (`schedule`, created 18:43): its refresh job succeeded (18:43:05–19:01:07), so that
+  afternoon's data did load. Its render job then failed at 19:01:07–19:01:10 without starting a step.
+- Run #66 (the 09-29 4 a.m. dispatch) and #67 (`schedule`, created 14:18) each failed their refresh job
+  within five seconds of creation, with no step run, and their render jobs were skipped.
+- The app's data was frozen from about 3 p.m. ET on 09-28 until Joe's manual run #68 (15:24–15:43 UTC
+  on 09-29, success).
+- #69 (`schedule`, created 17:00) succeeded too.
+
+**Why they ran out.** From 2026-09-17 the refresh ran three times a day. At §47's recent median of about
+22 minutes a run, that is about 66 minutes a day. GitHub's billing page showed MySports at $8.28 gross
+for September. At the $0.006 a minute GitHub publishes for a Linux 2-core runner, that is **about 1,380
+minutes, ~69 % of the allowance**. The figure is derived from the dollar amount, not published by
+GitHub; another private repo on the account used most of the rest.
+
+**The switch to public, and what it changed.** `gh repo view --json visibility,isPrivate` returned
+`PUBLIC` / `false` on 2026-09-29. Cowork observed the API return 404 for the repo, logged out, at about
+11:35 UTC, and `"visibility": "public"` by 15:40 UTC, after Joe switched it.
+
+- **Actions is free here now.** GitHub documents Actions usage as free "for public repositories that use
+  standard GitHub-hosted runners" (read 2026-09-29). So `docs/deployment-contract.md` §5's budget
+  paragraph, D7 and §47's projection no longer limit this repo; the contract (v1.0.6) records them as
+  history.
+- **A new constraint.** GitHub documents that "in a public repository, scheduled workflows are
+  automatically disabled when no repository activity has occurred in 60 days". That reaches the two
+  refresh crons and `backup_schema.yml`'s Sunday cron. It does not reach the Worker's dispatch.
+- **What is exposed now.** Any signed-in GitHub user can see the run logs and each run's step summary,
+  including the watch-links table. They can also download the 14-day `validation-*` artifact
+  (`schedule_refresh.yml`, the `upload-artifact` step), which carries raw provider payloads. Whether to
+  keep it is Joe's call, filed as `docs/queue.md` item 17.
+- **Secrets stay masked.** Before the switch, Cowork ran gitleaks over all 386 commits on every ref and
+  found no credential of Joe's. It found only Supabase anon keys (publishable by design), `.env.example`
+  placeholders, and tokens embedded in public wwe.com and indycar.com pages saved as test fixtures.
+
+**What was written:**
+
+- `docs/deployment-contract.md` v1.0.6: §5's heading and a Worker row, the crons as backstop, the token
+  risk, the 60-day rule, and the budget as history.
+- `.github/workflows/schedule_refresh.yml`: a header comment naming the three triggers, proved
+  comment-only (the parsed YAML is equal before and after, the `on:` block is byte-identical, and
+  `tests/test_workflows.py` passes).
+- Prompt 123's OPEN item is closed with the numbers below. Two OPEN items are added, for the token
+  expiry and the 2026-11-01 check.
+- Queue item 16 is now buildable, and item 17 is filed.
+
+**Prompt 123's OPEN item, answered.**
+
+- Cowork read the first refresh after the push (09-28, `github_sha` `c561ba2`): `eligibility_only` 819
+  and `eligibility_changes` 14, against a forecast of about 802 and 14. `refresh_runs` answers 401 to
+  the anon key, so these are Cowork's SELECTs and were not re-read here.
+- Re-read here through PostgREST: queue item 16's query returns **0** games for viewing days 2026-09-29
+  to 10-05 (146 games, 133 with broadcasts). It returned 34 before the push.
+- Every 2026-10-04 NFL CBS/FOX row carries the verdict its access says: `linear cbs|fox` where
+  `available`, not eligible where `out_of_market`, and market pending only on MIA @ MIN (4:05 p.m.
+  ET, FOX, `unverified`).
+
+**Out of scope, deliberately:** any schedule, workflow step, Worker or secret change (removing the 3:37
+cron and the `validation-*` artifact are Joe's calls); any Cloudflare call; the repo's visibility.

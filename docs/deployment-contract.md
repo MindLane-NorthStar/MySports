@@ -16,7 +16,7 @@
 | D4 | The web app reads through Supabase's Data API with the **publishable (anon) key**, schema `mysports` exposed, **RLS on every table with a read-only `anon` policy** | No user accounts in v1 (spec decision 1, market-of-one). No server secret ships to Vercel. |
 | D5 | Object storage is **Cloudflare R2**: bucket **`mysports-assets`** with public read (r2.dev URL in v1, custom domain later) for logos, marks, fonts, and grids; bucket **`mysports-data`**, private, for fixtures, raw snapshots, and backups. R2 public access is a per-bucket switch, so private material needs its own bucket | R2 is enabled on Joe's account (2026-09-01); free tier is 10 GB / 10 M class-B reads per month, no egress fees. Current asset set: 22 MB logos + 0.3 MB network marks + 1.5 MB fonts. |
 | D6 | Source of truth for assets is the bucket; the local `assets/` folder is a **cache** synced by `scripts/sync_assets.py`; `assets/` stays git-ignored | Retires the Phase 3 "do not stage assets" rule by giving assets a home instead of a git exception. |
-| D7 | Scheduled work runs on **GitHub Actions** in the private repo (2,000 free minutes/month; a refresh run — refresh job plus the render it triggers — MEASURED at a median of 15 minutes over 17 successful runs, 22 over the last six, not the ~3 this row said until v1.0.4) | Spec §15.1. The runner has network to every league API and to Supabase/R2; nothing depends on Joe's laptop or on Cowork's allowlist. |
+| D7 | Scheduled work runs on **GitHub Actions** in this repo, **public since 2026-09-29**, where Actions on standard GitHub-hosted runners is free (v1.0.6). Until then the repo was private and drew on the account's 2,000 included minutes a month, which ran out on 2026-09-28 (§5). A refresh run — refresh job plus the render it triggers — is MEASURED at a median of 15 minutes over 17 successful runs and 22 over the last six, not the ~3 this row said until v1.0.4; that length now matters for wall-clock time, not cost | Spec §15.1. The runner has network to every league API and to Supabase/R2; nothing depends on Joe's laptop or on Cowork's allowlist. |
 | D8 | Vercel project **`mysports`** linked to `MindLane-NorthStar/MySports`, **created at Milestone 4** (first Next.js commit), not now | There is nothing to deploy yet; a project linked today would fail every push. |
 | D9 | Backups: weekly `pg_dump --schema=mysports` to `mysports-data/backups/` by a GitHub Action, 8 weeks retained | The Free plan has no automated database backups. Everything in `mysports` is also re-derivable from the providers plus `source_snapshots`, so this is belt-and-braces, not the only recovery path. |
 | D10 | Migration tooling: SQL files in the repo under `db/migrations/NNNN_name.sql` are the source of truth; applied to Supabase by Cowork (`apply_migration`, connector) or Claude Code (`psql`); the Supabase migration history records the same names | The repo stays authoritative and reviewable; Supabase's history is the applied-state ledger. |
@@ -112,18 +112,35 @@ Rules: no service-role key anywhere in v1 (nothing needs it); `.env` is git-igno
 
 ---
 
-## 5. Scheduled work (GitHub Actions, private repo)
+## 5. Scheduled work (GitHub Actions, public repo since 2026-09-29)
+
+The repo is **public**: `gh repo view --json visibility,isPrivate` returned `PUBLIC` / `false` on 2026-09-29 (prompt 121). It was private until that day.
 
 | Workflow | Trigger | Does |
 |---|---|---|
-| `schedule_refresh.yml` | **twice daily, 07:37 and 11:37 UTC** (3:37 and 7:37 a.m. EDT; 2:37 and 6:37 a.m. EST after 2026-11-01) + manual dispatch | runs every in-season adapter, reconciles (Milestone 2), writes `mysports.*`, records `refresh_runs` |
+| `schedule_refresh.yml` | **The primary trigger is the Worker's daily dispatch at 4:00 a.m. Cleveland time** (next row). **The two crons are the backstop: 07:37 and 11:37 UTC**, which is 3:37 and 7:37 a.m. EDT, and 2:37 and 6:37 a.m. EST after 2026-11-01. The crons are UTC and move against the clock at each daylight-saving change; the Worker needs no edit. Plus manual dispatch. | runs every in-season adapter, reconciles (Milestone 2), writes `mysports.*`, records `refresh_runs` |
+| **Cloudflare Worker** (Joe's; outside the repo) → `schedule_refresh.yml` | **Measured with `gh` on 2026-09-29.** A `workflow_dispatch` was created every day from 2026-09-17 (run #28) to 2026-09-29 (#66), between 08:00:10 and 08:01:20 UTC, which is 4:00 a.m. EDT. The triggering actor and actor were `MindLane-NorthStar`, and no dispatch was created at 09:00 UTC. **Recorded by Cowork on 2026-09-22; none of it is visible from the repo:** a cron of `0 8,9 * * *` UTC, and a handler that dispatches only when the Cleveland clock reads 4 a.m. So it fires once a day, year round, and needs no edit at a daylight-saving change; from 2026-11-01 the dispatch should appear at 09:00 UTC. It has two Worker secrets. `GITHUB_TOKEN` is a fine-grained personal access token scoped to this repo, with Actions read and write. `TEST_KEY` guards a manual-test endpoint that dispatches on demand. Its source is not version-controlled. **Joe to supply: the token's expiry date.** | dispatches the refresh; the render follows it as usual |
 | `render_all.yml` | **after a successful refresh** (the refresh's own `render` job calls it) + manual dispatch; **no schedule of its own** | renders the viewing day(s), uploads `grids/` to R2, syncs the local cache |
 | `bootstrap_season.yml` | manual only | Milestone 1 season load |
 | `backup_schema.yml` | Sundays 12:00 UTC | `pg_dump --schema=mysports` → `backups/`, prune to 8 |
 
 Spec §15.2 failure rules apply unchanged: never delete canonical data, never publish an empty schedule, keep last-known-good grids in R2 (the upload is atomic per file; a failed run leaves yesterday's file in place).
 
-Budget (measured 2026-09-14, v1.0.4): two refresh runs a day at the recent median of ~22 billable minutes each (every job rounded up to the minute, as GitHub bills Linux runners) is **≈ 1,320 minutes a month, ~66 % of the 2,000-minute allowance**; at the all-run median of 15 minutes it is ≈ 900 (45 %). The weekly backup adds ~4. No standalone render any more. **It clears, but not by the order of magnitude this line used to claim** — it said ≈ 100–130 minutes/month on a ~3-minute run. The account's own billing figure could not be read (the API needs a token scope this repo's `gh` login does not carry), so the allowance itself is as stated in D7, not re-verified.
+**The Worker's URL and its Cloudflare account are deliberately not recorded here, because this repo is public.** The URL is also the manual-test endpoint.
+
+**The token is a point of failure this repo cannot see.** If the Worker's `GITHUB_TOKEN` expires, its dispatch fails inside Cloudflare. No workflow run is created, so no failed run and no log ever reaches this repo. Only the two crons would remain, and they are measured hours late (register §46). This run found them created between 12:02 and 18:43 UTC from 2026-09-17 to 09-29. The expiry date is Joe's to supply.
+
+**The 60-day rule.** GitHub documents that "in a public repository, scheduled workflows are automatically disabled when no repository activity has occurred in 60 days" (read 2026-09-29). That reaches the two `schedule_refresh.yml` crons and `backup_schema.yml`'s Sunday cron. It does not reach the Worker, because a `workflow_dispatch` is not a schedule.
+
+**Budget.** Actions minutes have been free for this repo since 2026-09-29, because it is public. GitHub documents Actions usage as free "for public repositories that use standard GitHub-hosted runners" (read 2026-09-29). The measured run length still matters for wall-clock time: a refresh run's recent median is ~22 minutes, and the job timeout is sized against it (35 minutes, register §41).
+
+**The 2,000-minute projection this paragraph carried is now history.** Measured on 2026-09-14 (v1.0.4), two runs a day came to about 1,320 minutes a month, ~66 % of the allowance. From 2026-09-17 the Worker's dispatch made it three a day, and **the account's 2,000 included minutes ran out on 2026-09-28 at about 19:01 UTC.** Measured with `gh`:
+
+- Run #65 (`schedule`, created 18:43): the refresh job finished at 19:01:07, and its render job failed at 19:01:10 without starting a step.
+- Run #66 (the 09-29 4 a.m. dispatch) and #67 (`schedule`, 14:18 UTC) each failed within five seconds, with no step run.
+- The data stood still from about 3 p.m. ET on 09-28 until Joe's manual run #68 (15:24–15:43 UTC on 09-29, success).
+
+GitHub's billing page showed MySports at $8.28 gross for September. At the published $0.006 a minute for a Linux 2-core runner, that is about 1,380 minutes, ~69 % of the allowance. The figure is derived from the dollar amount; GitHub did not publish it. Another private repo on the account used most of the rest. **That exhaustion is why the repo was made public on 2026-09-29** (register §68).
 
 ---
 
@@ -176,6 +193,17 @@ Budget (measured 2026-09-14, v1.0.4): two refresh runs a day at the recent media
 
 ## 12. Change log
 
+- **v1.0.6 (2026-09-29, prompt 121 rev B):** the refresh's real trigger, and the repo's visibility, are now recorded here.
+  - §5 names the Cloudflare Worker's daily 4 a.m. Cleveland dispatch as the primary trigger and the two crons as the
+    backstop. The dispatch has been measured daily since 2026-09-17 and was never in this contract.
+  - It records what Cowork noted about the Worker on 2026-09-22 and asks Joe for the token's expiry date. It
+    deliberately leaves out the Worker's URL and account, because the repo is public.
+  - §5's heading and D7 say "public", measured with `gh`.
+  - The budget paragraph becomes history: Actions is free on a public repo. The 2,000 included minutes ran out on
+    2026-09-28, and that is why the repo changed.
+  - §5 adds the 60-day rule for scheduled workflows in a public repo.
+  - Rev A of the brief said an 08:00 UTC trigger "fires at 3:00 AM EST after 2026-11-01". That holds for a bare cron,
+    not for this Worker's Cleveland-clock guard, and it was not written.
 - **v1.0.5 (2026-09-22, prompt 109):** §2.2 records `db-max-rows` as a deployment property. It was never mentioned in this contract, and the 1,000-row cap has now silently truncated two production reads (the Weeks index; the week view's standings, prompt 108). No setting changed and no code is described here that does not already exist; the entry exists so the cap is a known property of the deployment rather than a surprise rediscovered per incident.
 - **v1.0.4 (2026-09-14, prompt 98):** three corrections where this contract had drifted from the shipped code — the v1.0.3 shape: **the code was right and the contract was stale, so the contract moved.** (a) §5 `schedule_refresh.yml` said daily 11:00 UTC; prompt 97 made it **07:37 and 11:37 UTC** on 2026-09-14 and did not update this row — that brief's miss, corrected here. (b) §5 `render_all.yml` said daily 09:30 UTC in season; prompt 98 removed that schedule (Joe's ruling 2026-09-14: measured, it fired before the refresh on 12 of 12 days, so it never drew current rows), and the render now runs only after a refresh or by hand. (c) D7 and the §5 budget line said a refresh run is **~3 minutes**; measured from job start and end times it is a median of **15** (22 over the last six), so two runs a day is ≈ 900–1,320 minutes a month against 2,000 — inside the allowance, not an order of magnitude inside it. No code changed by this entry.
 - **v1.0.3 (2026-09-02, ~21:55 ET):** three corrections where this contract had drifted from the shipped code. **In all three the code was right and the contract was stale, so the contract moved.** (a) §4 named `SUPABASE_PUBLISHABLE_KEY` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; the app has always read **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** (`web/lib/config.js`, `web/.env.local.example`). A deployer following the old row would have set a variable nothing reads and seen the committed default silently used instead. (b) §5 said `schedule_refresh.yml` runs Mon/Wed/Fri; its cron has been `0 11 * * *` — **daily** — since 2026-09-03, for the reason recorded in the workflow's own header: `render_all` already runs daily in season, so a Mon/Wed/Fri refresh meant four days a week were rendered from stale rows. Budget line recomputed. (c) §7 step 7 said "the three `NEXT_PUBLIC_*` values"; there are **four**, and every one has a committed default in `web/lib/config.js`, so they are **not blocking for the first deploy** — step 7 now says so explicitly, and reframes setting them as future-proofing a key rotation rather than a prerequisite. No code changed.

@@ -378,5 +378,35 @@ a red gate is never committed over.
 
 **When.** After Cowork's OPEN item in `docs/handoff-status.md` confirms the first production refresh
 after prompt 123 left `computed_at` fresh for the next 7 days' games. The count should then be 0.
+**That precondition was met on 2026-09-29** (prompt 121 rev B, register §68). The first refresh after
+the push logged `eligibility_only` 819 and `eligibility_changes` 14. This query, re-read through
+PostgREST for viewing days 2026-09-29 to 10-05, returns **0** of 146 games. **The item can now be
+built**; whether and when is Joe's call.
 **Where it starts.** `web/scripts/smoke.mjs`, `web/lib/rest.js` (`restAll`). **Size.** Small. **A
 description of a problem, not an approved plan.**
+
+## 17. The refresh's `validation-*` artifact is public now, and it duplicates the private archive
+
+**What.** `schedule_refresh.yml` keeps the day's fixtures and raw provider payloads twice:
+
+- `:341-342`, "Archive fixtures + raw payloads (private bucket)", pushes `artifacts/validation` to
+  the private `mysports-data` bucket under `fixtures/<date>/`.
+- `:343-348` uploads the same directory as a GitHub Actions artifact named `validation-<date>`, kept
+  for 14 days, `if: always()`.
+
+While the repo was private, only Joe could reach the artifact. **Since 2026-09-29 the repo is public
+(register §68), and any signed-in GitHub user can download it.** It carries the raw payloads the
+adapters fetched: league and network schedules, and the coverage-page extracts. GitHub masks secrets
+in logs, but it does not scan artifacts, and Cowork's gitleaks pass covered the repo, not the
+artifacts. **Whether any fixture file could carry a credential has not been checked.** That is the
+first thing to read before deciding.
+
+**The trade.** The artifact is the one copy readable without R2 credentials. It survives a run whose
+R2 push failed, because of `if: always()`, which the bucket copy does not. It is handy for reading a
+failed run from the Actions page. Against that, it is a second public copy of provider responses whose
+terms were read for fetching, not for republishing. **Whether to keep it, narrow it (for example,
+`if: failure()` only), or remove it is Joe's call.** Prompt 121 made no change, by its scope.
+
+**Where it starts.** `.github/workflows/schedule_refresh.yml:343-348`; `scripts/sync_assets.py
+--push-data` for the private copy. **Size.** Small once ruled: one step edited or removed, and
+`tests/test_workflows.py` re-run. **A description of a problem, not an approved plan.**
