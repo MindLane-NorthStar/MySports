@@ -5896,3 +5896,158 @@ not waved through.
 **Out of scope, deliberately:** the Worker, its token and Cloudflare; `render_all.yml`,
 `bootstrap_season.yml` and `backup_schema.yml`; the success path's prefix and behaviour; any R2
 deletion (S7); the FOX late-window question.
+
+## 70. THE CARD AND THE GRID LANE NAME THE BROADCAST JOE CAN WATCH — 2026-09-30, prompt 126
+
+**Numbered by count:** §1–§69 each appear exactly once and there was no §70.
+
+**What Joe saw, 2026-09-30, on his phone.** The Blue Jackets opener (BUF @ CBJ, 2026-10-01, 7 PM,
+`nhl-2026020011`) showed no network mark on its list card, while the Prime Video mark appeared in
+the game's detail panel.
+
+**The finding.** The data was right and the card picked the wrong row.
+
+- The game has four active broadcast rows: `cbjnhl` (primary, LINEAR, access `unknown`), `cbjhn`
+  (LINEAR, `unknown`), `msg-b` (LINEAR, `out_of_market`) and `prime-video` (STREAMING, `available`).
+  Its verdict is eligible, "stream only: prime-video", with `eligible_via_network_id` null and
+  `eligible_via_service_ids` `{prime-video}`.
+- `cardBroadcast()` took the primary row, then a linear row, then the first row, so it named
+  `cbjnhl`. The card draws a mark only when the named service has one (`showsMark`,
+  `web/lib/marks.js:51`), and `cbjnhl` has none. So the mark column was empty on a game the
+  reconciler had decided is watchable.
+- `MobileGrid` chooses a game's lane with the same function (`web/components/MobileGrid.js:148`).
+  Cowork inferred from the code that the opener sat in a `CBJNHL` rail row. The "before" screenshots
+  confirm it at both widths: a rail row with no mark and the call letters `CBJNHL`.
+- The query did not fetch what a fix needs: the game embed had no `eligible_via_service_ids`.
+
+**It is a class, not one game.** Measured by this run with the anon key, 2026-09-30 to 2026-10-31:
+690 games, 184 eligible, and 17 whose card broadcast is neither the verdict's network nor one of its
+services. That is Cowork's count and its table, row for row. One detail differs: the NBA game is
+CLE @ ATL, not ATL @ CLE.
+
+**The rule (Cowork's recommendation; Joe ran the brief without a veto).**
+
+1. The card keeps its current pick whenever that pick shows a mark.
+2. Otherwise it names the first row the eligibility verdict names that is active on the game and has
+   a mark: `eligible_via_network_id`, then `eligible_via_service_ids` in array order.
+3. Otherwise the current pick stands.
+
+**Why it is keyed to the mark.** The test is the one the card already applies, so the rule cannot
+change any card that shows a mark today. It only reaches cards that show nothing. The NFL's ABC/ESPN
+simulcasts keep ABC although the verdict names ESPN, because `abc` has a mark. It reads the
+reconciler's verdict and derives no second eligibility rule in JavaScript (the D4/E3 note on
+`GAME_SELECT`). Both fields are empty on a game that is not eligible
+(`pipeline/reconcile.py:281-285`), so there is no `eligible` test to repeat.
+
+**One function for the card and the grid (Cowork's judgment call).** A game in a lane for a feed Joe
+cannot get is the same defect he reported on the card, so the rule lives in `cardBroadcast()` and
+both surfaces call it.
+
+**Where the code is (block A, `0f56eac`), and one departure from the brief.**
+
+- The brief put the rule in `web/components/MatchupCard.js:132-136`. That file is JSX and
+  `node --test` cannot import it, so a unit test could not run the rule there. `cardBroadcast()`
+  moved to `web/lib/cardbroadcast.js`. `MatchupCard.js` imports it and re-exports it under the same
+  name, and `MobileGrid.js` still imports it from `MatchupCard.js` and is not edited.
+- `web/lib/queries.js` adds `eligible_via_service_ids` to the game eligibility embed. The anon role
+  reads the column, confirmed by the read itself. The program embed is unchanged.
+- **One file outside the brief's named paths, approved by Joe in the session (S5).**
+  `web/app/qa/tbd/fixture.js` mirrors `GAME_SELECT` key for key, and `web/test/qatbd.test.mjs` went
+  red when the query gained a column. Its one eligibility row gained `eligible_via_service_ids: []`.
+- `cardMarkSlug()`, `simulcastLanes()`, `programBroadcast()` and the `hasMark` list are not changed.
+  `docs/design/mobile_demo.html` implements no broadcast choice, so rule 23 asks nothing of it
+  (searched for `is_primary` and `cardBroadcast`: no match).
+
+**The tests (15, `web/test/cardbroadcast.test.mjs`; `test:unit` 663 → 678).** The fixtures are rows
+as `gameById()` returned them on 2026-09-30, and the first test holds their keys to `GAME_SELECT`'s
+own column lists. The brief's six cases:
+
+- the opener's rows name `prime-video`;
+- an ABC primary with an ESPN verdict keeps `abc` (`abc` has a mark);
+- no eligibility row keeps the primary;
+- a verdict naming a service with no row on the game keeps the primary;
+- a verdict naming a service with a row but no mark keeps the primary (the real 10-09 rows, whose
+  verdict names `cbj-local`);
+- a Cavaliers simulcast collapses exactly as before, in all three states, lanes included. **These
+  rows are built, not copied:** no simulcast row was loaded on 2026-09-30 (`wuab-43` had 0 rows).
+
+The rest pin the order of the two fields, the array order, an inactive named row, a verdict that
+names nothing, the object form of the embed, the unchanged pick, and the wiring.
+
+**Four mutations, each red, the file restored byte for byte each time (sha256 identical).** The
+brief asked for three; the mark is tested in two places, so "ignore the mark test" is two mutations.
+
+| Mutation | Tests that fail |
+|---|---|
+| the pick's mark test ignored | 3: ABC keeps; a marked pick is never replaced; the Cavaliers collapse |
+| the named row's mark test ignored | 2: a row with no mark; the markless service passed over |
+| the two eligibility fields reversed | 1: the linear network comes before the streaming services |
+| the new branch deleted | 4: the opener; the object form; the field order; the array order |
+
+**The 17 games, before and after, from live data.** Four change. All four are rows the brief
+expected to change (CBJ, CFB, NBA).
+
+| Day | Game | Id | Card before | Card after | Verdict names |
+|---|---|---|---|---|---|
+| 10-01 | BUF @ CBJ | `nhl-2026020011` | `cbjnhl` (no mark) | **`prime-video`** | `prime-video` |
+| 10-03 | UTA @ CBJ | `nhl-2026020027` | `cbjnhl` (no mark) | **`prime-video`** | `prime-video` |
+| 10-09 | PIT @ CBJ | `nhl-2026020068` | `cbjnhl` (no mark) | `cbjnhl` | `cbj-local` |
+| 10-10 | CBJ @ STL | `nhl-2026020079` | `cbjnhl` (no mark) | `cbjnhl` | `cbj-local` |
+| 10-12 | BUF @ LAR | `nfl-401872994` | `abc` | `abc` | `espn` |
+| 10-13 | FLA @ CBJ | `nhl-2026020091` | `cbjnhl` (no mark) | `cbjnhl` | `cbj-local` |
+| 10-17 | ELON @ STAN | `401858262` | `acc-extra` (no mark) | **`accnx`** | `accnx` |
+| 10-17 | NYR @ CBJ | `nhl-2026020129` | `cbjnhl` (no mark) | `cbjnhl` | `cbj-local` |
+| 10-18 | CBJ @ MIN | `nhl-2026020135` | `cbjnhl` (no mark) | `cbjnhl` | `cbj-local` |
+| 10-19 | WSH @ SF | `nfl-401873008` | `abc` | `abc` | `espn` |
+| 10-20 | TOR @ CBJ | `nhl-2026020145` | `cbjnhl` (no mark) | `cbjnhl` | `cbj-local` |
+| 10-24 | VGK @ CBJ | `nhl-2026020174` | `cbjnhl` (no mark) | `cbjnhl` | `cbj-local` |
+| 10-26 | DAL @ PHI | `nfl-401873009` | `abc` | `abc` | `espn` |
+| 10-27 | CBJ @ PHI | `nhl-2026020188` | `cbjnhl` (no mark) | `cbjnhl` | `cbj-local` |
+| 10-29 | CLE @ ATL | `nba-401909893` | `nba-tv` (no mark) | **`dazn`** | `dazn` |
+| 10-29 | CBJ @ CAR | `nhl-2026020206` | `carnhl` (no mark) | `carnhl` | `cbj-local` |
+| 10-31 | CBJ @ DAL | `nhl-2026020225` | `cbjnhl` (no mark) | `cbjnhl` | `cbj-local` |
+
+- **The ten Blue Jackets games that do not change** still carry the old `cbj-local` carrier-TBA row,
+  which has no mark, so rule 3 applies and their cards still show an empty mark column. They are
+  past the refresh's 7-day window. Each should take a `prime-video` row as the window reaches it,
+  as 10-01 and 10-03 have, and the card then follows with no code change.
+- **The three NFL games** keep ABC, as the rule intends.
+
+**Every loaded game, for the size of the change.** 4,182 games, 1,125 eligible, 102 in the class.
+**Twelve cards change and none is outside the class.** Beyond the four above: WIS @ PSU 09-26
+(`eradm` → `peacock`), CBJ @ DET 09-26 (`dsn` → `prime-video`), and six more Cavaliers games from
+11-02 to 2027-03-29 whose primary row is `nba-tv` or `nbcsn` (→ `dazn`). The 90 that stay: 80
+Blue Jackets games waiting on the window, 9 ABC/ESPN simulcasts, and one Guardians game whose card
+shows NBC.
+
+**Block B: the pictures** (`assets/p126-card-broadcast/`, untracked; dev server and Playwright, a
+390×844 phone and a 1024×1366 coarse-pointer iPad, both at 2×).
+
+- **Before, both widths.** The list card has an empty mark column. The grid has two rail rows,
+  ESPN+ and a row with no mark that reads `CBJNHL`, and the opener is in the second.
+- **After, both widths.** The list card shows the Prime Video mark (56×40 on the phone, 84×44 on
+  the iPad). The grid's second rail row is Prime Video, drawn with the Prime Video mark, and the
+  opener is in it. The `CBJNHL` row is gone. The row count is unchanged at two.
+- The files are `before__` and `after__`, then `390__` or `1024-ipad__`, then `list-card.png`,
+  `grid.png` or `grid-rail-row.png`: twelve pictures, plus `before__facts.json` and
+  `after__facts.json`, which hold what the script read from the DOM.
+
+**A correction to the brief (rule 22).** The brief says the detail panel "lists every row, which is
+why Prime Video appears there", and that it "still lists" the two Blue Jackets feeds as "unknown".
+`web/components/GameDetail.js:310-365` does neither on this game. Once one row is accessible the
+panel draws only the accessible watch links and drops the whole "Where to watch" list (prompt 71
+stage 4). Prime Video appears because it is the accessible row. The word "Unknown" is not rendered
+for `cbjnhl` on any of its 82 games today, since each has an accessible row. Queue item 18 carries
+the corrected description.
+
+**Geometry.** All hard stops passed and none moved. The gate's days are 2026-09-03, 09-05 and
+09-13, and no game on them changes.
+
+**Left for Joe, in `docs/queue.md` item 18:** whether to record `cbjnhl` and `cbjhn` as
+unavailable. The brief's statement that the Blue Jackets Hockey Network is on Spectrum cable and
+not DIRECTV was not checked by this run.
+
+**Out of scope, deliberately:** any data change (`local_rights.json`, `access_profile.json`,
+broadcast rows, access statuses); the Python archived-grid renderer and the desktop grid, which
+follows `docs/rendering-contract.md` §5 rule 4; `programBroadcast()`, the Cavaliers collapse and
+`simulcastLanes()`; the `hasMark` list and every network logo.

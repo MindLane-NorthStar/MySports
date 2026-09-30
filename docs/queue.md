@@ -360,3 +360,44 @@ is gone. Before the 43 published artifacts were deleted, 14 were found byte-iden
 other 29 had been overwritten by a later run the same day, and were copied to
 `fixtures/<date>/run-<run id>/` first. The table is in §69, which also records whether any fixture
 file could carry a credential. The number is retired rather than reused.
+
+## 18. The Blue Jackets' own feeds carry access `unknown`, and whether Joe can receive them is his ruling
+
+**What.** The NHL feed lists the Blue Jackets' telecast as `cbjnhl` ("CBJNHL") and, on some games,
+`cbjhn` ("CBJHN"). Neither is named in `data/access_profile.json`, so `outlet_access()` falls
+through to `UNKNOWN` (`adapters/common.py:339-350`) and both load as `unknown`
+(`pipeline/load.py:307`). Measured 2026-09-30 with the anon key: 82 active `cbjnhl` rows
+and 2 active `cbjhn` rows, all `unknown`, and `cbjnhl` is the primary row on 78 of those games.
+Cowork's brief for prompt 126 says the Blue Jackets Hockey Network is carried on Spectrum cable and
+not on DIRECTV (Yahoo Sports, 2026-09-23). **That run did not check the source.** If it is right,
+these feeds are not watchable on Joe's profile, and `unknown` understates what is known.
+
+**What the app shows today.** Since prompt 126 (register §70) a Blue Jackets game whose rows include
+`prime-video` names Prime Video on its card and sits in the Prime Video rail row. That is the two
+games inside the refresh's 7-day window on 2026-09-30 (10-01 and 10-03). **The other 80, 10-09 to
+2027-04-10, still carry the old `cbj-local` carrier-TBA row**, which has no mark, so their cards
+still show an empty mark column and their grid lane still reads `CBJNHL`. Each should take a
+`prime-video` row as the window reaches it (`data/local_rights.json`, `nhl.CBJ`, Joe 2026-09-09),
+and the card follows without a code change. Nothing here fixes them sooner.
+
+**A correction to the brief, read against the component (rule 22).** The brief says the detail panel
+"still lists them as 'unknown'". It does not, on any of the 82 games. `GameDetail.js:310-365` drops
+the whole "Where to watch" list once one row is accessible (prompt 71 stage 4), and every one of the
+82 has an accessible row: `prime-video` on 2, `cbj-local` on 80. The word "Unknown"
+(`GameDetail.js:34`) would print for these feeds only on a game with no accessible row at all, and
+there is none today.
+
+**The ruling that is Joe's.** Whether to record the two feeds as unavailable. It is a data change,
+an entry under `unavailable` in `data/access_profile.json` edited through a parser (rule 17), and
+the file matches on the label form, not the slug (rule 31). It would change the status word and the
+eligibility reason on a game with no other row; it would not change a card that already names Prime
+Video.
+
+**Also noted, and not changed by prompt 126.** The archived desktop grid follows its own rule,
+`docs/rendering-contract.md` §5 rule 4: "on its primary row (first ROW_ORDER linear outlet, else
+first available streaming outlet)". Which row that render puts a Blue Jackets game in was not looked
+at; the Python renderer and the desktop grid were out of that brief's scope.
+
+**Where it starts.** `data/access_profile.json`, `adapters/common.py:339`, `web/lib/cardbroadcast.js`,
+`web/components/GameDetail.js:310-365`. **Size.** Small once ruled. **A description of a problem, not
+an approved plan.**

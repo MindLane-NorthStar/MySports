@@ -1,5 +1,26 @@
 # Mobile Grid Addendum — v2.1 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04 · per-team cap surface and art, candidate D, 2026-09-04)
 
+> **v2.6 (2026-09-30, prompt 126).** **WHICH BROADCAST A GAME CARD AND A GRID LANE NAME.** A game
+> names ONE broadcast: the list card draws that broadcast's mark, and the grid places the game in
+> that broadcast's rail row. The rule, in order:
+>
+> 1. **the current pick, if it shows a mark** — the primary row, else a linear row, else the first
+>    active row, exactly as before;
+> 2. **else the row the eligibility verdict names**, if that row is active on the game and has a
+>    mark — `eligible_via_network_id` first, then `eligible_via_service_ids` in their own order;
+> 3. **else the current pick.**
+>
+> Reason: Joe's report of 2026-09-30. The Blue Jackets opener (BUF @ CBJ, 2026-10-01) showed no mark
+> on its list card and sat in a `CBJNHL` rail row on the grid, because its primary row `cbjnhl` has
+> no published mark, while the reconciler had already decided the game is watchable on Prime Video.
+> It is keyed to the mark so that no game whose pick shows a mark can change: an ABC/ESPN simulcast
+> keeps ABC. One function serves both surfaces, `cardBroadcast()` in `web/lib/cardbroadcast.js`, and
+> it reads the verdict rather than deriving a second eligibility rule. **Untouched:** the Cavaliers
+> collapse and its lanes (`cardMarkSlug`, `simulcastLanes`), a program's row (M19), and the archived
+> PC render, which follows `rendering-contract.md` §5 rule 4. Nothing M1–M23 says about the grid's
+> construction changes; a game this rule moves changes WHICH rail row it is in, not how a row or a
+> block is built. Register §70.
+>
 > **v2.5 (2026-09-23, prompt 114).** **M22's top-edge treatment gains a TABLET clause.** On a
 > tablet-sized coarse pointer — `(min-width: 700px) and (min-height: 600px) and (pointer: coarse)`,
 > the iPad in both orientations and neither phone orientation — the collapsed navbar carries a 32 px
