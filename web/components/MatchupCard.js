@@ -27,6 +27,7 @@ import { etTime, teamColor, dayParts, slotContent } from '../lib/format.js';
 import { teamLogoDarkUrl, markUrl } from '../lib/config.js';
 import TeamMark from './TeamMark.js';
 import { showsMark, cardMarkSlug } from '../lib/marks.js';
+import { cardBroadcast } from '../lib/cardbroadcast.js';
 import { standingParts, standingFor, rankFor } from '../lib/standings.js';
 import { useTextMeasurer, useElementWidth } from '../lib/useTextMeasurer.js';
 import { fitNameAndRecord } from '../lib/cardGeometry.js';
@@ -128,12 +129,12 @@ function TeamStack({ team, teamId, sport, standings, rankings, season, week, pro
   );
 }
 
-/** The broadcast the card names. Primary first, then a linear row, then whatever is left. */
-export function cardBroadcast(game) {
-  const rows = (game.broadcasts || []).filter((b) => b.active !== false);
-  if (!rows.length) return null;
-  return rows.find((b) => b.is_primary) || rows.find((b) => b.delivery_surface === 'LINEAR') || rows[0];
-}
+// The broadcast the card names: primary first, then a linear row, then whatever is left - kept
+// whenever it shows a mark, and otherwise the row the eligibility verdict names that does (prompt
+// 126). THE RULE IS lib/cardbroadcast.js; it moved there because this file is JSX and `node --test`
+// cannot import it. It is still exported from here, which is where MobileGrid imports it from to
+// choose a game's lane, so the card and the grid cannot name two different broadcasts.
+export { cardBroadcast };
 
 // networkText() lived here and went with A3: it was the only caller's only use. THE STRING IT
 // CARRIED IS NOW GONE FROM THE REPO ENTIRELY - 'No linear telecast', which prompt 24 flagged as a

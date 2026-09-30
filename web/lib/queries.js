@@ -42,7 +42,7 @@ const GAME_SELECT = [
   // D4/E3: the reconciler's OWN eligibility verdict, embedded rather than re-derived. A second
   // rule in JS would drift from pipeline/reconcile.py and from the renderer's "not on your
   // services" count. Embedded on the FK, so this costs no extra round trip.
-  'eligibility:viewer_game_eligibility(eligible,reason,eligible_via_network_id,market_pending)',
+  'eligibility:viewer_game_eligibility(eligible,reason,eligible_via_network_id,eligible_via_service_ids,market_pending)',
 ].join(',');
 
 const ORDER = 'order=canonical_kickoff_at_utc.asc.nullslast,id.asc';
@@ -203,8 +203,8 @@ export async function gridIndex() {
  *
  * `primaryBroadcast` went with them and is the reason this is four deletions rather than three: it
  * was exported, but `networkName` was its only caller, so it orphaned the moment the chain did.
- * `cardBroadcast` in MatchupCard.js is a DIFFERENT function and is untouched - it is what the card
- * actually renders from.
+ * `cardBroadcast` is a DIFFERENT function and that deletion left it alone - it is what the card
+ * actually renders from (lib/cardbroadcast.js since prompt 126, which reads the two `eligible_via_*`).
  *
  * If search returns, it returns against the hub's own params and gets written for that. */
 

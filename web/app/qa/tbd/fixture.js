@@ -91,7 +91,9 @@ function game(n, kickoff, away, home, park) {
       delivery_surface: 'LINEAR',
       carriage_certainty: 'CONFIRMED',
     }],
-    eligibility: [{ reason: 'linear trutv', eligible: true, market_pending: false, eligible_via_network_id: 'trutv' }],
+    // `eligible_via_service_ids` joined GAME_SELECT in prompt 126; a linear game carries it empty
+    eligibility: [{ reason: 'linear trutv', eligible: true, market_pending: false, eligible_via_network_id: 'trutv',
+      eligible_via_service_ids: [] }],
   };
 }
 
