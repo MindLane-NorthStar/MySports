@@ -342,71 +342,21 @@ them exactly, so who is still playing can no longer turn it red. The Yankees' 40
 Smoke still reads live rows on purpose; item 12 stands. The number is retired rather than reused, as
 item 8's is.
 
-## 16. Eligibility freshness smoke check (prompt 123 Block B), to be added after the first production run confirms fresh rows
+## 16. *(closed 2026-09-29 by prompt 125 — register §69)*
 
-**What.** Register §66: from 2026-09-05 until prompt 123, a change in a game's access reached
-`game_broadcasts` and never reached `viewer_game_eligibility`, which is the table the app reads. Nothing
-went red. Joe found it by watching "Market TBD" sit on decided NFL games all Sunday. Prompt 123 fixed
-the reconciler. This check is the tripwire that would have caught it: **for the next 7 viewing days'
-games, no eligibility row may be more than 26 hours older than the newest `last_seen_at` among that
-game's broadcast rows.** The refresh runs twice a day and now re-judges every game it touches in the
-same run, so a fresh pipeline passes with a day of slack. A day of failed reconciles, or a
-regression of §66, trips it.
+This item was *"eligibility freshness smoke check (prompt 123 Block B)"*. Its precondition was met on
+2026-09-29 (register §68), and it is built. Smoke section (g) fails any game in the next 7 ET viewing
+days whose eligibility row is more than 26 hours older than the newest `last_seen_at` among its
+broadcast rows. A game with broadcasts and no eligibility row also fails. The rule is a pure function,
+`web/lib/freshness.js`, proven on fixture rows in `web/test/freshness.test.mjs`. On its first live
+run it was green: 146 games, 133 with broadcasts, 0 stale. The number is retired rather than reused.
 
-**The query**, as SQL for a read-only connector check (ET viewing days; `current_date` on the
-server is UTC, so substitute the ET date near midnight):
+## 17. *(closed 2026-09-29 by prompt 125 — register §69)*
 
-```sql
-select g.id, g.sport, e.computed_at, max(b.last_seen_at) as newest_seen
-from mysports.games g
-join mysports.game_broadcasts b on b.game_id = g.id
-left join mysports.viewer_game_eligibility e on e.game_id = g.id and e.viewer_profile_id = 1
-where g.viewing_day between date '2026-09-28' and date '2026-10-04'
-group by g.id, g.sport, e.computed_at
-having e.computed_at is null or e.computed_at < max(b.last_seen_at) - interval '26 hours';
-```
-
-In `web/scripts/smoke.mjs` it is two `restAll()` reads: the week's games by `viewing_day`, their
-broadcast rows by `game_id=in.(…)`, and their eligibility rows the same way. The comparison is done in
-JS. Rule 19's cap guard (`web/test/restcap.test.mjs`) will make each read state how it is bounded.
-
-**Today's count**, read through PostgREST with the anon key on 2026-09-28, after the 08:01 UTC
-dispatched refresh and before prompt 123 deployed: **34 games fail (NHL 18, NFL 16)**. They are out of
-86 with broadcast rows, among the 135 games on 2026-09-28 to 2026-10-04. That is why the check was
-not added in the same run: it would be red on live data until the first refresh after the push, and
-a red gate is never committed over.
-
-**When.** After Cowork's OPEN item in `docs/handoff-status.md` confirms the first production refresh
-after prompt 123 left `computed_at` fresh for the next 7 days' games. The count should then be 0.
-**That precondition was met on 2026-09-29** (prompt 121 rev B, register §68). The first refresh after
-the push logged `eligibility_only` 819 and `eligibility_changes` 14. This query, re-read through
-PostgREST for viewing days 2026-09-29 to 10-05, returns **0** of 146 games. **The item can now be
-built**; whether and when is Joe's call.
-**Where it starts.** `web/scripts/smoke.mjs`, `web/lib/rest.js` (`restAll`). **Size.** Small. **A
-description of a problem, not an approved plan.**
-
-## 17. The refresh's `validation-*` artifact is public now, and it duplicates the private archive
-
-**What.** `schedule_refresh.yml` keeps the day's fixtures and raw provider payloads twice:
-
-- `:341-342`, "Archive fixtures + raw payloads (private bucket)", pushes `artifacts/validation` to
-  the private `mysports-data` bucket under `fixtures/<date>/`.
-- `:343-348` uploads the same directory as a GitHub Actions artifact named `validation-<date>`, kept
-  for 14 days, `if: always()`.
-
-While the repo was private, only Joe could reach the artifact. **Since 2026-09-29 the repo is public
-(register §68), and any signed-in GitHub user can download it.** It carries the raw payloads the
-adapters fetched: league and network schedules, and the coverage-page extracts. GitHub masks secrets
-in logs, but it does not scan artifacts, and Cowork's gitleaks pass covered the repo, not the
-artifacts. **Whether any fixture file could carry a credential has not been checked.** That is the
-first thing to read before deciding.
-
-**The trade.** The artifact is the one copy readable without R2 credentials. It survives a run whose
-R2 push failed, because of `if: always()`, which the bucket copy does not. It is handy for reading a
-failed run from the Actions page. Against that, it is a second public copy of provider responses whose
-terms were read for fetching, not for republishing. **Whether to keep it, narrow it (for example,
-`if: failure()` only), or remove it is Joe's call.** Prompt 121 made no change, by its scope.
-
-**Where it starts.** `.github/workflows/schedule_refresh.yml:343-348`; `scripts/sync_assets.py
---push-data` for the private copy. **Size.** Small once ruled: one step edited or removed, and
-`tests/test_workflows.py` re-run. **A description of a problem, not an approved plan.**
+This item was *"the refresh's `validation-*` artifact is public now, and it duplicates the private
+archive"*. Joe's ruling that day was to keep failed runs' payloads privately and stop publishing. A
+failed or cancelled refresh now archives to `fixtures/<date>/failed-<run id>/`, and the artifact step
+is gone. Before the 43 published artifacts were deleted, 14 were found byte-identical to R2. The
+other 29 had been overwritten by a later run the same day, and were copied to
+`fixtures/<date>/run-<run id>/` first. The table is in §69, which also records whether any fixture
+file could carry a credential. The number is retired rather than reused.

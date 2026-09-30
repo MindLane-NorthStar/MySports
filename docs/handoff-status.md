@@ -10,7 +10,7 @@ sections, and the older measurement records. **This file stays the authority for
 repo state, gate floors, open items; since prompt 89 the working rules are `CLAUDE.md`'s alone. Read
 the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§68 — this said §1–§39 until prompt 99 corrected it, §1–§53 until prompt 111 did and §1–§61 until prompt 123 did, counted each time; all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§69 — this said §1–§39 until prompt 99 corrected it, §1–§53 until prompt 111 did and §1–§61 until prompt 123 did, counted each time; all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **131 briefs, covering 01–124, counted 2026-09-29 by prompt 121 rev B (115 reserved)
-(130 after prompt 124; 129 after prompt 123; 123 after prompt 116, and prompts 117–122 did not move this line though the README's count did; 122 after prompt 114 rev B; 121 after prompt 114; 120 after prompt 113 rev C; 118 after prompt 113; 117 after prompt 112; 116 after prompt 111; 107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - **`docs/prompts/README.md` "Duplicate numbers" owns this count**: seven numbers as the README counts them (23, 26, 43, 48 and 114 two each, 86 and 113 three; `13-14-combined` has its own row and is deliberately not counted under 13), eight if it is — which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **132 briefs, covering 01–125, counted 2026-09-29 by prompt 125 (115 reserved)
+(131 after prompt 121 rev B; 130 after prompt 124; 129 after prompt 123; 123 after prompt 116, and prompts 117–122 did not move this line though the README's count did; 122 after prompt 114 rev B; 121 after prompt 114; 120 after prompt 113 rev C; 118 after prompt 113; 117 after prompt 112; 116 after prompt 111; 107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - **`docs/prompts/README.md` "Duplicate numbers" owns this count**: seven numbers as the README counts them (23, 26, 43, 48 and 114 two each, 86 and 113 three; `13-14-combined` has its own row and is deliberately not counted under 13), eight if it is — which is why the file
 count runs ahead of the highest number. (Prompt 111 wrote "six" here after counting the directory; the old "five" it replaced was (13, 23, 26, 43, 86), wrong in both directions — it counted 13 and omitted 48, which has carried two since prompt 93 — and prompt 112 pointed this line at the README rather than keep a second copy.) **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -66,6 +66,24 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > appended a `Re-measured … prompt NN` line beneath it without touching the sentence above them, so
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
+
+**Measured 2026-09-29, prompt 125: `pytest` 728 → 732 passed + 1 skipped, `test:unit` 657 → 663 and smoke 33 → 34; `qa-shots`
+145/145 and geometry all hard stops did not move.** Written after the last gate run.
+
+- **Why the floors moved.** pytest gained four workflow tests (one cron, no published artifact, the failure-path
+  archive step, the unchanged success step). test:unit gained six freshness tests. Smoke gained section (g), the
+  eligibility freshness guard (queue item 16, now closed), which is green on live data: 146 games, 133 with broadcasts,
+  0 stale.
+- **Joe's three rulings** (register §69; deployment contract v1.0.7):
+  - The Worker's token has no expiration.
+  - One backstop cron, at 11:37 UTC.
+  - A failed or cancelled run archives privately under `fixtures/<date>/failed-<run id>/`, and nothing is published.
+- **The 43 public `validation-*` artifacts are deleted; this is one-way.** 14 were byte-identical to R2. By Joe's call,
+  the 29 that later same-day runs had overwritten in R2 were first copied to `fixtures/<date>/run-<run id>/` and
+  MD5-confirmed. None remain.
+- **No credential in any of the 43**, measured over their 4,463 files.
+- Block A's first `qa-shots` run was 144/145 on the pinch gesture check, with no web change behind it. Its one re-run
+  was 145/145.
 
 **Measured 2026-09-29, prompt 121 rev B: `pytest` 728 passed + 1 skipped, `test:unit` 657, smoke 33/33, `qa-shots` 145/145
 and geometry all hard stops; no floor moves (documentation and comments only).** Written after the last gate run.
@@ -1180,7 +1198,11 @@ before touching any count line.
   2026-10-04's NFL CBS/FOX rows carry the verdict their `game_broadcasts` access says: `linear cbs|fox` where
   `available`, not pending where `out_of_market`, and "Market TBD" only where the row is still `unverified`.
   Then queue item 16 can be built.
-- **OPEN — JOE SUPPLIES THE WORKER TOKEN'S EXPIRY DATE (prompt 121 rev B, register §68; deployment contract §5).**
+- ~~**OPEN — JOE SUPPLIES THE WORKER TOKEN'S EXPIRY DATE (prompt 121 rev B, register §68; deployment contract §5).**~~
+  **CLOSED 2026-09-29 by prompt 125 (register §69; contract v1.0.7): the token has no expiration date, by Joe's
+  choice.** An expiring token would bring back exactly the silent stop described below. The token is fine-grained,
+  scoped to this repo, and limited to Actions read and write, so it cannot change code or read secrets. The trade
+  Joe accepted is that a leaked token stays valid until he revokes it. The text below is the record of the item.
   The refresh's primary trigger is Joe's Cloudflare Worker, which dispatches `schedule_refresh.yml` at 4 a.m.
   Cleveland time using a fine-grained token scoped to this repo. If that token expires, the dispatch fails inside
   Cloudflare and nothing in this repo goes red: no run is created, so there is no failed run to see. Only the
@@ -1190,7 +1212,9 @@ before touching any count line.
   This is the Cleveland-clock guard's first run across a time change. Every dispatch since 2026-09-17 was
   created at 08:00–08:01 UTC (4 a.m. EDT). From 2026-11-01 (EST) it should be created at 09:00 UTC, and never at
   08:00. `gh run list --workflow schedule_refresh.yml --json event,createdAt` answers it. A dispatch at 08:00
-  UTC, or at both hours, means the guard is not doing what Cowork recorded.
+  UTC, or at both hours, means the guard is not doing what Cowork recorded. **The same day, the one remaining cron
+  shifts** (prompt 125): 11:37 UTC lands at 7:37 a.m. EDT until then and at 6:37 a.m. EST from 2026-11-01. That is
+  expected, since the cron is UTC, and needs no action; the 07:37 cron is gone.
 - **OPEN — CONFIRM ON 2026-09-28, AFTER THE 07:37 UTC REFRESH, THAT THE FOUR WILD CARD GAMES CARRY REAL TEAMS,
   TIMES AND NETWORKS (prompt 116, register §61).** `mlb-849843`, `-849845`, `-849849` and `-849851` carry MLB's
   placeholder seeds today; the seeds clinch after Sunday 2026-09-27 and the loader now follows the source for a

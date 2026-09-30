@@ -82,7 +82,11 @@ grids/{sport}/{YYYY-MM-DD}.png     1× raster; @2x.png = download raster (contra
 grids/multi/{YYYY-MM-DD}.svg       multi-sport day (contract v1.6+)
 
 mysports-data  (private)
-fixtures/{sport}/{season}/...      adapter outputs (the artifacts/validation/ files), for audit
+fixtures/{YYYY-MM-DD}/...          adapter outputs (the artifacts/validation/ files), for audit - the refresh's
+                                   success path; the UTC day, so a later run the same day overwrites (v1.0.7)
+fixtures/{YYYY-MM-DD}/failed-{run id}/...   the same, from a FAILED or cancelled refresh; its own prefix, keys only
+fixtures/{YYYY-MM-DD}/run-{run id}/...      29 superseded runs of 2026-09-16..29, copied from their public
+                                   artifacts before those were deleted (prompt 125, register §69)
 snapshots/{provider}/{date}/...    raw provider payloads (spec §7.15 source_snapshots)
 backups/mysports_{YYYY-MM-DD}.sql.gz   weekly schema dump (D9)
 ```
@@ -118,8 +122,8 @@ The repo is **public**: `gh repo view --json visibility,isPrivate` returned `PUB
 
 | Workflow | Trigger | Does |
 |---|---|---|
-| `schedule_refresh.yml` | **The primary trigger is the Worker's daily dispatch at 4:00 a.m. Cleveland time** (next row). **The two crons are the backstop: 07:37 and 11:37 UTC**, which is 3:37 and 7:37 a.m. EDT, and 2:37 and 6:37 a.m. EST after 2026-11-01. The crons are UTC and move against the clock at each daylight-saving change; the Worker needs no edit. Plus manual dispatch. | runs every in-season adapter, reconciles (Milestone 2), writes `mysports.*`, records `refresh_runs` |
-| **Cloudflare Worker** (Joe's; outside the repo) → `schedule_refresh.yml` | **Measured with `gh` on 2026-09-29.** A `workflow_dispatch` was created every day from 2026-09-17 (run #28) to 2026-09-29 (#66), between 08:00:10 and 08:01:20 UTC, which is 4:00 a.m. EDT. The triggering actor and actor were `MindLane-NorthStar`, and no dispatch was created at 09:00 UTC. **Recorded by Cowork on 2026-09-22; none of it is visible from the repo:** a cron of `0 8,9 * * *` UTC, and a handler that dispatches only when the Cleveland clock reads 4 a.m. So it fires once a day, year round, and needs no edit at a daylight-saving change; from 2026-11-01 the dispatch should appear at 09:00 UTC. It has two Worker secrets. `GITHUB_TOKEN` is a fine-grained personal access token scoped to this repo, with Actions read and write. `TEST_KEY` guards a manual-test endpoint that dispatches on demand. Its source is not version-controlled. **Joe to supply: the token's expiry date.** | dispatches the refresh; the render follows it as usual |
+| `schedule_refresh.yml` | **The primary trigger is the Worker's daily dispatch at 4:00 a.m. Cleveland time** (next row). **One cron is the backstop: 11:37 UTC** (Joe's ruling 2026-09-29, prompt 125; the 07:37 cron was removed). That is 7:37 a.m. EDT, and 6:37 a.m. EST after 2026-11-01. The cron is UTC and moves against the clock at each daylight-saving change; the Worker needs no edit. Plus manual dispatch. **Archive:** a successful run pushes `artifacts/validation` to the private bucket under `fixtures/<UTC date>/`; a failed or cancelled run pushes it under `fixtures/<UTC date>/failed-<run id>/`, a prefix of its own, so it only creates keys; **nothing is published** (the public `validation-*` artifact was removed, v1.0.7). | runs every in-season adapter, reconciles (Milestone 2), writes `mysports.*`, records `refresh_runs` |
+| **Cloudflare Worker** (Joe's; outside the repo) → `schedule_refresh.yml` | **Measured with `gh` on 2026-09-29.** A `workflow_dispatch` was created every day from 2026-09-17 (run #28) to 2026-09-29 (#66), between 08:00:10 and 08:01:20 UTC, which is 4:00 a.m. EDT. The triggering actor and actor were `MindLane-NorthStar`, and no dispatch was created at 09:00 UTC. **Recorded by Cowork on 2026-09-22; none of it is visible from the repo:** a cron of `0 8,9 * * *` UTC, and a handler that dispatches only when the Cleveland clock reads 4 a.m. So it fires once a day, year round, and needs no edit at a daylight-saving change; from 2026-11-01 the dispatch should appear at 09:00 UTC. It has two Worker secrets. `GITHUB_TOKEN` is a fine-grained personal access token scoped to this repo, with Actions read and write. `TEST_KEY` guards a manual-test endpoint that dispatches on demand. Its source is not version-controlled. **The token has no expiration date, by Joe's choice on 2026-09-29** (see the token paragraph below). | dispatches the refresh; the render follows it as usual |
 | `render_all.yml` | **after a successful refresh** (the refresh's own `render` job calls it) + manual dispatch; **no schedule of its own** | renders the viewing day(s), uploads `grids/` to R2, syncs the local cache |
 | `bootstrap_season.yml` | manual only | Milestone 1 season load |
 | `backup_schema.yml` | Sundays 12:00 UTC | `pg_dump --schema=mysports` → `backups/`, prune to 8 |
@@ -128,9 +132,13 @@ Spec §15.2 failure rules apply unchanged: never delete canonical data, never pu
 
 **The Worker's URL and its Cloudflare account are deliberately not recorded here, because this repo is public.** The URL is also the manual-test endpoint.
 
-**The token is a point of failure this repo cannot see.** If the Worker's `GITHUB_TOKEN` expires, its dispatch fails inside Cloudflare. No workflow run is created, so no failed run and no log ever reaches this repo. Only the two crons would remain, and they are measured hours late (register §46). This run found them created between 12:02 and 18:43 UTC from 2026-09-17 to 09-29. The expiry date is Joe's to supply.
+**The Worker's token has no expiration date. That is Joe's choice (2026-09-29, register §69), and it is deliberate.**
 
-**The 60-day rule.** GitHub documents that "in a public repository, scheduled workflows are automatically disabled when no repository activity has occurred in 60 days" (read 2026-09-29). That reaches the two `schedule_refresh.yml` crons and `backup_schema.yml`'s Sunday cron. It does not reach the Worker, because a `workflow_dispatch` is not a schedule.
+- **Why no expiry:** an expiring token would bring back a silent-stop failure. The Worker's dispatch would fail inside Cloudflare, no workflow run would be created, and nothing would ever reach this repo to go red. Only the backstop cron would remain, and the crons are measured hours late (register §46): created between 12:02 and 18:43 UTC from 2026-09-17 to 09-29.
+- **What limits the risk:** the token is fine-grained, scoped to this repo, and limited to Actions read and write. It cannot change code or read secrets.
+- **The trade Joe accepted:** a leaked token stays valid until he revokes it.
+
+**The 60-day rule.** GitHub documents that "in a public repository, scheduled workflows are automatically disabled when no repository activity has occurred in 60 days" (read 2026-09-29). That reaches the one `schedule_refresh.yml` cron and `backup_schema.yml`'s Sunday cron. It does not reach the Worker, because a `workflow_dispatch` is not a schedule.
 
 **Budget.** Actions minutes have been free for this repo since 2026-09-29, because it is public. GitHub documents Actions usage as free "for public repositories that use standard GitHub-hosted runners" (read 2026-09-29). The measured run length still matters for wall-clock time: a refresh run's recent median is ~22 minutes, and the job timeout is sized against it (35 minutes, register §41).
 
@@ -193,6 +201,15 @@ GitHub's billing page showed MySports at $8.28 gross for September. At the publi
 
 ## 12. Change log
 
+- **v1.0.7 (2026-09-29, prompt 125):** Joe's three rulings of 2026-09-29.
+  - The Worker's token has no expiration, on purpose. "Joe to supply" is removed, and the reason and the trade-off
+    are in §5.
+  - §5 now has one backstop cron, 11:37 UTC. The 07:37 cron was removed for provider load and run-list noise, not
+    cost.
+  - A failed or cancelled refresh now archives privately under `fixtures/<date>/failed-<run id>/`, and the public
+    `validation-*` artifact is gone. §3's `mysports-data` layout now shows the real `fixtures/<date>/` prefix, which it
+    had described as `fixtures/{sport}/{season}/` since v1.0, and the two new prefixes beside it.
+  - The 43 published artifacts were copied where needed and deleted (register §69).
 - **v1.0.6 (2026-09-29, prompt 121 rev B):** the refresh's real trigger, and the repo's visibility, are now recorded here.
   - §5 names the Cloudflare Worker's daily 4 a.m. Cleveland dispatch as the primary trigger and the two crons as the
     backstop. The dispatch has been measured daily since 2026-09-17 and was never in this contract.

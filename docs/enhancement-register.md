@@ -5723,3 +5723,176 @@ GitHub; another private repo on the account used most of the rest.
 
 **Out of scope, deliberately:** any schedule, workflow step, Worker or secret change (removing the 3:37
 cron and the `validation-*` artifact are Joe's calls); any Cloudflare call; the repo's visibility.
+
+## 69. ONE BACKSTOP CRON, A PRIVATE ARCHIVE FOR FAILED RUNS, AND THE ELIGIBILITY FRESHNESS GUARD — 2026-09-29, prompt 125
+
+**Numbered by count:** §1–§68 each appear exactly once and there was no §69.
+
+**Joe's three rulings, 2026-09-29.**
+
+1. **The Worker's token has no expiration date, and Joe keeps it that way.** An expiring token would
+   bring back a silent-stop failure: the dispatch would fail inside Cloudflare, where nothing in this
+   repo can see it (§68). The token is fine-grained, scoped to this repo, and limited to Actions read
+   and write, so it cannot change code or read secrets. The trade Joe accepted is that a leaked token
+   stays valid until he revokes it.
+2. **The 07:37 UTC cron is removed.** The Worker's 4 a.m. dispatch is the primary trigger, and the
+   11:37 UTC cron is the single backstop. The Worker has dispatched every day since 2026-09-17; its
+   one failure (#66) was the Actions minutes cap, not the Worker. Actions is free on this public repo,
+   so the reason is load on the providers and noise in the run list, not cost.
+3. **Failed runs' payloads are kept, privately, and nothing is published** (queue item 17). The private
+   R2 archive ran only when the job succeeded, while the public `validation-*` artifact ran on
+   `always()`, so on a failed run the public artifact was the only record. A failed or cancelled run
+   now archives to R2 as well, the artifact step is removed, and the published artifacts are deleted
+   once each is confirmed to have a private copy.
+
+**Block A, the workflow (`047b2c0`).**
+
+- The `37 7 * * *` cron is deleted (it was at `:31`; the brief said `:32`).
+- The header and the note under `on:` are rewritten for one backstop cron and the token ruling.
+- The success-path archive step is unchanged.
+- A new step directly after it, `if: failure() || cancelled()`, pushes `artifacts/validation` under
+  `fixtures/<UTC date>/failed-$GITHUB_RUN_ID/`. The runner's own variable is used, not an expression
+  inside `run`, per rule 28. GitHub documents `GITHUB_RUN_ID` as "a unique number for each workflow
+  run" (read 2026-09-29). The separate prefix means the step only ever creates keys, so a failed run
+  cannot overwrite a good run's day (S7).
+- The `upload-artifact` step is removed; nothing in the repo read it.
+- Four tests in `tests/test_workflows.py` walk the parsed YAML: exactly one cron, `37 11 * * *`; no
+  `upload-artifact` in any job; the failure step's `if`, its prefix, no `${{` in its `run`, and its
+  position directly after the success step; and the success step byte for byte.
+- **Eight mutations each go red, each on the intended test:** the 07:37 cron put back; an upload step
+  put back; `cancelled()` dropped; `failed-` dropped (which also reddens the success-step test,
+  correctly); the run id dropped; the run id written as `${{ github.run_id }}`; the success prefix
+  changed; and the success step given `if: always()`.
+
+**The two edge cases, as the brief asked:**
+
+- **A run that failed before any adapter wrote.** `artifacts/validation` does not exist, and
+  `--push-data` builds its file list with `src.rglob("*")` and never checks existence
+  (`scripts/sync_assets.py:273`). Measured locally with a fake S3 client on Python 3.13: it prints
+  "pushed 0 file(s)", returns 0, and uploads nothing. Python 3.14's `rglob` on a missing path returns
+  `[]`. **The runner's 3.12 could not be run here**, so its behaviour is inferred. `client()` runs
+  first, so a run that failed before `pip install` has no boto3, and this step exits 2 on a job that
+  has already failed.
+- **A job-level timeout.** GitHub documents `timeout-minutes` as the time before "GitHub automatically
+  cancels" the job. Its cancellation reference says that when a run is cancelled, unfinished steps
+  whose `if` evaluates true keep running, `cancelled()` included, within a 5-minute window. **It does
+  not say in so many words that a job timeout goes through the same step re-evaluation.** So timeout
+  coverage is probable and not claimed. It will be known the first time a refresh times out (35
+  minutes, §41).
+
+**Block B: the published artifacts, deleted only after a confirmed private copy (one-way).**
+
+`gh api …/actions/artifacts --paginate` listed 43 artifacts, every one `validation-*`, from runs #25
+(2026-09-16) to #69, all unexpired. Every run's `refresh` job had concluded `success`, including #65,
+whose render job was the one that failed. #66 and #67 never started a step and left no artifact. So
+the success-path archive had run for all 43, and the brief's step 3, the failed-run path, applied to
+none.
+
+**The brief's check was weaker than the ruling's condition.** "Objects exist under
+`fixtures/<date>/`" held for all 43. Each artifact was then downloaded and every file's MD5 compared
+with its R2 ETag:
+
+- **14 were byte-identical.** Each was the last successful run of its UTC day.
+- **The other 29 had been overwritten** by a later run the same day, with 66–84 of about 100 files
+  differing. Their exact bytes existed only in the public artifact.
+
+Asked, **Joe chose to copy the 29 before deleting.** Each went to `fixtures/<date>/run-<run id>/`, a
+new prefix checked empty first, so keys were only created. Every file was confirmed by MD5 before its
+artifact was deleted. One upload, #68, failed on a closed R2 connection and its artifact was left
+alone. A retry that uploads only missing keys, and refuses if an existing key differs, uploaded all
+100 of its files, confirmed them, and then deleted it. The artifacts were re-listed just before
+deleting (43, none new), and **every deletion was verified with a 404.** None remain.
+
+**Could an artifact carry a credential?** Measured over the 43 downloaded artifacts (4,463 files),
+reporting counts only:
+
+- no credential-shaped string (the secret-gate names with a value, a private key, an AWS or GitHub
+  token, an `Authorization` header, a bearer token);
+- no `postgresql://` DSN, and no `mysports_writer`;
+- zero exact matches for the CFBD key, the R2 key id, the R2 secret or the R2 account id, compared in
+  memory and never printed.
+
+The database writer credential was not loaded (rule 14), and the Schedules Direct secrets are not set
+here. This confirms Cowork's reading of the code with a measurement.
+
+| Artifact id | Name | Run | `refresh` | Private copy confirmed | Deleted |
+|---|---|---|---|---|---|
+| 10448310066 | validation-2026-09-16 | #25 (schedule) | success | yes: copied to `run-35097943470/`, 103 files identical | yes |
+| 10456145482 | validation-2026-09-16 | #26 (schedule) | success | yes: copied to `run-35115958301/`, 103 files identical | yes |
+| 10467713014 | validation-2026-09-16 | #27 (workflow_dispatch) | success | yes: `fixtures/2026-09-16/`, 103 of 103 files identical | yes |
+| 10487270207 | validation-2026-09-17 | #28 (workflow_dispatch) | success | yes: copied to `run-35197381174/`, 102 files identical | yes |
+| 10498812846 | validation-2026-09-17 | #29 (schedule) | success | yes: copied to `run-35222959480/`, 102 files identical | yes |
+| 10506885788 | validation-2026-09-17 | #30 (schedule) | success | yes: `fixtures/2026-09-17/`, 102 of 102 files identical | yes |
+| 10537849713 | validation-2026-09-18 | #31 (workflow_dispatch) | success | yes: copied to `run-35322158547/`, 102 files identical | yes |
+| 10546539548 | validation-2026-09-18 | #32 (schedule) | success | yes: copied to `run-35344185630/`, 102 files identical | yes |
+| 10554605380 | validation-2026-09-18 | #33 (schedule) | success | yes: `fixtures/2026-09-18/`, 102 of 102 files identical | yes |
+| 10580064457 | validation-2026-09-19 | #34 (workflow_dispatch) | success | yes: copied to `run-35430820382/`, 102 files identical | yes |
+| 10583663341 | validation-2026-09-19 | #35 (schedule) | success | yes: copied to `run-35441721374/`, 102 files identical | yes |
+| 10585998457 | validation-2026-09-19 | #36 (schedule) | success | yes: `fixtures/2026-09-19/`, 102 of 102 files identical | yes |
+| 10600614400 | validation-2026-09-20 | #37 (workflow_dispatch) | success | yes: copied to `run-35498355630/`, 109 files identical | yes |
+| 10605172718 | validation-2026-09-20 | #38 (schedule) | success | yes: copied to `run-35511079914/`, 109 files identical | yes |
+| 10608030538 | validation-2026-09-20 | #39 (schedule) | success | yes: `fixtures/2026-09-20/`, 109 of 109 files identical | yes |
+| 10628392861 | validation-2026-09-21 | #40 (workflow_dispatch) | success | yes: copied to `run-35575642342/`, 111 files identical | yes |
+| 10646171184 | validation-2026-09-21 | #41 (schedule) | success | yes: copied to `run-35612635669/`, 111 files identical | yes |
+| 10653609632 | validation-2026-09-21 | #42 (schedule) | success | yes: `fixtures/2026-09-21/`, 111 of 111 files identical | yes |
+| 10683790002 | validation-2026-09-22 | #43 (workflow_dispatch) | success | yes: copied to `run-35702453954/`, 104 files identical | yes |
+| 10695587781 | validation-2026-09-22 | #44 (schedule) | success | yes: copied to `run-35729429874/`, 104 files identical | yes |
+| 10704880189 | validation-2026-09-22 | #45 (schedule) | success | yes: `fixtures/2026-09-22/`, 104 of 104 files identical | yes |
+| 10739646551 | validation-2026-09-23 | #46 (workflow_dispatch) | success | yes: copied to `run-35834681015/`, 103 files identical | yes |
+| 10752383058 | validation-2026-09-23 | #47 (schedule) | success | yes: copied to `run-35863959039/`, 103 files identical | yes |
+| 10762330233 | validation-2026-09-23 | #48 (schedule) | success | yes: copied to `run-35882453048/`, 103 files identical | yes |
+| 10764411818 | validation-2026-09-23 | #49 (workflow_dispatch) | success | yes: `fixtures/2026-09-23/`, 103 of 103 files identical | yes |
+| 10796863025 | validation-2026-09-24 | #50 (workflow_dispatch) | success | yes: copied to `run-35972703829/`, 102 files identical | yes |
+| 10808717825 | validation-2026-09-24 | #51 (schedule) | success | yes: copied to `run-36001817834/`, 102 files identical | yes |
+| 10819167230 | validation-2026-09-24 | #52 (schedule) | success | yes: `fixtures/2026-09-24/`, 102 of 102 files identical | yes |
+| 10853498056 | validation-2026-09-25 | #53 (workflow_dispatch) | success | yes: copied to `run-36110551236/`, 101 files identical | yes |
+| 10866505514 | validation-2026-09-25 | #54 (schedule) | success | yes: copied to `run-36137886447/`, 101 files identical | yes |
+| 10874866801 | validation-2026-09-25 | #55 (schedule) | success | yes: `fixtures/2026-09-25/`, 101 of 101 files identical | yes |
+| 10901597243 | validation-2026-09-26 | #56 (workflow_dispatch) | success | yes: copied to `run-36228530941/`, 100 files identical | yes |
+| 10906376412 | validation-2026-09-26 | #57 (schedule) | success | yes: copied to `run-36241817965/`, 100 files identical | yes |
+| 10909745203 | validation-2026-09-26 | #58 (schedule) | success | yes: `fixtures/2026-09-26/`, 100 of 100 files identical | yes |
+| 10927097712 | validation-2026-09-27 | #59 (workflow_dispatch) | success | yes: copied to `run-36304885098/`, 105 files identical | yes |
+| 10932474530 | validation-2026-09-27 | #60 (schedule) | success | yes: copied to `run-36321794013/`, 105 files identical | yes |
+| 10935349591 | validation-2026-09-27 | #61 (schedule) | success | yes: `fixtures/2026-09-27/`, 105 of 105 files identical | yes |
+| 10958536432 | validation-2026-09-28 | #62 (workflow_dispatch) | success | yes: copied to `run-36394887115/`, 107 files identical | yes |
+| 10980928108 | validation-2026-09-28 | #63 (workflow_dispatch) | success | yes: copied to `run-36444497029/`, 107 files identical | yes |
+| 10981169207 | validation-2026-09-28 | #64 (schedule) | success | yes: copied to `run-36446873093/`, 107 files identical | yes |
+| 10991042419 | validation-2026-09-28 | #65 (schedule) | success | yes: `fixtures/2026-09-28/`, 107 of 107 files identical | yes |
+| 11043558095 | validation-2026-09-29 | #68 (workflow_dispatch) | success | yes: copied to `run-36589936472/`, 100 files identical (after a retry) | yes |
+| 11049499176 | validation-2026-09-29 | #69 (schedule) | success | yes: `fixtures/2026-09-29/`, 100 of 100 files identical | yes |
+
+**Block C: queue item 16, the eligibility freshness guard.**
+
+- **The rule.** `web/lib/freshness.js` exports `staleEligibility(games, broadcasts, eligibility)`. A game
+  fails when its eligibility row (profile 1) is more than 26 hours older than the newest `last_seen_at`
+  among its `game_broadcasts` rows, or when it has broadcast rows and no eligibility row. A game with no
+  broadcast rows is out of scope.
+- **The live check.** `web/scripts/smoke.mjs` section (g) applies the rule to the next 7 ET viewing days.
+  It uses three `restAll` reads: the games by `viewing_day` range, then their broadcasts and eligibility
+  by chunked id lists. The anon role was confirmed first to read both `game_broadcasts.last_seen_at` and
+  `viewer_game_eligibility.computed_at`.
+- **Rule 19.** `web/test/restcap.test.mjs` walks `lib/queries.js` only. So the rule-19 pin for these
+  reads (every read in section (g) is `restAll`) lives in `web/test/freshness.test.mjs`, beside the
+  rule's fixture tests.
+- **The fixture tests (6).** One fresh game, deliberately 3 hours behind its broadcasts; one stale game,
+  27 hours behind; one game with broadcasts and no eligibility row; and one with no broadcasts. Plus the
+  26-hour boundary, which is exact at 26 hours and fails a minute later, and the smoke wiring.
+- **First live run: green** on 2026-09-29..10-05: 146 games, 133 with broadcasts, 0 stale. Smoke goes
+  33 → 34.
+- **Three mutations each go red in `test:unit`:**
+  - the comparison flipped (3 tests failed);
+  - the window set to 0 hours (4 failed);
+  - the missing-row branch dropped (2 failed).
+- **The brief expected the 0-hour window to turn live data red. It does not:** live smoke stayed 34/34,
+  with 0 stale. Since prompt 123 every eligibility row is computed after its broadcasts' last sighting,
+  so live lag is at or below zero. The fixture's fresh game, 3 hours behind, is what catches that
+  mutation.
+
+**Also recorded:** the Block A gate run's first `qa-shots` pass was 144/145, on the pinch check "the
+same pinch 60px lower" (`scrollWidth` 1355 → 1355), with no web file changed. The single re-run
+allowed was 145/145 (1355 → 848). It is recorded as a flake of a gesture test on a slow dev server,
+not waved through.
+
+**Out of scope, deliberately:** the Worker, its token and Cloudflare; `render_all.yml`,
+`bootstrap_season.yml` and `backup_schema.yml`; the success path's prefix and behaviour; any R2
+deletion (S7); the FOX late-window question.
