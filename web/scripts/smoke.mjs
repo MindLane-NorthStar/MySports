@@ -16,11 +16,14 @@
 //
 // Exits non-zero on the first failure. Reads nothing secret: the anon key is publishable.
 
-import { rest, restAll, RestError } from '../lib/rest.js';
+import { rest, restAll, inList, RestError } from '../lib/rest.js';
 import proColours from '../../data/grid_colors_pro.json' with { type: 'json' };
 import { SUPABASE_URL, ASSET_BASE_URL, gridAssetUrl } from '../lib/config.js';
 import { indexStandings, standingLine } from '../lib/standings.js';
 import { isPlaceholderTeam, placeholderReason } from '../lib/placeholders.js';
+import { staleEligibility, FRESHNESS_DAYS, FRESHNESS_HOURS } from '../lib/freshness.js';
+import { todayET } from '../lib/format.js';
+import { addDays } from '../lib/weeks.js';
 
 let failures = 0;
 let checks = 0;
@@ -231,6 +234,40 @@ console.log('\n(f) standings, probables, display names, MLB short names');
          'the only unruled pro rows are TBD placeholders',
          `${exempt.length} placeholder${exempt.length === 1 ? '' : 's'} exempted: ${exempt.join('; ') || 'none'}`
          + (notPlaceholder.length ? ` | NOT placeholders: ${notPlaceholder.join('; ')}` : ''));
+}
+
+// ---------------------------------------------------------------- (g) eligibility freshness
+// Prompt 125, queue item 16 (register §66, §69). From 2026-09-05 until prompt 123 a change in who can
+// watch a game reached game_broadcasts and never reached viewer_game_eligibility, and nothing went red.
+// The RULE is lib/freshness.js's, unit-tested on fixture rows in test/freshness.test.mjs; this applies
+// it to the next 7 ET viewing days of live rows. It is red when the reconciler has stopped re-judging
+// games whose broadcasts moved - a day of failed reconciles, or register §66 coming back.
+//
+// BOUNDED, RULE 19: all three reads page with restAll. The games are a 7-day viewing_day range (146 on
+// 2026-09-29); the other two are keyed by those games' ids, in chunks so no URL grows with the slate.
+console.log(`\n(g) eligibility freshness - the next ${FRESHNESS_DAYS} viewing days`);
+{
+  const start = todayET();
+  const end = addDays(start, FRESHNESS_DAYS - 1);
+  const games = await restAll(
+    `games?select=id,sport,viewing_day&viewing_day=gte.${start}&viewing_day=lte.${end}&order=id.asc`);
+  const ids = games.map((g) => g.id);
+  const broadcasts = [];
+  const eligibility = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    const chunk = inList(ids.slice(i, i + 100));
+    broadcasts.push(...await restAll(`game_broadcasts?select=game_id,last_seen_at&game_id=in.${chunk}&order=id.asc`));
+    eligibility.push(...await restAll(
+      `viewer_game_eligibility?select=game_id,computed_at&viewer_profile_id=eq.1&game_id=in.${chunk}&order=game_id.asc`));
+  }
+  const stale = staleEligibility(games, broadcasts, eligibility);
+  const inScope = new Set(broadcasts.map((b) => b.game_id)).size;
+  assert(stale.length === 0,
+         `no game in the next ${FRESHNESS_DAYS} viewing days has eligibility more than ${FRESHNESS_HOURS}h older than its broadcasts`,
+         stale.length
+           ? stale.slice(0, 8).map((g) => `${g.id} (${g.why}${g.lagHours === null ? '' : `, ${g.lagHours}h`})`).join('; ')
+             + (stale.length > 8 ? ` and ${stale.length - 8} more` : '')
+           : `${start}..${end}: ${games.length} games, ${inScope} with broadcasts, 0 stale`);
 }
 
 console.log(`\n${failures === 0 ? 'OK' : 'FAILED'} - ${checks - failures}/${checks} checks passed`);
