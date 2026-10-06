@@ -10,7 +10,7 @@ sections, and the older measurement records. **This file stays the authority for
 repo state, gate floors, open items; since prompt 89 the working rules are `CLAUDE.md`'s alone. Read
 the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§70 — this said §1–§39 until prompt 99 corrected it, §1–§53 until prompt 111 did and §1–§61 until prompt 123 did, counted each time; all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§71 — this said §1–§39 until prompt 99 corrected it, §1–§53 until prompt 111 did and §1–§61 until prompt 123 did, counted each time; all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **133 briefs, covering 01–126, counted 2026-09-30 by prompt 126 (115 reserved)
-(132 after prompt 125; 131 after prompt 121 rev B; 130 after prompt 124; 129 after prompt 123; 123 after prompt 116, and prompts 117–122 did not move this line though the README's count did; 122 after prompt 114 rev B; 121 after prompt 114; 120 after prompt 113 rev C; 118 after prompt 113; 117 after prompt 112; 116 after prompt 111; 107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - **`docs/prompts/README.md` "Duplicate numbers" owns this count**: seven numbers as the README counts them (23, 26, 43, 48 and 114 two each, 86 and 113 three; `13-14-combined` has its own row and is deliberately not counted under 13), eight if it is — which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **134 briefs, covering 01–127, counted 2026-10-05 by prompt 127 (115 reserved)
+(133 after prompt 126; 132 after prompt 125; 131 after prompt 121 rev B; 130 after prompt 124; 129 after prompt 123; 123 after prompt 116, and prompts 117–122 did not move this line though the README's count did; 122 after prompt 114 rev B; 121 after prompt 114; 120 after prompt 113 rev C; 118 after prompt 113; 117 after prompt 112; 116 after prompt 111; 107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - **`docs/prompts/README.md` "Duplicate numbers" owns this count**: seven numbers as the README counts them (23, 26, 43, 48 and 114 two each, 86 and 113 three; `13-14-combined` has its own row and is deliberately not counted under 13), eight if it is — which is why the file
 count runs ahead of the highest number. (Prompt 111 wrote "six" here after counting the directory; the old "five" it replaced was (13, 23, 26, 43, 86), wrong in both directions — it counted 13 and omitted 48, which has carried two since prompt 93 — and prompt 112 pointed this line at the README rather than keep a second copy.) **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -66,6 +66,27 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > appended a `Re-measured … prompt NN` line beneath it without touching the sentence above them, so
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
+
+**Measured 2026-10-05, prompt 127: `test:unit` 678 → 701 and `qa-shots` 145 → 146; `pytest` 732 passed + 1 skipped and
+smoke 34/34 did not move, and geometry all hard stops, the MLB span re-pinned 393.4 → 396.4 by Joe's ruling.** Written
+after the last gate run.
+
+- **Why the floors moved.** `web/test/mygames.test.mjs` adds 21 tests of the new address, and `placeholders.test.mjs`
+  adds 2 for Joe's new placeholder form. `qa-shots` adds one check that requests `/api/my-games` from the dev server.
+- **`/api/my-games` is live** (register §71; deployment contract v1.0.8). It is read-only JSON with no parameter: Joe's
+  favourite teams' games from the current viewing day through the next seven, as the list card shows them, with
+  today's live scores. MyDash reads it. On 2026-10-05 the dev server answered 200 with 22 games. Cowork checks the
+  production host on its first read.
+- **The card's rules moved into `web/lib/`** so the route can call them: `cardName` to `cardname.js`, and the mark
+  the card wears (`cardMark`) and a row's name (`broadcastName`) to `cardbroadcast.js`. Nothing the card draws changed.
+- **Smoke went red at 33/34 on the LCS placeholders**, "NL Higher Seed" and "NL Lower Seed", as queue item 12
+  predicted. Joe ruled the form in mid-run (register §60, 2026-10-05). Smoke now exempts 14 placeholders.
+- **Geometry's MLB 2026-09-03 span read 396.38, outside 393.4 ± 2.** The untouched tree at `cd18385` read the same,
+  so it was the data: `widest` fell 87.08 → 75.10, and about 44 fixed pixels in `scrollWidth` count for more
+  "minutes" at the smaller scale. Joe ruled the re-pin. Queue item 19 describes the mechanism.
+- **Two queue items are new:** 19 (above) and 20, the page losing a late game's live score from midnight to 3 AM.
+- All five gates ran on the final tree with the dev server at `http://localhost:3000`. Nothing of this run's was left
+  running.
 
 **Measured 2026-09-30, prompt 126: `test:unit` 663 → 678; `pytest` 732 passed + 1 skipped, smoke 34/34, `qa-shots` 145/145
 and geometry all hard stops did not move.** Written after the last gate run.
@@ -926,6 +947,10 @@ stages fixed things that were WRONG rather than adding anything, and two had shi
 **https://my-sports-xi.vercel.app** — Vercel project `my-sports`, team `mindlane-northstar` (Pro),
 Root Directory `web`. **Leave Vercel Authentication on Standard Protection.** Do not buy Advanced
 Deployment Protection. Every push to `main` is the production deploy.
+
+**`https://my-sports-xi.vercel.app/api/my-games`** — read-only JSON, no parameter, open like the rest
+of the app: Joe's favourite teams' games from the current viewing day through the next seven, as the
+list card shows them, with today's live scores. MyDash reads it (prompt 127, register §71).
 
 **Akamai does not block Vercel** (probe from `iad1`, four 200s). The 403 is specific to the Cowork
 cloud workspace. **Never reapply a bare browser UA.**

@@ -6063,3 +6063,106 @@ not DIRECTV was not checked by this run.
 broadcast rows, access statuses); the Python archived-grid renderer and the desktop grid, which
 follows `docs/rendering-contract.md` §5 rule 4; `programBroadcast()`, the Cavaliers collapse and
 `simulcastLanes()`; the `hasMark` list and every network logo.
+
+## 71. ONE READ-ONLY ADDRESS ANSWERS WITH JOE'S TEAMS' GAMES FOR THE WEEK — 2026-10-05, prompt 127
+
+**Numbered by count:** §1–§70 each appear exactly once and there was no §71.
+
+**Joe's ruling, 2026-10-05.** Another app of his, MyDash, draws small score boxes for his own teams:
+who plays, when, where, on what broadcast, and the live score. It reads the games **from MySports'
+own read-only address** and works out nothing for itself. So the address says what MySports' own card
+says, by calling the card's own code (rule 32). Cowork recommended the shape below and Joe ran the
+brief without a veto.
+
+**The address: `GET /api/my-games`** (`web/app/api/my-games/route.js`, built by `web/lib/mygames.js`).
+
+- **What it answers.** Every game one of Joe's favourite teams plays (`isFavorite`, over game rows
+  only), from the current viewing day through the next seven, in the page's own order. One
+  `gamesForRange` read with no sport supplies the rows, and today's favourites' games get the live
+  overlay, as the week page applies it.
+- **The shape.** Each game carries its id, sport, viewing day, kickoff (null wherever the card prints
+  TBD), kickoff status, status, clock and period. It also carries the card's right-slot verdict
+  (`slotContent` with no favourite: kind and label), the neutral-site flag, and the venue. Each side
+  carries the card's name (`cardName`), abbreviation, `_dark` logo (null for a placeholder),
+  both colours as stored, and a score. The score is null unless the card shows one, so a stale live
+  row carries none. The broadcast carries the row's name and the absolute address of the mark the
+  card wears. The answer's keys are always present, with null where there is no value.
+- **What it refuses.** Any parameter, since it reads no query string. It also carries no programs,
+  no odds, and no word on whether Joe can watch (off-service, market pending, network TBD). The last
+  is Joe's call for another day. Because no odds are carried, a priced scheduled game reads `none`
+  where the card draws a line.
+- **It is open**, like the rest of the app (no sign-in; deployment contract D4, v1.0.8). It shows
+  which teams Joe follows, which `data/favorites.json` in the public repo already publishes. It sends
+  `Cache-Control: no-store` and no CORS header: MyDash reads it from its own server.
+- **A failed database read** answers 200 with the five keys, no games, and an `error` cut to 200
+  characters, as `/api/live` does. It never throws.
+
+**Its day changes at 3 AM; the page's changes at midnight, and that is on purpose.** The first day
+is `viewingDayOf(new Date())`, the app's own 03:00 ET cutover, because a game is filed under its
+viewing day. Under the page's calendar today (`todayET()`), a West Coast game still in progress at
+12:30 AM would drop out of the score boxes mid-play. The page is unchanged; `docs/queue.md` item 20
+describes its version of the gap, and whether it should follow is Joe's.
+
+**The rules moved into `web/lib/`, and why.** `MatchupCard.js` is JSX and `node --test` cannot
+import it, and a second copy of the card's rules in the route is the defect rule 32 names. So:
+
+- `cardName` moved to `web/lib/cardname.js`. `MatchupCard.js` re-exports it under the same name, so
+  GameDetail and MobileGrid import it unchanged.
+- The mark the card wears moved into `cardMark()` in `web/lib/cardbroadcast.js`, beside
+  `cardBroadcast` (prompt 126's move, for the same reason): the Cavaliers composite first, else the
+  named row's own mark. The card calls it; its markup and what it draws do not change. Under a
+  composite the address sends no name, because the row `cardBroadcast` names there is one outlet of
+  several.
+- `broadcastName()` in the same file is the words GameDetail and the grid rail print for a row. The
+  card prints no network name. A source-text test holds every copy to it.
+- The three pins on the card's old text moved to the new definitions and to the card's call of
+  them; none was deleted or loosened.
+
+**Rule 19.** `gamesForRange` now has two callers, and its written bound in
+`web/test/restcap.test.mjs` says so. Measured 2026-10-05 over all 4,217 loaded games (2026-08-29 to
+2027-04-11): the heaviest eight-day window is 329 games, and eight copies of the heaviest day (95)
+is 760, under the cap. So it stays `rest()`.
+
+**The privacy gate covers it.** The open item in `docs/handoff-status.md`, "The privacy gate before
+the Cavs season", covers this address as it covers the card. Rule 8 reads as it does there: the
+payload names call signs and services exactly as the card does, and never who told Joe anything.
+
+**Rule 23.** `docs/design/mobile_demo.html` implements nothing this changes. Searched for
+`cardName`, `cardMark`, `cardBroadcast`, `broadcastName`, `my-games`, `/api/` and `is_primary`: no
+match.
+
+**The tests** (`web/test/mygames.test.mjs`, 21). The fixture rows are `GAME_SELECT`'s exact shape,
+held to it by the first test. The tests cover the favourites filter, the page's order, the overlay's
+rows, a team, a broadcast, every slot state, the venue, the exact keys and the failed read. The
+wiring is pinned as source text: the route reads no query string, takes `viewingDayOf(`, calls
+`gamesForRange(` once and sends `no-store`. Every `in_progress` kickoff is computed from `Date.now()`.
+
+**Five mutations, each red, the file restored byte for byte:**
+
+| Mutation | Test that fails |
+|---|---|
+| the favourites filter dropped | only favourites' games come back |
+| the overlay handed the whole range | the overlay is handed only today's favourites |
+| the pick's own mark, collapse skipped | the Cavaliers simulcast; the same-place wiring |
+| a placeholder's logo returned | a placeholder team has no logo address |
+| a stale row's scores returned | a stale live row carries no score |
+
+`web/scripts/probes/test-mutation.mjs` reported no problem in the three test files that read source.
+
+**One check against the running app** (`web/scripts/qa-shots.mjs`, 145 → 146). It requests
+`/api/my-games` and asserts the shape, not the number of games. On 2026-10-05 it read 200,
+`no-store`, today 2026-10-05, 22 games, none malformed.
+
+**Where the tree contradicted the brief (rule 22).**
+
+- The brief said a row's name is written twice. It is written three times: `GameDetail.js:375`, the
+  where-to-watch list, is a third copy. The test holds all three to `broadcastName()`.
+- `MobileGrid.js:616`, the awaiting-kickoff tray, prints a different rule:
+  `cardBroadcast(g)?.network?.canonical_name || 'Network TBA'`. It is not touched.
+- `web/README.md` and `docs/app-skeleton.md` still describe `/weeks` and `/history`, retired by
+  prompt 50. Each got only the brief's one line per JSON route.
+
+**Two rulings Joe made mid-run, at the gate.** Smoke went red on the LCS placeholders, and Joe
+ruled the higher/lower-seed form in (§60, 2026-10-05). The geometry stop moved on MLB 2026-09-03.
+Run side by side, the untouched tree at `cd18385` read the same 396.38 minutes, so it was the data.
+Joe re-pinned it, and `docs/queue.md` item 19 records why the span moves when only `widest` does.

@@ -441,3 +441,33 @@ accept a re-pin whenever `widest` moves far on a day with a seam.
 `web/lib/gridmodel.js:117-124`, `web/components/MobileGrid.js:70` and `:482-492`, and `CLAUDE.md`'s
 "The phone-grid geometry check". **Size.** Small. **A description of a problem, not an approved
 plan.**
+
+## 20. From midnight to 3 AM the page loses a late game's live score
+
+**What.** The page's "today" is the calendar date in ET: `todayET()` (`web/lib/format.js:162-170`),
+read at `web/app/page.js:262`. A game is filed under its **viewing day**, which changes at 03:00 ET
+(the pipeline's `viewing_day`; `viewingDayOf()`, `web/lib/programs.js:276`). So from midnight to
+3 AM, a late game still in progress belongs to yesterday's viewing day while the page's today is
+already the new date. The two pages then behave like this:
+
+- **Today's page** does not show the game, because it is filed under yesterday.
+- **Yesterday's page** shows it but makes no live check, because `sportsWorthFetching` returns
+  nothing unless `day === today` (`web/lib/livescores.js:230-240`). The card keeps the database's
+  score.
+- **The live poll** decides the same way, since `/api/live` also takes `todayET()`
+  (`web/app/api/live/route.js:50`).
+
+A West Coast game in its late innings at 12:30 AM therefore sits on the page with a frozen score.
+
+**What prompt 127 did, and did not do.** `/api/my-games` takes its first day from
+`viewingDayOf(new Date())`, so the address keeps that game's live score past midnight (register
+§71). The page was left exactly as it is, on purpose.
+
+**The decision that is Joe's.** Whether the page and `/api/live` should follow the viewing day too.
+It is more than one line: the same `today` picks the day the page opens on (`resolveHubParams(raw,
+today)`, `page.js:263`), which day draws the now marker, where AutoScroll lands, and which day of a
+week polls.
+
+**Where it starts.** `web/lib/format.js:162-170`, `web/app/page.js:262-263`,
+`web/app/api/live/route.js:50`, `web/lib/livescores.js:230-240`, `web/lib/programs.js:276`.
+**Size.** Small to medium. **A description of a problem, not an approved plan.**
