@@ -73,7 +73,12 @@ test('the service set is read off the GAME, never from data/local_rights.json', 
   assert.doesNotMatch(code('lib/marks.js'), /local_rights/, 'marks.js must not read the announcement file');
   const card = code('components/MatchupCard.js');
   assert.doesNotMatch(card, /local_rights|simulcast_outlets/, 'nor may the card');
-  assert.match(card, /const collapsed = cardMarkSlug\(game\);/);
+  // The collapse is asked in lib/cardbroadcast.js's `cardMark` since prompt 127, and the card wears
+  // what it returns - so the function the card calls is held to the same rule as the card.
+  const wears = code('lib/cardbroadcast.js');
+  assert.doesNotMatch(wears, /local_rights|simulcast_outlets/, 'nor may the function the card wears');
+  assert.match(wears, /const collapsed = cardMarkSlug\(game\);/);
+  assert.match(card, /const mark = cardMark\(game\)\.url;/);
 });
 
 // ------------------------------------------- the grid's half of the ruling: a lane per network

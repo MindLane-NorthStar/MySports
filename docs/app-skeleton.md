@@ -113,6 +113,11 @@ once, at the first load that sees `result_status = 'final'`, and never overwritt
 event card is the click target. A final game with no `boxscore_url` renders as a plain card rather
 than a dead link.
 
+### JSON routes
+
+- `GET /api/live?day=YYYY-MM-DD` — the live overlay for one viewing day: `games?select=id,sport,result_status&viewing_day=eq.{day}` (paged), then the providers, for today only (`web/app/api/live/route.js`).
+- `GET /api/my-games` — no parameter: Joe's favourite teams' games from the current viewing day (03:00 ET cutover) through the next seven, one `gamesForRange` read with no sport plus today's live overlay, in the card's own words (`web/app/api/my-games/route.js`, register §71).
+
 ## Page chrome — Banner, NavBanner, layout routing
 
 The home page (`/`) opens on the full banner; `/weeks` and `/history` wear a compact bar cut from the

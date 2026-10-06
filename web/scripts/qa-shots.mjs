@@ -1349,6 +1349,37 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
+// ------------------------------------------ /api/my-games ANSWERS FROM THE RUNNING APP (prompt 127)
+//
+// `node --test` never compiles a route, and `next build` cannot run here (rule 12), so this is the one
+// place the route is proved to load and answer: test/mygames.test.mjs proves what it says. It asserts
+// the SHAPE and no number of games - the slate moves every day, and a check that fails on who plays
+// this week measures the schedule, not the route (the lesson the TBD block above records).
+{
+  const DAY = /^\d{4}-\d{2}-\d{2}$/;
+  let status = null;
+  let cache = null;
+  let body = {};
+  let failure = null;
+  try {
+    const res = await fetch(`${base}/api/my-games`);
+    status = res.status;
+    cache = res.headers.get('cache-control');
+    body = await res.json();
+  } catch (e) {
+    failure = String(e?.message ?? e).slice(0, 160);
+  }
+  const games = Array.isArray(body?.games) ? body.games : null;
+  const bad = (games || []).filter((g) => !g?.id || !g.home || !g.away || !DAY.test(g.viewingDay ?? '')
+    || g.viewingDay < body.start || g.viewingDay > body.end);
+  record('/api/my-games answers 200 with no error, a date for today, and every game has an id, two teams and a viewing day inside start..end',
+         status === 200 && body && !('error' in body) && DAY.test(body.today ?? '') && DAY.test(body.start ?? '')
+           && DAY.test(body.end ?? '') && games !== null && bad.length === 0,
+         `status ${status}, cache-control ${cache}, today ${body?.today}, ${body?.start}..${body?.end}, `
+           + `${games ? games.length : 'no'} games, ${bad.length} malformed`
+           + `${body && 'error' in body ? `, error: ${body.error}` : ''}${failure ? `, fetch failed: ${failure}` : ''}`);
+}
+
 // ------------------------------------------ THE iPAD'S HEADROOM, MEASURED AT FIVE VIEWPORTS (prompt 114)
 //
 // On the iPad the collapsed navbar and the tap-restored banner sit under iOS 27's scroll-edge scrim

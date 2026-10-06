@@ -53,8 +53,11 @@ const BOUNDED = {
     'one viewing day: `viewing_day=eq.` - the heaviest day loaded is 95 games (2026-09-12), and a ' +
     'day grows with the slate, not with the season',
   gamesForRange:
-    'an inclusive viewing_day range - its ONLY caller is the week page (app/page.js, `wk.start` to ' +
-    '`wk.end`), one calendar week; the heaviest week loaded is 229 games (w/c 2026-09-21). A caller ' +
+    'an inclusive viewing_day range, and it has TWO callers: the week page (app/page.js, `wk.start` ' +
+    'to `wk.end`), one calendar week, and /api/my-games (prompt 127), the current viewing day and the ' +
+    'seven after it - eight days. Measured 2026-10-05 over all 4,217 loaded games (2026-08-29 to ' +
+    '2027-04-11): the heaviest eight-day window is 329 games (from 2026-09-19), the heaviest seven 237, ' +
+    'and eight copies of the heaviest day (95, 2026-09-12) is 760, still under the cap. A caller ' +
     'passing a season-long range would need restAll, and this entry is what makes that visible',
   gamesForSeasonWeek:
     'one (sport, season, week) of a season-week sport: CFB week 1 is the largest at 99 games',

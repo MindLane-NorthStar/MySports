@@ -24,10 +24,10 @@
 
 import { useRef } from 'react';
 import { etTime, teamColor, dayParts, slotContent } from '../lib/format.js';
-import { teamLogoDarkUrl, markUrl } from '../lib/config.js';
+import { teamLogoDarkUrl } from '../lib/config.js';
 import TeamMark from './TeamMark.js';
-import { showsMark, cardMarkSlug } from '../lib/marks.js';
-import { cardBroadcast } from '../lib/cardbroadcast.js';
+import { cardBroadcast, cardMark } from '../lib/cardbroadcast.js';
+import { cardName } from '../lib/cardname.js';
 import { standingParts, standingFor, rankFor } from '../lib/standings.js';
 import { useTextMeasurer, useElementWidth } from '../lib/useTextMeasurer.js';
 import { fitNameAndRecord } from '../lib/cardGeometry.js';
@@ -35,10 +35,10 @@ import { fitNameAndRecord } from '../lib/cardGeometry.js';
 // STACK_H (54 = 22 + 16 + 16) is gone with markStyle(): the network mark is no longer sized against
 // the three-line stack, it is fitted to a fixed box per breakpoint in CSS.
 
-/** display_name is the media-standard short form; short_name is the fallback. Never the full name. */
-export function cardName(team, fallbackId) {
-  return team?.display_name || team?.short_name || team?.canonical_name || team?.abbreviation || fallbackId || 'TBD';
-}
+// The name a card prints for a team. THE RULE IS lib/cardname.js (prompt 127), for the reason the
+// note on `cardBroadcast` below gives: this file is JSX, and /api/my-games prints the same name. It
+// is still exported from here, which is where GameDetail and MobileGrid import it from.
+export { cardName };
 
 /**
  * The FIRST-PAINT size only. The real decision is fitNameAndRecord(), measured against the room the
@@ -167,15 +167,13 @@ export default function MatchupCard({ game, standings, rankings, showDay = false
   const bodyWidth = useElementWidth(bodyRef);
   const { measure } = useTextMeasurer();
   const { home, away, sport } = game;
-  const b = cardBroadcast(game);
   // THE CAVALIERS' SIMULCAST COLLAPSES TO ONE CARD (prompt 106, Joe 2026-09-16). The grid shows a
   // lane per network; the list shows one card wearing the composite for the services this game
-  // actually carries. `cardMarkSlug` derives that from the game's own rows - this component never
-  // reads data/local_rights.json, and null means "nothing to collapse", which is every other game in
-  // the app and leaves the line below exactly as it was.
-  const collapsed = cardMarkSlug(game);
+  // actually carries, and every other game wears its named row's own mark. `cardMark` composes the
+  // two, collapse first, from the game's own rows - this component never reads data/local_rights.json.
+  // It lives in lib/cardbroadcast.js since prompt 127, because /api/my-games names the same mark.
   // Just the URL. The mark's box is CSS now, per breakpoint, so the card never computes hf.
-  const mark = collapsed ? markUrl(collapsed) : (showsMark(b) ? markUrl(b.service_id) : null);
+  const mark = cardMark(game).url;
   const fav = favourite(game);
   // Contract v1.6.6: the right slot's five rungs, decided once in a pure function so the
   // ORDERING can be tested without a DOM. See web/lib/format.js.

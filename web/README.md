@@ -54,6 +54,8 @@ come near this app. Nothing here can write to the database.
 | `/` **Today** | One viewing day, with a date picker and a sport filter. Time in ET, away @ home with each team's colour as the card seam, network name, TBD/Final/Live state, final scores. When `generated_grids` has a row for the selected (sport, day), the newest archived grid SVG is shown from R2 above the listing. |
 | `/weeks` **Weeks** | The two-week-concept model as day-column **listings** — never a grid. Calendar view: ISO Monday–Sunday over `viewing_day`, all sports. Season view: NFL/CFB provider week labels, each with its span **derived** from the games carrying that label. |
 | `/history` **History** | `result_status = 'final'` newest first, with scores and a search box (team or network). Each card is a whole-card link to `boxscore_url`, opened in a new tab; the raw URL is never displayed. |
+| `/api/live?day=` **JSON** | The live overlay for one viewing day: status, score, clock and period, for today only, re-read from the database by the server (prompt 77). Today's list polls it once a minute. |
+| `/api/my-games` **JSON** | Read-only, no parameter: Joe's favourite teams' games from the current viewing day through the next seven, as the list card shows them, with today's live scores. MyDash reads it (prompt 127, register §71). |
 
 `viewing_day` — not `game_date` — is the day bucket everywhere, because the pipeline buckets on the
 03:00 ET cutover: a game that tips at 10:40pm and ends after midnight belongs to the night you sat

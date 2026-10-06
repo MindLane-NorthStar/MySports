@@ -23,6 +23,7 @@ import { dirname, join } from 'node:path';
 
 import { cardBroadcast } from '../lib/cardbroadcast.js';
 import { cardMarkSlug, simulcastLanes, hasMark, showsMark } from '../lib/marks.js';
+import { region } from './region.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const src = (p) => readFileSync(join(HERE, '..', p), 'utf8');
@@ -231,18 +232,23 @@ test('a Cavaliers simulcast game still collapses exactly as before', () => {
   const alone = { broadcasts: [dazn()], eligibility: verdict(true, 'stream only: dazn', null, ['dazn']) };
   assert.equal(cardMarkSlug(alone), null);
   assert.equal(cardBroadcast(alone).service_id, 'dazn');
-  // and the card still asks the collapse FIRST, before the pick this rule makes
-  assert.match(code('components/MatchupCard.js'),
-    /const mark = collapsed \? markUrl\(collapsed\) : \(showsMark\(b\) \? markUrl\(b\.service_id\) : null\);/);
+  // and the card still asks the collapse FIRST, before the pick this rule makes. The line moved into
+  // lib/cardbroadcast.js's `cardMark` with prompt 127, and the card wears what it returns.
+  assert.match(region(code('lib/cardbroadcast.js'), 'export function cardMark(', 'export function broadcastName(', 'cardMark'),
+    /url: collapsed \? markUrl\(collapsed\) : \(showsMark\(b\) \? markUrl\(b\.service_id\) : null\),/);
+  assert.match(code('components/MatchupCard.js'), /const mark = cardMark\(game\)\.url;/);
 });
 
 // ------------------------------------------------------------ one rule, reached from both surfaces
 test('the card and the grid lane call the same function, and the query fetches what it reads', () => {
   const card = code('components/MatchupCard.js');
-  assert.match(card, /import \{ cardBroadcast \} from '\.\.\/lib\/cardbroadcast\.js';/);
+  assert.match(card, /import \{ cardBroadcast, cardMark \} from '\.\.\/lib\/cardbroadcast\.js';/);
   assert.match(card, /export \{ cardBroadcast \};/);
   assert.doesNotMatch(card, /function cardBroadcast/, 'no second copy of the rule in the component');
-  assert.match(card, /const b = cardBroadcast\(game\);/);
+  // the card reaches the rule through `cardMark`, which calls it (prompt 127), and wears its mark
+  assert.match(region(code('lib/cardbroadcast.js'), 'export function cardMark(', 'export function broadcastName(', 'cardMark'),
+    /const b = cardBroadcast\(game\);/);
+  assert.match(card, /const mark = cardMark\(game\)\.url;/);
   const grid = code('components/MobileGrid.js');
   assert.match(grid, /import \{ cardName, cardBroadcast \} from '\.\/MatchupCard\.js';/);
   assert.match(grid, /programBroadcast\(g\) : cardBroadcast\(g\)\]\.filter\(Boolean\)/, 'the lane is chosen by it');

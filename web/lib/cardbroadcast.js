@@ -25,8 +25,16 @@
 // WHAT THIS DOES NOT TOUCH: `cardMarkSlug()` and `simulcastLanes()` in lib/marks.js (the Cavaliers
 // collapse, which the card consults BEFORE this pick), `programBroadcast()` in ProgramCard.js, and
 // GameDetail, which lists every active row.
+//
+// THE MARK THE CARD WEARS AND A ROW'S NAME LIVE HERE TOO (prompt 127). `/api/my-games` answers with
+// what the card shows, and a second copy of either rule in the route is the defect rule 32 names.
+// `cardMark()` is the line MatchupCard used to compose inline - the collapse first, then this pick's
+// own mark - and the card now calls it. `broadcastName()` is the words GameDetail and MobileGrid's
+// rail print for a row; the card prints no network name at all (lib/marks.js, `showsMark`), so that
+// one is the panel's rule, and test/mygames.test.mjs holds both components' copies to it.
 
-import { showsMark } from './marks.js';
+import { showsMark, cardMarkSlug } from './marks.js';
+import { markUrl } from './config.js';
 
 /** The reconciler's verdict row; the embed arrives as an array or an object (lib/offservice.js). */
 function eligibilityRow(game) {
@@ -52,4 +60,27 @@ export function cardBroadcast(game) {
     if (showsMark(row)) return row;
   }
   return pick;
+}
+
+/**
+ * The mark the list card wears, with the row it names.
+ *
+ * THE CAVALIERS' SIMULCAST COLLAPSES TO ONE CARD (prompt 106, Joe 2026-09-16): `cardMarkSlug` derives
+ * the composite from the game's own rows and is asked FIRST, before the pick above. Null there means
+ * "nothing to collapse", which is every other game, and the card wears the pick's own mark when it
+ * has one. `url` is a path under this site, versioned; `composite` is the composite's slug or null.
+ */
+export function cardMark(game) {
+  const b = cardBroadcast(game);
+  const collapsed = cardMarkSlug(game);
+  return {
+    broadcast: b,
+    composite: collapsed,
+    url: collapsed ? markUrl(collapsed) : (showsMark(b) ? markUrl(b.service_id) : null),
+  };
+}
+
+/** A broadcast row's name in words: the network's, then the row's own label, then the service id. */
+export function broadcastName(b) {
+  return b.network?.canonical_name || b.label || b.service_id;
 }
