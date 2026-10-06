@@ -5036,6 +5036,18 @@ The four sides render the TBD badge through `TeamMark`, since the same predicate
 and World Series rows will arrive in a form nobody has seen yet**, and are meant to turn the check red
 in their turn.
 
+**2026-10-05 — JOE'S RULING: THE HIGHER/LOWER-SEED FORM IS IN (prompt 127's gate run).** The League
+Championship Series rows loaded with sides named `mlb-5517` "NL Higher Seed" and `mlb-5525` "NL Lower
+Seed", and smoke went red on them (33/34), as item 12 of `docs/queue.md` predicted. Joe ruled the form
+in as published, the same way as the Wild Card and Division Series forms:
+`/^(AL|NL) (#\d+ Seed|Wild Card #\d+|\d+\/\d+ Winner|Higher Seed|Lower Seed)$/`. Pinned in
+`web/test/placeholders.test.mjs` (+2): both names, and the AL spelling of each, pass as
+`mlb-pattern`; `NL Higher Seeds`, lower-case `higher seed`, `Highest` and `Middle`, a missing `Seed`,
+`NLCS Higher Seed`, both anchors and a non-MLB sport all fail. Two mutations, each red then restored:
+dropping the new alternative, and loosening it to any word before `Seed`. `smoke.mjs`'s comment,
+which still said "two forms", now names all four. **The World Series form is not guessed**, by
+Joe's instruction: it is meant to turn the check red in its turn.
+
 ## 61. POSTSEASON GAMES TAKE THEIR REAL TEAMS, AND PLACEHOLDERS SHOW A TBD BADGE — 2026-09-23, prompt 116
 
 **Numbered by count:** §1–§60 each appear exactly once and there was no §61.

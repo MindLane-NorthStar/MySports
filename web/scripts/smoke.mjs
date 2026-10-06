@@ -223,10 +223,11 @@ console.log('\n(f) standings, probables, display names, MLB short names');
   assert(wrongSport.length === 0, 'every ruled team is in the sport the table says',
          wrongSport.length ? wrongSport.join(', ') : `${ruledIds.length} agree`);
   // WHAT A PLACEHOLDER IS lives in lib/placeholders.js (prompt 114 rev B, Joe's ruling 2026-09-23):
-  // a `-TBD` id, or an MLB row named for a postseason seed or wild card slot in one of the two forms
-  // MLB has published. The 2026-09-23 refresh loaded seven of the latter and this check went red,
-  // which is what it is for - and a form nobody has ruled on yet is MEANT to turn it red again. The
-  // detail names every row this exempted and why, so a green run still shows the reader the seven.
+  // a `-TBD` id, or an MLB row named in one of the forms MLB has published and Joe has ruled in - a
+  // seed, a wild card slot, a series winner (2026-09-28) and a higher or lower seed (2026-10-05). Each
+  // ruling followed this check going red on the new form, which is what it is for, and a form nobody
+  // has ruled on yet is MEANT to turn it red again. The detail names every row this exempted and why,
+  // so a green run still shows the reader each one.
   const proUnruled = allTeams.filter((t) => t.sport !== 'cfb' && !proColours.teams[String(t.id)]);
   const exempt = proUnruled.filter(isPlaceholderTeam).map((t) => `${t.id} "${t.canonical_name}" (${placeholderReason(t)})`);
   const notPlaceholder = proUnruled.filter((t) => !isPlaceholderTeam(t)).map((t) => `${t.id} "${t.canonical_name}"`);

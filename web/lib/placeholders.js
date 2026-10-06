@@ -22,12 +22,19 @@
 // red on them, and Joe widened the rule to that form as published: `AL|NL N/M Winner`, the winner of
 // the series between seeds N and M. The LCS and World Series rows will arrive in a form nobody has
 // seen yet, and they are meant to turn the check red in their turn.
-const MLB_POSTSEASON_PLACEHOLDER = /^(AL|NL) (#\d+ Seed|Wild Card #\d+|\d+\/\d+ Winner)$/;
+//
+// THE LCS HALF DID, AND IT WAS (Joe's ruling 2026-10-05, prompt 127's gate run, register §60). The
+// League Championship Series rows loaded with sides named "NL Higher Seed" and "NL Lower Seed"
+// (`mlb-5517`, `-5525`), smoke went red on them, and Joe ruled the form in as published:
+// `AL|NL Higher Seed` and `AL|NL Lower Seed`, exactly those two words and no others. The World Series
+// rows are still to come, and the World Series form is deliberately not guessed: it is meant to turn
+// the check red in its turn.
+const MLB_POSTSEASON_PLACEHOLDER = /^(AL|NL) (#\d+ Seed|Wild Card #\d+|\d+\/\d+ Winner|Higher Seed|Lower Seed)$/;
 
 /**
  * True when a `teams` row is a placeholder rather than a club: its id ends in `-TBD` (the rule that
  * stood alone until prompt 114 rev B), or it is an MLB row named for a postseason seed, wild card
- * slot or series winner in one of the three published forms.
+ * slot, series winner, or higher or lower seed, in one of the four published forms.
  */
 export function isPlaceholderTeam(team) {
   if (!team) return false;

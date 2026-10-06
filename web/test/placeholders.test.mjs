@@ -5,7 +5,9 @@
 // published - and ONLY those two, so that a form nobody has seen yet still turns the check red and
 // gets looked at. Every negative below is a shape the pattern must refuse for exactly that reason.
 // It did: the Division Series sides arrived as "AL 3/6 Winner", and Joe ruled that third form in on
-// 2026-09-28 (prompt 123's gate run).
+// 2026-09-28 (prompt 123's gate run). And again: the LCS sides arrived as "NL Higher Seed" and "NL
+// Lower Seed", and Joe ruled that fourth form in on 2026-10-05 (prompt 127's gate run). The World
+// Series form is not guessed here; it is meant to turn the check red in its turn.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -62,6 +64,33 @@ test('the series-winner form is exactly as published: near-misses are refused', 
   assert.equal(mlb('The AL 3/6 Winner'), false, 'anchored at the start');
   assert.equal(mlb('AL 3/6 Winner (home)'), false, 'anchored at the end');
   assert.equal(isPlaceholderTeam({ id: 'nhl-1', sport: 'nhl', canonical_name: 'AL 3/6 Winner' }), false, 'MLB only');
+});
+
+// the two League Championship Series sides the 2026-10-05 refresh loaded (Joe's ruling that day,
+// prompt 127's gate run, register §60)
+const LCS = [
+  ['mlb-5517', 'NL Higher Seed'],
+  ['mlb-5525', 'NL Lower Seed'],
+];
+
+test('the two LCS sides are placeholders, by the pattern - the fourth published form, in either league', () => {
+  for (const [id, canonical_name] of [...LCS, ['mlb-9998', 'AL Higher Seed'], ['mlb-9997', 'AL Lower Seed']]) {
+    assert.equal(isPlaceholderTeam({ id, sport: 'mlb', canonical_name }), true, `${id} ${canonical_name}`);
+    assert.equal(placeholderReason({ id, sport: 'mlb', canonical_name }), 'mlb-pattern', id);
+  }
+});
+
+test('the higher/lower-seed form is exactly as published: near-misses are refused', () => {
+  const mlb = (canonical_name) => isPlaceholderTeam({ id: 'mlb-9999', sport: 'mlb', canonical_name });
+  assert.equal(mlb('NL Higher Seeds'), false, 'a trailing s is not the published form');
+  assert.equal(mlb('NL higher seed'), false, 'the published form is capitalised');
+  assert.equal(mlb('NL Highest Seed'), false, 'Higher or Lower, and no other word');
+  assert.equal(mlb('NL Middle Seed'), false, 'Higher or Lower, and no other word');
+  assert.equal(mlb('NL Higher'), false, 'Seed is part of the form');
+  assert.equal(mlb('NLCS Higher Seed'), false, 'the league is AL or NL, not a round name');
+  assert.equal(mlb('The NL Lower Seed'), false, 'anchored at the start');
+  assert.equal(mlb('NL Lower Seed #2'), false, 'anchored at the end');
+  assert.equal(isPlaceholderTeam({ id: 'nhl-1', sport: 'nhl', canonical_name: 'NL Higher Seed' }), false, 'MLB only');
 });
 
 test('a -TBD id is a placeholder in any sport, by the suffix - the rule that stood before', () => {
