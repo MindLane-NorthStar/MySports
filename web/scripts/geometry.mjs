@@ -211,10 +211,20 @@ for (const [day, sport, wk] of CASES) {
 // scrollWidth rounding 1120.516 up to 1121. The first label moved 11AM -> 10AM, the last stayed 11PM,
 // and the one new row is ESPN (18 blocks, 4 rows; day/week equality held). Re-pinned to the MEASURED
 // gate reading, the way the other two are.
+//
+// MLB 2026-09-03 MOVED 393.4 -> 396.4 ON 2026-10-05, AND IT WAS THE DATA, PROVED SIDE BY SIDE (prompt
+// 127, Joe's ruling). The untouched tree at cd18385 and prompt 127's tree read the SAME, run minutes
+// apart against the same database: 396.38 min, widest 75.10, sw 546, rail 60, 3 blocks, 2 rows - against
+// prompt 80's 393.75 at widest 87.08, sw 569. The day's nine rows were last verified 2026-09-05; only
+// `widest` moved. "Standings cannot move it" is not quite true, and this is why: `scrollWidth` carries
+// about 44 FIXED pixels - the 30px seam over the 4:10-7:15 PM gap (SEAM_PX, MobileGrid.js) and the
+// last label's ~13px reach - and dividing those by pxPerMinute turns them into "minutes" that grow as
+// `widest` shrinks. A big enough `widest` drop on a day with a seam moves the span. docs/queue.md
+// item 19 describes it. Re-pinned to the measured reading.
 console.log('');
 console.log("THE DAY'S SPAN - hard stop, and standings cannot move it");
 const SPAN_TOLERANCE_MIN = 2;
-const SPANS = { '2026-09-05|cfb': 1042.4, '2026-09-03|mlb': 393.4, '2026-09-13|nfl': 830.4 };
+const SPANS = { '2026-09-05|cfb': 1042.4, '2026-09-03|mlb': 396.4, '2026-09-13|nfl': 830.4 };
 for (const [d, sport] of [['2026-09-05', 'cfb'], ['2026-09-03', 'mlb'], ['2026-09-13', 'nfl']]) {
   await go(`/?day=${d}&sport=${sport}&view=grid`);
   const m = await shape();

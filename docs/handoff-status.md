@@ -854,8 +854,16 @@ day really does change how much time the grid spans.
 | day | sport | **span (minutes, ASSERTED ±2)** | blocks | rows |
 |---|---|---|---|---|
 | `2026-09-05` | cfb | **1042.4** | 64 | 15 |
-| `2026-09-03` | mlb | **393.4** | 3 | 2 |
+| `2026-09-03` | mlb | ~~393.4~~ **396.4** | 3 | 2 |
 | `2026-09-13` | nfl | ~~770.1~~ **830.4** | ~~17~~ 18 | ~~3~~ 4 |
+
+**THE MLB ROW MOVED ON 2026-10-05 AND IT WAS THE DATA, PROVED SIDE BY SIDE (prompt 127, Joe's
+ruling).** The gate read 396.38 minutes at `widest` 75.10 and `scrollWidth` 546, against prompt 80's 393.75
+at 87.08 and 569, and the untouched tree at `cd18385` read exactly the same. The nine rows were last
+verified 2026-09-05; only `widest` moved. **So the span is not fully immune to the standings:**
+`scrollWidth` carries about 44 fixed pixels on this day (the 30 px seam over the afternoon gap, and the
+last label's reach), and those become more "minutes" as `widest` shrinks. Re-pinned in
+`web/scripts/geometry.mjs` to 396.4; `docs/queue.md` item 19 describes the mechanism and a fix.
 
 **THE NFL ROW MOVED ON 2026-09-10 AND IT WAS THE DATA, PROVED (prompt 87 step 0).** The 2026-09-10
 refresh loaded Sunday NFL Countdown (10:00–13:00 ET, ESPN), so the day starts at 10:00 instead of

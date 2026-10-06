@@ -401,3 +401,43 @@ at; the Python renderer and the desktop grid were out of that brief's scope.
 **Where it starts.** `data/access_profile.json`, `adapters/common.py:339`, `web/lib/cardbroadcast.js`,
 `web/components/GameDetail.js:310-365`. **Size.** Small once ruled. **A description of a problem, not
 an approved plan.**
+
+## 19. The day-span hard stop moves with the standings on a day that has a seam
+
+**What.** `npm run geometry` hard-stops on each test day's span in minutes, `(scrollWidth − rail) /
+pxPerMinute`, and both `CLAUDE.md:275` and `web/scripts/geometry.mjs:193` say every `widest` term
+cancels, so the standings cannot move it. That holds only for the part of `scrollWidth` that is
+minutes times pxPerMinute. Two parts are fixed pixels:
+
+- the seam `makeScale` puts in place of each gap of 60 minutes or more, 30 px wide (`SEAM_PX`,
+  `web/components/MobileGrid.js:70`; `web/lib/gridmodel.js:117-124`);
+- the last axis label's reach past the canvas edge (`.mgrid-axis-reach`, `MobileGrid.js:482-492`),
+  about 13 px for MLB 2026-09-03's "10PM".
+
+Divided by pxPerMinute, those pixels turn into "minutes", and there are more of them as `widest`
+shrinks.
+
+**Measured 2026-10-05 (prompt 127).** MLB 2026-09-03 read **396.38** minutes at `widest` 75.10 and
+`scrollWidth` 546. Prompt 80 read 393.75 at `widest` 87.08 and `scrollWidth` 569. The untouched tree
+at `cd18385` and prompt 127's tree gave the same reading, minutes apart, against the same database.
+The day's nine rows were last verified on 2026-09-05; only `widest` moved, and why it fell 12 px was
+not traced.
+
+The day's real span is 360 minutes: two 180-minute MLB blocks, 1:10–4:10 PM and 7:15–10:15 PM, with
+one seam between. So about 44 fixed pixels sit in the reading. That is 34 "minutes" at the old
+pxPerMinute and 36 at the new, and the integer rounding of `scrollWidth` covers the rest. Joe ruled
+the figure re-pinned to 396.4 (`geometry.mjs`, the `SPANS` block).
+
+**Why it matters.** The stop is meant to fire on code, or on a real schedule change, and not on the
+standings. On a day with a seam, a large enough fall in `widest` fires it with neither. A stop that
+cries wolf trains its reader to re-pin it.
+
+**What a fix could look like, for Joe to choose or decline.** Subtract the fixed pixels before
+dividing: the seam count times `SEAM_PX`, counted off the canvas's `.mgrid-cut` elements, and the
+label's reach. The figure is then real minutes. The alternative is to keep the figure as it is and
+accept a re-pin whenever `widest` moves far on a day with a seam.
+
+**Where it starts.** `web/scripts/geometry.mjs` (the `SPANS` block and the note above it),
+`web/lib/gridmodel.js:117-124`, `web/components/MobileGrid.js:70` and `:482-492`, and `CLAUDE.md`'s
+"The phone-grid geometry check". **Size.** Small. **A description of a problem, not an approved
+plan.**
