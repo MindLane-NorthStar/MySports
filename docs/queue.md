@@ -402,6 +402,18 @@ at; the Python renderer and the desktop grid were out of that brief's scope.
 `web/components/GameDetail.js:310-365`. **Size.** Small once ruled. **A description of a problem, not
 an approved plan.**
 
+**2026-10-06, a correction (prompt 128, rule 30): "What the app shows today" stops holding once the
+refresh runs.** Joe ruled that day that the Blue Jackets' Prime Video broadcasts are an add-on he does
+not hold, so each game's `prime-video` row turns `unavailable` as the refresh's window reaches it, and
+the game then has no accessible row at all. With none, the detail panel prints the status word for
+every feed, so `cbjnhl` and `cbjhn` will read "Unknown" (`web/components/GameDetail.js:34`), and the
+paragraph above that says the word "would print for these feeds only on a game with no accessible row
+at all, and there is none today" becomes false game by game. On what carries the feed: the club's pages
+of 2026-09-23 and 2026-09-28 name Spectrum TV, Fubo and Prime Video as carriers of Blue Jackets Hockey
+Network and say talks with other cable and satellite providers continue; DIRECTV is not named (an
+inference from absence, recorded in `docs/research/research-changelog.md`). **Whether to record
+`cbjnhl` and `cbjhn` as unavailable is still Joe's ruling.**
+
 ## 19. The day-span hard stop moves with the standings on a day that has a seam
 
 **What.** `npm run geometry` hard-stops on each test day's span in minutes, `(scrollWidth − rail) /
@@ -471,3 +483,59 @@ week polls.
 **Where it starts.** `web/lib/format.js:162-170`, `web/app/page.js:262-263`,
 `web/app/api/live/route.js:50`, `web/lib/livescores.js:230-240`, `web/lib/programs.js:276`.
 **Size.** Small to medium. **A description of a problem, not an approved plan.**
+
+## 21. The archived grid reads a row's access only for `OUT_OF_MARKET` and `UNVERIFIED`
+
+**What.** `scripts/render_day.py` decides a game's row in two steps, and neither consults
+`data/access_profile.json`:
+
+- `:412` drops a media row only when its access is in `OMIT_ACCESS`, which is `OUT_OF_MARKET` and
+  `UNVERIFIED` (`:151`). An `UNAVAILABLE` row stays in.
+- `:425` takes the first `ROW_ORDER` linear outlet, else the first web outlet not in `UNAVAILABLE` at
+  `:137`. That is a hard-coded set of four names (CBS Sports Network, FS2, MW+, UConn+) that no longer
+  matches the profile's eleven.
+- The rows themselves are built only for `ROW_ORDER` and `STREAMS` (`:517-518`). The NHL's streaming
+  rows are ESPN+, Disney+, Hulu and HBO Max (`data/row_order.json`).
+
+So a Blue Jackets game, whose only web row is the `unavailable` Prime Video add-on (Joe's ruling of
+2026-10-06), takes Prime Video as its primary. It is counted on the grid and drawn in no row.
+`docs/rendering-contract.md:52` already says the primary is the "first available streaming outlet".
+
+**Measured 2026-10-06 (prompt 128 Block C)**, rendered from the adapter's own fixtures with no
+database. The files are in `assets/p128-nhl-out-of-market/` (SVG; `--png` failed for want of the
+Cairo library on Joe's laptop).
+
+- **2026-10-09** read "3 on grid · 0 TBA · 1 omitted". The SVG draws blocks for two games only, SEA @
+  DET and ANA @ WPG, both in the ESPN+ row. **PIT @ CBJ is the third "on the grid" and appears nowhere**:
+  in no row, and not in the "around the league" strip, which holds NYR @ WSH (NHL Network), "not on your
+  services".
+- **2026-11-28** read "13 on grid · 0 TBA · 0 omitted". All 13 are package games, all in the one ESPN+
+  row, stacked **10 lanes deep** in a 1806×1318 render.
+
+Once the refresh writes the rows, the archived grid will do the same with every Blue Jackets game.
+`pipeline/render_feed.py` hands the renderer the database's access in the adapter's words, so it
+behaves as the fixture did.
+
+**Where it starts.** `scripts/render_day.py:137`, `:151`, `:412`, `:425`, `:517-518`;
+`pipeline/render_feed.py`; `docs/rendering-contract.md:52`. **Size.** Small to medium. **A
+description of a problem, not an approved plan.**
+
+## 22. The Blue Jackets' local row is added to national exclusives
+
+**What.** The NHL adapter mints the market team's local row whenever the league lists no receivable
+local feed (`adapters/nhl.py:281-284`), with no national-exclusive test. The NBA adapter has one:
+`national_exclusive` at `adapters/nba.py:182` gates its local row at `:187`. So a Blue Jackets game the
+league has taken nationally still carries the club's Prime Video row.
+
+**Two games carry a local row they should not**, both in `tests/fixtures/nhl_schedule_shapes_2026-10-06.json`:
+
+- **FLA @ CBJ, 2026-11-10**, on ESPN+, Hulu and Disney+;
+- **PHI @ CBJ, 2027-04-08**, on TNT, truTV and HBO Max.
+
+**It does not change either verdict.** The extra row is `unavailable` since Joe's 2026-10-06 ruling,
+and the national rows decide. It shows nowhere today either: the league's national row outranks the
+hand-entered one for primary, and the detail panel lists only the accessible rows once any exist
+(`web/components/GameDetail.js:114`). It is a wrong row in the data rather than a wrong screen.
+
+**Where it starts.** `adapters/nhl.py:281-284`, beside `adapters/nba.py:182-192`. **Size.** Small. **A
+description of a problem, not an approved plan.**

@@ -6,6 +6,41 @@
 
 ---
 
+## 2026-10-06 — NHL: the out-of-market package, NHL Network, and where the Blue Jackets air (prompt 128)
+
+- **VERIFIED (league, NHL.com, 2026-08-26, "ESPN announces national TV schedule for 2026-27 season").**
+  "NHL Power Play on the ESPN App returns with 1,050+ out-of-market games", available "with an ESPN
+  Unlimited plan subscription or pay TV authentication". The same release says replays of every game on
+  ABC, ESPN, NHL Network and TNT are on NHL Power Play.
+  https://www.nhl.com/news/espn-announces-national-tv-schedule-for-2026-27-season
+- **VERIFIED (ESPN's own page, read 2026-10-06).** "Access over 1,050+ out-of-market NHL games from every
+  team, all season long. Now part of both ESPN Unlimited and Select packages. Blackouts and restrictions
+  apply." https://plus.espn.com/nhl
+- **REPORTED, not verified: an NHL Network game is blacked out live on ESPN+.** Broadpeak, 2023-10-03:
+  "When the NHL Network has a match, ESPN+ is blacked out." idarb, 2026-08-04: replays of TNT, NHL Network
+  or locally blacked-out games "are typically held back for 24 hours". No current primary source says it
+  outright. Joe's ruling of 2026-10-06 (NHL Network is not on his services) settles what the app shows
+  either way, and supersedes research-nhl.md's assumption that these render as available on delay.
+  https://www.broadpeak.io/more-clarity-on-nhl-blackout-rules/
+  https://idarb.com/2026/08/04/nhl-in-market-out-of-market-blackout-map/
+- **VERIFIED (league API, 2026-10-06).** `postal-lookup` for the market's ZIP returns the Columbus Blue
+  Jackets and no other club, so the Penguins are out of market for Joe and the Blue Jackets are not.
+- **VERIFIED as to what the club's pages name; INFERRED as to DIRECTV.** The Blue Jackets' releases of
+  2026-09-23 and 2026-09-28 name Spectrum TV, Fubo and Prime Video as carriers of Blue Jackets Hockey
+  Network and say negotiations with additional cable and satellite providers continue. DIRECTV is not
+  named in either. That DIRECTV does not carry it is an inference from its absence, not a statement.
+  https://www.nhl.com/bluejackets/news/blue-jackets-coming-to-spectrum-tv
+  https://www.nhl.com/bluejackets/news/blue-jackets-games-to-air-on-fubo
+- **Joe, 2026-10-06:** the Blue Jackets' Prime Video broadcasts are an extra paid tier he does not hold.
+  This reverses his 2026-09-09 ruling recorded in `data/local_rights.json`.
+- **DERIVED from the league's schedule endpoint, 2026-10-06, 1,344 regular-season games:** 189 carry a US
+  national row (53 ESPN or ABC, 72 TNT family, 47 ESPN+/Hulu/Disney+ exclusives, 17 NHL Network); 82 are
+  Blue Jackets games with no national row; 1,073 are neither, and take the ESPN+ row. All 17 NHL Network
+  games fall on or before 2026-11-01, so more will be named.
+- **A limit on the quotations above.** Cowork read these pages through a fetch tool that extracts text
+  with a small model. The NHL.com and ESPN lines were asked for verbatim; re-open the page before quoting
+  any of them further.
+
 ## 2026-09-16 — Cavaliers OTA simulcast: the schedule is ANNOUNCED, and the outlet is per game
 
 - **Doc:** supersedes the 2026-09-01 entry's "partner and schedule will be communicated at a later

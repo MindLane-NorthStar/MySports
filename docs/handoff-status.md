@@ -10,7 +10,7 @@ sections, and the older measurement records. **This file stays the authority for
 repo state, gate floors, open items; since prompt 89 the working rules are `CLAUDE.md`'s alone. Read
 the archive when you need to know why something was decided.
 
-Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§71 — this said §1–§39 until prompt 99 corrected it, §1–§53 until prompt 111 did and §1–§61 until prompt 123 did, counted each time; all
+Read first for any session picking up MySports. Companions: **`docs/enhancement-register.md`** (§1–§73 — this said §1–§39 until prompt 99 corrected it, §1–§53 until prompt 111 did and §1–§61 until prompt 123 did, counted each time; all
 in the repo — check there before re-raising any decision; §23 list-is-a-list,
 **§24 prompt 56’s ten approved revisions, the band-title rename, R11 declined and the VERTICAL
 SCALE**), **`docs/feature-study/05-home-page-decisions.md` — BINDING** (D1–D6, the D3
@@ -23,8 +23,8 @@ retired every path to page level**), `docs/rendering-contract.md` **v1.7**, `doc
 in the repo since prompt 48 stage 0 along with the ten events & shows research documents under
 `docs/research/`. `docs/research/README-events-docs.md` maps their Project names to their repo paths. **`docs/prompts/`**
 holds the Claude Code briefs themselves, verbatim and never
-edited after the fact. ~~**62 files, covering prompts 01-60**~~ **134 briefs, covering 01–127, counted 2026-10-05 by prompt 127 (115 reserved)
-(133 after prompt 126; 132 after prompt 125; 131 after prompt 121 rev B; 130 after prompt 124; 129 after prompt 123; 123 after prompt 116, and prompts 117–122 did not move this line though the README's count did; 122 after prompt 114 rev B; 121 after prompt 114; 120 after prompt 113 rev C; 118 after prompt 113; 117 after prompt 112; 116 after prompt 111; 107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - **`docs/prompts/README.md` "Duplicate numbers" owns this count**: seven numbers as the README counts them (23, 26, 43, 48 and 114 two each, 86 and 113 three; `13-14-combined` has its own row and is deliberately not counted under 13), eight if it is — which is why the file
+edited after the fact. ~~**62 files, covering prompts 01-60**~~ **135 briefs, covering 01–128, counted 2026-10-06 by prompt 128 (115 reserved)
+(134 after prompt 127; 133 after prompt 126; 132 after prompt 125; 131 after prompt 121 rev B; 130 after prompt 124; 129 after prompt 123; 123 after prompt 116, and prompts 117–122 did not move this line though the README's count did; 122 after prompt 114 rev B; 121 after prompt 114; 120 after prompt 113 rev C; 118 after prompt 113; 117 after prompt 112; 116 after prompt 111; 107 after prompt 102, and it stood at 107 for eight prompts because 103–110 reached the Project and not `Claude outputs\`; 106 after prompt 101; 105 after prompt 100; 104 after prompt 99; 103 after prompt 98; 102 after prompt 97; 101 after prompt 96; 100 after prompt 95; 99 after prompt 94; 98 after prompt 93; 96 after prompt 92; 95 after prompt 90; 94 with 90 still to be filed before that; 92 before prompt 91, which prompt 89 missed)** - **`docs/prompts/README.md` "Duplicate numbers" owns this count**: seven numbers as the README counts them (23, 26, 43, 48 and 114 two each, 86 and 113 three; `13-14-combined` has its own row and is deliberately not counted under 13), eight if it is — which is why the file
 count runs ahead of the highest number. (Prompt 111 wrote "six" here after counting the directory; the old "five" it replaced was (13, 23, 26, 43, 86), wrong in both directions — it counted 13 and omitted 48, which has carried two since prompt 93 — and prompt 112 pointed this line at the README rather than keep a second copy.) **39 and 42 are the
 only missing numbers and neither is recoverable**: 39 exists nowhere at all, and 42's brief is gone
 though its handoff survives at `assets/handoff/banner-v2/HANDOFF-Prompt-42.md`. Neither was
@@ -67,6 +67,27 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
 
+**Measured 2026-10-06, prompt 128: `pytest` 732 → 752 passed + 1 skipped and `test:unit` 701 → 713; smoke 34/34,
+`qa-shots` 146/146 and geometry all hard stops did not move.** Written before the final gate run, which matched it.
+
+- **Why the floors moved.** `tests/test_nhl_out_of_market.py` adds 20 tests. `web/test/cardbroadcast.test.mjs` adds 3,
+  and `web/test/exhibition.test.mjs` 9.
+- **An out-of-market NHL game names ESPN+, NHL Network is unavailable, and the Blue Jackets' Prime Video is an add-on
+  Joe does not hold** (register §72; Joe's three rulings of 2026-10-06). The NHL adapter adds one ESPN+ row ("NHL
+  Power Play on ESPN+") to a regular-season game with no US national row and no local team, by the rule in
+  `data/markets.json` `nhl.outOfMarketPackage`. `NHLN` resolves to NHL Network. The Blue Jackets' local-rights entry
+  states its own access, `UNAVAILABLE`. **Nothing a user can see changes until the nightly refresh loads the rows**
+  (rule 25). Cowork checks production after that refresh, and then Joe dispatches one forward season load.
+- **Smoke went red at 33/34 mid-run on `nba-LON`, London Lions**, an NBA exhibition opponent with no colour ruling. Joe
+  ruled it exempt BY NAME (register §73), in `data/grid_colors_pro.json` `exhibitionOpponents`, read by
+  `web/lib/exhibition.js`. Smoke now exempts 17 rows: 16 placeholders and the one named opponent.
+- **Geometry's MLB 2026-09-03 span read 395.52 at `widest` 76.94**, inside 396.4 ± 2 and still moving with the
+  standings, as queue item 19 describes.
+- **The archived grid counts a Blue Jackets game and draws it in no row** (queue item 21; renders in
+  `assets/p128-nhl-out-of-market/`). Queue item 22 is new, and item 18 carries a dated correction.
+- The zero-byte `.git/cowork-stale-lock-2026-10-06.tmp` Cowork left was deleted, as the brief asked. Nothing of this
+  run's was left running.
+
 **Measured 2026-10-05, prompt 127: `test:unit` 678 → 701 and `qa-shots` 145 → 146; `pytest` 732 passed + 1 skipped and
 smoke 34/34 did not move, and geometry all hard stops, the MLB span re-pinned 393.4 → 396.4 by Joe's ruling.** Written
 after the last gate run.
@@ -100,10 +121,16 @@ and geometry all hard stops did not move.** Written after the last gate run.
   is active and has a mark. The grid lane uses the same function.
 - **Twelve cards change across the 4,182 loaded games**, and every one showed no mark before. Four are in October:
   the Blue Jackets on 10-01 and 10-03 (Prime Video), ELON @ STAN on 10-17 (ACCNX) and CLE @ ATL on 10-29 (DAZN).
-- **OPEN: 80 Blue Jackets games, 10-09 to 2027-04-10, still show an empty mark column** and a `CBJNHL` grid lane.
+- **~~OPEN:~~ 80 Blue Jackets games, 10-09 to 2027-04-10, still show an empty mark column** and a `CBJNHL` grid lane.
   They carry the old `cbj-local` carrier-TBA row, which has no mark. Each should take a `prime-video` row as the
   refresh's 7-day window reaches it, and the card follows with no code change. Confirm it on 10-09's card once that
   day is inside the window.
+  - **2026-10-06, SETTLED BY JOE'S RULING (prompt 128, register §72): the empty column is the ruling, not a
+    defect.** The Blue Jackets' Prime Video broadcasts are an add-on Joe does not hold. As the refresh reaches
+    each game, it takes a `prime-video` row that is `unavailable`. The game is then not eligible and the verdict
+    names nothing, so the card keeps naming `cbjnhl` with no mark, by ruling. The phone grid also drops these
+    games then, because `web/components/Listing.js:196-199` keeps only eligible games on the grid, favourites
+    included. The list keeps them, since a favourite is never hidden.
 - **The rule is in `web/lib/cardbroadcast.js`**, not in `MatchupCard.js` as the brief wrote it, because that file is
   JSX and `node --test` cannot import it. `MatchupCard.js` re-exports it under the same name.
 - **One file outside the brief's named paths was edited, with Joe's approval in the session (S5):**

@@ -6166,3 +6166,230 @@ wiring is pinned as source text: the route reads no query string, takes `viewing
 ruled the higher/lower-seed form in (§60, 2026-10-05). The geometry stop moved on MLB 2026-09-03.
 Run side by side, the untouched tree at `cd18385` read the same 396.38 minutes, so it was the data.
 Joe re-pinned it, and `docs/queue.md` item 19 records why the span moves when only `widest` does.
+
+## 72. AN OUT-OF-MARKET NHL GAME NAMES ESPN+, AND THE BLUE JACKETS' PRIME VIDEO ADD-ON IS NOT ON JOE'S SERVICES — 2026-10-06, prompt 128
+
+**Numbered by count:** §1–§71 each appear exactly once and there was no §72.
+
+**What Joe saw.** VGK @ SEA, 2026-10-06 (`nhl-2026020051`). Production's `/api/my-games` named `KING`
+with no mark, a local feed he cannot get. Joe holds ESPN Unlimited, which includes NHL Power Play,
+the league's out-of-market games on the ESPN app.
+
+**Joe's three rulings, 2026-10-06, in his words.**
+
+1. "surface ESPN+ as the broadcast provider for ALL NHL games that are not airing on one of the other
+   primary national broadcast providers (ESPN, ABC, TBS, TNT)."
+2. "NHL Network games are NOT on my services."
+3. "Columbus Blue Jackets amazon prime broadcasts are an extra paid tier so those broadcasts need to be
+   marked as blacked out for me (unavailable)." **This reverses his ruling of 2026-09-09**, "treat
+   Prime Video as AVAILABLE (subscribing)". `data/local_rights.json` keeps that ruling as
+   `nhl.CBJ.previousDecision`. Prime Video itself stays under `available` in
+   `data/access_profile.json`; only the Blue Jackets' row changes.
+
+**How big it is.** These are Cowork's counts from the league's schedule endpoint on 2026-10-06: 28
+weekly calls, 1,344 games, all regular season. They come from the feed, not from published figures.
+
+| class | games | before | after |
+|---|---|---|---|
+| a US row on ESPN or ABC | 53 | available | same |
+| a US row on TNT, truTV, HBO Max | 71 + 1 Blue Jackets | available | same |
+| ESPN+, Hulu, Disney+ national exclusive | 46 + 1 Blue Jackets | available | same |
+| NHL Network national row | 17 | `NHLN`, access `UNKNOWN` | `NHL Network`, `UNAVAILABLE` |
+| Blue Jackets, no national row | 82 | Prime Video, `AVAILABLE` | Prime Video, `UNAVAILABLE` |
+| no Blue Jackets, US local feeds only | 1,017 | every row `OUT_OF_MARKET` | plus one ESPN+ row |
+| no Blue Jackets, no US row at all | 56 | no rows | one ESPN+ row |
+
+**The rule** (`adapters/nhl.py` `takes_out_of_market_package()`; data in `data/markets.json`
+`nhl.outOfMarketPackage`, and deleting the key turns it off). A game takes one row for the entry's
+outlet, ESPN+, labelled "NHL Power Play on ESPN+", when all of these hold:
+
+1. the entry exists with both `outlet` and `gameTypes`;
+2. the game's type is in `gameTypes` (regular season);
+3. neither club is a local team, because the package blacks out in-market games;
+4. no row the league listed has market `national`, whatever its outlet;
+5. the game has no row for that outlet already.
+
+The row is `web`, market `national`, `CONFIRMED`, and its access is `outlet_access()` against the
+profile, never a literal. With ESPN+ listed under `unavailable`, the row reads `UNAVAILABLE`.
+
+**Why condition 4 is wider than Joe's list, and why that changes nothing today.** On 2026-10-06 the
+US outlets the league marks national were ESPN, ABC, TNT, truTV, HBO Max, ESPN+, Hulu, Disney+ and
+NHL Network, and no other. So "any national row" and Joe's list select the same 189 games. A national
+outlet nobody has seen yet withholds the row, because telling Joe he can watch what he cannot is the
+worse error (`adapters/common.py`, `access_status_for`). Block C found no new national outlet in two
+windows.
+
+**Why the row is filed under the league's own source, as the compromise it is.** The league never
+said "ESPN+" about these games; a rule derived the row from what the league did say. Its `source` is
+`data/markets.json nhl.outOfMarketPackage`. `pipeline/load.py:317-319` files a row under
+`data/local_rights` only when the source starts with that, so this claim is filed under the fixture's
+source beside the league's rows. Three things follow:
+
+- It closes by the loader's existing mechanism (`:324-332`) the day the league names a national row
+  for the game, with no loader change.
+- It competes for primary inside the league's own candidate (`pipeline/resolver.py:149-174`), so on a
+  game with a linear local row the primary does not move.
+- On a game whose only other US row is another club's stream, it becomes the primary, and the card
+  names ESPN+. Cowork counts 17 such games; the first is MTL @ DAL on 2026-10-29.
+
+The source string reaches `source_observations.source_url_or_key`, so the evidence trail can still
+tell a derived row from a league row. Filed anywhere else, it would never close. Mutation 5 below
+proves the filing does that work.
+
+**NHL Network names its games in batches.** All 17 of its games fall on or before 2026-11-01, and more
+will be named, each out of the 1,073. **So a game losing its ESPN+ row is the ordinary path.** The
+test `ThroughTheLoader.test_the_package_row_retires_when_the_league_names_a_national_row` loads VGK @
+SEA, then a copy the league has given an `NHLN` row. The ESPN+ row goes inactive and the game stops
+being eligible.
+
+**What changed** (block A and B, one commit).
+
+- `adapters/nhl.py`: the rule, its call in `build_fixture()` before the "no US broadcast rows" note,
+  and `PACKAGE_SOURCE`. The report now counts the league's national rows apart from the package row,
+  and marks package rows `/pkg`.
+- `adapters/common.py`: `"NHLN": "NHL Network"`, and `local_rights_access()`. A local-rights entry's
+  own `access` (AVAILABLE or UNAVAILABLE) wins; absent, the profile decides as before; any other value
+  is UNKNOWN with a warning naming the team and the value. Both adapters' confirmed-carrier branches
+  call it, `nhl.py` and `nba.py` `_local_row`, so `nba.CLE`, which states no access, emits exactly
+  what it did.
+- `data/markets.json` and `data/local_rights.json` were edited through the parser. Each was first
+  proved to round-trip byte for byte, and every key but the intended ones was asserted equal.
+- No file under `pipeline/`, `web/lib`, `web/components` or `scripts/` changed. `adapters/README.md`
+  was left alone: nothing in it became false.
+
+**Tests.** `tests/test_nhl_out_of_market.py` has 20 tests: the ten-game file against the brief's
+"after" column, the tracked 47-game file (38 games take the row alone, 7 are unchanged, 2 carry the
+add-on), game type, the switch, the profile, the local-rights function, and the reconciler through
+`primary_candidates`, `resolve_field` and `telecast_verdict`. Two tests run through prompt 123's
+SQLite harness, imported, not copied. `web/test/cardbroadcast.test.mjs` adds 3, and no web code
+changed. The new fixture `tests/fixtures/nhl_schedule_shapes_2026-10-06.json` is byte-identical to
+Cowork's (`1675053d…1a029e98`).
+
+**Seven mutations, each red, each file restored byte for byte:**
+
+| Mutation | Tests that fail |
+|---|---|
+| condition 4 dropped | 6, the retirement test among them |
+| condition 3 dropped | 6, the access-change test among them |
+| condition 2 dropped | 2: game type; the rule's own conditions |
+| the local-rights function ignores `access` | 7 |
+| the package source begins with `data/local_rights` | 4, **the retirement test among them** |
+| `cardBroadcast()`'s verdict branch deleted | 5 web, the ESPN+ test among them |
+| `cardBroadcast()` names any row with a mark | 7 web, the Blue Jackets test among them |
+
+**What Block C measured,** from the live league feed with no database:
+
+- **The 2026-10-07 window, 53 games.** 40 take the package row, 5 have another national row, 5 are on
+  NHL Network and 3 are Blue Jackets games: the brief's numbers exactly. The US national outlets seen
+  were ESPN, ESPN+, Hulu, Disney+, TNT, HBO MAX and NHLN, none new.
+- **The 2026-11-28 window, 49 games.** 42 take the row, and all 13 on 11-28 itself do. None was on NHL
+  Network; 2 were Blue Jackets games.
+- **The archived grid** (`assets/p128-nhl-out-of-market/`, SVG; `--png` failed for want of the Cairo
+  library). 2026-10-09 read "3 on grid · 0 TBA · 1 omitted": PIT @ CBJ is counted among the three and
+  drawn in no row and not in the "around the league" strip. 2026-11-28 read "13 on grid", all 13 in
+  the one ESPN+ row, 10 lanes deep. That is Cowork's reading of `scripts/render_day.py`, confirmed;
+  `docs/queue.md` item 21 describes it.
+
+**Rule 32: every place that says whether Joe can watch a game.** The search was `git grep -l -E
+"eligib|access_status|OMIT_ACCESS|OUT_OF_MARKET|out_of_market"` over `web/lib`, `web/components`,
+`web/app`, `scripts` and `pipeline/render_feed.py`, excluding `web/test`. Matches that were comments,
+a CSS colour, one-off scripts, or a program's own verdict were set aside.
+
+- **The list card's mark and the grid lane** (`web/lib/cardbroadcast.js`, `MobileGrid.js:148`):
+  **obeys.** A package game names `espn-plus` through the verdict. A Blue Jackets game names `cbjnhl`
+  with no mark, because only a service the verdict names may replace the pick. The three web tests pin
+  both.
+- **Which games the phone grid draws** (`web/components/Listing.js:196-199`): **obeys, and Joe should
+  know what that means.** The grid keeps only eligible games, favourites included. Once the refresh
+  writes the rows, Blue Jackets games leave the phone grid and out-of-market games join it in the
+  ESPN+ lane.
+- **The page's hidden split and count line** (`web/lib/offservice.js`): **obeys.** Package games
+  become eligible and are counted on his services. NHL Network games become off-service and hidden.
+  Blue Jackets games are off-service but a favourite is never hidden (`:271-284`), so they stay on the
+  page, **dimmed**, as the brief said. `web/components/SportBand.js:92-96` gives an off-service game
+  `offsvc-row`, which composes with the favourite's `fav-row`, and `web/app/globals.css:2234-2235`
+  draws it at `opacity:.45; filter:saturate(.7)`. *(Corrected before commit: this sentence first said
+  no dim treatment was found. The search was `dim|off-?service`, and the class is spelled `offsvc`,
+  which that search cannot match. That was rule 31, caught by Cowork.)*
+- **The detail panel** (`web/components/GameDetail.js`): **obeys.** A package game offers an ESPN+
+  watch link. A Blue Jackets game has no accessible row, so the panel lists every feed with its word:
+  `cbjnhl` and `cbjhn` "Unknown", the Penguins' feed "Out of market", Prime Video "Not on your
+  services". Queue item 18 carries the correction.
+- **`/api/my-games`** (`web/lib/mygames.js`, through `cardMark`): **obeys.** Joe's favourites include
+  the Golden Knights (`nhl-54`) and the Penguins (`nhl-5`), so their out-of-market games will name
+  ESPN+ with its mark, and Blue Jackets games name `CBJNHL` with none. It still carries no
+  watchability field (§71).
+- **The archived grid** (`scripts/render_day.py`, fed by `pipeline/render_feed.py`): **does not obey.**
+  It reads access only for `OUT_OF_MARKET` and `UNVERIFIED`, so a Blue Jackets game takes the
+  unavailable Prime Video as its primary and is drawn in no row. Out of this brief's scope; queue item
+  21.
+- `web/lib/freshness.js` and smoke read eligibility only for staleness; they are a guard, not a
+  surface.
+
+**Nothing a user can see changes until the nightly refresh loads the rows** (rule 25). Then Cowork
+checks production, and Joe dispatches one forward season load. Neither step is this prompt's work.
+
+**Left for Joe.** Whether `cbjnhl` and `cbjhn` are unavailable (queue item 18). The archived grid
+(item 21). The Blue Jackets' local row on two national exclusives (item 22). `CLAUDE.md`'s two count
+lines were outside the brief's named paths. Joe widened the scope to them mid-run (§73), calling the
+omission Cowork's miss, and they moved with this prompt.
+
+## 73. AN EXHIBITION OPPONENT IS EXEMPT FROM THE UNRULED-TEAM CHECK BY NAME — 2026-10-06, prompt 128 (mid-run)
+
+**Numbered by count:** §1–§72 each appear exactly once and there was no §73.
+
+**What went red.** Prompt 128's smoke run read 33/34. *"The only unruled pro rows are TBD
+placeholders"* named `nba-LON`, "London Lions": a `teams` row the nightly refresh loaded, with no colour
+ruling, that is not a placeholder. Nothing in prompt 128 caused it; the check read live data.
+
+**The facts, measured by Cowork on 2026-10-06** with read-only SELECTs and ESPN's scoreboard.
+`nba-LON` is London Lions: abbreviation LON, conference null, `external_ids` `{}`, no colours and no
+logo. One game uses it, `nba-401914130`, LON @ POR, viewing day 2026-10-12, with no broadcast rows.
+ESPN's NBA scoreboard for 2026-10-01 to 10-20 has no other event with a non-NBA club.
+
+**JOE'S RULING, 2026-10-06: it is an exhibition opponent, exempt from the check BY NAME.** No colour
+ruling, and no class exemption.
+
+- **By name, never by a property.** A real club whose id changed arrives looking exactly like London
+  Lions: null conference, empty external ids. That is what the check exists to catch, so an exemption
+  keyed to those properties would wave it through.
+- **Not through the placeholder rule.** `isPlaceholderTeam` and `placeholderReason` are untouched.
+  `components/TeamMark.js` would badge a real club TBD, and `lib/mygames.js` would null its logo.
+
+**What changed** (its own commit, the first of prompt 128's three).
+
+- `data/grid_colors_pro.json` gains one top-level key, `exhibitionOpponents`. It holds an `_about` and
+  one entry, `nba-LON`, with its name, sport, game, Cowork's measurement, the ruling and the date. It
+  was edited through the parser after a byte-for-byte round-trip check. `teams` and `counts` are equal,
+  124 and 124, and every reader of the file (`gridmodel.js`, `build_cap_table.py`,
+  `gridcolors.test.mjs`, `captable.test.mjs`) reads only `teams` or `counts`.
+- `web/lib/exhibition.js`, new and pure. `isExhibitionOpponent(team, doc)` matches the id exactly and
+  cross-checks the sport and the name (rule 18). `exhibitionFaults(doc, teams)` names an entry that is
+  no team, a team in another sport or under another name, or one also ruled in `teams`.
+- `web/scripts/smoke.mjs`: a named opponent leaves the unruled set before
+  `proUnruled.every(isPlaceholderTeam)` runs. That expression is unchanged, because
+  `placeholders.test.mjs` pins it. The faults join the SAME assertion. The label now reads *"the only
+  unruled pro rows are TBD placeholders or named exhibition opponents"*, so it stays true. The detail
+  lists every exempted row and why: `nba-LON "London Lions" (exhibition opponent, named)` beside the
+  placeholders' `mlb-pattern` and `suffix`. The check count is unchanged, and smoke reads 34/34.
+
+**Tests** (`web/test/exhibition.test.mjs`, 9). The real file's one entry and its unchanged 124. No fault
+against the teams it names. The exact id with the sport and name cross-check. A look-alike club is
+not exempt. London Lions is not a placeholder, and `lib/placeholders.js` never mentions exhibitions.
+Every kind of fault. And smoke's wiring, as source text.
+
+**Joe's three mutations, each red in the unit tests AND in live smoke, the file restored byte for byte
+(sha256 `23c0130e…` before and after):**
+
+| Mutation | Unit tests that fail | Smoke's check says |
+|---|---|---|
+| the entry deleted | 2 | NOT placeholders: `nba-LON` |
+| the entry pointed at `nba-ATL`, a ruled team | 3 | `nba-ATL`: named "Atlanta Hawks"…; also ruled in teams |
+| the entry pointed at `nba-ZZZ`, no team | 3 | `nba-ZZZ`: no such team |
+
+**The next exhibition opponent is meant to turn the check red**, and gets its own name in the list by a
+ruling, as the placeholder forms do (§60).
+
+**Two corrections Joe made in the same message.** §72's sentence saying no dim treatment was found was
+wrong, and is corrected there. `CLAUDE.md` was missing from prompt 128's named paths, which Joe called
+Cowork's miss, and its two count lines move with this prompt.
