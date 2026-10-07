@@ -1,14 +1,16 @@
 {
- "_about": "Local-rights status per team for the late-binding local row (spec 3.12). TBA_NO_RIGHTS_HOLDER = the club holds its local rights and has announced no distributor; UNANNOUNCED = a distributor exists but this game's local row is not yet in the league file; CONFIRMED = a distributor is announced (outlet/surface/label take effect; the row renders as a normal service, no CARRIER TBA plate). simulcasts lists hand-entered OTA simulcast games (matched by ET date + opponent tricode, source-agnostic). Update when carriers are announced (Tier 1 research task, docs/research/research-changelog.md).",
+ "_about": "Local-rights status per team for the late-binding local row (spec 3.12). TBA_NO_RIGHTS_HOLDER = the club holds its local rights and has announced no distributor; UNANNOUNCED = a distributor exists but this game's local row is not yet in the league file; CONFIRMED = a distributor is announced (outlet/surface/label take effect; the row renders as a normal service, no CARRIER TBA plate). simulcasts lists hand-entered OTA simulcast games (matched by ET date + opponent tricode, source-agnostic). Update when carriers are announced (Tier 1 research task, docs/research/research-changelog.md). access (optional, prompt 128) = AVAILABLE or UNAVAILABLE: a CONFIRMED entry states its own row's access, and it wins over data/access_profile.json; absent, the profile decides by outlet, as before; any other value makes the row UNKNOWN and prints a warning (adapters/common.py local_rights_access).",
  "nhl": {
   "CBJ": {
    "status": "CONFIRMED",
    "outlet": "Prime Video",
    "surface": "web",
-   "label": "Blue Jackets on Prime Video",
-   "asOf": "2026-09-09",
+   "access": "UNAVAILABLE",
+   "label": "Blue Jackets on Prime Video (add-on subscription)",
+   "asOf": "2026-10-06",
    "source": "Joe 2026-09-09: \"Blue Jackets are available via Prime Video.\"",
-   "decision": "Joe 2026-09-09: treat Prime Video as AVAILABLE (subscribing) - the same pattern as DAZN for CLE (decision 7) and Apple TV (decision 4).",
+   "decision": "Joe 2026-10-06: \"Columbus Blue Jackets amazon prime broadcasts are an extra paid tier so those broadcasts need to be marked as blacked out for me (unavailable).\" Prime Video itself stays available in data/access_profile.json; only this row is not.",
+   "previousDecision": "Joe 2026-09-09: treat Prime Video as AVAILABLE (subscribing) - the same pattern as DAZN for CLE (decision 7) and Apple TV (decision 4).",
    "superseded": {
     "status": "TBA_NO_RIGHTS_HOLDER",
     "label": "CBJ LOCAL",

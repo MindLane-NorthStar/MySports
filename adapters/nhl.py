@@ -8,12 +8,19 @@ Writes artifacts/validation/nhl_2026_{date}_fixture.json (+ _raw.json, _report.m
 artifacts/validation/nhl_2026_teams.json (NHL ids + names, colors/PNG logos joined from ESPN's team
 endpoint — the league API only offers SVG marks and no colors). Logos land in assets/logos/nhl-{id}.png.
 
-Late-binding local carriage (spec §3.12): the league schedule carries no local TV rows in August/September
-for almost every team. For the market's territory team (postal-lookup -> Columbus Blue Jackets for the
-Cleveland market) every game gets a synthesized local row:
-    outlet "Blue Jackets local TV", market "local", access AVAILABLE,
-    carriageCertainty TBA_NO_RIGHTS_HOLDER (data/local_rights.json) or UNANNOUNCED
+Late-binding local carriage (spec §3.12): for the market's territory team (postal-lookup -> Columbus Blue
+Jackets for the Cleveland market) a game with no receivable local row from the league gets a synthesized one
+from data/local_rights.json. A CONFIRMED carrier is a real service row - the Blue Jackets' Prime Video since
+2026-09-09 - whose access is the entry's own `access` when it states one (UNAVAILABLE since Joe's ruling of
+2026-10-06: an add-on he does not hold), and otherwise data/access_profile.json's answer for the outlet.
+Without a confirmed carrier the row is the placeholder
+    outlet "{ABBREV} LOCAL", market "local", access AVAILABLE,
+    carriageCertainty TBA_NO_RIGHTS_HOLDER or UNANNOUNCED
 which the renderer draws as a "LOCAL - CARRIER TBA" row. An empty tvBroadcasts list is never "no telecast".
+
+The out-of-market package (prompt 128, Joe's ruling 2026-10-06): a regular-season game with no US national
+row, neither club the market's own, takes one ESPN+ row - NHL Power Play on the ESPN app - by the rule in
+data/markets.json `nhl.outOfMarketPackage`. See takes_out_of_market_package().
 
 Verified against the live payload 2026-09-01: /v1/schedule/{date} -> {nextStartDate, previousStartDate,
 gameWeek[{date, numberOfGames, games[{id, season, gameType, gameDate, venue{default}, neutralSite,
@@ -30,8 +37,8 @@ from pathlib import Path
 from typing import Any
 
 from adapters.common import (access_lookup, dump_json, et_date, et_display, fetch_logos, find_repo_root, fixture_envelope,
-                             http_json, load_data, load_raw_or_fetch, md_table, media_row, normalize_outlet, outlet_access,
-                             team_record, write_text, result_status, score_int)
+                             http_json, load_data, load_raw_or_fetch, local_rights_access, md_table, media_row,
+                             normalize_outlet, outlet_access, team_record, write_text, result_status, score_int)
 
 API = "https://api-web.nhle.com/v1"
 # NHL abbreviations that differ from ESPN's TEAMS endpoint (/hockey/nhl/teams), which is what
@@ -58,6 +65,52 @@ NHL_TO_ESPN_SCOREBOARD = {"LAK": "LA", "NJD": "NJ", "TBL": "TB", "SJS": "SJ"}
 NHL_MARKET = {"N": "national", "A": "local", "H": "local"}
 CANADIAN = {"Sportsnet", "SN", "SNP", "SNO", "SNE", "SNW", "TVA Sports", "TVAS", "CBC", "Sportsnet+", "Prime Video (CA)"}
 GAME_TYPE = {1: "preseason", 2: "regular", 3: "playoffs"}
+
+# THE OUT-OF-MARKET PACKAGE'S ROW IS FILED UNDER THE LEAGUE'S OWN SOURCE, ON PURPOSE (prompt 128).
+#
+# This string is the row's `source`. pipeline/load.py files a media row under data/local_rights only
+# when its source starts with that, so this row's claim is filed under the fixture's source,
+# nhl.schedule, beside the league's own rows - which is a compromise: the league never said "ESPN+"
+# about these games, a rule derived it from what the league did say. Filed there, the claim CLOSES by
+# the loader's existing mechanism the day the league names a national row for the game (NHL Network
+# names its games in batches, so that is the ordinary path), and the row competes for primary inside
+# the league's own candidate, so a linear local row still wins it. Filed anywhere else it would never
+# close. The string itself reaches source_observations.source_url_or_key, so the evidence trail can
+# still tell a derived row from a league row.
+PACKAGE_SOURCE = "data/markets.json nhl.outOfMarketPackage"
+
+
+def takes_out_of_market_package(game_type: str | None, home_abbrev: str | None, away_abbrev: str | None,
+                                media: list[dict[str, Any]], local_abbrevs: set[str] | list[str],
+                                entry: dict[str, Any] | None) -> bool:
+    """Does this game take one row for the out-of-market package? (Joe's ruling 2026-10-06, prompt 128.)
+
+    "Surface ESPN+ as the broadcast provider for ALL NHL games that are not airing on one of the other
+    primary national broadcast providers (ESPN, ABC, TBS, TNT)", and "NHL Network games are NOT on my
+    services." The rule is data - `entry` is data/markets.json `nhl.outOfMarketPackage` - and a game
+    takes the row only when ALL of these hold:
+
+      1. the entry exists with both `outlet` and `gameTypes`; anything less adds no row;
+      2. the game's type, as GAME_TYPE labels it, is in `gameTypes` (the package is regular season);
+      3. neither club is a local team - the package blacks out in-market games;
+      4. no row built so far has market `national`, WHATEVER ITS OUTLET. Deliberately wider than Joe's
+         list of names: on 2026-10-06 the US outlets the league marks national were ESPN, ABC, TNT,
+         truTV, HBO Max, ESPN+, Hulu, Disney+ and NHL Network, so "any national row" and his list
+         select the same 189 games - and a national outlet nobody has seen yet withholds the row,
+         because telling Joe he can watch what he cannot is the worse error. The rows built so far are
+         the league's, plus a synthesized local row only on a local team's game, which 3 has excluded;
+      5. the game has no row for the outlet already.
+    """
+    if not entry or not entry.get("outlet") or not entry.get("gameTypes"):
+        return False
+    if game_type not in entry["gameTypes"]:
+        return False
+    if home_abbrev in local_abbrevs or away_abbrev in local_abbrevs:
+        return False
+    if any(m.get("market") == "national" for m in media):
+        return False
+    outlet = normalize_outlet(entry["outlet"])
+    return not any(m.get("outlet") == outlet for m in media)
 
 
 def fetch_week(date: str) -> dict[str, Any]:
@@ -188,6 +241,7 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
     available, unavailable = access_lookup(root)
     market = load_data(root, "markets.json", {}).get("nhl", {})
     local_abbrevs = set(market.get("localTeams", ["CBJ"]))
+    package = market.get("outOfMarketPackage")      # None turns the out-of-market rule off
     carriage = load_data(root, "local_rights.json", {}).get("nhl", {})
     by_id = {t["id"]: t for t in teams}
     notes: list[str] = []
@@ -242,12 +296,15 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
                     # CONFIRMED while the adapter kept emitting `CBJ LOCAL`, which is the shape of a
                     # data fix that silently does nothing.
                     #
-                    # `outlet_access` decides availability from data/access_profile.json rather than
-                    # hardcoding AVAILABLE, which is what the placeholder branch below has to do
-                    # because a carrier nobody has named cannot be looked up.
+                    # `local_rights_access` takes the entry's own `access` when it states one - the Blue
+                    # Jackets' Prime Video is UNAVAILABLE by Joe's 2026-10-06 ruling, an add-on he does not
+                    # hold, while Prime Video stays available everywhere else - and otherwise asks
+                    # data/access_profile.json, rather than hardcoding AVAILABLE, which is what the
+                    # placeholder branch below has to do because a carrier nobody has named cannot be
+                    # looked up. adapters/nba.py's `_local_row` calls the same function (prompt 128).
                     if cert == "CONFIRMED" and cs.get("outlet"):
                         media.append(media_row("web" if cs.get("surface") == "web" else "tv", cs["outlet"],
-                                               outlet_access(cs["outlet"], available, unavailable),
+                                               local_rights_access(cs, ab, available, unavailable),
                                                market="local", certainty="CONFIRMED", start_time=start, tbd=tbd,
                                                source="data/local_rights.json",
                                                label=cs.get("label") or f"{nick} on {cs['outlet']}"))
@@ -255,6 +312,16 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
                     media.append(media_row("tv", cs.get("label") or f"{ab} LOCAL", "AVAILABLE", market="local", certainty=cert,
                                            start_time=start, tbd=tbd, source="data/local_rights.json",
                                            label=f"{nick} local TV - carrier TBA"))
+            # THE OUT-OF-MARKET PACKAGE (prompt 128): after the league's rows and before the note below,
+            # so a game the package covers is not reported as having no US row. Its access is the
+            # profile's answer for the outlet, never a literal.
+            game_type = GAME_TYPE.get(g.get("gameType"), str(g.get("gameType")))
+            if takes_out_of_market_package(game_type, home["abbreviation"], away["abbreviation"], media,
+                                           local_abbrevs, package):
+                pkg_outlet = normalize_outlet(package["outlet"])
+                media.append(media_row("web", pkg_outlet, outlet_access(pkg_outlet, available, unavailable),
+                                       market="national", certainty="CONFIRMED", start_time=start, tbd=tbd,
+                                       source=PACKAGE_SOURCE, label=package.get("label") or pkg_outlet))
             if not media:
                 notes.append(f"{et_date(start)}: {away['abbreviation']}@{home['abbreviation']} no US broadcast rows")
             # THE ODDS JOIN. A game with no ESPN match is not an error - it is logged, counted and
@@ -281,7 +348,7 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
                 "home": home, "away": away, "media": media,
                 **_status_scores(g),
                 "odds": odds, "records": None,
-                "flags": {"gameType": GAME_TYPE.get(g.get("gameType"), str(g.get("gameType"))),
+                "flags": {"gameType": game_type,
                           "gameState": g.get("gameState"), "gameScheduleState": g.get("gameScheduleState"),
                           "nhlSeason": g.get("season")},
             })
@@ -305,11 +372,19 @@ def report_md(fixture: dict[str, Any], notes: list[str], postal: Any) -> str:
     rows = []
     for g in fixture["games"]:
         outs = ", ".join(f"{m['outlet']}[{m['access'][:4]}{'/'+m['market'][:3] if m['market']!='national' else ''}"
-                         f"{'/'+m['carriageCertainty'][:3] if m['carriageCertainty']!='CONFIRMED' else ''}]" for m in g["media"]) or "-"
+                         f"{'/'+m['carriageCertainty'][:3] if m['carriageCertainty']!='CONFIRMED' else ''}"
+                         f"{'/pkg' if m.get('source') == PACKAGE_SOURCE else ''}]" for m in g["media"]) or "-"
         rows.append([f"{g['away']['abbreviation']} @ {g['home']['abbreviation']}", g["startTimeET"], g["flags"]["gameType"], outs])
-    n_nat = sum(1 for g in fixture["games"] if any(m["market"] == "national" for m in g["media"]))
+    # THE LEAGUE'S NATIONAL ROWS ONLY (prompt 128). The out-of-market package row is market `national`
+    # too, so counting every national row would count the package as a national telecast; it is
+    # counted on its own, beside it, and its rows are marked `/pkg` in the table.
+    n_nat = sum(1 for g in fixture["games"]
+                if any(m["market"] == "national" and m.get("source") != PACKAGE_SOURCE for m in g["media"]))
+    n_pkg = sum(1 for g in fixture["games"] if any(m.get("source") == PACKAGE_SOURCE for m in g["media"]))
     lines = [f"# NHL adapter report - window {v['window'][0] if v['window'] else '?'} .. {v['window'][-1] if v['window'] else '?'}", "",
-             f"- generated {v['generatedAt']}", f"- games: **{len(fixture['games'])}** ({n_nat} with a US national row)",
+             f"- generated {v['generatedAt']}",
+             f"- games: **{len(fixture['games'])}** ({n_nat} with a US national row from the league; "
+             f"{n_pkg} with the out-of-market package row)",
              f"- local teams (market {v['market']}): {', '.join(v['localTeams'])}",
              f"- postal-lookup: {json.dumps(postal, ensure_ascii=False)[:300] if postal else 'not run'}", "",
              md_table(["Game", "Start (ET)", "Type", "Media rows [access/market/certainty]"], rows), ""]

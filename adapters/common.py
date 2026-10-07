@@ -295,6 +295,10 @@ OUTLET_ALIASES = {
     "Prime": "Prime Video", "Amazon": "Prime Video", "HULU": "Hulu", "NFL Net": "NFL Network", "NFLN": "NFL Network",
     "TruTV": "truTV", "SN": "Sportsnet", "SNP": "Sportsnet", "SNO": "Sportsnet", "SNE": "Sportsnet", "SNW": "Sportsnet",
     "TVAS": "TVA Sports", "CBC": "CBC", "ESPN Deportes": "ESPN Deportes",
+    # The NHL's schedule names NHL Network `NHLN` (measured 2026-10-06). Unaliased it was its own outlet,
+    # absent from data/access_profile.json, so its games answered UNKNOWN; NHL Network is listed there
+    # as unavailable, and Joe ruled the same day that its games are not on his services (prompt 128).
+    "NHLN": "NHL Network",
     "WUAB": "WUAB 43", "WUAB-43": "WUAB 43", "Cleveland's 43": "WUAB 43", "Cavaliers on DAZN": "DAZN", "DAZN 1": "DAZN",
     # WOIO IS CBS, AND THIS IS WHERE THAT RESOLVES (prompt 106). The Cavaliers' OTA simulcast package
     # names stations - thirteen of the fifteen are on WOIO - and WOIO is CBS's Cleveland affiliate
@@ -347,6 +351,34 @@ def outlet_access(outlet: str, available: set[str], unavailable: set[str]) -> st
         return "CONDITIONAL/VERIFY"
     if any(k in low for k in ("paramount", "peacock", "espn+", "espn plus")) or low in {"max", "hbo max"}:
         return "AVAILABLE"
+    return "UNKNOWN"
+
+
+LOCAL_RIGHTS_ACCESS = ("AVAILABLE", "UNAVAILABLE")
+
+
+def local_rights_access(entry: dict[str, Any], team: str, available: set[str] | list[str],
+                        unavailable: set[str] | list[str]) -> str:
+    """The access of a confirmed carrier's row from data/local_rights.json (prompt 128).
+
+    AN ENTRY CAN STATE ITS OWN ACCESS, and it wins. Joe ruled on 2026-10-06 that the Blue Jackets'
+    Prime Video broadcasts are an add-on he does not hold, while Prime Video itself stays on his
+    services - so the outlet's access in data/access_profile.json is the wrong answer for this one row,
+    and the profile cannot say so without saying it of every Prime Video game.
+
+    `access` is AVAILABLE or UNAVAILABLE. ABSENT, THE PROFILE DECIDES BY OUTLET, exactly as before, so an
+    entry without the key (nba.CLE) emits what it always did. ANY OTHER VALUE is UNKNOWN with a warning
+    naming the team and the value: a misspelling must not quietly become either answer.
+
+    ONE FUNCTION FOR BOTH ADAPTERS' CONFIRMED-CARRIER BRANCHES (adapters/nhl.py and adapters/nba.py
+    `_local_row`). A field only one of them honours is the defect adapters/nhl.py records from prompt 72.
+    """
+    if "access" not in entry:
+        return outlet_access(entry.get("outlet") or "", set(available), set(unavailable))
+    value = entry["access"]
+    if value in LOCAL_RIGHTS_ACCESS:
+        return value
+    print(f"  warn: data/local_rights.json {team}: access {value!r} is not AVAILABLE or UNAVAILABLE - row access UNKNOWN")
     return "UNKNOWN"
 
 

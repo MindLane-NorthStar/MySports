@@ -28,8 +28,8 @@ from pathlib import Path
 from typing import Any
 
 from adapters.common import (access_lookup, dump_json, et_date, et_display, fetch_logos, find_repo_root, fixture_envelope,
-                             http_json, load_data, load_raw_or_fetch, md_table, media_row, normalize_outlet, outlet_access,
-                             team_record, write_text, now_et_iso, result_status, score_int)
+                             http_json, load_data, load_raw_or_fetch, local_rights_access, md_table, media_row,
+                             normalize_outlet, outlet_access, team_record, write_text, now_et_iso, result_status, score_int)
 from adapters.espn import fetch_scoreboard, fetch_teams, _odds, _broadcast_names
 
 ESPN_TO_TRICODE = {"NY": "NYK", "GS": "GSW", "SA": "SAS", "UTAH": "UTA", "NO": "NOP", "WSH": "WAS"}
@@ -60,7 +60,7 @@ def _local_row(side: dict[str, Any], carriage: dict[str, Any], start: str, tbd: 
     if cs.get("status") == "CONFIRMED" and cs.get("outlet"):
         # decision 7 (2026-09-01): Cavaliers on DAZN (RESN production) - a real service row, no CARRIER TBA plate
         return media_row("web" if cs.get("surface") == "web" else "tv", cs["outlet"],
-                         outlet_access(cs["outlet"], available, unavailable), market="local", certainty="CONFIRMED",
+                         local_rights_access(cs, ab, available, unavailable), market="local", certainty="CONFIRMED",
                          start_time=start, tbd=tbd, source="data/local_rights.json",
                          label=cs.get("label") or f"{nick} on {cs['outlet']}")
     return media_row("tv", cs.get("label") or f"{ab} LOCAL", "AVAILABLE", market="local", certainty=cs.get("status", "UNANNOUNCED"),

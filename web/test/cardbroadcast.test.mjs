@@ -21,7 +21,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { cardBroadcast } from '../lib/cardbroadcast.js';
+import { cardBroadcast, cardMark } from '../lib/cardbroadcast.js';
 import { cardMarkSlug, simulcastLanes, hasMark, showsMark } from '../lib/marks.js';
 import { region } from './region.mjs';
 
@@ -195,6 +195,60 @@ test('the streaming services are taken in the verdict\'s own order, skipping any
   assert.equal(named(['prime-video', 'espn-plus']).service_id, 'prime-video');
   assert.equal(hasMark('acc-extra'), false);
   assert.equal(named(['acc-extra', 'prime-video']).service_id, 'prime-video', 'the markless one is passed over');
+});
+
+// --------------------------------------- the NHL out-of-market package and the Blue Jackets' add-on (prompt 128)
+// Joe, 2026-10-06: out-of-market NHL games are on ESPN+ (NHL Power Play), and the Blue Jackets' Prime
+// Video broadcasts are an add-on he does not hold. The adapter writes the rows (adapters/nhl.py); these
+// pin that the card needs NO change to show them. Rows are the adapter's output for three real games in
+// tests/fixtures/nhl_schedule_shapes_2026-10-06.json, in GAME_SELECT's shape, with the primary and the
+// verdict the reconciler decides for them (tests/test_nhl_out_of_market.py proves both).
+
+test('an out-of-market NHL game whose primary is a markless local feed names ESPN+', () => {
+  // VGK @ SEA, 2026-10-06 - the game Joe saw named KING
+  const game = {
+    broadcasts: [
+      bc('prime-video', 'STREAMING', 'out_of_market', { name: 'Prime Video', side: 'HOME' }),
+      bc('king', 'LINEAR', 'out_of_market', { label: 'KING', name: 'KING', side: 'HOME', primary: true }),
+      bc('kong', 'LINEAR', 'out_of_market', { label: 'KONG', name: 'KONG', side: 'HOME' }),
+      bc('scripps', 'LINEAR', 'out_of_market', { label: 'SCRIPPS', name: 'SCRIPPS', side: 'HOME' }),
+      bc('espn-plus', 'STREAMING', 'available', { label: 'NHL Power Play on ESPN+', name: 'ESPN+' }),
+    ],
+    eligibility: verdict(true, 'stream only: espn-plus', null, ['espn-plus']),
+  };
+  assert.equal(hasMark('king'), false, 'the pick shows no mark');
+  assert.ok(hasMark('espn-plus'));
+  assert.equal(cardBroadcast(game).service_id, 'espn-plus');
+});
+
+test('where the package row is the primary, the card names ESPN+ and not the other club\'s Prime Video', () => {
+  // MTL @ DAL, 2026-10-29 - the Stars' own Prime Video stream is out of market
+  const game = {
+    broadcasts: [
+      bc('prime-video', 'STREAMING', 'out_of_market', { name: 'Prime Video', side: 'HOME' }),
+      bc('espn-plus', 'STREAMING', 'available', { label: 'NHL Power Play on ESPN+', name: 'ESPN+', primary: true }),
+    ],
+    eligibility: verdict(true, 'stream only: espn-plus', null, ['espn-plus']),
+  };
+  assert.equal(cardBroadcast(game).service_id, 'espn-plus');
+});
+
+test('a Blue Jackets game on the unavailable add-on names its feed and wears no mark', () => {
+  // PIT @ CBJ, 2026-10-09. Not eligible, so the verdict names nothing, and the unavailable Prime
+  // Video row cannot lend its mark: only a service the verdict names may replace the pick.
+  const game = {
+    broadcasts: [
+      bc('cbjnhl', 'LINEAR', 'unknown', { label: 'CBJNHL', name: 'CBJNHL', side: 'HOME', primary: true }),
+      bc('cbjhn', 'LINEAR', 'unknown', { label: 'CBJHN', name: 'CBJHN', side: 'HOME' }),
+      bc('sn-pit', 'LINEAR', 'out_of_market', { label: 'SN-PIT', name: 'SN-PIT', side: 'AWAY' }),
+      bc('prime-video', 'STREAMING', 'unavailable', { label: 'Blue Jackets on Prime Video (add-on subscription)',
+        name: 'Prime Video', side: 'HOME' }),
+    ],
+    eligibility: verdict(false, 'not receivable: cbjnhl=unknown, cbjhn=unknown, prime-video=unavailable', null, []),
+  };
+  assert.ok(hasMark('prime-video'), 'the add-on row HAS a mark - which is why the rule must not borrow it');
+  assert.equal(cardBroadcast(game).service_id, 'cbjnhl');
+  assert.equal(cardMark(game).url, null);
 });
 
 // ------------------------------------------------------- what the change must leave exactly as it was
