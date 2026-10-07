@@ -21,6 +21,7 @@ import proColours from '../../data/grid_colors_pro.json' with { type: 'json' };
 import { SUPABASE_URL, ASSET_BASE_URL, gridAssetUrl } from '../lib/config.js';
 import { indexStandings, standingLine } from '../lib/standings.js';
 import { isPlaceholderTeam, placeholderReason } from '../lib/placeholders.js';
+import { isExhibitionOpponent, exhibitionFaults } from '../lib/exhibition.js';
 import { staleEligibility, FRESHNESS_DAYS, FRESHNESS_HOURS } from '../lib/freshness.js';
 import { todayET } from '../lib/format.js';
 import { addDays } from '../lib/weeks.js';
@@ -228,13 +229,26 @@ console.log('\n(f) standings, probables, display names, MLB short names');
   // ruling followed this check going red on the new form, which is what it is for, and a form nobody
   // has ruled on yet is MEANT to turn it red again. The detail names every row this exempted and why,
   // so a green run still shows the reader each one.
-  const proUnruled = allTeams.filter((t) => t.sport !== 'cfb' && !proColours.teams[String(t.id)]);
-  const exempt = proUnruled.filter(isPlaceholderTeam).map((t) => `${t.id} "${t.canonical_name}" (${placeholderReason(t)})`);
+  //
+  // A NAMED EXHIBITION OPPONENT IS EXEMPT TOO, BY NAME (Joe's ruling 2026-10-06, register §73): London
+  // Lions (`nba-LON`) played one exhibition and has no colour ruling. lib/exhibition.js reads the name
+  // from data/grid_colors_pro.json `exhibitionOpponents` - never a property, and never through
+  // isPlaceholderTeam, which would badge a real club TBD. The SAME check goes red if a named id is not
+  // a team in the sport its entry states, or is also in `teams`.
+  const exhibition = allTeams.filter((t) => t.sport !== 'cfb' && isExhibitionOpponent(t, proColours));
+  const faults = exhibitionFaults(proColours, allTeams);
+  const proUnruled = allTeams.filter((t) => t.sport !== 'cfb' && !proColours.teams[String(t.id)]
+    && !isExhibitionOpponent(t, proColours));
+  const exempt = [
+    ...proUnruled.filter(isPlaceholderTeam).map((t) => `${t.id} "${t.canonical_name}" (${placeholderReason(t)})`),
+    ...exhibition.map((t) => `${t.id} "${t.canonical_name}" (exhibition opponent, named)`),
+  ];
   const notPlaceholder = proUnruled.filter((t) => !isPlaceholderTeam(t)).map((t) => `${t.id} "${t.canonical_name}"`);
-  assert(proUnruled.every(isPlaceholderTeam),
-         'the only unruled pro rows are TBD placeholders',
-         `${exempt.length} placeholder${exempt.length === 1 ? '' : 's'} exempted: ${exempt.join('; ') || 'none'}`
-         + (notPlaceholder.length ? ` | NOT placeholders: ${notPlaceholder.join('; ')}` : ''));
+  assert(proUnruled.every(isPlaceholderTeam) && faults.length === 0,
+         'the only unruled pro rows are TBD placeholders or named exhibition opponents',
+         `${exempt.length} exempted: ${exempt.join('; ') || 'none'}`
+         + (notPlaceholder.length ? ` | NOT placeholders: ${notPlaceholder.join('; ')}` : '')
+         + (faults.length ? ` | NAMED EXHIBITION FAULTS: ${faults.join('; ')}` : ''));
 }
 
 // ---------------------------------------------------------------- (g) eligibility freshness

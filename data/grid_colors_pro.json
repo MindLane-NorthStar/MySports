@@ -1006,5 +1006,20 @@
       "ratio": 12.07,
       "via": "C+invert"
     }
+  },
+  "exhibitionOpponents": {
+    "_about": "Clubs from outside the four leagues that a league schedule lists as an opponent, exempt BY NAME from smoke's 'the only unruled pro rows are TBD placeholders or named exhibition opponents' check: one id per entry, no colour ruling, and never a class or a property. A real club whose id changed arrives with no conference and empty external ids too, and that is what the check exists to catch. web/lib/exhibition.js reads this; smoke goes red if a named id is not a team in the sport its entry states, or is also in `teams`. Register 73.",
+    "nba-LON": {
+      "name": "London Lions",
+      "sport": "nba",
+      "game": {
+        "id": "nba-401914130",
+        "matchup": "LON @ POR",
+        "viewingDay": "2026-10-12"
+      },
+      "measured": "Cowork, 2026-10-06, read-only SELECTs and ESPN's scoreboard: abbreviation LON, conference null, external_ids {}, no colours, no logo; one game, no broadcast rows; ESPN's NBA scoreboard for 2026-10-01 to 10-20 has no other event with a non-NBA club.",
+      "ruling": "Joe 2026-10-06: an exhibition opponent, exempt from the check by name. No colour ruling, and no class exemption.",
+      "date": "2026-10-06"
+    }
   }
 }
