@@ -1,5 +1,5 @@
 {
- "_about": "Viewer access profile (spec 3.2), label-based until networks_services/carriage_status exist. Provider: DIRECTV CHOICE (no Sports Pack) + ESPN Unlimited + Peacock Premium + Paramount+ + HBO Max + Prime Video + Netflix + Disney+ + Apple TV (decision 4). Adapters classify each media row's access from this file. Anything not listed classifies UNKNOWN (never assumed held or not held): Hulu, YouTube, NBA TV, MLB Network are unstated as of 2026-09-01.",
+ "_about": "Viewer access profile (spec 3.2), label-based until networks_services/carriage_status exist. Provider: DIRECTV CHOICE (no Sports Pack) + ESPN Unlimited + Peacock Premium + Paramount+ + HBO Max + Prime Video + Netflix + Disney+ + Apple TV (decision 4). Adapters classify each media row's access from this file. Anything not listed classifies UNKNOWN (never assumed held or not held): YouTube is unstated as of 2026-09-01. Joe ruled 2026-10-14 (prompt 129, register §74): NBA TV (\"I get NBA TV\"; DIRECTV CHOICE channel 216) and Hulu (\"I have HULU\") are on his services; the Blue Jackets' own channel, CBJNHL and CBJHN, is not (\"Blue Jackets NOT AVAILABLE\"). MLB Network is listed available below; this note called it unstated until prompt 129 corrected it.",
  "available": [
   "ABC",
   "CBS",
@@ -33,7 +33,9 @@
   "DAZN",
   "WUAB 43",
   "MLB Network",
-  "Guardians TV"
+  "Guardians TV",
+  "NBA TV",
+  "Hulu"
  ],
  "unavailable": [
   "CBS Sports Network",
@@ -46,6 +48,8 @@
   "Sportsnet",
   "TVA Sports",
   "CBC",
-  "Sportsnet+"
+  "Sportsnet+",
+  "CBJNHL",
+  "CBJHN"
  ]
 }

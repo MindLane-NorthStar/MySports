@@ -109,20 +109,22 @@ class _Tmp(unittest.TestCase):
 
 
 # ------------------------------------------------------------------------------- the ten games
+# PROMPT 129 MOVED FOUR CELLS, by Joe's rulings of 2026-10-14 (register §74): Hulu is on his services and
+# the Blue Jackets' own channel, CBJNHL and CBJHN, is not. Prompt 128 measured all four as UNKNOWN.
 AFTER = {
     "nhl-2026020048": [("ESPN", "AVAILABLE", "national")],
     VGK_SEA: [("Prime Video", "OUT_OF_MARKET", "local"), ("KING", "OUT_OF_MARKET", "local"),
               ("KONG", "OUT_OF_MARKET", "local"), ("SCRIPPS", "OUT_OF_MARKET", "local"), ("ESPN+", "AVAILABLE", "national")],
-    PIT_CBJ: [("CBJNHL", "UNKNOWN", "local"), ("CBJHN", "UNKNOWN", "local"), ("SN-PIT", "OUT_OF_MARKET", "local"),
+    PIT_CBJ: [("CBJNHL", "UNAVAILABLE", "local"), ("CBJHN", "UNAVAILABLE", "local"), ("SN-PIT", "OUT_OF_MARKET", "local"),
               ("Prime Video", "UNAVAILABLE", "local")],
-    PHI_DET: [("ESPN+", "AVAILABLE", "national"), ("Hulu", "UNKNOWN", "national"), ("Disney+", "AVAILABLE", "national")],
+    PHI_DET: [("ESPN+", "AVAILABLE", "national"), ("Hulu", "AVAILABLE", "national"), ("Disney+", "AVAILABLE", "national")],
     TOR_EDM: [("ESPN+", "AVAILABLE", "national")],
     "nhl-2026020199": [("TNT", "AVAILABLE", "national"), ("truTV", "AVAILABLE", "national"),
                        ("HBO Max", "AVAILABLE", "national"), ("NBCSP+", "OUT_OF_MARKET", "local")],
     MTL_DAL: [("Prime Video", "OUT_OF_MARKET", "local"), ("ESPN+", "AVAILABLE", "national")],
     NJD_VGK: [("NHL Network", "UNAVAILABLE", "national"), ("MSGSN", "OUT_OF_MARKET", "local"),
               ("SCRIPPS", "OUT_OF_MARKET", "local")],
-    FLA_CBJ: [("ESPN+", "AVAILABLE", "national"), ("Hulu", "UNKNOWN", "national"), ("Disney+", "AVAILABLE", "national"),
+    FLA_CBJ: [("ESPN+", "AVAILABLE", "national"), ("Hulu", "AVAILABLE", "national"), ("Disney+", "AVAILABLE", "national"),
               ("Prime Video", "UNAVAILABLE", "local")],
     "nhl-2026021319": [("TNT", "AVAILABLE", "national"), ("truTV", "AVAILABLE", "national"),
                        ("HBO Max", "AVAILABLE", "national"), ("NBCSP+", "OUT_OF_MARKET", "local"),
