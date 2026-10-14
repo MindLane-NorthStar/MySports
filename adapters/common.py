@@ -320,12 +320,32 @@ OUTLET_ALIASES = {
     "TBS (out-of-market only)": "TBS",
     "FOX / FS1": "FOX",
     "WKYC 3": "NBC",
+    # MLB's 2026 postseason labels (prompt 129, measured in source_observations 2026-09-17..10-14):
+    # `FS1/ FOX ONE` then `FS1 / FOX ONE` for FS1, `FOX/ FOX ONE` for FOX, `TBS/HBO MAX` for TBS.
+    # Unaliased, each became its own stub network with access `unknown` and the NLCS was hidden.
+    # The spacing around `/` is normalised before the lookup (see `_slash_spaced`), so one key per
+    # label covers every spacing the feed has used or will use.
+    "FS1 / FOX ONE": "FS1",
+    "TBS / HBO MAX": "TBS",
 }
+
+
+def _slash_spaced(s: str) -> str:
+    """`A/B`, `A/ B`, `A /B` and `A / B` are one spelling: the feed has used two of them for the same
+    label inside one postseason. Applied to the label AND to the alias keys, so the lookup stays an
+    exact match (rule 18) - only the spacing around a slash is relaxed, never the words."""
+    return re.sub(r"\s*/\s*", " / ", s)
+
+
+_ALIASES_SLASH_SPACED = {_slash_spaced(k): v for k, v in OUTLET_ALIASES.items()}
 
 
 def normalize_outlet(outlet: str | None) -> str:
     o = re.sub(r"\s+", " ", (outlet or "").strip())
-    return OUTLET_ALIASES.get(o, o)
+    if o in OUTLET_ALIASES:
+        return OUTLET_ALIASES[o]
+    # an unaliased label keeps its own spelling; only an alias match is rewritten
+    return _ALIASES_SLASH_SPACED.get(_slash_spaced(o), o)
 
 
 def access_lookup(root: Path) -> tuple[set[str], set[str]]:
@@ -407,8 +427,8 @@ def canonical_outlet(outlet: str, available: set[str], unavailable: set[str]) ->
     if o in available or o in unavailable:
         return o
     folded = o.casefold()
-    for alias, canon in OUTLET_ALIASES.items():
-        if alias.casefold() == folded:
+    for alias, canon in _ALIASES_SLASH_SPACED.items():
+        if alias.casefold() == _slash_spaced(o).casefold():
             return canon
     for known in (*available, *unavailable):
         if known.casefold() == folded:
