@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from adapters.common import (access_lookup, dump_json, et_display, fetch_logos, find_repo_root, fixture_envelope,
-                             http_json, load_data, load_raw_or_fetch, md_table, media_row, normalize_outlet,
+                             http_json, load_data, load_raw_or_fetch, md_table, media_row, canonical_outlet,
                              outlet_access, result_status, score_int, team_record, write_text)
 
 API = "https://statsapi.mlb.com/api/v1"
@@ -222,7 +222,7 @@ def build_media(game: dict[str, Any], *, local_abbrevs: set[str], available: set
         if not raw:
             continue
         code = ((b.get("availability") or {}).get("availabilityCode") or "").lower()
-        outlet = normalize_outlet(raw)
+        outlet = canonical_outlet(raw, available, unavailable)
         if code in NATIONAL_CODES:
             has_national = True
             if outlet in national_seen:      # the home/away pair of the same national feed

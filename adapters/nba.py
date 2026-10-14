@@ -29,7 +29,7 @@ from typing import Any
 
 from adapters.common import (access_lookup, dump_json, et_date, et_display, fetch_logos, find_repo_root, fixture_envelope,
                              http_json, load_data, load_raw_or_fetch, local_rights_access, md_table, media_row,
-                             normalize_outlet, outlet_access, team_record, write_text, now_et_iso, result_status, score_int)
+                             canonical_outlet, outlet_access, team_record, write_text, now_et_iso, result_status, score_int)
 from adapters.espn import fetch_scoreboard, fetch_teams, _odds, _broadcast_names
 
 ESPN_TO_TRICODE = {"NY": "NYK", "GS": "GSW", "SA": "SAS", "UTAH": "UTA", "NO": "NOP", "WSH": "WAS"}
@@ -116,7 +116,7 @@ def _simulcast_rows(side: dict[str, Any], carriage: dict[str, Any], other_ab: st
     """
     rows = []
     for raw in simulcast_outlets(carriage, side["abbreviation"], other_ab, start):
-        outlet = normalize_outlet(raw)
+        outlet = canonical_outlet(raw, available, unavailable)
         rows.append(media_row("tv", outlet, outlet_access(outlet, available, unavailable),
                               market="local", certainty="CONFIRMED", start_time=start, tbd=tbd,
                               source="data/local_rights.json simulcasts",
@@ -169,7 +169,7 @@ def build_from_espn(raw: dict[str, Any], root: Path, *, season: int, day_filter:
         home, away = side(sides["home"]), side(sides["away"])
         tbd = not bool(comp.get("timeValid", True))
         media = []
-        for outlet, espn_mkt in _broadcast_names(comp):
+        for outlet, espn_mkt in _broadcast_names(comp, available, unavailable):
             acc = outlet_access(outlet, available, unavailable)
             mtype = "web" if outlet in STREAM_ONLY else "tv"
             mk = "national"
@@ -247,7 +247,8 @@ def build_from_league(raw: dict[str, Any], root: Path, *, season: int, day_filte
                                   ("homeTvBroadcasters", "local", "home"), ("awayTvBroadcasters", "local", "away"),
                                   ("homeOttBroadcasters", "local", "home"), ("awayOttBroadcasters", "local", "away")):
                 for b in bc.get(key) or []:
-                    outlet = normalize_outlet(b.get("broadcasterDisplay") or b.get("broadcasterAbbreviation") or "")
+                    outlet = canonical_outlet(b.get("broadcasterDisplay") or b.get("broadcasterAbbreviation") or "",
+                                              available, unavailable)
                     if not outlet:
                         continue
                     acc = outlet_access(outlet, available, unavailable)

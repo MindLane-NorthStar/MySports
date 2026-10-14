@@ -47,8 +47,8 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from adapters.common import (ET, access_lookup, clock, dump_json, et_date, et_display, fetch_logos, fixture_envelope,
-                             hex6, http_json, load_data, load_raw_or_fetch, md_table, media_row, normalize_outlet,
+from adapters.common import (ET, access_lookup, canonical_outlet, clock, dump_json, et_date, et_display, fetch_logos, fixture_envelope,
+                             hex6, http_json, load_data, load_raw_or_fetch, md_table, media_row,
                              outlet_access, parse_iso, team_record, write_text, now_et_iso, find_repo_root, result_status, score_int)
 
 SITE = "https://site.api.espn.com/apis/site/v2/sports"
@@ -281,20 +281,27 @@ def _odds(comp: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
-def _broadcast_names(comp: dict[str, Any]) -> list[tuple[str, str]]:
-    """[(outlet, espn_market)] — geoBroadcasts first (typed), then the flat broadcasts list."""
+def _broadcast_names(comp: dict[str, Any], available: set[str] | frozenset[str] = frozenset(),
+                     unavailable: set[str] | frozenset[str] = frozenset()) -> list[tuple[str, str]]:
+    """[(outlet, espn_market)] — geoBroadcasts first (typed), then the flat broadcasts list.
+
+    THE NAME IS CANONICAL BEFORE ANYTHING DECIDES ON IT (prompt 129). ESPN began writing `Fox` for
+    FOX on 2026-10-05; an exact lookup left it `Fox`, so REGIONAL_NETWORKS never matched and the
+    profile answered UNKNOWN. `canonical_outlet` folds case within the alias table and the profile
+    (exact match, rule 18), so the regional rules and the access lookup both see `FOX`."""
     seen: list[tuple[str, str]] = []
     for gb in comp.get("geoBroadcasts") or []:
         if (gb.get("lang") or "en") != "en" or (gb.get("region") or "us") != "us":
             continue
-        name = normalize_outlet(ESPN_OUTLETS.get((gb.get("media") or {}).get("shortName", ""), (gb.get("media") or {}).get("shortName", "")))
+        name = canonical_outlet(ESPN_OUTLETS.get((gb.get("media") or {}).get("shortName", ""), (gb.get("media") or {}).get("shortName", "")),
+                                available, unavailable)
         mk = ((gb.get("market") or {}).get("type") or "National").lower()
         if name and (name, mk) not in seen:
             seen.append((name, mk))
     for b in comp.get("broadcasts") or []:
         mk = (b.get("market") or "national").lower()
         for n in b.get("names") or []:
-            name = normalize_outlet(ESPN_OUTLETS.get(n, n))
+            name = canonical_outlet(ESPN_OUTLETS.get(n, n), available, unavailable)
             if name and all(name != s[0] for s in seen):
                 seen.append((name, mk))
     return seen
@@ -356,7 +363,7 @@ def build_nfl_fixture(raw: dict[str, Any], root: Path, *, season: int, week: int
         cov_game = cov.get("games", {}).get(gid) or cov.get("games", {}).get(f"{away['abbreviation']}@{home['abbreviation']}")
 
         media = []
-        for outlet, espn_mkt in _broadcast_names(comp):
+        for outlet, espn_mkt in _broadcast_names(comp, available, unavailable):
             acc = outlet_access(outlet, available, unavailable)
             mtype = "web" if outlet in STREAM_ONLY else "tv"
             mk, cert, src = "national", "CONFIRMED", "espn.scoreboard"

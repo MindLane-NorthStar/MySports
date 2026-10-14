@@ -38,7 +38,7 @@ from typing import Any
 
 from adapters.common import (access_lookup, dump_json, et_date, et_display, fetch_logos, find_repo_root, fixture_envelope,
                              http_json, load_data, load_raw_or_fetch, local_rights_access, md_table, media_row,
-                             normalize_outlet, outlet_access, team_record, write_text, result_status, score_int)
+                             canonical_outlet, outlet_access, team_record, write_text, result_status, score_int)
 
 API = "https://api-web.nhle.com/v1"
 # NHL abbreviations that differ from ESPN's TEAMS endpoint (/hockey/nhl/teams), which is what
@@ -82,7 +82,8 @@ PACKAGE_SOURCE = "data/markets.json nhl.outOfMarketPackage"
 
 def takes_out_of_market_package(game_type: str | None, home_abbrev: str | None, away_abbrev: str | None,
                                 media: list[dict[str, Any]], local_abbrevs: set[str] | list[str],
-                                entry: dict[str, Any] | None) -> bool:
+                                entry: dict[str, Any] | None, *, available: set[str] | frozenset[str] = frozenset(),
+                                unavailable: set[str] | frozenset[str] = frozenset()) -> bool:
     """Does this game take one row for the out-of-market package? (Joe's ruling 2026-10-06, prompt 128.)
 
     "Surface ESPN+ as the broadcast provider for ALL NHL games that are not airing on one of the other
@@ -109,7 +110,7 @@ def takes_out_of_market_package(game_type: str | None, home_abbrev: str | None, 
         return False
     if any(m.get("market") == "national" for m in media):
         return False
-    outlet = normalize_outlet(entry["outlet"])
+    outlet = canonical_outlet(entry["outlet"], available, unavailable)
     return not any(m.get("outlet") == outlet for m in media)
 
 
@@ -265,7 +266,7 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
             for b in g.get("tvBroadcasts") or []:
                 if (b.get("countryCode") or "US") != "US":
                     continue
-                outlet = normalize_outlet(b.get("network"))
+                outlet = canonical_outlet(b.get("network") or "", available, unavailable)
                 if outlet in CANADIAN:
                     continue
                 mk = NHL_MARKET.get(b.get("market", "N"), "national")
@@ -317,8 +318,8 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
             # profile's answer for the outlet, never a literal.
             game_type = GAME_TYPE.get(g.get("gameType"), str(g.get("gameType")))
             if takes_out_of_market_package(game_type, home["abbreviation"], away["abbreviation"], media,
-                                           local_abbrevs, package):
-                pkg_outlet = normalize_outlet(package["outlet"])
+                                           local_abbrevs, package, available=available, unavailable=unavailable):
+                pkg_outlet = canonical_outlet(package["outlet"], available, unavailable)
                 media.append(media_row("web", pkg_outlet, outlet_access(pkg_outlet, available, unavailable),
                                        market="national", certainty="CONFIRMED", start_time=start, tbd=tbd,
                                        source=PACKAGE_SOURCE, label=package.get("label") or pkg_outlet))

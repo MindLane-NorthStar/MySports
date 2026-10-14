@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from adapters.common import (access_lookup, dump_json, et_display, fetch_logos, find_repo_root, http_json,
-                             load_dotenv, md_table, normalize_outlet, now_et_iso, outlet_access, team_record, write_text, score_int)
+                             load_dotenv, md_table, canonical_outlet, now_et_iso, outlet_access, team_record, write_text, score_int)
 
 API_BASE = "https://api.collegefootballdata.com"
 
@@ -139,6 +139,11 @@ def build_fixture(games: list[dict[str, Any]], media: list[dict[str, Any]], root
         if block is not None:
             odds_by[e.get("id")] = block
     available, unavailable = access_lookup(root)
+
+    def canon(m: dict[str, Any]) -> str:
+        # case folds before access is decided (prompt 129): CFBD began writing `Fox` on 2026-10-13
+        return canonical_outlet(str(m.get("outlet", "")), available, unavailable)
+
     fbs = [g for g in games if is_fbs_involving(g)]
     ids = {g.get("id") for g in fbs}
     media_by: dict[Any, list[dict[str, Any]]] = defaultdict(list)
@@ -158,8 +163,8 @@ def build_fixture(games: list[dict[str, Any]], media: list[dict[str, Any]], root
                      "classification": g.get("homeClassification")},
             "away": {"id": g.get("awayId"), "team": g.get("awayTeam"), "conference": g.get("awayConference"),
                      "classification": g.get("awayClassification")},
-            "media": [{"mediaType": m.get("mediaType"), "outlet": normalize_outlet(str(m.get("outlet", ""))),
-                       "access": outlet_access(str(m.get("outlet", "")), available, unavailable),
+            "media": [{"mediaType": m.get("mediaType"), "outlet": canon(m),
+                       "access": outlet_access(canon(m), available, unavailable),
                        "isStartTimeTBD": m.get("isStartTimeTBD"), "startTime": m.get("startTime")}
                       for m in media_by.get(g.get("id"), [])],
             "odds": odds_by.get(g.get("id")),
