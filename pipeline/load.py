@@ -247,8 +247,15 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
         # THE TEAMS ARE IN THE UPDATE LIST (prompt 116), PRESERVED: a null side - the source gave no
         # id - coalesces onto the stored column rather than erasing it; a real id, placeholder or
         # club, lands. This is the write that lets "AL Wild Card #2" become a club on 2026-09-28.
-        db.upsert("games", [game], "id", ["season", "week", "neutral_site", "home_team_id", "away_team_id"],
-                  tag="games", preserve=["home_team_id", "away_team_id"])
+        # COMPETITION CONTEXT WHEN THE FIXTURE STATES ONE (prompt 129). Only adapters/mlb.py does today,
+        # from gameType: every MLB row from 2026-10-08 read REGULAR because nothing wrote the column.
+        # A fixture without the key leaves the stored value alone - the key is absent from the row, so
+        # it is neither inserted (the column's default stands) nor updated; `preserve` keeps a null
+        # from erasing it as well. The NFL half (queue item 14) stays queued.
+        if g.get("competitionContext"):
+            game["competition_context"] = g["competitionContext"]
+        db.upsert("games", [game], "id", ["season", "week", "neutral_site", "home_team_id", "away_team_id", "competition_context"],
+                  tag="games", preserve=["home_team_id", "away_team_id", "competition_context"])
         if venue_id_sub:
             db.run("update games set venue_id = (select id from venues where name = %s and city = '' limit 1) where id = %s", (venue_id_sub, gid), tag="games.venue")
         counts["games"] += 1

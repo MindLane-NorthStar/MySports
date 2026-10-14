@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from adapters.common import (access_lookup, dump_json, et_display, fetch_logos, find_repo_root, fixture_envelope,
-                             http_json, load_data, load_raw_or_fetch, md_table, media_row, canonical_outlet,
+                             http_json, load_data, load_raw_or_fetch, md_table, media_row, canonical_outlet, _slash_spaced,
                              outlet_access, result_status, score_int, team_record, write_text)
 
 API = "https://statsapi.mlb.com/api/v1"
@@ -39,6 +39,11 @@ KEEP_TYPES = {"R", "F", "D", "L", "W", "C", "P", "A"}
 # status families that are tombstones, not games (brief 1.4 / 7.2)
 TOMBSTONE = ("D", "C")
 NATIONAL_CODES = {"national", "exclusive"}
+# games.competition_context by gameType (prompt 129). Wild Card, Division Series, LCS and World Series
+# are PLAYOFF; the regular season is REGULAR. Any other kept type (All-Star, C, P) is not written at
+# all, so the stored value - the column's default - stands rather than a guess.
+PLAYOFF_TYPES = {"F", "D", "L", "W"}
+COMPETITION_CONTEXT = {**{t: "PLAYOFF" for t in PLAYOFF_TYPES}, "R": "REGULAR"}
 # Outlets whose canonical name is a streaming service (brief 9.3 mediaType rule)
 STREAMING = {"Apple TV", "Netflix", "Peacock", "HBO Max", "Prime Video", "ESPN+", "Disney+", "Hulu", "Paramount+"}
 
@@ -232,8 +237,13 @@ def build_media(game: dict[str, Any], *, local_abbrevs: set[str], available: set
             market = "national"
             access = outlet_access(outlet, available, unavailable)
             certainty = "CONFIRMED"
-            # FOX Saturday is regional: 2-3 simultaneous games all labelled FOX (brief 8.1)
-            if outlet in ("FOX", "FS1") and raw.upper().startswith("FOX /"):
+            # FOX Saturday is regional: 2-3 simultaneous games all labelled FOX (brief 8.1) - IN THE
+            # REGULAR SEASON ONLY (prompt 129). FOX's LDS, LCS, World Series and All-Star Game are
+            # national, as every NFL playoff game is (adapters/espn.py rule 0, register §64); without
+            # the gameType test NLCS Games 1, 2 and 7 sat UNVERIFIED as Market TBD. The label's spacing
+            # around `/` is normalised first: the feed wrote `FOX/ FOX ONE` and `FOX / FOX ONE`.
+            if (outlet in ("FOX", "FS1") and game.get("gameType") == "R"
+                    and _slash_spaced(raw.upper()).startswith("FOX /")):
                 if guardians_in_window:
                     market = "regional"
                 else:
@@ -356,6 +366,8 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, date: str,
                 "records": {"home": record("home"), "away": record("away")},
                 "probables": build_probables(g, people),
                 "gameType": g.get("gameType"),
+                **({"competitionContext": COMPETITION_CONTEXT[g.get("gameType")]}
+                   if g.get("gameType") in COMPETITION_CONTEXT else {}),
                 "doubleHeader": dh, "doubleheaderGameNumber": gnum if dh != "N" else None,
                 "seriesGameNumber": g.get("seriesGameNumber"), "gamesInSeries": g.get("gamesInSeries"),
                 "dayNight": g.get("dayNight"),

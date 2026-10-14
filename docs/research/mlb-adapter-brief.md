@@ -234,7 +234,7 @@ MLB's three-year agreements with ESPN, NBCUniversal and Netflix cover **2026–2
 | ESPN / ABC (+ ESPN App) | 30-game weeknight package (summer-weighted), Memorial Day, second-half opener, Little League Classic | Yes — no local rows | Available (DIRECTV + ESPN Unlimited) |
 | NBC / Peacock | Sunday Night Baseball; Opening Day and Labor Day primetime; Wild Card Series | Yes — no local rows | Available (NBC + Peacock Premium) |
 | Peacock / NBCSN | Sunday Leadoff (late-morning Sundays), Peacock "Extra" games, the July 5 all-Peacock day | Yes — no local rows | Available via Peacock; NBCSN is not on DIRECTV and does not matter |
-| FOX / Fox One | Saturday 7:15 PM ET window (2–3 regional games), All-Star Game, LDS/LCS/World Series | Yes — no local rows; **regional** | Available, subject to the coverage map (§8.1) |
+| FOX / Fox One | Saturday 7:15 PM ET window (2–3 regional games), All-Star Game, LDS/LCS/World Series | Yes — no local rows; **regional in the regular-season Saturday window only**; the All-Star Game and the postseason are **national** (corrected by prompt 129: this row listed them as regional, and `adapters/mlb.py` sent NLCS Games 1, 2 and 7 to Market TBD) | Available; the Saturday window is subject to the coverage map (§8.1) |
 | FS1 | Overflow national games; part of FOX Saturday regional splits | Sometimes (locals present on non-Saturday FS1 games) | Available |
 | TBS / truTV / HBO Max | Tuesday nights; Division Series and LCS (HBO Max simulcasts postseason) | No — locals coexist; blacked out in the two markets | Available (decision 6 confirmed TBS) |
 | MLB Network | Nightly national selections, "MLBN alt" | No — locals coexist; blacked out in the two markets | **Not in profile** — 9 games in the Aug–Oct window; see §12 Q5 |
