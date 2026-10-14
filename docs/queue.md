@@ -331,6 +331,12 @@ renderers group by week anywhere that would show a Wild Card game under "week 1"
 `db/migrations/0003_games.sql` (`competition_context`). **Size.** Small to medium; needs a ruling on
 week numbering first. **A description of a problem, not an approved plan.**
 
+**2026-10-14, amended (prompt 129, register §74): the MLB half is done; the NFL half remains.** The MLB adapter
+now emits `competitionContext` from `gameType` (PLAYOFF for F, D, L and W; REGULAR for R), and
+`pipeline/load.py` writes it on insert and update only when a fixture states one. After refresh 38625331262
+every MLB game from 10-13 to 10-20 read `PLAYOFF`. The NFL is unchanged: ESPN's `season.type` is still not
+carried into the column, and the week-numbering question above is still open.
+
 ## 15. *(closed 2026-09-29 by prompt 124 — register §67)*
 
 This item was *"qa-shots' TBD-badge check reads live placeholders, and they are running out."* The
@@ -361,58 +367,15 @@ other 29 had been overwritten by a later run the same day, and were copied to
 `fixtures/<date>/run-<run id>/` first. The table is in §69, which also records whether any fixture
 file could carry a credential. The number is retired rather than reused.
 
-## 18. The Blue Jackets' own feeds carry access `unknown`, and whether Joe can receive them is his ruling
+## 18. *(closed 2026-10-14 by prompt 129 — register §74)*
 
-**What.** The NHL feed lists the Blue Jackets' telecast as `cbjnhl` ("CBJNHL") and, on some games,
-`cbjhn` ("CBJHN"). Neither is named in `data/access_profile.json`, so `outlet_access()` falls
-through to `UNKNOWN` (`adapters/common.py:339-350`) and both load as `unknown`
-(`pipeline/load.py:307`). Measured 2026-09-30 with the anon key: 82 active `cbjnhl` rows
-and 2 active `cbjhn` rows, all `unknown`, and `cbjnhl` is the primary row on 78 of those games.
-Cowork's brief for prompt 126 says the Blue Jackets Hockey Network is carried on Spectrum cable and
-not on DIRECTV (Yahoo Sports, 2026-09-23). **That run did not check the source.** If it is right,
-these feeds are not watchable on Joe's profile, and `unknown` understates what is known.
-
-**What the app shows today.** Since prompt 126 (register §70) a Blue Jackets game whose rows include
-`prime-video` names Prime Video on its card and sits in the Prime Video rail row. That is the two
-games inside the refresh's 7-day window on 2026-09-30 (10-01 and 10-03). **The other 80, 10-09 to
-2027-04-10, still carry the old `cbj-local` carrier-TBA row**, which has no mark, so their cards
-still show an empty mark column and their grid lane still reads `CBJNHL`. Each should take a
-`prime-video` row as the window reaches it (`data/local_rights.json`, `nhl.CBJ`, Joe 2026-09-09),
-and the card follows without a code change. Nothing here fixes them sooner.
-
-**A correction to the brief, read against the component (rule 22).** The brief says the detail panel
-"still lists them as 'unknown'". It does not, on any of the 82 games. `GameDetail.js:310-365` drops
-the whole "Where to watch" list once one row is accessible (prompt 71 stage 4), and every one of the
-82 has an accessible row: `prime-video` on 2, `cbj-local` on 80. The word "Unknown"
-(`GameDetail.js:34`) would print for these feeds only on a game with no accessible row at all, and
-there is none today.
-
-**The ruling that is Joe's.** Whether to record the two feeds as unavailable. It is a data change,
-an entry under `unavailable` in `data/access_profile.json` edited through a parser (rule 17), and
-the file matches on the label form, not the slug (rule 31). It would change the status word and the
-eligibility reason on a game with no other row; it would not change a card that already names Prime
-Video.
-
-**Also noted, and not changed by prompt 126.** The archived desktop grid follows its own rule,
-`docs/rendering-contract.md` §5 rule 4: "on its primary row (first ROW_ORDER linear outlet, else
-first available streaming outlet)". Which row that render puts a Blue Jackets game in was not looked
-at; the Python renderer and the desktop grid were out of that brief's scope.
-
-**Where it starts.** `data/access_profile.json`, `adapters/common.py:339`, `web/lib/cardbroadcast.js`,
-`web/components/GameDetail.js:310-365`. **Size.** Small once ruled. **A description of a problem, not
-an approved plan.**
-
-**2026-10-06, a correction (prompt 128, rule 30): "What the app shows today" stops holding once the
-refresh runs.** Joe ruled that day that the Blue Jackets' Prime Video broadcasts are an add-on he does
-not hold, so each game's `prime-video` row turns `unavailable` as the refresh's window reaches it, and
-the game then has no accessible row at all. With none, the detail panel prints the status word for
-every feed, so `cbjnhl` and `cbjhn` will read "Unknown" (`web/components/GameDetail.js:34`), and the
-paragraph above that says the word "would print for these feeds only on a game with no accessible row
-at all, and there is none today" becomes false game by game. On what carries the feed: the club's pages
-of 2026-09-23 and 2026-09-28 name Spectrum TV, Fubo and Prime Video as carriers of Blue Jackets Hockey
-Network and say talks with other cable and satellite providers continue; DIRECTV is not named (an
-inference from absence, recorded in `docs/research/research-changelog.md`). **Whether to record
-`cbjnhl` and `cbjhn` as unavailable is still Joe's ruling.**
+This item was *"the Blue Jackets' own feeds carry access `unknown`, and whether Joe can receive them is his
+ruling"*. Joe ruled on 2026-10-14: *"Blue Jackets NOT AVAILABLE"*. The club's update of 2026-10-09 names
+Spectrum, Prime Video and Fubo as carriers and says DIRECTV was offered terms and has not agreed. `CBJNHL`
+and `CBJHN`, the labels the NHL schedule emits, are now under `unavailable` in `data/access_profile.json`.
+After refresh 38625331262 every `cbjnhl` and `cbjhn` row in the 7-day window read `unavailable` (3 each).
+A Blue Jackets game whose rows are only those feeds and the Prime Video add-on is now off-service, not
+unknown. The number is retired rather than reused.
 
 ## 19. The day-span hard stop moves with the standings on a day that has a seam
 
@@ -556,4 +519,27 @@ their MLB day.
 
 **Where it starts.** `pipeline/render_feed.py:40-51` (select `g.result_status` and pass it through) or
 `scripts/render_day.py` (skip the game before it reaches a row). **Size.** Small. **A description of a
+problem, not an approved plan.**
+
+## 24. A refresh anchored on a past date re-decides that Sunday's regional games without its coverage windows
+
+**What.** `schedule_refresh.yml`'s `date` input moves every adapter's window except one. The EntitledSports
+step, `python -m adapters.es_windows --out ...`, passes no `--week`, so `adapters/es_windows.py:164-170`
+reads the week containing the real clock's now and the one after it. An anchored run for a past Sunday
+therefore hands `adapters/espn.py` rule 4b no windows for that Sunday, the station listings are dormant
+(register §62), and `data/market_coverage_nfl.json` holds only week 1. Every Sunday-afternoon CBS or FOX
+game without the Browns falls to rule 6: UNVERIFIED, Market TBD.
+
+**Measured 2026-10-14 for the backfill prompt 129 proposed** (anon key): 2026-10-04 (week 4) carries `cbs`
+2 available and 5 out_of_market, all decided, and `fox` 5 unknown; 2026-10-11 (week 5) carries `cbs` 1
+available, 3 out_of_market and 1 unverified, and `fox` 6 unknown. An anchored run would turn the decided
+CBS rows into Market TBD, and the FOX rows from unknown into Market TBD rather than into the decision the
+week's windows gave. The Browns' own games are unaffected (rule 3).
+
+**What it would take.** Pass the anchor's NFL week to `adapters.es_windows --week` in the workflow, if
+EntitledSports still serves past weeks' pages; or skip rule 4b's rewrite of an already decided row. Both
+touch `.github/workflows/schedule_refresh.yml` or `adapters/espn.py`'s regional path.
+
+**Where it starts.** `.github/workflows/schedule_refresh.yml` (the coverage windows step),
+`adapters/es_windows.py:160-170`, `adapters/espn.py` `decide_regional`. **Size.** Small. **A description of a
 problem, not an approved plan.**

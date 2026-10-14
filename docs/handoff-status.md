@@ -67,6 +67,26 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
 
+**Measured 2026-10-14, prompt 129: `pytest` 752 → 798 passed + 1 skipped, `test:unit` 713 → 735, smoke 34 → 35/35
+and `qa-shots` 146 → 151/151; geometry all hard stops did not move.** Written before Stop 2's final gate run, which matched it.
+
+- **Why the floors moved.** pytest: `test_outlet_case_fold.py` 7, `test_mlb_postseason.py` 12,
+  `test_access_rulings_2026_10_14.py` 6, `test_mlb_cancellation.py` 14 and `test_mlb_source_switch.py` 7. test:unit:
+  `gridset.test.mjs` 6, `unknownaccess.test.mjs` 6, `unrecognized.test.mjs` 8, one each in `qatbd.test.mjs` and
+  `restcap.test.mjs`. Smoke gains (h), unknown access. qa-shots gains two off-air checks (`/qa/offair`) and three
+  CHANNEL ? checks (`/qa/channel`).
+- **Hidden games are shown, and unplayed postseason games are cancelled** (register §74, Joe's rulings of 2026-10-14).
+  The case fold reaches every game adapter, MLB's postseason labels are aliased, FOX's postseason is national,
+  MLB games carry PLAYOFF, NBA TV and Hulu are available, the Blue Jackets' channel is not, "ACC Extra" is ACCNX,
+  a scheduled postseason game the feed drops is cancelled, a cancelled or postponed game leaves the grid, a game
+  on a channel nobody has ruled on is shown with a CHANNEL ? cue, and MLB observations are credited to
+  `mlb.statsapi`.
+- **Refresh 38625331262 (Joe's dispatch, 19:38Z) confirmed Part 1 through the anon key**, with zero cancellations:
+  see §74. NLCS Games 1 and 2 were outside its window and wait for the backfill.
+- **The backfill is proposed as anchors 2026-10-04 and 2026-10-11, with a hazard** (queue item 24): an anchored run
+  re-decides that Sunday's regional NFL games without its coverage windows.
+- **Not in this brief's scope, so not edited:** `CLAUDE.md` still says "135 briefs covering 01–128" and "§1–§73".
+
 **Measured 2026-10-06, prompt 128: `pytest` 732 → 752 passed + 1 skipped and `test:unit` 701 → 713; smoke 34/34,
 `qa-shots` 146/146 and geometry all hard stops did not move.** Written before the final gate run, which matched it.
 
@@ -1177,6 +1197,14 @@ counted on its own line, mutually exclusive with market-pending. Implemented in 
 before touching any count line.
 
 ## Open
+
+- **Prompt 129 needs Joe's phone (rule 25).** Check each of these on the device:
+  - Sunday's Browns card (Ravens at Browns, 10-18, 1:00 PM) shows FOX as watchable.
+  - An NLCS card names FS1, and the ALCS card names TBS.
+  - An NBA TV game is listed as watchable.
+  - When a series ends early, its unplayed games read `Cancelled` in the list and are absent from the grid.
+  - A game on a channel nobody has ruled on shows the CHANNEL ? cue. The live window held none after
+    refresh 38625331262, so `/qa/channel` is where it was proved.
 
 - ~~Rendering-contract v1.7~~ **SHIPPED** in prompt 48 stage 2 (`376ef36`) — the program card on both
   grids, the list-card variant, the now marker, studio bookends, and the `open_ended` ↔

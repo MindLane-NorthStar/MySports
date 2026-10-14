@@ -6393,3 +6393,139 @@ ruling, as the placeholder forms do (§60).
 **Two corrections Joe made in the same message.** §72's sentence saying no dim treatment was found was
 wrong, and is corrected there. `CLAUDE.md` was missing from prompt 128's named paths, which Joe called
 Cowork's miss, and its two count lines move with this prompt.
+
+## 74. GAMES HIDDEN BY NETWORK SPELLINGS ARE SHOWN, UNPLAYED POSTSEASON GAMES ARE CANCELLED, AND JOE'S ACCESS RULINGS — 2026-10-14, prompt 129
+
+**Joe's rulings of 2026-10-14, verbatim as the brief carries them:**
+
+1. An unrecognized channel shows the game, with a cue. It is never hidden. *"show the game"*
+2. NBA TV is on Joe's services. *"I get NBA TV"* (a DIRECTV dealer page, americantv.com, updated
+   2026-10-02, lists NBA TV as channel 216 in CHOICE).
+3. The Blue Jackets' own channel (`CBJNHL`, `CBJHN`) is not on Joe's services. *"Blue Jackets NOT
+   AVAILABLE"* (the club's update of 2026-10-09 names Spectrum, Prime Video and Fubo, and says DIRECTV was
+   offered terms and has not agreed). Closes queue item 18.
+4. Postponed games come off the grid, as cancelled games do. *"Yes take them off"*
+5. The four unplayed Division Series games are closed. *"close them"*
+6. The archive is backfilled. *"yes"*
+7. Hulu is on Joe's services. *"I have HULU"*
+8. Four further calls: FOX's MLB postseason is national; the ALCS card names TBS; an unplayed game reads
+   `Cancelled`; MLB's observations are credited to MLB, *"MLB is fine to MLB"*.
+
+**And one more, made at Stop 1 the same day:** "ACC Extra" is the same service as ACCNX. The alias landed
+in Part 2 (`d646d20`). Smoke (h) keeps `acc-extra` named until a refresh has rewritten its rows, and the
+entry comes off at the Stop 2 continuation.
+
+**What was wrong.** Three spelling drifts in the feeds gave access `unknown` on networks Joe has. The
+reconciler marked those games `eligible = false, market_pending = false`, `offServiceSummary` filed them
+`off`, and D4 hid them. Cowork measured **39 games hidden since 2026-09-17, 14 of them in the next seven
+viewing days** (2026-10-14). They included Ravens at Browns on 10-18 (`nfl-401872997`), Ohio State at
+Indiana on 10-17 (`401858488`) and NLCS Games 3–6. Production read *"4 broadcasts on your services · 5 TBD
+Show 4 not on your services"* on 10-14, with neither NLCS club on the page.
+
+- **Cause 1, case.** ESPN wrote `Fox` from 2026-10-05 19:55Z and CFBD from 2026-10-13 08:09Z. The game
+  adapters resolved outlets with the exact `normalize_outlet`, so `Fox` missed `REGIONAL_NETWORKS` and the
+  profile. **`canonical_outlet()` already existed and folded case correctly, and only the program loader
+  reached it** (rule 32: the fix was present, and it was not the only place that needed it).
+- **Cause 2, MLB's postseason labels.** `FS1/ FOX ONE`, `FS1 / FOX ONE`, `FOX/ FOX ONE` and `TBS/HBO MAX`
+  were unaliased, so they became the stub networks `fs1-fox-one`, `fox-fox-one` and `tbs-hbo-max`.
+- **Cause 3, FOX's postseason was treated as Saturday regional baseball.** The source was a wrong row in
+  `docs/research/mlb-adapter-brief.md`. Postseason games were also stored as `REGULAR`, because nothing
+  wrote `competition_context`.
+- **Cause 4, unplayed games stayed `scheduled`.** No grid code tested `cancelled` or `postponed`.
+
+**What shipped.**
+
+- **A, `bec6199`.** Every game adapter (espn, cfbd, mlb, nba, nhl) resolves outlets through
+  `canonical_outlet()`. espn's `_broadcast_names` takes the profile, so the regional rules see `FOX`.
+  Every committed fixture resolved identically before and after.
+- **B, `81185e8`.** `normalize_outlet` normalises the spacing around `/` on the label and on the alias keys
+  before the exact lookup. The four spellings map to FS1, FS1, FOX and TBS. Every older slash alias still
+  resolves, an unaliased label keeps its spelling, and nothing is a substring match.
+- **C, `d7d2fb0`. The postseason-national rule, following §64.** FOX's regional branch is the
+  regular-season Saturday window only (`gameType == "R"`), as rule 0 makes every NFL playoff game
+  national. The adapter writes `competitionContext` PLAYOFF for F, D, L and W, and REGULAR for R. The
+  loader writes it only when a fixture states one (`preserve`). Beyond the brief, the regional test also
+  normalises the label's slash spacing, so a regular-season `FOX/ FOX ONE` game is regional like
+  `FOX / FOX ONE`.
+- **D, `053dd46`.** Rulings 2, 3 and 7 in `data/access_profile.json`, through a parser. Nothing that decides
+  eligibility reads `viewer_services`. Its only appearance outside the DDL is the writer at
+  `pipeline/bootstrap.py:74-78`, and the reconciler decides from `game_broadcasts.access_status`
+  (`pipeline/reconcile.py:281`).
+- **E, `740dac3`. The cancellation pass.** It runs after every fixture is loaded. An MLB game becomes
+  `cancelled`, never deleted, when it is still `scheduled` on a fixture's `game_date`, is stored as PLAYOFF
+  or dated on or after `data/markets.json` `mlb.postseason.2026.start` in the same season, and is listed by
+  no MLB fixture in the run among its games or tombstones. The start date is 2026-09-28, hand-entered from
+  statsapi's season record. Each cancellation writes one line to `refresh_runs.notes.cancellations`.
+  `game_date` rather than `viewing_day`, because it is the ET calendar date of the kickoff, which is how
+  statsapi defines `officialDate`.
+  **The fail-closed proof.** A failed fetch raises in `http_json` after its retries, `adapters/mlb.py main`
+  exits non-zero without writing a fixture, and the workflow's `|| exit 1` stops before the loader runs. The
+  zero-TV-rows guard does the same. A fixture cancels only if the adapter marked it `feedComplete` (an
+  integer `totalGames` and a `dates` list, which a successful empty day has and an error object does not),
+  its window is its one date, and it is under 36 hours old. A game the feed lists again returns to
+  `scheduled` through `SCORES_SQL`.
+  **The grid rule.** `gridSet()` in `web/lib/offservice.js` drops cancelled and postponed games from the
+  mobile grid, and the list keeps them. `mobile_demo.html` filters the same way. The archived desktop grid
+  does not yet (queue item 23).
+- **F, `918d81f`.** Smoke (h): an active unknown-access row on the next 7 ET viewing days must be on a named
+  service with a reason. Before the refresh it was red on exactly the seven services the brief predicted.
+  After it, it was green, with `acc-extra` (one game) named.
+- **G, `c149212`. The fifth listing state, UNRECOGNIZED.** A game is unrecognized when it is not eligible,
+  not market-pending and not network-TBD, and at least one of its active rows has access `unknown`. It is
+  never hidden, its row wrapper is cued `CHANNEL ?`, it is summed into TBD, and the grid draws it under the
+  feed's network name. At 390px the cue is 46.2px, against NETWORK TBD's 59.2 and MARKET TBD's 52.2, in the
+  same place. Mobile Grid Addendum v2.7.
+- **H, `b1affff`. The source switch.** `mlb-statsapi` maps to `mlb.statsapi` (league_api, 80). On an MLB
+  game the run loads, the espn.scoreboard claims are set aside as the same source's earlier id. They close
+  wherever the new source has claimed the field, so the stubs go inactive. History outside the window keeps
+  its claims, and a non-MLB game's espn.scoreboard claims keep their rows.
+
+**Measured after refresh 38625331262** (Joe's dispatch, 2026-10-14 19:38Z, on `740dac3`), through the anon key:
+
+- `nfl-401872997` reads fox available and is eligible.
+- NLCS Games 3–6 read fs1 available and are eligible, and their `fs1-fox-one` stubs are inactive.
+- The ALCS has `tbs` primary and available, and `tbs-hbo-max` is inactive.
+- Every MLB game from 10-13 to 10-20 reads PLAYOFF.
+- The four NBA TV games in the window are eligible.
+- `cbjnhl` and `cbjhn` have 3 rows each, all unavailable.
+- **Zero cancellations**, and no MLB game in `authority_conflict`.
+- NLCS Games 1 and 2 (10-11, 10-12) still read `fox` unverified and REGULAR. They fall before that
+  refresh's MLB window, and the backfill is what reaches them.
+
+**The backfill report (ruling 6).** A dispatch with `date` D rewrites these past viewing days:
+
+| Sport | Days | From |
+|---|---|---|
+| NFL | D−1 to D+6 | the ESPN date loop |
+| NBA | D−1 to D+6 | the date loop |
+| MLB | D−1 to D+6 | the date loop; the cancellation pass runs over each of those dates |
+| NHL | D−1, then the week from D | two `--date` calls |
+| CFB | the whole CFBD week `max(1, (D − 2026-09-01) // 7 + 1)`, plus, when D is a Sunday or Monday, the newest week the database holds | the CFB step |
+
+The anchors are **2026-10-04** (MLB 10-03 to 10-10, NFL 10-03 to 10-10, CFB week 5) and **2026-10-11** (MLB
+10-10 to 10-17, NFL 10-10 to 10-17, CFB week 6, which is the week the database gives 10-10). Together they
+cover MLB 10-03 to 10-12 with the four unplayed games, NFL 10-04 and 10-11, and CFB 10-10, as Cowork
+expected.
+
+Every dispatch also writes the following **outside** the window, whatever its anchor, exactly as the
+nightly writes them:
+
+- standings for **today's** ET date (`pipeline/standings.py:93-94`, `:355`)
+- the CFB polls
+- programs and studio shows through 2026-12-31
+- the newest CFB week's enrichment
+- the reconcile of every game with new evidence
+- new logos pushed to R2 (`--push --allow-new`, which overwrites an object whose bytes differ)
+- the fixtures archived to R2 under **today's** UTC date prefix, overwriting objects of the same name the
+  nightly archived there
+- the render job, which renders and publishes the **anchor day's** archived grids (`grids/{sport}/grid_{D}.*`)
+  and overwrites the old ones
+
+Only the render differs from what a nightly run does: it replaces a past day's archived grid with one drawn
+from today's rows.
+
+**One rewrite inside the window is not harmless (queue item 24).** The EntitledSports step reads the week
+of the real clock, not the anchor. So a past Sunday's regional CBS and FOX games without the Browns fall to
+rule 6, UNVERIFIED. Measured: 10-04's decided CBS rows (2 available, 5 out of market) and 10-11's (1
+available, 3 out of market) would turn to Market TBD. The archived NFL grids for those two days would lose
+them, because `render_day.py`'s `OMIT_ACCESS` drops UNVERIFIED rows.
