@@ -290,6 +290,9 @@ def now_et_iso() -> str:
 OUTLET_ALIASES = {
     "CW": "The CW", "The CW Network": "The CW", "USA": "USA Network", "USA Net": "USA Network",
     "BTN": "Big Ten Network", "ACCN": "ACC Network", "SECN": "SEC Network", "SECN+": "SEC Network+",
+    # Joe ruled 2026-10-14 (prompt 129, register §74): "ACC Extra" is the same service as ACCNX, which
+    # data/access_profile.json lists available. Unaliased it was its own stub, `acc-extra`, access unknown.
+    "ACC Extra": "ACCNX",
     "ESPN Unlmtd": "ESPN Unlimited", "CBSSN": "CBS Sports Network", "FOX Sports 1": "FS1", "FOX Sports 2": "FS2",
     "ESPN Plus": "ESPN+", "Paramount Plus": "Paramount+", "Max": "HBO Max", "HBO MAX": "HBO Max", "MAX": "HBO Max", "Amazon Prime Video": "Prime Video",
     "Prime": "Prime Video", "Amazon": "Prime Video", "HULU": "Hulu", "NFL Net": "NFL Network", "NFLN": "NFL Network",

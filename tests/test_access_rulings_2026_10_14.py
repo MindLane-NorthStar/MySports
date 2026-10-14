@@ -47,6 +47,13 @@ class TheProfile(unittest.TestCase):
             with self.subTest(label=label):
                 self.assertEqual(access(label), "UNAVAILABLE")
 
+    def test_acc_extra_is_accnx_and_available(self):
+        """Joe's later ruling of 2026-10-14: "ACC Extra" is the same service as ACCNX."""
+        for label in ("ACC Extra", "ACC EXTRA"):
+            with self.subTest(label=label):
+                self.assertEqual(canonical_outlet(label, AVAILABLE, UNAVAILABLE), "ACCNX")
+                self.assertEqual(access(label), "AVAILABLE")
+
     def test_the_blue_jackets_prime_video_entry_is_unchanged(self):
         cbj = json.loads((ROOT / "data" / "local_rights.json").read_text(encoding="utf-8"))["nhl"]["CBJ"]
         self.assertEqual((cbj.get("outlet"), cbj.get("access")), ("Prime Video", "UNAVAILABLE"))
