@@ -41,6 +41,8 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
+import { region } from './region.mjs';
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const raw = readFileSync(join(HERE, '..', 'lib/queries.js'), 'utf8');
 // Comments stripped, so a rest() mentioned in prose is not a call site.
@@ -125,6 +127,18 @@ test('gridIndex pages with restAll - no filter, and the archive grows every nigh
   assert.equal(g.length, 1);
   assert.equal(g[0].kind, 'restAll', 'a bare rest() here would drop the OLDEST archives first, silently');
   assert.match(g[0].text, /order=generated_at\.desc,id\.desc/, 'a total order, so offset paging is stable');
+});
+
+test('smoke (h), unknown access (prompt 129), pages both of its reads', () => {
+  // scripts/smoke.mjs is not lib/queries.js and the walk above does not see it, so its two reads are
+  // pinned at their call sites: a 7-day viewing_day range paged, then the rows keyed by those ids in
+  // chunks of 100, each paged. A bare rest() on either would cap at 1,000 rows and pass quietly.
+  const smoke = readFileSync(join(HERE, '..', 'scripts', 'smoke.mjs'), 'utf8');
+  const h = region(smoke, '(h) unknown access', 'checks passed`);', 'smoke block (h)');
+  assert.match(h, /await restAll\(\s*`games\?select=id&viewing_day=gte\.\$\{start\}&viewing_day=lte\.\$\{end\}&order=id\.asc`\)/);
+  assert.match(h, /for \(let i = 0; i < ids\.length; i \+= 100\)/);
+  assert.match(h, /await restAll\(\s*`game_broadcasts\?select=game_id,service_id,access_status,active&game_id=in\.\$\{inList\(ids\.slice\(i, i \+ 100\)\)\}`/);
+  assert.doesNotMatch(h, /\brest\(/, 'no unpaged read in block (h)');
 });
 
 test('the allowlist names only functions that exist - a stale entry is a lie about the file', () => {

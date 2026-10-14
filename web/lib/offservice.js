@@ -367,3 +367,35 @@ export function gridSet(games) {
   const off = new Set(offServiceSummary(games).off.map((g) => g.id));
   return (games || []).filter((g) => !off.has(g.id) && airs(g));
 }
+
+/* ------------------------------------------------- the smoke guard on unknown access (prompt 129)
+ *
+ * A FEED'S NEW SPELLING MUST NOT HIDE A GAME QUIETLY. ESPN began writing `Fox` on 2026-10-05 and
+ * prompt 128's gates passed on 2026-10-06 with those rows already in the database: 39 games went
+ * unseen for four weeks because nothing read `access_status = 'unknown'` as a fault. An unknown row
+ * is the honest answer for a service nobody has ruled on - and a rule nobody has made is a decision
+ * waiting for Joe, so it is named. scripts/smoke.mjs applies this to the next 7 ET viewing days
+ * against an explicit list, each entry with its reason; a service off the list is red.
+ */
+
+/**
+ * Group active unknown-access rows by service, and split them by the allowed list.
+ *
+ * @param {Array<{game_id: string, service_id: string, access_status?: string, active?: boolean}>} rows
+ * @param {Record<string, string>} allowed  service_id -> the written reason it may stay unknown
+ * @returns {{faults: Array<{service: string, games: string[]}>, allowed: Array<{service: string, games: string[]}>}}
+ */
+export function unknownAccessByService(rows, allowed = {}) {
+  const by = new Map();
+  for (const r of rows || []) {
+    if (r?.active === false || r?.access_status !== 'unknown') continue;
+    const s = String(r.service_id);
+    if (!by.has(s)) by.set(s, new Set());
+    by.get(s).add(String(r.game_id));
+  }
+  const out = { faults: [], allowed: [] };
+  for (const [service, games] of [...by.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    (Object.hasOwn(allowed, service) ? out.allowed : out.faults).push({ service, games: [...games].sort() });
+  }
+  return out;
+}

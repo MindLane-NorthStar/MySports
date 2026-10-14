@@ -23,6 +23,7 @@ import { indexStandings, standingLine } from '../lib/standings.js';
 import { isPlaceholderTeam, placeholderReason } from '../lib/placeholders.js';
 import { isExhibitionOpponent, exhibitionFaults } from '../lib/exhibition.js';
 import { staleEligibility, FRESHNESS_DAYS, FRESHNESS_HOURS } from '../lib/freshness.js';
+import { unknownAccessByService } from '../lib/offservice.js';
 import { todayET } from '../lib/format.js';
 import { addDays } from '../lib/weeks.js';
 
@@ -283,6 +284,49 @@ console.log(`\n(g) eligibility freshness - the next ${FRESHNESS_DAYS} viewing da
            ? stale.slice(0, 8).map((g) => `${g.id} (${g.why}${g.lagHours === null ? '' : `, ${g.lagHours}h`})`).join('; ')
              + (stale.length > 8 ? ` and ${stale.length - 8} more` : '')
            : `${start}..${end}: ${games.length} games, ${inScope} with broadcasts, 0 stale`);
+}
+
+// ---------------------------------------------------------------- (h) unknown access is named
+// Prompt 129 (register §74). ESPN began writing `Fox` on 2026-10-05, MLB's postseason `FS1 / FOX ONE`
+// and `TBS/HBO MAX`, and every such row resolved to access `unknown`; the reconciler filed those games
+// off-service and D4 hid them - 39 games over four weeks, NLCS Games 3-6 and Sunday's Browns game
+// among them - while prompt 128's gates passed. A new spelling must turn something red. So every
+// ACTIVE broadcast row with access `unknown` on the next 7 ET viewing days must sit on a service named
+// below, and each name carries the reason it may stay unknown. A name with no reason is red too.
+//
+// WHAT BELONGS ON THE LIST is a service nobody has ruled on that is not a misspelling of one somebody
+// has. Measured 2026-10-14: `acc-extra` (one CFB game, 401858262) is the only such service in the
+// window. `eradm`, named in the brief, has no row in the window and is not listed; it goes back on
+// with a reason if it returns.
+//
+// BOUNDED, RULE 19, the shape of (g): a 7-day viewing_day range paged with restAll, then the rows keyed
+// by those ids in chunks of 100, each paged. web/test/restcap.test.mjs pins both call sites.
+const UNKNOWN_ACCESS_ALLOWED = {
+  'acc-extra': '"ACC Extra", a streaming label written for some ACC games. Joe ruled 2026-10-14 that it is the '
+    + 'ACCNX the profile lists; prompt 129 Part 2 adds the alias, and this entry comes off at Stop 2, once a '
+    + 'refresh has rewritten the row.',
+};
+console.log(`\n(h) unknown access - the next ${FRESHNESS_DAYS} viewing days`);
+{
+  const start = todayET();
+  const end = addDays(start, FRESHNESS_DAYS - 1);
+  const games = await restAll(
+    `games?select=id&viewing_day=gte.${start}&viewing_day=lte.${end}&order=id.asc`);
+  const ids = games.map((g) => g.id);
+  const unknown = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    unknown.push(...await restAll(
+      `game_broadcasts?select=game_id,service_id,access_status,active&game_id=in.${inList(ids.slice(i, i + 100))}`
+      + '&active=eq.true&access_status=eq.unknown&order=id.asc'));
+  }
+  const reasonless = Object.entries(UNKNOWN_ACCESS_ALLOWED).filter(([, why]) => typeof why !== 'string' || why.trim().length < 20);
+  const { faults, allowed } = unknownAccessByService(unknown, UNKNOWN_ACCESS_ALLOWED);
+  const show = (xs) => xs.map((x) => `${x.service} (${x.games.length}: ${x.games.slice(0, 3).join(', ')}${x.games.length > 3 ? ', ...' : ''})`).join('; ');
+  assert(faults.length === 0 && reasonless.length === 0,
+         `every unknown-access broadcast in the next ${FRESHNESS_DAYS} viewing days is on a named service`,
+         (faults.length ? `UNNAMED: ${show(faults)}` : `${start}..${end}: ${unknown.length} unknown row(s)`)
+         + (reasonless.length ? ` | NO REASON: ${reasonless.map(([k]) => k).join(', ')}` : '')
+         + (allowed.length ? ` | named: ${show(allowed)}` : ''));
 }
 
 console.log(`\n${failures === 0 ? 'OK' : 'FAILED'} - ${checks - failures}/${checks} checks passed`);
