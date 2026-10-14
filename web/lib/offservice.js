@@ -338,3 +338,32 @@ export function revealElsewhere(hiddenCount) {
     ? `${hiddenCount} not on your services — switch to List to see them`
     : null;
 }
+
+/* ------------------------------------------------------------- the grid's set (prompt 129)
+ *
+ * A GAME THAT WILL NOT AIR DRAWS NO GRID BLOCK, and the list keeps it. Joe, 2026-10-14: postponed
+ * games come off the grid "as cancelled games do" - "Yes take them off". The card already prints the
+ * word (lib/format.js, contract v1.6.6), so the list is where a cancelled or postponed game is still
+ * worth seeing; on the grid it is a block of airtime that will not happen. Nothing in web/components or
+ * lib/gridmodel.js tested either state until now, so the grid drew both.
+ *
+ * ONE FUNCTION, because the grid spans bands and Listing is the only caller that builds it (MobileGrid
+ * is drawn from nowhere else); it lives here rather than in Listing.js because that file is JSX and
+ * `node --test` cannot import it. The archived desktop grid is rendered by pipeline/render_feed.py and
+ * scripts/render_day.py from the database, outside this module (queue item 23).
+ */
+export const OFF_AIR_STATES = new Set(['cancelled', 'postponed']);
+
+/** False for a game that will not air at its slot: cancelled or postponed. */
+export function airs(game) {
+  return !OFF_AIR_STATES.has(game?.result_status);
+}
+
+/**
+ * The mobile grid's games: everything the bands show except what is genuinely off-service, and
+ * nothing that will not air. Built from the WHOLE day (Listing's note on hoisted favourites).
+ */
+export function gridSet(games) {
+  const off = new Set(offServiceSummary(games).off.map((g) => g.id));
+  return (games || []).filter((g) => !off.has(g.id) && airs(g));
+}

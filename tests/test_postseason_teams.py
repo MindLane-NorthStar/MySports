@@ -186,7 +186,8 @@ class AMissingSideIsNeverWritten(unittest.TestCase):
 class TheNotesCarryTheChanges(unittest.TestCase):
     def test_main_writes_team_changes_into_refresh_runs_notes(self):
         src = (ROOT / "pipeline" / "load.py").read_text(encoding="utf-8")
-        self.assertRegex(src, re.compile(r'notes = json\.dumps\(\{\*\*totals, \*\*run_context\(\), "team_changes": list\(TEAM_CHANGES\)\}\)'))
+        # prompt 129 adds "cancellations" after it, so the key may be followed by more (re.S: the call wraps)
+        self.assertRegex(src, re.compile(r'notes = json\.dumps\(\{\*\*totals, \*\*run_context\(\), "team_changes": list\(TEAM_CHANGES\)[,}]', re.S))
 
 
 if __name__ == "__main__":

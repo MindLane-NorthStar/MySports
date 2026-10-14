@@ -393,6 +393,12 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, date: str,
         endpoint=f"{API}/schedule?sportId=1&date={date}&hydrate={HYDRATE}",
         broadcastRowsSeen=tv_rows_seen,
         postponed=tombstones["postponed"], cancelled=tombstones["cancelled"], suspended=tombstones["suspended"],
+        # A COMPLETE ANSWER FOR THE DATE (prompt 129). Statsapi answers a date with `totalGames` and a
+        # `dates` list - `"totalGames":0,"dates":[]` for a day with no games (measured for 2026-11-15).
+        # pipeline/load.py cancels a postseason game the feed has dropped ONLY from a fixture that says
+        # this, so a payload of any other shape - an error object, a replay of something partial, a
+        # fixture written before this key existed - cancels nothing.
+        feedComplete=isinstance(raw.get("totalGames"), int) and isinstance(raw.get("dates"), list),
     )
     return fixture, notes, tombstones
 

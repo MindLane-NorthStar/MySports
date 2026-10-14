@@ -1349,6 +1349,36 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
+// --------------------------------------- A GAME THAT WILL NOT AIR LEAVES THE GRID (prompt 129, block E)
+//
+// Joe's ruling 4 of 2026-10-14: a cancelled or postponed game draws no grid block, lane or row, and
+// keeps its card. /qa/offair (app/qa/offair/page.js) renders the real Listing, bands and mobile grid,
+// with three watchable games on three networks - scheduled on TBS, CANCELLED on FS1, POSTPONED on FOX
+// - so THE COUNTS ARE CODE AND ARE ASSERTED EXACTLY: three cards, two status words, one block, one row.
+{
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  await page.goto(`${base}/qa/offair`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(600);
+  const r = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('.mcard')];
+    const text = (re) => cards.filter((c) => re.test(c.textContent)).length;
+    const grid = document.querySelector('.mgrid-only');
+    // textContent runs the right slot onto the conference line ("NL WestCancelled"), so no \b here
+    return { cards: cards.length, cancelled: text(/Cancelled$/), postponed: text(/Postponed$/),
+             gridShown: grid ? getComputedStyle(grid).display !== 'none' : false,
+             blocks: document.querySelectorAll('.mgrid-only .mblock:not(.pblock)').length,
+             rows: [...document.querySelectorAll('.mgrid-only .mgrid-row')].map((row) => row.id) };
+  });
+  record('Off air: a cancelled and a postponed game keep their cards on /qa/offair and print the word',
+         r.cards === 3 && r.cancelled === 1 && r.postponed === 1,
+         `${r.cards} cards, ${r.cancelled} reading Cancelled, ${r.postponed} reading Postponed`);
+  record('Off air: neither draws a grid block, lane or row - one block on one row, the scheduled TBS game',
+         r.gridShown && r.blocks === 1 && r.rows.length === 1,
+         `grid shown ${r.gridShown}, ${r.blocks} game block(s), rows ${JSON.stringify(r.rows)}`);
+  await ctx.close();
+}
+
 // ------------------------------------------ /api/my-games ANSWERS FROM THE RUNNING APP (prompt 127)
 //
 // `node --test` never compiles a route, and `next build` cannot run here (rule 12), so this is the one

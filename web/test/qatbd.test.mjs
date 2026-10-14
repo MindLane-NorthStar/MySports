@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { TBD_GAMES } from '../app/qa/tbd/fixture.js';
+import { OFFAIR_GAMES } from '../app/qa/offair/fixture.js';
 import { isPlaceholderTeam, placeholderReason } from '../lib/placeholders.js';
 import { splitHidden } from '../lib/offservice.js';
 import { chronological } from '../lib/favorites.js';
@@ -60,6 +61,12 @@ test('every fixture row carries exactly the fields gamesForDay() returns, embeds
   for (const g of TBD_GAMES) assertShape(g, GAME_SELECT, g.id);
 });
 
+test('the /qa/offair fixture (prompt 129) carries exactly the fields gamesForDay() returns too', () => {
+  for (const g of OFFAIR_GAMES) assertShape(g, GAME_SELECT, g.id);
+  const { hidden } = splitHidden(chronological(OFFAIR_GAMES, new Set()), new Set());
+  assert.equal(hidden.length, 0, 'every game is watchable, so the list shows all three');
+});
+
 test('the fixture covers every branch of the badge: the three MLB name forms and the -TBD suffix', () => {
   const sides = TBD_GAMES.flatMap((g) => [g.away, g.home]).map((t) => ({ ...t, sport: 'mlb' }));
   const placeholders = sides.filter(isPlaceholderTeam);
@@ -90,8 +97,9 @@ test('Today\'s filters hide none of the fixture: a hidden card is a side qa-shot
   assert.equal(visible.length, TBD_GAMES.length);
 });
 
-test('both qa pages 404 in production: the guard is the first line of each component', () => {
+test('every qa page 404s in production: the guard is the first line of each component', () => {
   const guard = /export default (?:async )?function \w+\([^)]*\) \{\n\s+if \(process\.env\.NODE_ENV === 'production'\) notFound\(\);/;
   assert.match(src('app/qa/tbd/page.js'), guard);
   assert.match(src('app/qa/programs/page.js'), guard);
+  assert.match(src('app/qa/offair/page.js'), guard);
 });

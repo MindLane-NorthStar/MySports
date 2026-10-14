@@ -539,3 +539,21 @@ hand-entered one for primary, and the detail panel lists only the accessible row
 
 **Where it starts.** `adapters/nhl.py:281-284`, beside `adapters/nba.py:182-192`. **Size.** Small. **A
 description of a problem, not an approved plan.**
+
+## 23. The archived desktop grid still draws a cancelled or postponed game
+
+**What.** Joe ruled on 2026-10-14 that a cancelled or postponed game comes off the grid and stays in the
+list (register §74, ruling 4). Prompt 129 Block E made the mobile grid obey: `gridSet()` in
+`web/lib/offservice.js` drops both states, `web/components/Listing.js` builds `MobileGrid` from it, and
+`docs/design/mobile_demo.html` filters the same way. **The archived desktop grid does not.**
+`pipeline/render_feed.py`'s game select (`:40-51`) does not read `result_status`, and `scripts/render_day.py`
+has no test for either state (`git grep -n -E "cancel|postpon|result_status" -- scripts/render_day.py
+pipeline/render_feed.py` finds nothing). A fine pointer sees the archived render and nothing else (Addendum
+M5), so on a desktop the four Division Series games the cancellation pass closes would still draw blocks for
+their MLB day.
+
+**Why it was not fixed in prompt 129.** Neither file is in that brief's scope (S5).
+
+**Where it starts.** `pipeline/render_feed.py:40-51` (select `g.result_status` and pass it through) or
+`scripts/render_day.py` (skip the game before it reaches a row). **Size.** Small. **A description of a
+problem, not an approved plan.**

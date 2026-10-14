@@ -591,7 +591,8 @@ function mgMin(ets){ const m=ets.match(/(\d+):(\d+) (AM|PM)/); let h=+m[1]%12; i
 function mgFmt(min){ min=((min%1440)+1440)%1440; let h=Math.floor(min/60), mm=min%60, ap=h>=12?"PM":"AM"; h=h%12||12; return h+(mm?":"+String(mm).padStart(2,"0"):"")+" "+ap; }
 function buildMobileGrid(style){
   // curated illustrative slate from today's real games: afternoon starts + the evening wave
-  const keep = TODAY.filter(g=>{const m=mgMin(g.et); return m<=155+12*60 || m>=18*60+40;});
+  // a cancelled or postponed game keeps its card and draws no block (prompt 129; web/lib/offservice.js gridSet)
+  const keep = TODAY.filter(g=>{const m=mgMin(g.et); return g.result_status!=="cancelled" && g.result_status!=="postponed" && (m<=155+12*60 || m>=18*60+40);});
   const rows = [...new Map(keep.map(g=>[g.network,g])).values()].sort((a,b)=>mgMin(a.et)-mgMin(b.et));
   let iv = keep.map(g=>[mgMin(g.et), mgMin(g.et)+MG_DUR]).sort((a,b)=>a[0]-b[0]);
   const win=[]; for(const p of iv){ if(win.length&&p[0]-win[win.length-1][1]<MG_GAP) win[win.length-1][1]=Math.max(win[win.length-1][1],p[1]); else win.push([p[0],p[1]]); }

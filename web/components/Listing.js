@@ -18,7 +18,7 @@ import MobileGrid from './MobileGrid.js';
 import GameDetail from './GameDetail.js';
 import { indexStandings, indexRankings } from '../lib/standings.js';
 import { SPORTS, SPORT_LABEL, sportMarkUrl } from '../lib/config.js';
-import { offServiceSummary } from '../lib/offservice.js';
+import { gridSet } from '../lib/offservice.js';
 // ONE IMPORT, AND NOT FROM lib/livescores.js (prompt 78 block C). That module carries the provider
 // fetching, and importing `applyOverlay` from it dragged all of it into the CLIENT bundle - measured
 // at 88-90/91 on qa-shots against 91/91 without it. `applyOverlay` now lives beside the poll.
@@ -192,11 +192,9 @@ export default function Listing({ games: serverGames, standingsRows, rankingsRow
   // The mobile grid follows what the bands actually show: everything except genuinely ineligible
   // games. Computed here because the grid spans bands - and it is deliberately built from the WHOLE
   // day, not from `rest`, so hoisting favourites into their own section does not remove them from
-  // the grid. The grid shows what it showed.
-  const gridGames = useMemo(() => {
-    const off = new Set(offServiceSummary(games).off.map((g) => g.id));
-    return (games || []).filter((g) => !off.has(g.id));
-  }, [games]);
+  // the grid. The grid shows what it showed. AND NOTHING THAT WILL NOT AIR (prompt 129): a cancelled
+  // or postponed game keeps its card in the bands and draws no block, lane or row - see gridSet().
+  const gridGames = useMemo(() => gridSet(games), [games]);
 
   /**
    * R3 + R4, prompt 56: ONE HEADING, AT ONE LEVEL, WITH THE LEAGUE ON IT.

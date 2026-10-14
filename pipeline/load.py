@@ -387,6 +387,90 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
     return counts
 
 
+# A POSTSEASON GAME THE FEED DROPS IS CANCELLED (prompt 129, Joe's rulings 4 and 5 of 2026-10-14).
+# Statsapi removes an unplayed "if necessary" game from the schedule once its series ends; the
+# adapter only sees what the feed lists and the upsert above only writes what a fixture carries, so
+# four 2026 Division Series games sat `scheduled` - two of them shown as watchable on truTV. This pass
+# closes them: never a delete (rule 6), one note line per game, and `SCORES_SQL` restores a game the
+# feed lists again, because its "Preview" maps to `scheduled` (adapters/common.py `_PROVIDER_STATE`).
+#
+# FAIL CLOSED, BY FOUR CONDITIONS ON THE FIXTURE. A failed fetch never reaches here: `http_json`
+# raises after its retries, `adapters/mlb.py main` exits non-zero without writing a fixture, and the
+# workflow's `|| exit 1` stops the refresh before this loader runs; the zero-TV-rows guard returns 1
+# the same way. On top of that, a fixture cancels only if (1) it says `feedComplete` - the payload had
+# an integer `totalGames` and a `dates` list, which a successful empty day has
+# (`"totalGames":0,"dates":[]`) and an error object does not; (2) its window is the one date it
+# names; (3) it was generated within CANCEL_MAX_AGE of this load, so a stale file on a laptop cannot
+# speak for a day it was not fetched about; and (4) it is MLB's.
+#
+# WHAT IS CANCELLED: an MLB game still `scheduled`, on that fixture's `game_date` - the ET calendar
+# date of the kickoff, which is how statsapi's `officialDate` is defined (viewing_day moves a
+# sub-03:00 start to the previous day and would not match) - that is a postseason game, either stored
+# as PLAYOFF or dated on or after data/markets.json `mlb.postseason.<season>.start` in the same
+# season, and that no MLB fixture in this run lists among its games or its tombstones (postponed,
+# cancelled, suspended). The date clause is what reaches the four Division Series games: they left
+# the feed before anything wrote PLAYOFF. A regular-season game and a `final` game are never touched.
+CANCEL_MAX_AGE = timedelta(hours=36)
+CANCELLATIONS: list[str] = []
+
+# Two shapes, never a NULL parameter: Postgres cannot type `%s is not null` from a bare None, so a
+# season with no start date in data/markets.json gets the PLAYOFF-only clause instead.
+CANCEL_SQL = """
+update games set result_status = 'cancelled'
+where sport = 'mlb' and result_status = 'scheduled' and game_date = %s and season = %s
+  and ({postseason})
+  and not (id = any(%s))
+returning id
+"""
+
+
+def _mlb_fixture_ids(fx: dict) -> set[str]:
+    meta = fx.get("validation") or {}
+    ids = {str(g.get("id")) for g in fx.get("games") or []}
+    for k in ("postponed", "cancelled", "suspended"):
+        ids |= {str(t.get("id")) for t in meta.get(k) or []}
+    return ids
+
+
+def cancel_dropped_postseason(db: DB, files: list[Path], now: datetime | None = None) -> list[str]:
+    """The cancellation pass over this run's MLB fixtures. Returns one note line per cancelled game."""
+    now = now or datetime.now(timezone.utc)
+    fixtures = []
+    for f in files:
+        fx = json.loads(Path(f).read_text(encoding="utf-8"))
+        if ((fx.get("validation") or {}).get("sport")) == "mlb":
+            fixtures.append(fx)
+    seen: set[str] = set()
+    for fx in fixtures:
+        seen |= _mlb_fixture_ids(fx)
+    seasons = (json.loads((ROOT / "data" / "markets.json").read_text(encoding="utf-8")).get("mlb") or {}).get("postseason") or {}
+    lines: list[str] = []
+    for fx in fixtures:
+        meta = fx["validation"]
+        day = meta.get("dayFilter")
+        window = meta.get("window") or {}
+        made = parse_iso(meta.get("generatedAt"))
+        if not (meta.get("feedComplete") is True and day and window.get("start") == day == window.get("end")
+                and made is not None and abs(now - made) <= CANCEL_MAX_AGE):
+            continue
+        season = int(meta.get("year") or day[:4])
+        start = ((seasons.get(str(season)) or {}).get("start"))
+        d = datetime.fromisoformat(day).date()
+        s = datetime.fromisoformat(start).date() if start else None
+        clause, extra = ("competition_context = 'PLAYOFF' or game_date >= %s", (s,)) if s else ("competition_context = 'PLAYOFF'", ())
+        sql = CANCEL_SQL.format(postseason=clause)
+        # the empty string keeps the array non-empty on a day no fixture lists any game; no game id is ''
+        params = (d, season, *extra, sorted(seen | {""}))
+        if db.conn is None:   # emit mode: nothing to read, so the statement is recorded and decides at apply time
+            db.run(sql.replace("returning id", ""), params, tag="games.cancel")
+            continue
+        for (gid,) in db.fetch(sql, params):
+            why = "postseason" if s and d >= s else "stored as PLAYOFF"
+            lines.append(f"{gid}: scheduled -> cancelled (absent from the {day} feed; {why})")
+    CANCELLATIONS.extend(lines)
+    return lines
+
+
 def run_context() -> dict[str, Any]:
     """Where this run happened, for the refresh_runs ledger.
 
@@ -458,9 +542,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{f.name}: " + " · ".join(f"{k} {v}" for k, v in c.items()))
             for k, v in c.items():
                 totals[k] = totals.get(k, 0) + v
+        # after every fixture is loaded, so a game any MLB fixture in this run lists is never cancelled
+        for line in cancel_dropped_postseason(db, files):
+            print(f"  cancel: {line}")
+        totals["cancellations"] = len(CANCELLATIONS)
         # team_changes: every "<gid>: side old -> new" this run made (prompt 116), so a flip is
         # visible in refresh_runs and never silent. The counters beside it say how many.
-        notes = json.dumps({**totals, **run_context(), "team_changes": list(TEAM_CHANGES)})
+        # cancellations: the same, one line per game the pass above cancelled (prompt 129).
+        notes = json.dumps({**totals, **run_context(), "team_changes": list(TEAM_CHANGES),
+                            "cancellations": list(CANCELLATIONS)})
         if run_id is not None:
             db.run("update refresh_runs set completed_at = now(), status = 'succeeded', games_checked = %s, notes = %s where run_id = %s",
                    (totals.get("games", 0), notes, run_id), tag="refresh_runs")
