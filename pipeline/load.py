@@ -32,9 +32,21 @@ from adapters.common import normalize_outlet   # alias table: CBSSN -> CBS Sport
 ET = ZoneInfo("America/New_York")
 ACCESS = {"AVAILABLE": "available", "UNAVAILABLE": "unavailable", "UNKNOWN": "unknown", "CONDITIONAL/VERIFY": "conditional",
           "OUT_OF_MARKET": "out_of_market", "UNVERIFIED": "unverified"}
-SOURCE_ID = {"cfbd.games+media": "cfbd", "espn.scoreboard": "espn.scoreboard", "nhl.schedule": "nhl.schedule", "nba.schedule": "nba.schedule"}
+# MLB's fixtures say `source: "mlb-statsapi"` and had no entry here until prompt 129, so the fallback
+# below credited every MLB observation since 2026-09-01 to espn.scoreboard - 843 broadcast rows. The
+# id and its (league_api, 80) match the `sources` row migration 0005 seeded for it.
+SOURCE_ID = {"cfbd.games+media": "cfbd", "espn.scoreboard": "espn.scoreboard", "nhl.schedule": "nhl.schedule", "nba.schedule": "nba.schedule",
+             "mlb-statsapi": "mlb.statsapi"}
 SOURCE_META = {"cfbd": ("structured_provider", 60), "espn.scoreboard": ("structured_provider", 55), "nhl.schedule": ("league_api", 80),
-               "nba.schedule": ("league_api", 80), "data/local_rights": ("hand_entered", 90), "506sports": ("official_aggregator", 70)}
+               "nba.schedule": ("league_api", 80), "data/local_rights": ("hand_entered", 90), "506sports": ("official_aggregator", 70),
+               "mlb.statsapi": ("league_api", 80)}
+# A SOURCE THAT WAS FILED UNDER ANOTHER ID (prompt 129). When a game of this sport loads under the new
+# id, its active claims under the old id are the SAME source's earlier claims, and they close under the
+# rules the current source's own claims close by - otherwise the loop below, which closes only claims
+# whose source is in `seen_now`, would leave every espn.scoreboard claim on an MLB game active forever,
+# the stub broadcast rows active with them, and two kickoff claims competing. Only games this run
+# loads are touched; an MLB game outside the window keeps its claims as they are.
+SOURCE_PREDECESSOR = {("mlb", "mlb.statsapi"): "espn.scoreboard"}
 PARSER_VERSION = "adapters@b69f4f8"
 STREAM_TYPES = {"ESPN+", "ESPN Unlimited", "Peacock", "Paramount+", "HBO Max", "Prime Video", "Netflix", "Disney+", "Hulu", "Apple TV", "SEC Network+", "YouTube"}
 
@@ -284,6 +296,9 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
         for oid, osrc, ofield, oval, ocert in active_rows:
             active.setdefault((osrc, ofield), {})[oval] = (int(oid), ocert)
         seen_now: dict[tuple[str, str], set[str]] = {}
+        # the predecessor's claims are set aside, so observe() never treats one as this source's own
+        legacy_src = SOURCE_PREDECESSOR.get((sport, source_id))
+        legacy = {f: active.pop((osrc, f)) for (osrc, f) in list(active) if legacy_src and osrc == legacy_src}
 
         def observe(src: str, fieldn: str, raw: str | None, norm: str, label: str | None, orole: str, oscore: int, cert: str, key: str) -> None:
             seen_now.setdefault((src, fieldn), set()).add(norm)
@@ -336,6 +351,15 @@ def load_fixture(db: DB, path: Path, run_id: int | None) -> dict[str, int]:
                 if oval not in seen_now[(osrc, ofield)]:
                     db.run("update source_observations set valid_to = now() where id = %s and valid_to is null", (oid,), tag="source_observations.close")
                     counts["observations_closed"] += 1
+        # the predecessor's claims close wherever the current source has now made its own for the field:
+        # kickoff_at always (every load claims one, and it is single-valued - the supersession above),
+        # broadcast whenever the game carries media. The same value under the new id is a new claim.
+        for ofield, vals in legacy.items():
+            if (source_id, ofield) not in seen_now:
+                continue
+            for oval, (oid, _) in vals.items():
+                db.run("update source_observations set valid_to = now() where id = %s and valid_to is null", (oid,), tag="source_observations.predecessor")
+                counts["observations_closed"] += 1
         db.run("update game_broadcasts b set active = exists (select 1 from source_observations o where o.game_id = b.game_id and o.field_name = 'broadcast' and o.valid_to is null "
                "and split_part(o.normalized_value, '|', 1) = b.service_id) where b.game_id = %s", (gid,), tag="game_broadcasts.active")
         od = g.get("odds")
