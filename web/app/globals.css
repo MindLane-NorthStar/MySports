@@ -2369,6 +2369,19 @@ html[data-hdr='collapsed'] .mgrid-axis {
   border:1px solid var(--line-soft);border-radius:3px;padding:2px 5px 1px}
 @media (max-width:699px){.networktbd-row::after{font-size:9px;padding:1px 4px 0}}
 
+/* ---- unrecognized channel (prompt 129, Joe's ruling 1 of 2026-10-14: "show the game")
+ * The fifth state: the game has a broadcaster, and one of its channels is one nobody has ruled on
+ * (access `unknown`). Shown, never dimmed, never hidden - the opposite of what it got until this
+ * prompt, which was `off`. Same place and same charcoal as NETWORK TBD: both say "not settled yet",
+ * and the word says which. Mutually exclusive with .pending-row and .networktbd-row by the if/else in
+ * offServiceSummary, so the three ::after tags can never collide. MatchupCard is not touched. */
+.unrecognized-row{position:relative}
+.unrecognized-row::after{content:'CHANNEL ?';position:absolute;top:4px;right:66px;z-index:2;pointer-events:none;
+  font-family:var(--display);font-weight:600;font-size:10px;letter-spacing:.14em;
+  color:var(--dim);background:rgba(27,27,27,.86);
+  border:1px solid var(--line-soft);border-radius:3px;padding:2px 5px 1px}
+@media (max-width:699px){.unrecognized-row::after{font-size:9px;padding:1px 4px 0}}
+
 /* ================================================================================================
  * THE VERTICAL RHYTHM BELOW THE PICKER (prompt 56 stage 8, Joe 2026-09-06:
  * "evaluate the vertical spacing between cards and between sections that render below the picker -

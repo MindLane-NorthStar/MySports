@@ -58,6 +58,8 @@ export default function SportBand({ sport, label, games, standings, rankings, sh
   const offIds = useMemo(() => new Set(summary.off.map((g) => g.id)), [summary]);
   const pendingIds = useMemo(() => new Set(summary.pending.map((g) => g.id)), [summary]);
   const tbdIds = useMemo(() => new Set(summary.tbd.map((g) => g.id)), [summary]);
+  // prompt 129: a channel nobody has ruled on - shown, with the CHANNEL ? cue (lib/offservice.js)
+  const unrecognizedIds = useMemo(() => new Set(summary.unrecognized.map((g) => g.id)), [summary]);
 
   const favIds = useMemo(() => favoriteIds(favoritesDoc), []);
 
@@ -81,9 +83,9 @@ export default function SportBand({ sport, label, games, standings, rankings, sh
   // locked and nothing here reaches inside it. The buckets are mutually exclusive by the if/else in
   // offServiceSummary, so at most one cue class can ever apply and no card can render both badges.
   /**
-   * THE FAVOURITE IS A FOURTH WRAPPER CLASS, and it does NOT behave like the other three.
+   * THE FAVOURITE IS A FIFTH WRAPPER CLASS, and it does NOT behave like the other four.
    *
-   * The first three are MUTUALLY EXCLUSIVE by the if/else in `offServiceSummary`, so at most one can
+   * The first four are MUTUALLY EXCLUSIVE by the if/else in `offServiceSummary`, so at most one can
    * ever apply. `fav-row` is orthogonal: an off-service game can perfectly well be one of Joe's, and
    * both cues have to show. They COMPOSE - `.offsvc-row.fav-row` gets the dim and the gold border -
    * and a test pins that, because "one silently wins" is the failure this shape invites.
@@ -91,6 +93,7 @@ export default function SportBand({ sport, label, games, standings, rankings, sh
   const rowClass = (g) =>
     [tbdIds.has(g.id) ? 'networktbd-row' : null,
      pendingIds.has(g.id) ? 'pending-row' : null,
+     unrecognizedIds.has(g.id) ? 'unrecognized-row' : null,
      offIds.has(g.id) ? 'offsvc-row' : null,
      favIdSet && isFavorite(g, favIdSet) ? 'fav-row' : null]
       .filter(Boolean).join(' ') || undefined;
@@ -101,7 +104,7 @@ export default function SportBand({ sport, label, games, standings, rankings, sh
   // differs, and MatchupCard is not touched to make that true.
   const row = (g) => (
     <div key={g.id} className={rowClass(g)} data-market-tbd={pendingIds.has(g.id) || undefined}
-         data-network-tbd={tbdIds.has(g.id) || undefined}>
+         data-network-tbd={tbdIds.has(g.id) || undefined} data-channel-unknown={unrecognizedIds.has(g.id) || undefined}>
       {isProgram(g) ? (
         <ProgramCard program={g} showDay={showDay} onOpen={onOpen} />
       ) : (

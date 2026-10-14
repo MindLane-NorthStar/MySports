@@ -1,5 +1,25 @@
 # Mobile Grid Addendum — v2.1 (decided 2026-09-02; overlap rule added 2026-09-03; zoom mechanism corrected 2026-09-03 · bands, name run and record format added 2026-09-04 · flat endcap added 2026-09-04 · flat endcap renumbered M17→M18 2026-09-04 · per-team cap surface and art, candidate D, 2026-09-04)
 
+> **v2.7 (2026-10-14, prompt 129, Joe's rulings 1 and 4).** **TWO RULES FOR WHAT THE GRID DRAWS.**
+>
+> 1. **A game that will not air draws no block, lane or row.** A `cancelled` or `postponed` game
+>    keeps its list card, which prints the word (contract v1.6.6), and is absent from the grid. Joe:
+>    postponed games come off "as cancelled games do" - "Yes take them off". One function decides
+>    the grid's set, `gridSet()` in `web/lib/offservice.js`, and `Listing` builds `MobileGrid` from
+>    it; `docs/design/mobile_demo.html` filters the same way. **The archived PC render does not
+>    obey yet** (queue item 23).
+> 2. **A game on a channel nobody has ruled on is drawn, under the network name the feed used.**
+>    The fifth listing state, UNRECOGNIZED: not eligible, not market-pending, not network-TBD, and
+>    at least one active row with access `unknown` (`isUnrecognized()`). Joe: "show the game". It
+>    is never hidden by D4's control, its list card wears a **`CHANNEL ?`** cue on the row wrapper
+>    (`.unrecognized-row`, built like MARKET TBD and NETWORK TBD, in the same place and NETWORK
+>    TBD's charcoal; MatchupCard is untouched), and the page's count line sums it into `TBD`. On
+>    the grid it takes the rail row v2.6's rule names, which for a game whose only row is the
+>    unruled one is that row: the rail prints the feed's own network name when the service has no
+>    published mark.
+>
+> Nothing M1–M23 says about how a row or a block is built changes. Register §74.
+>
 > **v2.6 (2026-09-30, prompt 126).** **WHICH BROADCAST A GAME CARD AND A GRID LANE NAME.** A game
 > names ONE broadcast: the list card draws that broadcast's mark, and the grid places the game in
 > that broadcast's rail row. The rule, in order:

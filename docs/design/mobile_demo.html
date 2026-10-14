@@ -214,6 +214,10 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 
 /* ---------- game cards: matchup+records / pitchers / network, odds at right ---------- */
 .mrows{display:flex; flex-direction:column; gap:6px; padding:0 12px 14px}
+.unrecognized-row{position:relative}   /* prompt 129: a channel nobody has ruled on - shown, with this cue (web/app/globals.css) */
+.unrecognized-row::after{content:'CHANNEL ?'; position:absolute; top:4px; right:66px; z-index:2; pointer-events:none;
+  font-family:var(--disp); font-weight:600; font-size:9px; letter-spacing:.14em; color:var(--dim); background:rgba(27,27,27,.86);
+  border:1px solid var(--line-soft); border-radius:3px; padding:1px 4px 0}
 /* Joe 2026-09-04: the right half is TWO FIXED tracks, so the mark column and the slot each hold
    one centreline down a mixed list. They were `auto` and `minmax(58px,auto)` here as in the app. */
 .mcard{position:relative; display:grid; grid-template-columns:44px minmax(0,1fr) 92px 100px; gap:8px; align-items:center;
@@ -580,7 +584,10 @@ function card(g, key){
 
 const ALLGAMES = {};   // key -> game (for the detail sheet)
 function rows(list, prefix){
-  return `<div class="mrows">${list.map((g,i)=>{ const k=prefix+i; ALLGAMES[k]=g; return card(g,k); }).join("")}</div>`;
+  // a game on a channel nobody has ruled on (access `unknown`, not eligible) wears the CHANNEL ? cue on its
+  // row wrapper and is never hidden (prompt 129; web/lib/offservice.js isUnrecognized, SportBand.js)
+  return `<div class="mrows">${list.map((g,i)=>{ const k=prefix+i; ALLGAMES[k]=g; const c=card(g,k);
+    return g.access_status==="unknown" && !g.eligible ? `<div class="unrecognized-row">${c}</div>` : c; }).join("")}</div>`;
 }
 
 // ---------- mobile grid: only airing windows survive; gaps >= 60 min collapse ----------

@@ -445,8 +445,12 @@ def access_status_for(outlet: str, available: set[str], unavailable: set[str]) -
     `data/access_profile.json` lists under `unavailable`. Telling Joe he can watch something he
     cannot is the same class of error as inventing a network, and it is worse than saying "unknown".
 
-    An outlet the profile does not mention resolves to `unknown`, which is neither eligible nor
-    off-service - the honest answer for a service nobody has ruled on.
+    An outlet the profile does not mention resolves to `unknown` - the honest answer for a service
+    nobody has ruled on. The reconciler cannot count it as receivable, so a game whose only route is
+    such a row is not eligible; the app files it as UNRECOGNIZED and SHOWS it with a CHANNEL ? cue
+    (web/lib/offservice.js `isUnrecognized`, prompt 129, Joe's ruling 2026-10-14). Until that prompt
+    this docstring said such a game was "neither eligible nor off-service", and it was false: the app
+    filed it off-service and D4 hid it. Smoke (h) turns red on an unknown row nobody has named.
     """
     return ACCESS_STATUS_OF.get(
         outlet_access(canonical_outlet(outlet, available, unavailable), available, unavailable),

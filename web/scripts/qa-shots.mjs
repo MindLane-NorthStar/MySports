@@ -1379,6 +1379,48 @@ for (const dev of DEVICES) {
   await ctx.close();
 }
 
+// ------------------------------- CHANNEL ? - A CHANNEL NOBODY HAS RULED ON IS SHOWN (prompt 129, block G)
+//
+// Joe's ruling 1 of 2026-10-14: "show the game". /qa/channel renders the real Listing with one card per
+// cue state - UNRECOGNIZED, MARKET TBD, NETWORK TBD - so the new cue is measured against the two it is
+// built like, at 390px: its text, the same top and right offset, a box no wider than NETWORK TBD's
+// (so it fits wherever that one does), inside its card. And the game is on the grid, in a rail row
+// under the feed's own network name.
+{
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  await page.goto(`${base}/qa/channel`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(600);
+  const r = await page.evaluate(() => {
+    const cue = (cls) => {
+      const el = document.querySelector(`.cards > .${cls}`);
+      if (!el) return null;
+      const a = getComputedStyle(el, '::after');
+      const card = el.getBoundingClientRect();
+      const w = parseFloat(a.width);
+      const right = card.right - parseFloat(a.right);
+      return { text: a.content, top: a.top, right: a.right, size: a.fontSize, w: Math.round(w * 10) / 10,
+               inside: right - w >= card.left && right <= card.right };
+    };
+    const rows = [...document.querySelectorAll('.mgrid-only .mgrid-row')];
+    const row = rows.find((x) => x.id === 'mrow-fs1-fox-one');
+    return { cards: document.querySelectorAll('.cards > div').length, chan: cue('unrecognized-row'),
+             market: cue('pending-row'), net: cue('networktbd-row'),
+             gridRow: Boolean(row), rail: row ? row.querySelector('.mrail-cell')?.textContent.replace(/\s+/g, ' ').trim() : null,
+             blocks: row ? row.querySelectorAll('.mblock').length : 0 };
+  });
+  const c = r.chan || {};
+  record('CHANNEL ?: a game on an unruled channel is shown on /qa/channel with the cue',
+         r.cards === 3 && c.text === '"CHANNEL ?"', `${r.cards} cards; cue ${c.text}`);
+  record('CHANNEL ?: the cue fits at 390px exactly as MARKET TBD and NETWORK TBD do',
+         Boolean(r.market && r.net) && c.top === r.net.top && c.top === r.market.top && c.right === r.net.right
+           && c.right === r.market.right && c.size === r.net.size && c.w <= r.net.w && c.inside && r.net.inside && r.market.inside,
+         `CHANNEL ? ${c.w}px at top ${c.top} right ${c.right} ${c.size}; NETWORK TBD ${r.net?.w}px; MARKET TBD ${r.market?.w}px; all inside ${c.inside && r.net?.inside && r.market?.inside}`);
+  record('CHANNEL ?: the game is on the grid, in a rail row under the feed\'s own network name',
+         r.gridRow && r.blocks === 1 && /FS1\/ FOX\s?ONE/.test(r.rail || ''), `row ${r.gridRow}, rail "${r.rail}", ${r.blocks} block(s)`);
+  await ctx.close();
+}
+
 // ------------------------------------------ /api/my-games ANSWERS FROM THE RUNNING APP (prompt 127)
 //
 // `node --test` never compiles a route, and `next build` cannot run here (rule 12), so this is the one

@@ -24,6 +24,17 @@
 // So a game with zero active broadcast rows gets its own state, its own count and its own cue, and
 // the same carve-out from D4 - the season load put 529 games in it, and the app was calling every
 // one of them 'not on your services'.
+//
+// AND A FIFTH (prompt 129, Joe's ruling 1 of 2026-10-14: "show the game"). UNRECOGNIZED: the game has
+// a broadcaster, but at least one of its active rows is on a channel nobody has ruled on - access
+// `unknown`, which pipeline/reconcile.py cannot count as receivable. Until now such a game fell
+// through to `off` and D4 hid it, and that is how a feed's new spelling ("Fox", "FS1 / FOX ONE") hid
+// 39 games for four weeks. Calling a channel nobody has ruled on "not on your services" asserts a
+// ruling that was never made, the same false certainty the two states above refuse. So it is SHOWN,
+// in every toggle state, with a CHANNEL ? cue, counted inside TBD, and drawn on the grid under the
+// network name the feed used. It is a structural fact read from the broadcast rows, as network-TBD
+// is - not a second eligibility rule: the verdict is still the reconciler's, and an eligible game is
+// never unrecognized.
 
 function eligibilityRow(game) {
   const e = game?.eligibility;
@@ -65,6 +76,20 @@ export function isNetworkTbd(game) {
   return !rows.some((b) => b?.active !== false);
 }
 
+/**
+ * UNRECOGNIZED (prompt 129): not eligible, not market-pending, not network-TBD, and at least one
+ * ACTIVE broadcast row carries access `unknown` - a channel nobody has ruled on.
+ *
+ * The three exclusions are tested here as well as by position in offServiceSummary, so a caller that
+ * asks this one question gets the same answer the buckets give.
+ */
+export function isUnrecognized(game) {
+  if (isEligible(game) || isMarketPending(game) || isNetworkTbd(game)) return false;
+  const rows = game?.broadcasts;
+  if (!Array.isArray(rows)) return false;
+  return rows.some((b) => b?.active !== false && b?.access_status === 'unknown');
+}
+
 /** The reconciler's verdict for one game. Absent row -> treated as eligible (shown), never hidden. */
 export function isEligible(game) {
   const e = game?.eligibility;
@@ -102,6 +127,7 @@ export function offServiceSummary(games, { maxOutlets = 3 } = {}) {
   const on = [];
   const pending = [];
   const tbd = [];
+  const unrecognized = [];
   const off = [];
   for (const g of rows) {
     // Order matters, and it carries both carve-outs: the two exempt states are tested BEFORE `off`,
@@ -109,9 +135,12 @@ export function offServiceSummary(games, { maxOutlets = 3 } = {}) {
     // because it is the structural fact - a stale row claiming market_pending on a game with no
     // broadcast rows would otherwise assert a broadcaster that does not exist. The two cannot both
     // be true anyway (pending needs an unverified row, TBD needs none), which a test pins.
+    // UNRECOGNIZED is the third carve-out (prompt 129), tested after eligibility and BEFORE `off`, so
+    // a game on a channel nobody has ruled on can never be counted as unwatchable.
     if (isNetworkTbd(g)) tbd.push(g);
     else if (isMarketPending(g)) pending.push(g);
     else if (isEligible(g)) on.push(g);
+    else if (isUnrecognized(g)) unrecognized.push(g);
     else off.push(g);
   }
 
@@ -119,16 +148,18 @@ export function offServiceSummary(games, { maxOutlets = 3 } = {}) {
     on,
     pending,
     tbd,
+    unrecognized,
     off,
     total: rows.length,
     onCount: on.length,
     pendingCount: pending.length,
     tbdCount: tbd.length,
+    unrecognizedCount: unrecognized.length,
     offCount: off.length,
     outlets: rankOutlets(off),
     pendingOutlets: rankOutlets(pending),
     line: countLine(rows.length, off.length, rankOutlets(off), maxOutlets),
-    lines: countLines(rows.length, on.length, pending, off, tbd),
+    lines: countLines(rows.length, on.length, pending, off, tbd, unrecognized),
   };
 }
 
@@ -185,11 +216,12 @@ function outletClause(outlets, max) {
  * `total` is still returned - it is true and cheap - but it is NOT on the line any more. The Today
  * page prints it one scroll above in <p class="sub">, and the three segments sum to it.
  */
-export function countLines(total, onCount, pending, off, tbd) {
+export function countLines(total, onCount, pending, off, tbd, unrecognized = []) {
   const pendingCount = (pending || []).length;
   const tbdCount = (tbd || []).length;
   const offCount = (off || []).length;
-  const bothTbd = pendingCount + tbdCount;
+  // the unrecognized state joins the display sum (prompt 129): shown and unsettled, like the other two
+  const bothTbd = pendingCount + tbdCount + (unrecognized || []).length;
   return {
     total: `${total} ${total === 1 ? 'game' : 'games'}`,
     airing: onCount ? `${onCount} airing` : null,
@@ -305,7 +337,7 @@ export function splitHidden(rows, favIds) {
  */
 export function pageCountLine(summary) {
   const on = summary?.onCount ?? 0;
-  const tbd = (summary?.pendingCount ?? 0) + (summary?.tbdCount ?? 0);
+  const tbd = (summary?.pendingCount ?? 0) + (summary?.tbdCount ?? 0) + (summary?.unrecognizedCount ?? 0);
   // R7, prompt 56: BROADCAST, not GAME. `on` counts every row the page decided to show, and since
   // v1.7 that includes programs - a NASCAR race, a UFC card, College GameDay. None of those is a
   // game, so the noun was false for them and had been since programs landed. `broadcast` is true of
