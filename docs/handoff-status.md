@@ -67,6 +67,11 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
 
+**2026-10-15, prompt 130 Part 0: prompt 129 closed at its Stop 2 without its backfill.** No dispatch was made at that
+stop. Joe chose to hold the two anchored refreshes until the NFL regression they would cause (queue item 24) was fixed,
+and asked for the close-out and the fix as one prompt: *"Combine this prompt and prompt 130 into one prompt."* The
+backfill moves to prompt 130. `acc-extra` stays on smoke (h)'s named list until prompt 130 Block A.
+
 **Measured 2026-10-14, prompt 129: `pytest` 752 → 798 passed + 1 skipped, `test:unit` 713 → 735, smoke 34 → 35/35
 and `qa-shots` 146 → 151/151; geometry all hard stops did not move.** Written before Stop 2's final gate run, which matched it.
 
