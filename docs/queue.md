@@ -503,43 +503,18 @@ hand-entered one for primary, and the detail panel lists only the accessible row
 **Where it starts.** `adapters/nhl.py:281-284`, beside `adapters/nba.py:182-192`. **Size.** Small. **A
 description of a problem, not an approved plan.**
 
-## 23. The archived desktop grid still draws a cancelled or postponed game
+## 23. *(closed 2026-10-15 by prompt 130 — register §75)*
 
-**What.** Joe ruled on 2026-10-14 that a cancelled or postponed game comes off the grid and stays in the
-list (register §74, ruling 4). Prompt 129 Block E made the mobile grid obey: `gridSet()` in
-`web/lib/offservice.js` drops both states, `web/components/Listing.js` builds `MobileGrid` from it, and
-`docs/design/mobile_demo.html` filters the same way. **The archived desktop grid does not.**
-`pipeline/render_feed.py`'s game select (`:40-51`) does not read `result_status`, and `scripts/render_day.py`
-has no test for either state (`git grep -n -E "cancel|postpon|result_status" -- scripts/render_day.py
-pipeline/render_feed.py` finds nothing). A fine pointer sees the archived render and nothing else (Addendum
-M5), so on a desktop the four Division Series games the cancellation pass closes would still draw blocks for
-their MLB day.
+This item was *"the archived desktop grid still draws a cancelled or postponed game"*. `pipeline/render_feed.py`
+now selects `result_status` and carries it as each game's `status`, and `scripts/render_day.py` skips a game in
+`OFF_AIR_STATES` at day selection, so it takes no block, lane, row or TBA card. One loop serves the per-day pro
+renders and the CFB week render. Proved by a real render of a four-game MLB day: 2 on grid, 0 TBA, 0 omitted. The
+number is retired rather than reused.
 
-**Why it was not fixed in prompt 129.** Neither file is in that brief's scope (S5).
+## 24. *(closed 2026-10-15 by prompt 130 — register §75)*
 
-**Where it starts.** `pipeline/render_feed.py:40-51` (select `g.result_status` and pass it through) or
-`scripts/render_day.py` (skip the game before it reaches a row). **Size.** Small. **A description of a
-problem, not an approved plan.**
-
-## 24. A refresh anchored on a past date re-decides that Sunday's regional games without its coverage windows
-
-**What.** `schedule_refresh.yml`'s `date` input moves every adapter's window except one. The EntitledSports
-step, `python -m adapters.es_windows --out ...`, passes no `--week`, so `adapters/es_windows.py:164-170`
-reads the week containing the real clock's now and the one after it. An anchored run for a past Sunday
-therefore hands `adapters/espn.py` rule 4b no windows for that Sunday, the station listings are dormant
-(register §62), and `data/market_coverage_nfl.json` holds only week 1. Every Sunday-afternoon CBS or FOX
-game without the Browns falls to rule 6: UNVERIFIED, Market TBD.
-
-**Measured 2026-10-14 for the backfill prompt 129 proposed** (anon key): 2026-10-04 (week 4) carries `cbs`
-2 available and 5 out_of_market, all decided, and `fox` 5 unknown; 2026-10-11 (week 5) carries `cbs` 1
-available, 3 out_of_market and 1 unverified, and `fox` 6 unknown. An anchored run would turn the decided
-CBS rows into Market TBD, and the FOX rows from unknown into Market TBD rather than into the decision the
-week's windows gave. The Browns' own games are unaffected (rule 3).
-
-**What it would take.** Pass the anchor's NFL week to `adapters.es_windows --week` in the workflow, if
-EntitledSports still serves past weeks' pages; or skip rule 4b's rewrite of an already decided row. Both
-touch `.github/workflows/schedule_refresh.yml` or `adapters/espn.py`'s regional path.
-
-**Where it starts.** `.github/workflows/schedule_refresh.yml` (the coverage windows step),
-`adapters/es_windows.py:160-170`, `adapters/espn.py` `decide_regional`. **Size.** Small. **A description of a
-problem, not an approved plan.**
+This item was *"a refresh anchored on a past date re-decides that Sunday's regional games without its coverage
+windows"*. `adapters/es_windows.py --date D` reads ESPN's calendar at noon ET on D, and the workflow passes it only
+on a dispatch that names a date. EntitledSports served weeks 4 and 5. The dry run kept all 11 decided CBS rows and
+gave 10 of 11 FOX rows a decision; the eleventh, 10-04's MIA@MIN, stays UNVERIFIED because week 4's FOX late window
+is TBD on the page. The number is retired rather than reused.

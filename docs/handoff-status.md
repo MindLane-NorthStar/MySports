@@ -67,6 +67,17 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
 
+**Measured 2026-10-15, prompt 130: `pytest` 798 → 816 passed + 1 skipped; `test:unit` 735, smoke 35/35, `qa-shots`
+151/151 and geometry all hard stops did not move.** Written before the Stop's final gate run, which matched it.
+
+- **Why the floor moved.** `test_es_windows.py` 5, `test_workflows.py` 6, `test_archived_grid_off_air.py` 4 and
+  `test_render_range.py` 3. `unknownaccess.test.mjs` changed one assertion and kept its count.
+- **The backfill is unblocked and waits on Joe's dispatches** (register §75): a refresh dispatched for a past date
+  reads that week's coverage windows, the archived grid drops cancelled and postponed games, and `render_all` can
+  render a range of past days. Smoke (h)'s named list is empty. Queue items 23 and 24 are closed.
+- **Prompt 129's Block H ran for the first time on 2026-10-15** (run 38702662624): 25 MLB claims re-filed under
+  `mlb.statsapi`, 25 predecessors closed, zero cancellations, no `authority_conflict` anywhere.
+
 **2026-10-15, prompt 130 Part 0: prompt 129 closed at its Stop 2 without its backfill.** No dispatch was made at that
 stop. Joe chose to hold the two anchored refreshes until the NFL regression they would cause (queue item 24) was fixed,
 and asked for the close-out and the fix as one prompt: *"Combine this prompt and prompt 130 into one prompt."* The

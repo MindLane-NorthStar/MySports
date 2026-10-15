@@ -6529,3 +6529,83 @@ of the real clock, not the anchor. So a past Sunday's regional CBS and FOX games
 rule 6, UNVERIFIED. Measured: 10-04's decided CBS rows (2 available, 5 out of market) and 10-11's (1
 available, 3 out of market) would turn to Market TBD. The archived NFL grids for those two days would lose
 them, because `render_day.py`'s `OMIT_ACCESS` drops UNVERIFIED rows.
+
+## 75. A REFRESH FOR A PAST DATE READS ITS OWN WEEK, THE ARCHIVED GRID DROPS GAMES THAT WILL NOT AIR, AND A RANGE OF PAST DAYS CAN BE RENDERED — 2026-10-15, prompt 130
+
+**Joe's decision of 2026-10-14, verbatim as the brief carries it.** At prompt 129's Stop 2, Claude Code
+recommended running the two anchored refreshes despite the NFL regression it had found. Cowork recommended
+holding them until that regression was fixed. **Joe chose to hold**, and asked for the close-out and the fix to
+come as one prompt: *"Combine this prompt and prompt 130 into one prompt."* His ruling 6 of 2026-10-14 still
+stands: *"The archive is backfilled."* Prompt 129 closed at Stop 2 without its backfill (`64f98d5`).
+
+**Block H's first run (Block A).** The 4:00 AM refresh of 2026-10-15 (run 38702662624, on `8671da3`) was the
+first with `b1affff`.
+
+- **The credit, from the loader's own counts.** `source_observations` is closed to the anon key by design (smoke
+  check d), so this was read from the run log. Every MLB fixture shows `observations_seen 0` and as many claims
+  closed as inserted: 2/2, 5/5, 5/5, 3/3, 2/2, 5/5 and 3/3 for 10-14 to 10-20, and 10-21 was an empty, complete
+  day. So 25 claims were re-filed under `mlb.statsapi` and 25 `espn.scoreboard` predecessors closed. Cowork had
+  counted 28 active espn-era MLB claims for 10-13 onward. The 3 left are the 10-13 ALCS game's kickoff, `tbs` and
+  `trutv`, which that run's window did not load, so they correctly kept their claims.
+- **Rows, through the anon key.** NLCS Games 3–6 are on `fs1`, available. Game 7 is on `fox`, available. Every
+  ALCS game has `tbs` primary and `trutv`, both available. Every game reads PLAYOFF.
+- **Cancellations: 0.** No game in the database reads `authority_conflict`.
+- **ACC Extra.** `401858262` has `acc-extra` inactive and `accnx` active and available, so smoke (h)'s named list
+  is now empty (`f805345`). Five September CFB games still carry an active `acc-extra` row. They are outside every
+  refresh window and outside the October backfill, so they stay as they are.
+
+**The windows fix (Block B, `f0b55d3`; closes queue item 24).** `adapters/es_windows.py --date D` reads ESPN's
+calendar at noon ET on D, so it fetches D's week and the next. Noon because the weeks turn over on Wednesday at
+07:00Z, and noon ET is D's date under daylight or standard time. The coverage-windows step passes the flag only
+when the dispatch named a date, and `tests/test_workflows.py` executes the step's shell to prove the nightly
+command is unchanged. EntitledSports served both past weeks:
+
+| Week | Updated | CBS early | FOX early | CBS late | FOX late |
+|---|---|---|---|---|---|
+| 4 | Mon Oct 5, 1:26 PM ET | JAX@CIN | LAR@PHI | KC@LV | **TBD** |
+| 5 | Mon Oct 12, 1:26 PM ET | CLE@NYJ | CHI@GB | TBD | SF@SEA |
+
+**The dry run, no write.** The real windows and `adapters.espn` for each anchor's Sunday, beside the database:
+
+| Day | Game | Net | Database | Dry run |
+|---|---|---|---|---|
+| 10-04 | ARI@NYG, NE@BUF, TEN@BAL, DEN@SF, LAC@SEA | CBS | out_of_market | out_of_market |
+| 10-04 | JAX@CIN, KC@LV | CBS | available | available |
+| 10-04 | DAL@HOU, GB@TB, NYJ@CHI | FOX | unknown | out_of_market |
+| 10-04 | LAR@PHI | FOX | unknown | available |
+| 10-04 | MIA@MIN (4:05) | FOX | unknown | **unverified** (week 4's FOX late is TBD) |
+| 10-11 | HOU@TEN, IND@PIT, LV@NE | CBS | out_of_market | out_of_market |
+| 10-11 | CLE@NYJ | CBS | available | available (rule 3, local team) |
+| 10-11 | DEN@LAC (4:05) | CBS | unverified | unverified (week 5's CBS late is TBD) |
+| 10-11 | CIN@MIA, MIN@NO, NYG@WSH, DET@ARI | FOX | unknown | out_of_market |
+| 10-11 | CHI@GB, SF@SEA | FOX | unknown | available |
+
+**None of the 11 decided CBS rows moves.** 10 of the 11 FOX rows get a decision. The eleventh, MIA@MIN, goes from
+hidden to a visible Market TBD, because the page has no game for that window. The brief had expected all 11.
+
+**The archived-grid rule (Block C, `ea67731`; closes queue item 23).** Joe's ruling 4 of 2026-10-14 reaches the
+archived render.
+
+- `pipeline/render_feed.py` selects `result_status` and carries it as each game's `status`. It drops nothing,
+  because the feed is the database speaking.
+- `scripts/render_day.py` skips a game in `OFF_AIR_STATES` (`cancelled`, `postponed`) at day selection, beside
+  `OMIT_ACCESS`, so it takes no block, lane, row or TBA card.
+- One loop serves the per-day pro renders and the CFB week render. `render_day_prototype.py` is called by no
+  workflow.
+- A real render of a four-game MLB day (scheduled, cancelled, postponed, final) reads 2 on grid, 0 TBA,
+  0 omitted, with the cancelled and postponed clubs absent from the SVG.
+
+**The render range (Block D, `0fa748e`).**
+
+- **A `days` input.** `render_all.yml` takes `days` on a dispatch (default 1, refused outside 1–14) and renders
+  D through D+days−1 through the existing loop. The nightly's `workflow_call` carries no `days`, so it renders
+  one day as before.
+- **A past Saturday's CFB week.** A Saturday other than today asks `render_feed --week-of` for the week the
+  database gives it (10-03 is week 5, 10-10 week 6) instead of `--latest-week`. Today keeps `--latest-week`.
+- **Timeout 15 → 30.** Eight render jobs from 2026-10-12 to 10-15 took 4.2–12.7 minutes. The logo pull was
+  234–729 s of that, and the render 5–7 s a day, so ten days add about 70 s to a worst case near 13.5 minutes.
+- **The concurrency group is unchanged.** It is `mysports-render` with `cancel-in-progress: true`, so a render
+  started while another runs cancels the first. A dated `schedule_refresh` calls this workflow as its render
+  job, so it is in the same group.
+
+**`CLAUDE.md`'s two stale lines** now read 137 briefs covering 01–130 and §1–§75, counted from the tree.
