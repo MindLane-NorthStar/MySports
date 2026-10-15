@@ -149,6 +149,9 @@ else:  # fallback = spec §11.3 order
                  "Big Ten Network","ACC Network","SEC Network"]
     STATIONS = {}; _STREAMS_FROM_FILE = None
 OMIT_ACCESS = {"OUT_OF_MARKET", "UNVERIFIED"}   # v1.5: regional rows Cleveland does not (or is not yet known to) receive
+# prompt 130, Joe's ruling 4 of 2026-10-14: a game that will not air draws no block, lane, row or TBA card.
+# The mobile grid has obeyed since prompt 129 (web/lib/offservice.js OFF_AIR_STATES); this is the same pair.
+OFF_AIR_STATES = {"cancelled", "postponed"}
 NET_ABBR = {"ABC":"abc","CBS":"CBS","FOX":"FOX","NBC":"NBC","The CW":"CW","ESPN":"ESPN","ESPN2":"ESPN2",
             "ESPNU":"ESPNU","FS1":"FS1","TNT":"TNT","USA Network":"USA","Big Ten Network":"BTN",
             "ACC Network":"ACCN","SEC Network":"SECN","ESPN+":"ESPN+","ESPN Unlimited":"ESPN UNL",
@@ -404,6 +407,7 @@ for g in games:
     if g.get("startDate") is None: continue   # pro leagues: a game with no time at all is not a viewing-day event yet
     dt = datetime.fromisoformat(g["startDate"].replace("Z","+00:00")).astimezone(ET)
     if dt.strftime("%Y-%m-%d") != TARGET: continue
+    if g.get("status") in OFF_AIR_STATES: continue          # cancelled or postponed: off the archived grid, as on the phone's
     seen, tv, web, blocked = set(), [], [], []
     for m in g["media"]:
         o = ALIASES.get(m["outlet"], m["outlet"]); k = (m["mediaType"],o)

@@ -40,7 +40,7 @@ select g.id, g.season, g.week, g.canonical_kickoff_at_utc, g.kickoff_certainty, 
        v.name,
        h.id, h.short_name, h.canonical_name, h.location, h.abbreviation, hc.name,
        a.id, a.short_name, a.canonical_name, a.location, a.abbreviation, ac.name,
-       g.updated_at
+       g.updated_at, g.result_status
 from games g
 left join venues v on v.id = g.venue_id
 left join teams h on h.id = g.home_team_id
@@ -128,7 +128,7 @@ def build(db: DB, sport: str, *, date: str | None, week: int | None, year: int) 
     for r in rows:
         (gid, season, wk, kickoff, certainty, neutral, venue,
          hid, hshort, hfull, hloc, habbr, hconf,
-         aid, ashort, afull, aloc, aabbr, aconf, updated) = r
+         aid, ashort, afull, aloc, aabbr, aconf, updated, status) = r
         start = _iso(kickoff)
         tbd = certainty == "tbd"
         newest = updated if newest is None or (updated is not None and updated > newest) else newest
@@ -150,6 +150,10 @@ def build(db: DB, sport: str, *, date: str | None, week: int | None, year: int) 
             "home": side(hid, hshort, hfull, hloc, habbr, hconf),
             "away": side(aid, ashort, afull, aloc, aabbr, aconf),
             "media": rows_m,
+            # prompt 130: the renderer drops a cancelled or postponed game from the grid (Joe's ruling 4
+            # of 2026-10-14), so the feed carries the state in the adapters' own key. Nothing is dropped
+            # HERE - this feed is the database speaking, and the decision is the renderer's.
+            "status": status,
         }
         if sport != "cfb":
             o = odds.get(gid)
