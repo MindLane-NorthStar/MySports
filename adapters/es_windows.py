@@ -3,6 +3,7 @@
 
     python -m adapters.es_windows --out "$RUNNER_TEMP/nfl_windows.json"
     python -m adapters.es_windows --out out.json --week 3 --week 4     # the weeks named, no calendar fetch
+    python -m adapters.es_windows --out out.json --date 2026-10-04    # that date's week and the next
 
 WHY (prompt 118, Joe's ruling 2026-09-23, register §63). No paid data: Joe did not buy Schedules Direct
 and will not, so `adapters/sd_listings.py` stays in the tree dormant (without its secrets it writes
@@ -33,6 +34,15 @@ adapter already fetches, whose regular-season entries carry `value`, `startDate`
 (captured in tests/fixtures/espn_nfl_scoreboard_raw.json) - so the number here is the same number
 `adapters/espn.py` writes on every game. `--week` overrides it for a replay.
 
+A PAST DATE READS ITS OWN WEEK (prompt 130, queue item 24). `--date D` puts "today" at NOON ET on D, so
+the calendar answers with D's week and the next. Noon because ESPN's weeks turn over on Wednesday at
+07:00Z (3 AM ET, the fixture's calendar), so noon ET is never within hours of a turnover, and its ET date
+is D under daylight or standard time. Without it, a refresh dispatched for a past Sunday read the week of
+the real clock, rule 4b had no windows for that Sunday, and every decided regional CBS or FOX game without
+the Browns fell to rule 6 (UNVERIFIED). EntitledSports serves past weeks (week 4 and week 5 read
+2026-10-15). The workflow passes the flag only on a dispatch that names a date, so the nightly is as it
+was.
+
 EACH WEEK'S PAGE STANDS ALONE (prompt 119, Joe's ruling 2026-09-23, register §64). The two pages are
 fetched and parsed independently: a week that fails - an HTTP error, a timeout, no Cleveland block,
 fewer than four windows - is left out with one note naming the week and the reason, and the file is
@@ -49,7 +59,7 @@ import argparse
 import json
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timezone
 from pathlib import Path
 from typing import Any, Callable
 
@@ -121,6 +131,11 @@ def weeks_from_calendar(scoreboard: dict[str, Any], now: datetime) -> tuple[int,
     raise PageError("today is not inside a regular-season week on ESPN's calendar")
 
 
+def anchor_noon(day: str) -> datetime:
+    """Noon ET on `day` (YYYY-MM-DD), in UTC: the instant `--date` reads the calendar at."""
+    return datetime.combine(date.fromisoformat(day), time(12), tzinfo=ET).astimezone(timezone.utc)
+
+
 def default_fetch_text(url: str) -> str:
     return http_text(url, headers={"User-Agent": USER_AGENT})
 
@@ -158,9 +173,16 @@ def main(argv: list[str] | None = None, *, fetch_text: Callable[[str], str] | No
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--out", required=True, help="where to write the windows JSON")
     ap.add_argument("--week", type=int, action="append", help="a week to fetch (repeatable); default: this week and the next")
+    ap.add_argument("--date", help="anchor day YYYY-MM-DD (ET): that date's week and the next, read at noon ET")
     args = ap.parse_args(argv)
     fetch_text = fetch_text or default_fetch_text
     fetch_scoreboard = fetch_scoreboard or default_fetch_scoreboard
+    try:
+        if args.date:
+            now = anchor_noon(args.date)
+    except ValueError as e:   # a bad --date is no week to fetch: one line, no file, exit 0
+        log(f"es_windows: failed (ValueError: {e}) - no windows written, refresh continues")
+        return 0
     now = now or datetime.now(timezone.utc)
     try:
         if args.week:

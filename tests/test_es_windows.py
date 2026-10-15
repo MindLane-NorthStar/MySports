@@ -205,5 +205,49 @@ class TheRun(unittest.TestCase):
             self.assertNotIn("<table", text)
 
 
+class TheAnchor(unittest.TestCase):
+    """Prompt 130 (queue item 24): `--date D` reads D's week and the next, at noon ET on D."""
+
+    REAL_NOW = datetime(2026, 10, 15, 12, 0, tzinfo=timezone.utc)   # the clock on the morning of the backfill
+
+    def run_anchored(self, argv):
+        asked = []
+        pages = {es.PAGE_URL.format(week=w): WEEK3 for w in range(1, 19)}
+        def fetch_text(url):
+            return pages[url]
+        def fetch_scoreboard(now):
+            asked.append(now)
+            return SCOREBOARD
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "w.json"
+            with mock.patch.object(es, "http_text", LIVE_CALL), mock.patch.object(es, "http_json", LIVE_CALL),                     redirect_stdout(io.StringIO()):
+                rc = es.main(["--out", str(out)] + argv, fetch_text=fetch_text, fetch_scoreboard=fetch_scoreboard,
+                             now=self.REAL_NOW)
+            data = json.loads(out.read_text(encoding="utf-8")) if out.exists() else None
+        return rc, data, asked
+
+    def test_a_past_sunday_reads_its_own_week_and_the_next(self):
+        rc, data, asked = self.run_anchored(["--date", "2026-10-04"])
+        self.assertEqual((rc, list(data["weeks"])), (0, ["4", "5"]))
+        self.assertEqual(asked, [datetime(2026, 10, 4, 16, 0, tzinfo=timezone.utc)], "noon ET on the anchor")
+
+    def test_the_second_anchor_reads_week_5_and_6(self):
+        rc, data, _ = self.run_anchored(["--date", "2026-10-11"])
+        self.assertEqual(list(data["weeks"]), ["5", "6"])
+
+    def test_without_a_date_the_real_clock_decides_exactly_as_before(self):
+        rc, data, asked = self.run_anchored([])
+        self.assertEqual(list(data["weeks"]), ["6", "7"])
+        self.assertEqual(asked, [self.REAL_NOW])
+
+    def test_noon_et_in_both_seasons_of_the_clock(self):
+        self.assertEqual(es.anchor_noon("2026-10-04"), datetime(2026, 10, 4, 16, 0, tzinfo=timezone.utc))
+        self.assertEqual(es.anchor_noon("2026-12-06"), datetime(2026, 12, 6, 17, 0, tzinfo=timezone.utc))
+
+    def test_a_bad_date_writes_nothing_and_exits_zero(self):
+        rc, data, asked = self.run_anchored(["--date", "2026-13-40"])
+        self.assertEqual((rc, data, asked), (0, None, []))
+
+
 if __name__ == "__main__":
     unittest.main()

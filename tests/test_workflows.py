@@ -192,7 +192,7 @@ def test_nfl_refresh_covers_every_game_day_not_only_sunday():
     """
     doc = yaml.safe_load((ROOT / ".github" / "workflows" / "schedule_refresh.yml").read_text(encoding="utf-8"))
     steps = doc["jobs"]["refresh"]["steps"]
-    nfl = [s for s in steps if str(s.get("name", "")).startswith("NFL") and "--date" in str(s.get("run", ""))]
+    nfl = [s for s in steps if str(s.get("name", "")).startswith("NFL") and "adapters.espn" in str(s.get("run", "")) and "--date" in str(s.get("run", ""))]
     assert len(nfl) == 1, f"expected exactly one NFL date-driven step, found {len(nfl)}"
     run = nfl[0]["run"]
     assert "for i in -1 0 1 2 3 4 5 6" in run, "yesterday for the finals, then today and six days on"
@@ -229,7 +229,7 @@ def test_nfl_listings_step_feeds_the_nfl_step_and_can_never_fail_the_run():
         assert job["env"].get(name) == "${{ secrets." + name + " }}", f"{name} is job env from the secret of the same name"
     listings = [i for i, s in enumerate(steps) if "adapters.sd_listings" in str(s.get("run", ""))]
     assert len(listings) == 1, "exactly one listings step"
-    nfl = [i for i, s in enumerate(steps) if str(s.get("name", "")).startswith("NFL") and "--date" in str(s.get("run", ""))]
+    nfl = [i for i, s in enumerate(steps) if str(s.get("name", "")).startswith("NFL") and "adapters.espn" in str(s.get("run", "")) and "--date" in str(s.get("run", ""))]
     assert len(nfl) == 1
     assert listings[0] < nfl[0], "the listings are fetched before the NFL step that reads them"
     lst, nfl_step = steps[listings[0]], steps[nfl[0]]
@@ -256,7 +256,7 @@ def test_nfl_windows_step_feeds_the_nfl_step_and_the_listings_step_says_it_is_do
     steps = job["steps"]
     windows = [i for i, s in enumerate(steps) if "adapters.es_windows" in str(s.get("run", ""))]
     listings = [i for i, s in enumerate(steps) if "adapters.sd_listings" in str(s.get("run", ""))]
-    nfl = [i for i, s in enumerate(steps) if str(s.get("name", "")).startswith("NFL") and "--date" in str(s.get("run", ""))]
+    nfl = [i for i, s in enumerate(steps) if str(s.get("name", "")).startswith("NFL") and "adapters.espn" in str(s.get("run", "")) and "--date" in str(s.get("run", ""))]
     assert len(windows) == 1 and len(listings) == 1 and len(nfl) == 1
     assert listings[0] < windows[0] < nfl[0], "listings, then windows, then the NFL step that reads both"
     win, nfl_step = steps[windows[0]], steps[nfl[0]]
@@ -268,6 +268,34 @@ def test_nfl_windows_step_feeds_the_nfl_step_and_the_listings_step_says_it_is_do
     assert "continue-on-error" not in win
     assert not any(k.startswith("ES_") or "ENTITLED" in k for k in job["env"]), "no secret for the free source"
     assert "dormant" in str(steps[listings[0]].get("name", "")).lower(), "the Schedules Direct step says it is dormant"
+
+
+def _windows_step():
+    doc, _ = _schedule_refresh()
+    return next(s for s in doc["jobs"]["refresh"]["steps"] if "adapters.es_windows" in str(s.get("run", "")))
+
+
+def _windows_command(input_date: str) -> str:
+    """The command the windows step actually runs, by executing its own shell with a stub `python`."""
+    import shutil
+    import subprocess
+    sh = shutil.which("bash") or shutil.which("sh")
+    if not sh:
+        pytest.skip("no POSIX shell to execute the step with")
+    script = 'python() { echo "python $*"; }' + chr(10) + _windows_step()["run"]
+    env = {"PATH": "/usr/bin:/bin", "MYSPORTS_NFL_WINDOWS": "/tmp/w.json", "INPUT_DATE": input_date}
+    return subprocess.run([sh, "-c", script], env=env, capture_output=True, text=True, check=True).stdout.strip()
+
+
+def test_the_windows_step_passes_a_date_only_on_a_dated_dispatch():
+    """PROMPT 130 (queue item 24): a dispatch that names a date reads that date's coverage week; the
+    nightly - the cron and the Worker's undated dispatch, both with an empty input - runs the command it
+    always ran. The input arrives through `env`, never as an expression inside `run` (rule 28)."""
+    step = _windows_step()
+    assert step["env"]["INPUT_DATE"] == "${{ github.event.inputs.date }}"
+    assert "${{" not in step["run"]
+    assert _windows_command("") == "python -m adapters.es_windows --out /tmp/w.json", "the nightly is unchanged"
+    assert _windows_command("2026-10-04") == "python -m adapters.es_windows --out /tmp/w.json --date 2026-10-04"
 
 
 def test_cfbd_teams_fetch_is_not_restricted_to_the_week():
