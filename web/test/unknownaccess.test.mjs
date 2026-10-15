@@ -44,5 +44,5 @@ test('smoke (h) applies this rule to the named list, and every entry carries a w
   assert.match(smoke, /unknownAccessByService\(unknown, UNKNOWN_ACCESS_ALLOWED\)/);
   const list = smoke.match(/const UNKNOWN_ACCESS_ALLOWED = \{([\s\S]*?)\n\};/)[1];
   const keys = [...list.matchAll(/^\s+'([^']+)':/gm)].map((m) => m[1]);
-  assert.deepEqual(keys, ['acc-extra'], 'measured 2026-10-14; a new entry is a ruling waiting for Joe, so it is noticed');
+  assert.deepEqual(keys, [], 'empty since prompt 130 (acc-extra became ACCNX); a new entry is a ruling waiting for Joe, so it is noticed');
 });

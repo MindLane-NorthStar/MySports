@@ -295,16 +295,15 @@ console.log(`\n(g) eligibility freshness - the next ${FRESHNESS_DAYS} viewing da
 // below, and each name carries the reason it may stay unknown. A name with no reason is red too.
 //
 // WHAT BELONGS ON THE LIST is a service nobody has ruled on that is not a misspelling of one somebody
-// has. Measured 2026-10-14: `acc-extra` (one CFB game, 401858262) is the only such service in the
-// window. `eradm`, named in the brief, has no row in the window and is not listed; it goes back on
-// with a reason if it returns.
+// has. THE LIST IS EMPTY, and that is the healthy state. Measured 2026-10-14 it held only `acc-extra`
+// (401858262); Joe ruled that day that "ACC Extra" is ACCNX, the alias landed (d646d20), and the
+// 2026-10-15 refresh rewrote the row to `accnx`, available, with the stub inactive - so prompt 130 took
+// the entry off. `eradm`, named in prompt 129's brief, had no row in the window and was never listed.
+// A service goes on only with its reason, and an entry is a ruling waiting for Joe.
 //
 // BOUNDED, RULE 19, the shape of (g): a 7-day viewing_day range paged with restAll, then the rows keyed
 // by those ids in chunks of 100, each paged. web/test/restcap.test.mjs pins both call sites.
 const UNKNOWN_ACCESS_ALLOWED = {
-  'acc-extra': '"ACC Extra", a streaming label written for some ACC games. Joe ruled 2026-10-14 that it is the '
-    + 'ACCNX the profile lists; prompt 129 Part 2 adds the alias, and this entry comes off at Stop 2, once a '
-    + 'refresh has rewritten the row.',
 };
 console.log(`\n(h) unknown access - the next ${FRESHNESS_DAYS} viewing days`);
 {
