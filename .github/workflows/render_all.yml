@@ -7,11 +7,17 @@
 # minutes, so every grid it drew on its own schedule came from the previous day's rows. A failed refresh
 # should leave yesterday's grids in R2 untouched, not publish a fresh-looking stale one. Do not add a
 # schedule back as an apparent omission.
+# A RANGE OF PAST DAYS ON DEMAND (prompt 130, register §75). A dispatch may name `days`: it renders D through
+# D+days-1, each day through the same loop. It exists for a backfill - a dated refresh renders only its anchor
+# day, so the days between anchors kept grids drawn from the rows before the fix. The nightly reaches this file
+# through `workflow_call`, which has no `days` input, so it renders one day exactly as before.
+# THE CONCURRENCY GROUP CANCELS: a second render started while one runs cancels the first. Dispatch one at a time.
 name: render_all
 on:
   workflow_dispatch:
     inputs:
       date: { description: "Viewing day (YYYY-MM-DD, ET). Default: today.", required: false }
+      days: { description: "How many days from `date` to render (1-14). Default: 1.", required: false, default: "1" }
   workflow_call:
     inputs:
       date: { type: string, required: false }
@@ -19,7 +25,10 @@ concurrency: { group: mysports-render, cancel-in-progress: true }
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 30, not 15 (prompt 130): measured on eight runs 2026-10-12..15, the job took 4.2-12.7 minutes, of which the
+    # logo pull was 234-729 s and the render 5-7 s a day. Fourteen days add ~1.6 minutes to a pull that alone has
+    # come within 2.3 minutes of the old ceiling. The ceiling is a guard, so the nightly costs nothing more.
+    timeout-minutes: 30
     env:
       R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
       R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -38,14 +47,26 @@ jobs:
         run: python scripts/sync_assets.py --pull
       - name: Resolve date
         id: when
+        env:
+          INPUT_DAYS: "${{ github.event.inputs.days }}"
         run: |
           D="${{ inputs.date || github.event.inputs.date }}"
           if [ -z "$D" ]; then D=$(TZ=America/New_York date +%F); fi
           echo "date=$D" >> "$GITHUB_OUTPUT"
+          N="${INPUT_DAYS:-1}"
+          case "$N" in ''|*[!0-9]*) echo "days must be a whole number, got '$N'"; exit 1;; esac
+          if [ "$N" -lt 1 ] || [ "$N" -gt 14 ]; then echo "days must be 1-14, got $N"; exit 1; fi
+          echo "days=$N" >> "$GITHUB_OUTPUT"
       - name: Render every in-season sport that has games in the database for the day
+        env:
+          D0: ${{ steps.when.outputs.date }}
+          DAYS: ${{ steps.when.outputs.days }}
         run: |
           set -e
-          D=${{ steps.when.outputs.date }}
+          TODAY=$(TZ=America/New_York date +%F)
+          for i in $(seq 0 $((DAYS - 1))); do
+          D=$(date -d "$D0 + $i day" +%F)
+          echo "== $D"
           for S in nhl nba nfl mlb; do
             F="artifacts/validation/db_${S}_${D}_fixture.json"
             # --teams-out writes the renderer's teams file FROM THE DATABASE. This job runs on its own
@@ -57,9 +78,15 @@ jobs:
               python scripts/render_day.py --sport $S --date $D --png --export --fixture "$F"
             fi
           done
-          # CFB: Saturday renders the newest loaded week (the feed carries the whole week; render_day picks the day)
+          # CFB: Saturday renders the newest loaded week (the feed carries the whole week; render_day picks the day).
+          # A SATURDAY OTHER THAN TODAY renders the week the database gives that Saturday (prompt 130): the newest
+          # week would overwrite a past day's archive with a later slate. Today keeps --latest-week, as before.
           if [ "$(date -d $D +%u)" = "6" ]; then
-            W=$(python -m pipeline.render_feed --sport cfb --latest-week || true)
+            if [ "$D" = "$TODAY" ]; then
+              W=$(python -m pipeline.render_feed --sport cfb --latest-week || true)
+            else
+              W=$(python -m pipeline.render_feed --sport cfb --week-of "$D" || true)
+            fi
             if [ -n "$W" ]; then
               F="artifacts/validation/db_cfbd_week${W}_fixture.json"
               N=$(python -m pipeline.render_feed --sport cfb --week "$W" --out "$F" --teams-out | grep '^db feed:' | awk '{print $3}')
@@ -69,6 +96,7 @@ jobs:
               fi
             fi
           fi
+          done
       - name: Publish grids to R2 (last-known-good stays if a render is missing — uploads are per file)
         run: python scripts/sync_assets.py --push-grids artifacts/rendering
       - name: Register the archived grids (mysports.generated_grids — spec §7.12, §12)

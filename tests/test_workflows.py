@@ -298,6 +298,106 @@ def test_the_windows_step_passes_a_date_only_on_a_dated_dispatch():
     assert _windows_command("2026-10-04") == "python -m adapters.es_windows --out /tmp/w.json --date 2026-10-04"
 
 
+
+# ------------------------------------------------------------------ render_all: a range of days (prompt 130)
+def _render_all():
+    doc = yaml.safe_load((ROOT / ".github" / "workflows" / "render_all.yml").read_text(encoding="utf-8"))
+    return doc, doc.get("on", doc.get(True)), doc["jobs"]["render"]["steps"]
+
+
+def _sh():
+    import shutil
+    sh = shutil.which("bash")
+    if not sh:
+        pytest.skip("no bash to execute the step with")
+    return sh
+
+
+def _run(script: str, env: dict) -> "subprocess.CompletedProcess":
+    import os
+    import subprocess
+    full = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), **env}
+    return subprocess.run([_sh(), "-c", script], env=full, capture_output=True, text=True)
+
+
+def _resolve(days: str, date: str = "2026-10-03"):
+    """The Resolve date step, executed: returns (exit code, the outputs it wrote)."""
+    import tempfile
+    step = next(s for s in _render_all()[2] if s.get("id") == "when")
+    script = step["run"].replace("${{ inputs.date || github.event.inputs.date }}", date)
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "out"
+        out.write_text("", encoding="utf-8")
+        r = _run(script, {"GITHUB_OUTPUT": str(out), "INPUT_DAYS": days})
+        got = dict(line.split("=", 1) for line in out.read_text(encoding="utf-8").split() if "=" in line)
+    return r.returncode, got
+
+
+# A stub `python` that answers the feed's three questions and echoes every render, and a stub `date` whose
+# `+%F` with no -d is FAKE_TODAY (the step reads today in ET that way); every other call is the real date.
+STUBS = r"""
+python() {
+  case "$*" in
+    *render_feed*--latest-week*) echo 9 ;;
+    *render_feed*--week-of*) case "$6" in 2026-10-03) echo 5 ;; 2026-10-10) echo 6 ;; esac ;;
+    *render_feed*) echo "db feed: 1 games" ;;
+    *render_day.py*) echo "RENDER $*" ;;
+  esac
+}
+date() { if [ "$1" = "+%F" ]; then echo "$FAKE_TODAY"; else command date "$@"; fi; }
+"""
+
+
+def _render(d0: str, days: str, today: str) -> list[str]:
+    step = next(s for s in _render_all()[2] if str(s.get("name", "")).startswith("Render every"))
+    r = _run(STUBS + step["run"], {"D0": d0, "DAYS": days, "FAKE_TODAY": today})
+    assert r.returncode == 0, r.stderr
+    return [line for line in r.stdout.splitlines() if line.startswith("RENDER ")]
+
+
+def test_render_all_dispatch_takes_days_and_the_nightly_call_does_not():
+    """The nightly reaches render_all through workflow_call with `date` only, so it renders one day."""
+    _, on, _ = _render_all()
+    assert set(on["workflow_call"]["inputs"]) == {"date"}, "the nightly's call is unchanged"
+    assert on["workflow_dispatch"]["inputs"]["days"]["default"] == "1"
+    doc, _, _ = _render_all()
+    assert doc["concurrency"] == {"group": "mysports-render", "cancel-in-progress": True}, "the group is unchanged"
+    assert doc["jobs"]["render"]["timeout-minutes"] == 30
+
+
+def test_render_all_days_resolves_to_one_by_default_and_refuses_out_of_range():
+    assert _resolve("") == (0, {"date": "2026-10-03", "days": "1"})
+    assert _resolve("10") == (0, {"date": "2026-10-03", "days": "10"})
+    for bad in ("0", "15", "x", "-1"):
+        assert _resolve(bad)[0] != 0, bad
+
+
+def test_render_all_one_day_renders_exactly_what_it_rendered_before():
+    """days=1 on a weekday: one render per sport for that day, nothing else."""
+    lines = _render("2026-10-15", "1", "2026-10-15")
+    assert [l.split("--date ")[1].split()[0] for l in lines] == ["2026-10-15"] * 4
+    assert all("--sport" in l for l in lines)
+
+
+def test_render_all_renders_the_range_and_a_past_saturday_renders_its_own_cfb_week():
+    lines = _render("2026-10-03", "10", "2026-10-15")
+    days = sorted({l.split("--date ")[1].split()[0] for l in lines})
+    assert days == [f"2026-10-{d:02d}" for d in range(3, 13)]
+    cfb = [l for l in lines if "--week " in l]
+    # the week the database gives each Saturday (5 and 6, measured 2026-10-14), never the newest (the stub's 9)
+    assert cfb == ["RENDER scripts/render_day.py --week 5 --date 2026-10-03 --png --export "
+                   "--fixture artifacts/validation/db_cfbd_week5_fixture.json",
+                   "RENDER scripts/render_day.py --week 6 --date 2026-10-10 --png --export "
+                   "--fixture artifacts/validation/db_cfbd_week6_fixture.json"]
+
+
+def test_render_all_todays_saturday_keeps_the_newest_week():
+    lines = _render("2026-10-17", "1", "2026-10-17")
+    assert [l for l in lines if "--week " in l] == [
+        "RENDER scripts/render_day.py --week 9 --date 2026-10-17 --png --export "
+        "--fixture artifacts/validation/db_cfbd_week9_fixture.json"]
+
+
 def test_cfbd_teams_fetch_is_not_restricted_to_the_week():
     """The other half of the same defect, and the half no workflow file can show.
 

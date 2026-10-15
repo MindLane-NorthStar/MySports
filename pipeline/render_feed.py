@@ -200,6 +200,15 @@ def latest_week(db: DB, sport: str, year: int) -> int | None:
     return rows[0][0] if rows and rows[0][0] is not None else None
 
 
+def week_of(db: DB, sport: str, year: int, day: str) -> int | None:
+    """The week the database gives `day` (prompt 130). A render of a PAST Saturday must draw that
+    Saturday's week: `latest_week` is the newest week loaded, so re-rendering 10-10 with it would overwrite
+    that day's archive with a later week's slate. One viewing day sits in one week; max() only makes the
+    answer single-valued."""
+    rows = db.fetch("select max(week) from games where sport = %s and season = %s and viewing_day = %s", (sport, year, day))
+    return rows[0][0] if rows and rows[0][0] is not None else None
+
+
 TEAMS_SQL = """
 select t.id, t.canonical_name, t.short_name, t.abbreviation, t.primary_color, t.secondary_color,
        c.name as conference, t.fbs_status
@@ -251,6 +260,7 @@ def main() -> int:
     ap.add_argument("--week", type=int, help="cfb week")
     ap.add_argument("--year", type=int, default=2026)
     ap.add_argument("--latest-week", action="store_true", help="print the newest loaded week for --sport and exit")
+    ap.add_argument("--week-of", metavar="DATE", help="print the week the database gives that viewing day and exit")
     ap.add_argument("--out", help="write here instead of the default artifacts/validation path")
     ap.add_argument("--teams-out", nargs="?", const="", metavar="PATH",
                     help="also write the renderer's teams file from the database (default path when "
@@ -259,6 +269,13 @@ def main() -> int:
 
     db = DB()
     try:
+        if args.week_of:
+            w = week_of(db, args.sport, args.year, args.week_of)
+            if w is None:
+                print(f"no {args.sport} {args.year} games on {args.week_of}", file=sys.stderr)
+                return 1
+            print(w)
+            return 0
         if args.latest_week:
             w = latest_week(db, args.sport, args.year)
             if w is None:
