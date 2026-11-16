@@ -67,6 +67,31 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
 
+**Measured 2026-11-14, prompt 131, committed 2026-11-16 on Joe's approval: `pytest` 816 → 838 passed + 1
+skipped; `test:unit` 735 → 745; `qa-shots` 151/151 did not move. TWO GATES READ RED ON DATA, NOT ON THIS RUN'S CODE:
+smoke 33/35 and geometry one hard stop.**
+
+- **COMMITTED OVER THE TWO RED GATES BY JOE'S ONE-TIME OVERRIDE OF S4 (2026-11-16, "Override S4 once").** HEAD
+  `7758920` fails both the same way, so the commit does not move them. S4 stands for every later run; the
+  override covers prompt 131's commits only. Smoke re-run 2026-11-16 before the commit: still 33/35. (f) is
+  unchanged; (h) now names only `dazn-cle`, because `eradm`'s two CFB games have left the 7-day window. Geometry
+  was not re-run (its cause is the records, not code). Before the commit, Joe added the no-team-ids guard's
+  mutation check (red: removing the guard fails exactly the test at `offservice.test.mjs:500`) and had
+  `CLAUDE.md`'s counts and `docs/prompts/README.md` corrected by count; `pytest` 838 + 1 and `test:unit` 745
+  were re-run after those edits.
+
+- **Why the floors moved.** `test_es_windows.py` 14 (the three-window page, the two shapes, the status file; its
+  `:73` and `:155` were replaced, not added) and `test_nfl_market_rules.py` 8 (the single window, the ledger).
+  `offservice.test.mjs` 9 and `gridnote.test.mjs` 1 for the NBA ruling. Register §76 has both blocks.
+- **Smoke (f):** pro team row `mlb-21` reads "TB/CLE", a postseason winner-of placeholder in a form
+  `lib/placeholders.js` does not recognize. **Smoke (h):** active `unknown` rows on two unlisted services,
+  `dazn-cle` (3 NBA games: nba-401909307, nba-401909995, nba-401910007) and `eradm` (2 CFB: 401856885, 401858301).
+  Each is a ruling waiting for Joe. Smoke imports nothing this run changed.
+- **Geometry: the MLB 2026-09-03 span reads 393.85 (widest 86.57, sw 568) against 396.4 ± 2.** HEAD's
+  `web/lib/offservice.js` swapped back in read the same, minutes apart against the same server: the data, queue
+  item 19's mechanism in reverse (prompt 80 read 393.75 at widest 87.08; prompt 127 re-pinned 396.4 at 75.10).
+  Re-pinning is Joe's ruling, as it was in prompt 127; not done here.
+
 **Measured 2026-10-15, prompt 130: `pytest` 798 → 816 passed + 1 skipped; `test:unit` 735, smoke 35/35, `qa-shots`
 151/151 and geometry all hard stops did not move.** Written before the Stop's final gate run, which matched it.
 

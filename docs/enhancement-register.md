@@ -6609,3 +6609,87 @@ archived render.
   job, so it is in the same group.
 
 **`CLAUDE.md`'s two stale lines** now read 137 briefs covering 01–130 and §1–§75, counted from the tree.
+
+---
+
+## 76. SUNDAY'S WINDOWS READ THE THREE-WINDOW PAGE, THE READER'S RESULT REACHES THE LEDGER, AND A BARE NBA GAME WITHOUT THE CAVALIERS IS UNAVAILABLE — 2026-11-14, prompt 131
+
+**What Joe reported, 2026-11-09.** Every Sunday NFL game off his local channels showed a TBD cue all day (the
+card's cue is MARKET TBD), and NBA games with no network listed appeared in his daily NBA schedule.
+
+### Block A — EntitledSports went to three windows, and nothing recorded the reader failing
+
+**The measurement (Cowork, read 2026-11-09).** Active CBS/FOX rows on Sunday-afternoon NFL games:
+
+| Sunday | available | out_of_market | unverified |
+|---|---|---|---|
+| 10-18 | 3 | 6 | 1 |
+| 10-25 | 3 | 6 | 1 |
+| 11-01 | 1 | 0 | 10 |
+| 11-08 | 1 | 0 | 10 |
+| 11-15 | 2 | 0 | 9 |
+
+From 11-01 rule 4b decided nothing; the one `available` row was the Browns game, by rule 3. It hid two games
+Joe could watch: DAL @ IND and GB @ NE on WJW 8, 11-08 (`nfl-401873040`, `nfl-401873049`).
+
+**The cause, measured on the live pages 2026-11-14.** Weeks 9 and 10, fetched with the adapter's User-Agent.
+Both pages have 25 market blocks, every one of them three windows: `CBS` ×25, `FOX Early` ×25, `FOX Late` ×25,
+and no `CBS Early` or `CBS Late` anywhere. The single network's label is bare, and its station span gains the
+kickoff after a U+00B7: `WOIO 19 (CBS) · 1:00 PM ET` (week 9), `WOIO 19 (CBS) · 4:05 PM ET` (week 10).
+`BLOCK` and `STAMP` matched unchanged; `WINDOW` matched all three once only the label was relaxed. Nothing
+else in the markup moved. The four-window reader parsed two windows and raised PageError; prompt 119 drops
+such a week with one log line and exit 0, and the line reached no ledger, so it went unseen for nine days.
+
+| Week | Updated | CBS (single) | FOX early | FOX late |
+|---|---|---|---|---|
+| 9 | Mon Nov 9, 12:27 PM ET | CLE@NO, 1:00 | DAL@IND | GB@NE |
+| 10 | Fri Nov 13, 12:27 AM ET | SEA@LV, 4:05 | HOU@CLE | SF@DAL |
+
+**What changed.**
+
+- `adapters/es_windows.py`: the slot is optional; a bare label is that network's `single` window, with the
+  kickoff kept in a separate `time` field and `station` keeping the whole span. **A block is valid in exactly
+  two shapes** (`valid_shape`): the four windows, or one network's early and late plus the other's single.
+  Anything else is a PageError naming the labels it found.
+- `adapters/espn.py` `windows_decision`: the exact `(network, slot)` first; failing that, the network's single
+  window for EITHER slot, because a network with one game in the market airs that game and no other. The
+  source names it: `WOIO CBS single CLE @ NO`. HOU @ LAC at 4:05 on CBS in week 9 is decided by it.
+- **The result reaches the ledger.** The module writes its per-week result, on every exit, to the file
+  `MYSPORTS_NFL_WINDOWS_STATUS` names; `pipeline/load.py` copies it into `refresh_runs.notes` as `nfl_windows`,
+  e.g. `{"written": true, "how": "ESPN calendar", "weeks": {"10": "ok: 3 of 3 windows named", "11": "ok: …"}}`,
+  or `"failed (PageError: …)"` per week, or `"error"` when no week could be placed. An environment variable,
+  not a flag, so the step's command stays the one prompt 130 pinned; `schedule_refresh.yml` sets it on the
+  windows step and the load step. A set variable with no readable file is recorded as such.
+- Fixtures `tests/fixtures/es_week9_cleveland.html` and `es_week10_cleveland.html`, the stamp row and the
+  Cleveland block cut verbatim from the live pages.
+
+**The dry run, 2026-11-15, no write.** Every CBS/FOX game decided; none UNVERIFIED. HOU @ CLE AVAILABLE by
+rule 3; SEA @ LV (CBS single) and SF @ DAL (FOX late) AVAILABLE; KC @ ATL, MIA @ IND, BUF @ NYJ, LAR @ ARI on
+CBS and CAR @ NO, MIN @ GB, JAX @ TEN on FOX OUT_OF_MARKET; NE @ DET (9:30 AM, FOX) national by rule 1.
+
+**Not done, and whose.** The 11-01 and 11-08 backfills are Joe's dispatches (`date=2026-11-01`,
+`date=2026-11-08`). A smoke check that turns red when a Sunday's regional games are all UNVERIFIED after a
+Thursday is Joe's threshold to set; `nfl_windows` in the notes is what it would read.
+
+### Block B — Joe's ruling, 2026-11-09: a bare NBA game without the Cavaliers is "Count as unavailable"
+
+**Why 05 §9's premise fails for the NBA.** §9 holds that a game with no row has a broadcaster nobody has
+announced. Every national NBA game was announced on 2026-08-13, and a Cavaliers game always carries the
+synthesized local row (`adapters/nba.py`, `_local_row`), so a bare NBA game without the Cavaliers is League
+Pass or another club's local channel, and Joe has neither.
+
+**The measurement (Cowork, read 2026-11-09).** Inside ESPN's window, one or two bare NBA games a day since
+11-04 and none before: ten games through 11-12. Beyond it, most of each day (6 of 8 on 11-16, 9 of 12 on 11-18,
+7 of 7 on 11-22); the two or three with rows are the nationals. The reconciler already read each one
+`eligible = false`, "no telecast observed"; the web's `isNetworkTbd` overrode it into `tbd`. The archived grid
+already omitted such games. Why it started on 11-04 is unverified (likely ESPN's scoreboard dropping some
+clubs' local channels) and was not chased.
+
+**What changed.** `web/lib/offservice.js` `isNetworkTbd`, the one place: an NBA game whose team ids
+(`game.home.id`, `game.away.id`, as `GAME_SELECT` embeds them; `home_team_id` is not selected) do not include
+`nba-CLE`, with zero active rows, is not network-TBD. It falls to the reconciler's verdict and lands in `off`:
+hidden by default, counted as unavailable, reachable from the reveal, back with no manual step when a row
+lands. A bare Cavaliers game, every other sport's bare game, a favourite's game (splitHidden is unchanged) and
+a game with no team ids selected keep NETWORK TBD; an unjudged game is still shown. The grid note
+("N games not on the grid · network TBD") stops counting these games because `off` never reaches the grid.
+05 §9 carries a one-line amendment pointing here.

@@ -179,6 +179,8 @@ Zero-count segments remain omitted.
 
 **A data-layer bug found alongside it, fixed in the same prompt.** 78 of the 529 read `reason = "no national telecast - out of market"` — `pipeline/reconcile.py`'s non-CFB else-branch asserting an out-of-market **conclusion** from an **empty** broadcast list. The 78 reconcile exactly to nfl 24 + nhl 38 + nba 16; CFB's 451 correctly read `no telecast observed`. The guard belongs in the reconciler, not in the web layer, and its sanity gate is inverted: **if the count of genuinely unavailable games falls, the guard is over-broad and is eating real out-of-market verdicts.**
 
+**Amended 2026-11-09 (Joe's ruling, prompt 131, register §76):** an NBA game without the Cavaliers that has zero active broadcast rows is NOT network-TBD — "Count as unavailable" — because every national NBA game is announced and a Cavaliers game always carries its local row, so a bare one is League Pass or another club's channel; it is filed under `unavailable` and hidden by default, and every other sport, and a bare Cavaliers game, keeps NETWORK TBD as ruled above.
+
 ---
 
 ## 10. COUNT LINE AMENDED — 2026-09-03, after prompt 25's 390 px measurement
