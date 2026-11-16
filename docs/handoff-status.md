@@ -67,6 +67,29 @@ the winner — do not put a number back there, and do not add a third copy anywh
 > the one clause naming the tree's position was the one thing on this page that was never true. The
 > rest of the paragraph is correct provenance for the floors-live-here rule and is unchanged.
 
+**Measured 2026-11-16, prompt 132, committed 2026-11-16 on Joe's approval: `pytest` 838 → 863
+passed + 1 skipped; `test:unit` 745 → 765; `qa-shots` 151/151; `geometry` ALL HARD STOPS, the MLB span re-pinned
+396.4 → 393.9 by Joe's approval. Smoke 35/36 — the floor rises to 36 with check (i) — RED ON ONE CHECK THAT ONLY
+A REFRESH CAN CLEAR.**
+
+- **Prompt 131's two S4-override reds:** geometry is CLEARED (the re-pin, proved side by side, register §77);
+  smoke (f) is CLEARED (`mlb-21 "TB/CLE"` is a placeholder, reason `mlb-slash-pair`). Smoke (h) is NOT: its
+  three `dazn-cle` rows (nba-401909307, -401909995, -401910007) are database rows, and the `DAZN CLE` → DAZN
+  alias rewrites them only when the nightly refresh's NBA load runs this code, which needs the commit. The dry
+  run for 2026-11-16/18/20 mints all three as `DAZN` AVAILABLE. (h) was deliberately not made green by listing
+  `dazn-cle` as an unruled service: it is ruled.
+- **COMMITTED OVER SMOKE (h) BY JOE'S ONE-TIME OVERRIDE OF S4 (2026-11-16, "Approved — commit and push,
+  recording the S4 override for smoke (h)").** The commit IS the cure: the red is three database rows the new
+  alias rewrites only when a refresh runs the committed code, and the dry run above is the proof. Joe's
+  instruction is to fire the refresh after the deploy and re-run smoke, expecting 36/36; the result is recorded
+  below this line when it lands. S4 stands for every later run; the override covers prompt 132's commits only.
+- **qa-shots was 150/151 on its first run** - the pinch 60px below the collapsed bar on 2026-09-05 CFB left
+  `scrollWidth` 1356 → 1356 - **and 151/151 on the immediate re-run** against the same server and tree. Nothing
+  in prompt 132 touches CFB days or the pinch handler; recorded as intermittent, not waved through.
+- **Why the floors moved.** pytest: `test_access_rulings_2026_11_16.py` 14, `test_cbj_simulcast.py` 11
+  (838 + 25 = 863; the six superseded CBJ assertions in two older files were changed in place, not added).
+  test:unit: placeholders 3, simulcastmark 6, sundaywindows 10, restcap 1 (745 + 20 = 765). Smoke gained check (i).
+
 **Measured 2026-11-14, prompt 131, committed 2026-11-16 on Joe's approval: `pytest` 816 → 838 passed + 1
 skipped; `test:unit` 735 → 745; `qa-shots` 151/151 did not move. TWO GATES READ RED ON DATA, NOT ON THIS RUN'S CODE:
 smoke 33/35 and geometry one hard stop.**
@@ -963,7 +986,7 @@ day really does change how much time the grid spans.
 | day | sport | **span (minutes, ASSERTED ±2)** | blocks | rows |
 |---|---|---|---|---|
 | `2026-09-05` | cfb | **1042.4** | 64 | 15 |
-| `2026-09-03` | mlb | ~~393.4~~ **396.4** | 3 | 2 |
+| `2026-09-03` | mlb | ~~393.4~~ ~~396.4~~ **393.9** | 3 | 2 |
 | `2026-09-13` | nfl | ~~770.1~~ **830.4** | ~~17~~ 18 | ~~3~~ 4 |
 
 **THE MLB ROW MOVED ON 2026-10-05 AND IT WAS THE DATA, PROVED SIDE BY SIDE (prompt 127, Joe's
@@ -973,6 +996,12 @@ verified 2026-09-05; only `widest` moved. **So the span is not fully immune to t
 `scrollWidth` carries about 44 fixed pixels on this day (the 30 px seam over the afternoon gap, and the
 last label's reach), and those become more "minutes" as `widest` shrinks. Re-pinned in
 `web/scripts/geometry.mjs` to 396.4; `docs/queue.md` item 19 describes the mechanism and a fix.
+
+**AND IT MOVED BACK ON 2026-11-16, THE DATA AGAIN, PROVED SIDE BY SIDE (prompt 132, Joe approved the
+re-pin; register §77).** The season's final MLB records took `widest` 75.10 → 86.57, and the span read
+393.85 at `scrollWidth` 568 — on prompt 132's tree and with `e0c303f`'s six changed web files swapped back
+in, identically, against the same server minutes apart. Re-pinned to 393.9. This is the red prompt 131
+shipped over under the one-time S4 override.
 
 **THE NFL ROW MOVED ON 2026-09-10 AND IT WAS THE DATA, PROVED (prompt 87 step 0).** The 2026-09-10
 refresh loaded Sunday NFL Countdown (10:00–13:00 ET, ESPN), so the day starts at 10:00 instead of

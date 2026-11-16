@@ -6530,6 +6530,8 @@ rule 6, UNVERIFIED. Measured: 10-04's decided CBS rows (2 available, 5 out of ma
 available, 3 out of market) would turn to Market TBD. The archived NFL grids for those two days would lose
 them, because `render_day.py`'s `OMIT_ACCESS` drops UNVERIFIED rows.
 
+**Amended 2026-11-16 (Joe's ruling, prompt 132, register §77):** ruling 3 above - the Blue Jackets' own channel, `CBJNHL` and `CBJHN`, is not on Joe's services - is SUPERSEDED. The NHL and DirecTV put the Blue Jackets Hockey Network on DirecTV on 2026-10-24, after this ruling, and Joe confirmed on 2026-11-16 that he receives it ("yes i get bluejackets too"). The Prime Video add-on ruling of 2026-10-06 is unchanged.
+
 ## 75. A REFRESH FOR A PAST DATE READS ITS OWN WEEK, THE ARCHIVED GRID DROPS GAMES THAT WILL NOT AIR, AND A RANGE OF PAST DAYS CAN BE RENDERED — 2026-10-15, prompt 130
 
 **Joe's decision of 2026-10-14, verbatim as the brief carries it.** At prompt 129's Stop 2, Claude Code
@@ -6693,3 +6695,154 @@ lands. A bare Cavaliers game, every other sport's bare game, a favourite's game 
 a game with no team ids selected keep NETWORK TBD; an unjudged game is still shown. The grid note
 ("N games not on the grid · network TBD") stops counting these games because `off` never reaches the grid.
 05 §9 carries a one-line amendment pointing here.
+
+## 77. FOUR ACCESS RULINGS, THE BLUE JACKETS' WUAB 43 SIMULCASTS WITH A PLAIN MARK, A SUNDAY-WINDOWS SMOKE CHECK, AND THE MLB SPAN RE-PINNED — 2026-11-16, prompt 132
+
+Prompt 131 pushed on 2026-11-16 over two data reds under a one-time override of S4: smoke 33/35 (checks f and
+h) and geometry's 2026-09-03 MLB span. This prompt carries the rulings that clear them, two additions Joe asked
+for the same day, and one ruling he made mid-run. Uncommitted at the end of the run: Joe approves the commit.
+
+### A1 — `dazn-cle` is DAZN, available (Joe, 2026-11-14: "I have DAZN via DirecTV - i get all games on DAZN")
+
+ESPN began naming the Cavaliers' regional feed `DAZN CLE` on 2026-10-24. Unaliased it was its own stub,
+`dazn-cle`, typed linear_cable, access `unknown`: 10 active rows on Cavaliers games 10-24 to 11-20 (read
+2026-11-16), and the three inside smoke (h)'s window turned it red. It is decision 7's DAZN, which
+`data/access_profile.json` already lists available, so the fix is the spelling ruling's shape (`d646d20`,
+"ACC Extra" -> ACCNX): one line in `adapters/common.py` `OUTLET_ALIASES`, `"DAZN CLE": "DAZN"`. ONLY that
+spelling - `DAZN MEM`, `DAZN IND`, `DAZN MIN`, the YES feed and the rest are those markets' products and stay
+out of market. Dry run, 2026-11-16/18/20: CHI @ CLE, MEM @ CLE and IND @ CLE each mint `DAZN` AVAILABLE and no
+`dazn-cle` row; `DAZN MEM` on MEM @ CLE stays OUT_OF_MARKET.
+
+### A2 — the Blue Jackets' channel is available (Joe, 2026-11-16: "yes i get bluejackets too")
+
+**This supersedes §74 ruling 3** ("Blue Jackets NOT AVAILABLE", 2026-10-14), which predates the fact that
+changed it: on 2026-10-24 the NHL and DirecTV announced a multiyear deal putting the Blue Jackets Hockey Network
+on DirecTV (channel 660 streaming, 660-1 satellite, Choice package or higher), and Joe's provider is DIRECTV
+CHOICE. `CBJNHL` and `CBJHN` move from `unavailable` to `available` in `data/access_profile.json`, whose `_about`
+records the supersession; `data/local_rights.json` `nhl.CBJ.channelDecision` records it beside the carrier.
+
+- **The Prime Video add-on is unchanged** - UNAVAILABLE by the 2026-10-06 decision; he watches through the
+  DirecTV channel. One consequence, not a change to the ruling: `adapters/nhl.py` synthesizes the Prime row only
+  when a game has no available local row, so a game the league lists on the club channel no longer carries
+  the Prime row at all. A Blue Jackets game with no club-channel row (FLA @ CBJ in the shapes fixture) still
+  carries it, unavailable.
+- **`cbj-local` was verified and left alone.** Its 63 rows (11-23 to 2027-04-10) were all first and last seen
+  2026-09-05 - a one-off season load before any of these rulings, `local_tba`, "carrier TBA". So are 62
+  `cbjnhl` rows at `unknown` over the same span. The nightly NHL adapter rewrites a game only inside its 7-day
+  window, so both age out as the window reaches them.
+- **`wwho` is OUT_OF_MARKET.** WWHO is CW Columbus. The league lists it as the Blue Jackets' feed on their CW
+  simulcast nights (H on 11-12, A on 11-30), and because the Blue Jackets are this market's club the local-feed
+  rule kept its access - `unknown`. Ruled by name in `data/local_rights.json` `nhl.CBJ.outOfMarketStations`,
+  with its reason, and read by `adapters/nhl.py`; the profile is untouched, so `WWHO` alone still answers
+  UNKNOWN anywhere else. (There was no by-name out-of-market precedent; `data/markets.json` was not used because
+  it does not round-trip through a parser, rule 17.)
+- **Tests that pinned the superseded ruling were moved, not deleted.** `tests/test_access_rulings_2026_10_14.py`
+  (two tests) and `tests/test_nhl_out_of_market.py` (four) asserted CBJNHL/CBJHN UNAVAILABLE. Each now asserts
+  the new truth with a comment naming this section; the one that proves an access change in local_rights.json
+  reaches the verdict keeps proving it by pinning the pre-132 profile in a temporary data root.
+
+### A3 — ERADM is ESPN Radio, and radio is not loaded
+
+**The decode, verbatim** (ESPN summary payloads fetched 2026-11-16 for TEX @ LSU, 401856885, and GSW @ SA,
+401909302): `{"type": {"id": "5", "shortName": "Radio", "longName": "Radio", "slug": "radio"}, "station":
+"13715732", "stationKey": "espn", "market": {"id": "1", "type": "National"}, "media": {"callLetters": "ERADM",
+"name": "ESPN Radio", "shortName": "ERADM"}, "lang": "en", "region": "us", "isNational": true}`. The
+scoreboard's `geoBroadcasts` carries the same entry typed `{"id": "5", "shortName": "Radio"}`.
+
+It is radio, so it is handled the way the codebase already handles radio: **not loaded**, the precedent being
+`adapters/nascar.py` ("Radio is deliberately not loaded: nothing in the app renders a radio row"). Exclusion at
+the adapter rather than a named entry on smoke (h)'s list, because (h)'s list is for services nobody has ruled
+on, and this one is ruled. `adapters/espn.py` `_broadcast_names` - the one reader the NFL, CFB and NBA paths
+share - skips ESPN's typed radio entries (`is_radio`: type id 5 or shortName Radio) and does not let the same
+name back in through the untyped flat list. Keyed on ESPN's TYPE, not the call sign, so the next radio feed is
+excluded without a ruling. The 26+ existing `eradm` rows go inactive as refreshes reach their games.
+
+### A4 — "TB/CLE" is a placeholder
+
+Team `mlb-21` carries "TB/CLE" in `canonical_name`, `short_name` and `abbreviation`. `web/lib/placeholders.js`
+gains the slash pair - exactly two all-caps tokens of two or three letters around one slash, MLB only - with
+reason `mlb-slash-pair`. Near-misses stay red on purpose: spaced, three clubs, lower case, one or four letters,
+names around a slash. Smoke (f), TeamMark's badge and `/api/my-games` all read the same predicate.
+
+### B — the Blue Jackets' ten WUAB 43 simulcasts (Joe, 2026-11-16: "select Bluejackets games are available on WUAB 43 in Cleveland - these should surface in MySportsTV and show WUAB 43 as the broadcaster")
+
+The team's announcement of 2026-11-02 (nhl.com/bluejackets/news/cbj-on-cw, "Cleveland (WUAB, MyNet, 43.1)")
+lists ten Blue Jackets Hockey Network games simulcast over the air, hand-entered in `data/local_rights.json`
+`nhl.CBJ.simulcasts` in the Cavaliers' shape. **Matched read-only on 2026-11-16, each to exactly one game:**
+
+| # | date | game | id | ET |
+|---|---|---|---|---|
+| 1 | 2026-11-05 | DAL @ CBJ | `nhl-2026020258` | 7:00 |
+| 2 | 2026-11-12 | TBL @ CBJ | `nhl-2026020304` | 7:00 |
+| 3 | 2026-11-30 | CBJ @ PIT | `nhl-2026020432` | 7:00 |
+| 4 | 2026-12-07 | CBJ @ TBL | `nhl-2026020483` | 7:00 |
+| 5 | 2027-01-07 | CBJ @ NJD | `nhl-2026020695` | 7:00 |
+| 6 | 2027-01-21 | CGY @ CBJ | `nhl-2026020804` | 7:00 |
+| 7 | 2027-02-08 | CBJ @ TOR | `nhl-2026020895` | 7:30 |
+| 8 | 2027-02-11 | OTT @ CBJ | `nhl-2026020903` | 7:00 |
+| 9 | 2027-03-01 | CAR @ CBJ | `nhl-2026021038` | 7:00 |
+| 10 | 2027-03-22 | CBJ @ PIT | `nhl-2026021193` | 7:00 |
+
+`adapters/nhl.py` had no simulcast mechanism. It now imports `adapters/nba.py`'s `_simulcast_rows` - the same
+function, not a copy, the rule `local_rights_access` already states - and emits the rows after the synthesized
+local row, deduped on the outlet. The league's own feed lists WWHO but never WUAB on these nights, which is why
+the list is hand-entered. Dry run, 2026-11-30: CBJ @ PIT carries `WUAB 43` AVAILABLE ("WUAB 43 simulcast")
+beside `CBJNHL` and `CBJHN` AVAILABLE, WWHO and SN-PIT OUT_OF_MARKET; CBJ @ CAR and CBJ @ NSH, not on the slate,
+carry no WUAB row.
+
+**THE CARD, A MID-RUN RULING.** The brief assumed the card would show WUAB 43 "exactly as the Cavaliers' OTA
+cards do". It would not have: measured through the real loader and reconciler, the primary row on these nights
+is a league row (the club channel, or WWHO), the verdict names `cbjhn`, and none of them has a mark - so the
+card would have named the club channel with no logo. The Cavaliers get WUAB 43 from `cardMarkSlug`'s collapse,
+which fired only with their DAZN row. Adding WUAB 43 to the NHL rail changes nothing (the primary is chosen per
+source, and the league's source outranks the hand-entered one). Asked, **Joe ruled 2026-11-16: widen the WUAB
+rule**, on one condition - "verify which mark asset the widened rule attaches. If the existing WUAB 43 mark is
+the Cavaliers' composite with RESN/DAZN inside it, mint a plain WUAB 43 mark for non-Cavaliers games through the
+existing recipes in scripts/build_web_marks.py, and pin with a test that a CBJ card wears the plain mark and a
+Cavs card keeps its composite."
+
+- **It is the composite**: `wuab-43` is the Cleveland's 43 lockup over the RESN wordmark (its source has two ink
+  bands, rows 0-242 and 273-704). `scripts/build_web_marks.py` gains `CROPS`, the inverse of `COMPOSITES`:
+  `wuab-43-plain` is the first ink band of the processed `wuab-43`, rebuilt whenever it is. A full build to a
+  temporary directory reproduced all 35 published marks and the manifest byte-identically and added one entry
+  (`hf` 0.825, 474 x 128); those two files were published from it.
+- **`web/lib/marks.js`**: a game with an active WUAB 43 row and no DAZN row now collapses to `wuab-43-plain` on
+  the list card and draws ONE grid block, in the WUAB 43 row. Which art is the presence of the Cavaliers' DAZN
+  row - not the sport, not local_rights.json - decided in one function, `wuabMarkSlug`, which the card, the grid
+  rail and jump-nav (`railRowMarkSlug`, so a row holding a Cavaliers game keeps the Cavaliers' art) and the
+  detail panel's two lists (`rowMarkSlug`) all ask. `MatchupCard.js` (locked) is not touched; it already calls
+  `cardMark`. `docs/design/mobile_demo.html` implements none of this (searched: no `wuab`, no `cardMarkSlug`).
+
+### C — smoke (i), the Sunday windows (Joe approved 2026-11-16, threshold Thursday)
+
+`web/lib/sundaywindows.js`, applied by smoke (i): from Thursday ET, the coming Sunday's regional CBS/FOX rows
+must not ALL be `unverified`. "Regional" is rule 1's window exactly - `adapters/espn.py` `SUNDAY_WINDOW`,
+12:00-17:00 ET, pinned by a test that reads the Python constant - rather than the brief's "before 7 PM", so the
+check and the adapter cannot disagree about which games the windows decide.
+
+**One finding the brief's rule would have missed: the market's own club's game is left out.** Rule 3 decides
+the Browns' game from the team alone, so on 2026-11-01 and -08 the rows read 1 available and 10 unverified, and
+"every regional game unverified" was false on both outage Sundays - the check as briefed could never have
+fired on the outage it exists for. With the Browns' game excluded the outage reads 10 of 10.
+
+The red message cannot quote the reader's `nfl_windows` result: `refresh_runs` is unreadable by the anon key on
+purpose (smoke check (d)), so the message says where it is recorded instead. Both reads page (rule 19), pinned
+in `web/test/restcap.test.mjs`, whose (h) region now ends at (i) instead of quietly absorbing it.
+
+### Geometry — the MLB span re-pinned 396.4 -> 393.9 (Joe approved 2026-11-16)
+
+The season's final MLB records took `widest` 75.10 -> 86.57 and the 2026-09-03 span to 393.85 (sw 568, rail
+60): queue item 19's seam pixels, divided by a larger pxPerMinute. Proved side by side as prompt 127 proved
+the last move - this tree and `e0c303f`'s six changed web files swapped back in read 393.85 / 86.57 / 568
+identically, against the same server minutes apart. Re-pinned to the measured reading.
+
+### What cannot be green inside this run
+
+**Smoke (h) stays red on `dazn-cle` until a refresh runs this code.** Smoke reads the live database; the alias
+rewrites the rows only when the nightly refresh's NBA load runs with it, which needs the commit and a push - and
+this run neither commits nor writes rows (S2). Putting `dazn-cle` on (h)'s list would have turned it green by
+filing a ruled service as unruled, which is the opposite of what the list is for. The dry run above is the
+evidence that the next refresh clears it.
+
+**Out of scope, as briefed:** the 11-01/11-08 backfills (run 2026-11-16), E5, the FOX-late question, the CBJ
+Prime Video row, the other clubs' DAZN services, ERADM's history, and `MatchupCard`.
