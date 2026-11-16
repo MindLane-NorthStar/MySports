@@ -39,6 +39,12 @@ from typing import Any
 from adapters.common import (access_lookup, dump_json, et_date, et_display, fetch_logos, find_repo_root, fixture_envelope,
                              http_json, load_data, load_raw_or_fetch, local_rights_access, md_table, media_row,
                              canonical_outlet, outlet_access, team_record, write_text, result_status, score_int)
+# THE CAVALIERS' SIMULCAST FUNCTION, NOT A COPY OF IT (prompt 132). The Blue Jackets' WUAB 43 games are the
+# same shape as the Cavaliers' OTA package - hand-entered in data/local_rights.json under the club, matched
+# on ET date + opponent tricode, one row per outlet, the label keeping the station - and nothing in
+# `_simulcast_rows` is NBA-specific. One function for both adapters is the rule `local_rights_access`
+# already states: a field only one adapter honours is the defect prompt 72 found here.
+from adapters.nba import _simulcast_rows
 
 API = "https://api-web.nhle.com/v1"
 # NHL abbreviations that differ from ESPN's TEAMS endpoint (/hockey/nhl/teams), which is what
@@ -244,6 +250,12 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
     local_abbrevs = set(market.get("localTeams", ["CBJ"]))
     package = market.get("outOfMarketPackage")      # None turns the out-of-market rule off
     carriage = load_data(root, "local_rights.json", {}).get("nhl", {})
+    # STATIONS IN THE CLUB'S OWN TERRITORY THAT CLEVELAND CANNOT RECEIVE (prompt 132, register §77). The
+    # league lists WWHO, CW Columbus, as the home feed on the Blue Jackets' CW simulcast nights; because the
+    # Blue Jackets are this market's club, the local-feed rule below kept its access and it answered UNKNOWN.
+    # A named station is OUT_OF_MARKET whatever its feed side. Read from local_rights.json, where each name
+    # carries its reason, so the ruling is data and not a literal here.
+    elsewhere = {st for ab in local_abbrevs for st in ((carriage.get(ab) or {}).get("outOfMarketStations") or {})}
     by_id = {t["id"]: t for t in teams}
     notes: list[str] = []
     games: list[dict[str, Any]] = []
@@ -277,6 +289,8 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
                     local_side = home if b.get("market") == "H" else away
                     if local_side["abbreviation"] not in local_abbrevs:
                         acc = "OUT_OF_MARKET"
+                if outlet in elsewhere:
+                    acc = "OUT_OF_MARKET"
                 media.append(media_row(mtype, outlet, acc, market=mk, certainty="CONFIRMED", start_time=start, tbd=tbd,
                                        source="nhl.schedule", label=f"{b.get('network')}"))
             # synthesized late-binding local row for the territory team (spec §3.12)
@@ -313,6 +327,19 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
                     media.append(media_row("tv", cs.get("label") or f"{ab} LOCAL", "AVAILABLE", market="local", certainty=cert,
                                            start_time=start, tbd=tbd, source="data/local_rights.json",
                                            label=f"{nick} local TV - carrier TBA"))
+            # THE OTA SIMULCAST (prompt 132, Joe 2026-11-16): the Blue Jackets' ten WUAB 43 games, from
+            # data/local_rights.json nhl.CBJ.simulcasts. AFTER the synthesized row above on purpose: that
+            # row is minted only when no local row is available, and a simulcast row emitted first would
+            # suppress it - which would change what every one of these games carried before this prompt
+            # beyond the one row Joe asked for. ONE ROW PER OUTLET, deduped on the outlet exactly as
+            # adapters/nba.py does, so a league row naming the same station is never doubled.
+            for s in (home, away):
+                if s["abbreviation"] not in local_abbrevs:
+                    continue
+                other = away if s is home else home
+                for sim in _simulcast_rows(s, carriage, other["abbreviation"], start, tbd, available, unavailable):
+                    if not any(m["outlet"] == sim["outlet"] for m in media):
+                        media.append(sim)
             # THE OUT-OF-MARKET PACKAGE (prompt 128): after the league's rows and before the note below,
             # so a game the package covers is not reported as having no US row. Its access is the
             # profile's answer for the outlet, never a literal.

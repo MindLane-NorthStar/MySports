@@ -13,7 +13,7 @@ import { useEffect } from 'react';
 import { etTime, longDay, resultLabel, hasScore } from '../lib/format.js';
 import { teamLogoDarkUrl, watchUrl, mlbAppUrl, DIRECTV_STREAM } from '../lib/config.js';
 import TeamMark from './TeamMark.js';
-import { markStyle, hasMark } from '../lib/marks.js';
+import { markStyle, hasMark, rowMarkSlug } from '../lib/marks.js';
 import { standingLine, standingFor } from '../lib/standings.js';
 import { cardName } from './MatchupCard.js';
 import { gameLink } from '../lib/gamelink.js';
@@ -53,11 +53,14 @@ function isLinear(b) {
  * the text fallback is native rather than added here. Of the 33 services that appear on an
  * accessible row, exactly two have no mark: `cavs-local` and `cbj-local`.
  */
-function WatchLink({ service, name, href, big }) {
+function WatchLink({ service, mark, name, href, big }) {
   // The enlarged mark is not the 30px one scaled: markStyle() takes a stack height and applies the
   // frozen per-mark ink-area factor, so both sizes are normalised the same way and a wordmark and a
   // roundel still carry equal visual weight.
-  const m = hasMark(service) ? markStyle(service, big ? 46 : 26) : null;
+  // `mark` is the row's ART when it differs from the service (prompt 132: WUAB 43's plain lockup on a
+  // game that is not the Cavaliers'); the link itself is always the service's.
+  const art = mark || service;
+  const m = hasMark(art) ? markStyle(art, big ? 46 : 26) : null;
   return (
     <a
       className={`dlink dlink-watch${big ? ' dlink-big' : ''}`}
@@ -342,6 +345,7 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
               {accessible.map((b, i) => (
                 <WatchLink key={`${b.service_id}-${b.feed_side}-${b.delivery_surface}`}
                            service={b.service_id}
+                           mark={rowMarkSlug(b.service_id, game)}
                            name={b.network?.canonical_name || b.label || b.service_id}
                            href={b.service_id === 'guardians-tv' ? mlbAppUrl(game) : null}
                            big={i === 0} />
@@ -368,7 +372,8 @@ export default function GameDetail({ game, standings, generatedAt, onClose }) {
               {rows.length ? (
                 <ul>
                   {rows.map((b) => {
-                    const m = hasMark(b.service_id) ? markStyle(b.service_id, 30) : null;
+                    const art = rowMarkSlug(b.service_id, game);   // WUAB 43's plain lockup off the Cavaliers (prompt 132)
+                    const m = hasMark(art) ? markStyle(art, 30) : null;
                     return (
                       <li key={`${b.service_id}-${b.feed_side}-${b.delivery_surface}`} className="dbcast">
                         {m ? <img src={m.src} height={m.height} alt="" /> : null}

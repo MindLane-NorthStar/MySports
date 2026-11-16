@@ -14,7 +14,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { cardMarkSlug, simulcastLanes, LIST_ONLY_MARKS, hasMark } from '../lib/marks.js';
+import { cardMarkSlug, simulcastLanes, LIST_ONLY_MARKS, hasMark, wuabMarkSlug, rowMarkSlug,
+  railRowMarkSlug } from '../lib/marks.js';
+import { cardMark } from '../lib/cardbroadcast.js';
 import manifest from '../public/marks/manifest.json' with { type: 'json' };
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -45,11 +47,14 @@ test('DAZN alone collapses nothing - the ordinary single-mark path still draws i
   assert.equal(cardMarkSlug(game('dazn')), null);
 });
 
-test('a game with no DAZN row collapses nothing, whatever else it carries', () => {
+test('a game with no DAZN row never wears a Cavaliers mark, whatever else it carries', () => {
   // The composites mean "this Cavaliers game is also on air". CBS alone is an ordinary CBS game -
   // an NFL Sunday, a bowl - and must never wear a Cavaliers mark.
+  // PROMPT 132 (Joe, 2026-11-16) WIDENED ONE CASE: a game with a WUAB 43 row and no DAZN row now wears
+  // WUAB 43 - but the PLAIN lockup, which carries no RESN and so is not a Cavaliers mark. This line
+  // read `null` until then; the property in the test's name is unchanged.
   assert.equal(cardMarkSlug(game('cbs')), null);
-  assert.equal(cardMarkSlug(game('cbs', 'wuab-43')), null);
+  assert.equal(cardMarkSlug(game('cbs', 'wuab-43')), 'wuab-43-plain');
   assert.equal(cardMarkSlug(game('espn', 'abc')), null);
   assert.equal(cardMarkSlug({ broadcasts: [] }), null);
   assert.equal(cardMarkSlug(undefined), null);
@@ -160,4 +165,91 @@ test('the composites are named in ONE web file - the rail and the detail cannot 
     }
   }
   assert.ok(manifest.some((m) => m.slug === 'cbs-dazn'), 'and they are still published');
+});
+
+// --------------------------------------------------------------- prompt 132: the Blue Jackets' WUAB 43
+// Joe, 2026-11-16: the Blue Jackets' ten WUAB 43 games "should surface in MySportsTV and show WUAB 43 as the
+// broadcaster" - and, his condition on widening this rule: "If the existing WUAB 43 mark is the Cavaliers'
+// composite with RESN/DAZN inside it, mint a plain WUAB 43 mark for non-Cavaliers games ... and pin with a
+// test that a CBJ card wears the plain mark and a Cavs card keeps its composite." It is, so they are.
+
+/** A Blue Jackets WUAB 43 night as the reconciler leaves it: the league's club channel PRIMARY (no mark),
+ *  WWHO out of market, the opponent's feed out of market, and the hand-entered WUAB 43 row. */
+const cbjNight = () => ({
+  sport: 'nhl',
+  broadcasts: [
+    { service_id: 'cbjnhl', is_primary: true, delivery_surface: 'LINEAR', access_status: 'available', active: true },
+    { service_id: 'cbjhn', is_primary: false, delivery_surface: 'LINEAR', access_status: 'available', active: true },
+    { service_id: 'wwho', is_primary: false, delivery_surface: 'LINEAR', access_status: 'out_of_market', active: true },
+    { service_id: 'sn-pit', is_primary: false, delivery_surface: 'LINEAR', access_status: 'out_of_market', active: true },
+    { service_id: 'wuab-43', is_primary: false, delivery_surface: 'LINEAR', access_status: 'available', active: true,
+      label: 'WUAB 43 simulcast' },
+  ],
+  eligibility: [{ eligible: true, eligible_via_network_id: 'cbjhn', eligible_via_service_ids: [] }],
+});
+/** A Cavaliers WUAB-only night: DAZN primary, WUAB 43 beside it. */
+const cavsNight = () => ({
+  sport: 'nba',
+  broadcasts: [
+    { service_id: 'dazn', is_primary: true, delivery_surface: 'STREAMING', access_status: 'available', active: true },
+    { service_id: 'wuab-43', is_primary: false, delivery_surface: 'LINEAR', access_status: 'available', active: true },
+  ],
+});
+
+test('p132: the existing wuab-43 mark IS the Cavaliers composite, and wuab-43-plain is published beside it', () => {
+  // the premise of Joe's condition, checked against the build script rather than assumed
+  const builder = readFileSync(join(HERE, '..', '..', 'scripts', 'build_web_marks.py'), 'utf8');
+  assert.match(builder, /`wuab-43` already exists, and it already carries\n# RESN\/DAZN inside it/);
+  assert.match(builder, /"wuab-43-plain": \("wuab-43", /, 'the plain mark is a recipe over wuab-43, not a hand-cut PNG');
+  assert.ok(hasMark('wuab-43') && hasMark('wuab-43-plain'));
+  const slugs = manifest.map((m) => m.slug);
+  assert.ok(slugs.includes('wuab-43-plain'));
+});
+
+test('p132: a CBJ card wears the PLAIN WUAB 43 mark, and a Cavs card keeps its composite', () => {
+  assert.equal(cardMarkSlug(cbjNight()), 'wuab-43-plain');
+  assert.equal(cardMark(cbjNight()).url.split('?')[0], '/marks/wuab-43-plain.png');
+  assert.equal(cardMarkSlug(cavsNight()), 'wuab-43');
+  assert.equal(cardMark(cavsNight()).url.split('?')[0], '/marks/wuab-43.png');
+  // and the both-station Cavaliers game is untouched
+  assert.equal(cardMarkSlug(game('dazn', 'wuab-43', 'cbs')), 'cbs-wuab-43');
+});
+
+test('p132: without the widening the CBJ card would name the club channel and wear NO mark', () => {
+  // the reason the rule was widened: the ordinary pick is the primary row, which has no published mark
+  const night = cbjNight();
+  night.broadcasts = night.broadcasts.filter((b) => b.service_id !== 'wuab-43');
+  assert.equal(cardMarkSlug(night), null);
+  assert.equal(cardMark(night).url, null);
+});
+
+test('p132: a CBJ WUAB 43 night is ONE grid block, in the WUAB 43 row', () => {
+  assert.deepEqual(simulcastLanes(cbjNight()), ['wuab-43']);
+  assert.deepEqual(simulcastLanes(cavsNight()), ['wuab-43', 'dazn'], 'the Cavaliers keep a lane per network');
+});
+
+test('p132: the grid rail and the detail panel ask the same rule as the card', () => {
+  // detail panel: one row of one game
+  assert.equal(rowMarkSlug('wuab-43', cbjNight()), 'wuab-43-plain');
+  assert.equal(rowMarkSlug('wuab-43', cavsNight()), 'wuab-43');
+  assert.equal(rowMarkSlug('cbs', cbjNight()), 'cbs', 'every other service is its own id');
+  // grid rail: a row of games - a Cavaliers game in the row keeps the Cavaliers' art for the row
+  const row = (...games) => ({ id: 'wuab-43', items: games.map((g) => ({ game: g })) });
+  assert.equal(railRowMarkSlug(row(cbjNight())), 'wuab-43-plain');
+  assert.equal(railRowMarkSlug(row(cavsNight())), 'wuab-43');
+  assert.equal(railRowMarkSlug(row(cbjNight(), cavsNight())), 'wuab-43');
+  assert.equal(railRowMarkSlug({ id: 'espn', items: [] }), 'espn');
+  assert.equal(wuabMarkSlug([]), 'wuab-43-plain');
+});
+
+test('p132: MobileGrid and GameDetail draw a WUAB 43 row through the rule, not the raw service id', () => {
+  const code = (p) => src(p).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const grid = code('components/MobileGrid.js');
+  assert.match(grid, /markStyle\(railRowMarkSlug\(r\), 26\)/, 'the jump nav');
+  assert.match(grid, /railMark\(railRowMarkSlug\(row\)\)/, 'the rail cell');
+  assert.doesNotMatch(grid, /railMark\(row\.id\)|markStyle\(r\.id/, 'no raw row id left');
+  const detail = code('components/GameDetail.js');
+  assert.match(detail, /mark=\{rowMarkSlug\(b\.service_id, game\)\}/, 'the Watch Live links');
+  assert.match(detail, /const art = rowMarkSlug\(b\.service_id, game\)/, 'the Where to watch list');
+  assert.doesNotMatch(detail, /markStyle\(b\.service_id/, 'no raw service id left');
 });

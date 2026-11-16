@@ -49,7 +49,7 @@ import { useTextMeasurer } from '../lib/useTextMeasurer.js';
 // above the grid is what states the sport now.
 import { teamLogoUrl, teamLogoDarkUrl, teamLogoCapUrl } from '../lib/config.js';
 import TeamMark from './TeamMark.js';
-import { markStyle, hasMark, railMark, simulcastLanes } from '../lib/marks.js';
+import { markStyle, hasMark, railMark, simulcastLanes, railRowMarkSlug } from '../lib/marks.js';
 // longDay went with the header too - the picker directly above the grid carries the date.
 import { etTime } from '../lib/format.js';
 import { cardName, cardBroadcast } from './MatchupCard.js';
@@ -413,7 +413,8 @@ export default function MobileGrid({ games, sport, day, standings, onOpen, nowMi
               is unconditional so the accessible name is the network either way: an <img alt=""> in a
               button that has no other text leaves it announced as "button", nothing more. */}
           {rows.map((r) => {
-            const mark = markStyle(r.id, 26);
+            // the row's ART, not always its id: WUAB 43 wears the plain lockup unless a Cavaliers game is in it (prompt 132)
+            const mark = markStyle(railRowMarkSlug(r), 26);
             return (
               <button
                 key={r.id}
@@ -527,15 +528,17 @@ export default function MobileGrid({ games, sport, day, standings, onOpen, nowMi
                       smaller than a 25.8px FOX wordmark: same column, 71% less ink.
                       `railMark` returns a real width AND height; the CSS clamps stay as a
                       backstop but no longer bind, which stage 5 verified for all 28. */}
-                  {hasMark(row.id) ? (() => {
-                    const m = railMark(row.id);
+                  {/* the row's ART, not always its id (prompt 132): `railRowMarkSlug` gives a WUAB 43
+                      row the plain lockup unless a Cavaliers game is in it. Every other row is its id. */}
+                  {hasMark(railRowMarkSlug(row)) ? (() => {
+                    const m = railMark(railRowMarkSlug(row));
                     return <img src={m.src} width={m.width} height={m.height}
                                 alt={row.name} loading="lazy" />;
                   })() : null}
                 </div>
                 {/* a network WITH a mark needs no name under it; one without gets a derived
                     abbreviation of at most two short lines - never a mid-word ellipsis */}
-                {hasMark(row.id) ? null : (
+                {hasMark(railRowMarkSlug(row)) ? null : (
                   <div className="mrail-call" title={row.name}>
                     {railLabel(row.name).map((line) => (
                       <span key={line}>{line}</span>

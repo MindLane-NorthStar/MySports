@@ -29,23 +29,34 @@
 // `AL|NL Higher Seed` and `AL|NL Lower Seed`, exactly those two words and no others. The World Series
 // rows are still to come, and the World Series form is deliberately not guessed: it is meant to turn
 // the check red in its turn.
+//
+// THE SLASH PAIR (Joe's ruling, prompt 132, 2026-11-16, register §77). Team `mlb-21` loaded with
+// `canonical_name`, `short_name` and `abbreviation` all exactly "TB/CLE": the winner of a series
+// between two named clubs, spelled as their two abbreviations around one slash. Smoke (f) went red on
+// it and stayed red through prompt 131's commit. THE RULE IS NARROW: exactly two all-caps tokens of
+// two or three letters around exactly one slash, nothing else on the line - so a real name that
+// happens to contain a slash, a three-club string, or a lower-case spelling is still not a
+// placeholder and still turns the check red. MLB only, like the forms above.
 const MLB_POSTSEASON_PLACEHOLDER = /^(AL|NL) (#\d+ Seed|Wild Card #\d+|\d+\/\d+ Winner|Higher Seed|Lower Seed)$/;
+const MLB_SLASH_PAIR_PLACEHOLDER = /^[A-Z]{2,3}\/[A-Z]{2,3}$/;
 
 /**
  * True when a `teams` row is a placeholder rather than a club: its id ends in `-TBD` (the rule that
  * stood alone until prompt 114 rev B), or it is an MLB row named for a postseason seed, wild card
- * slot, series winner, or higher or lower seed, in one of the four published forms.
+ * slot, series winner, or higher or lower seed, in one of the four published forms, or the winner of
+ * a series named by its two clubs' abbreviations around one slash ("TB/CLE", prompt 132).
  */
 export function isPlaceholderTeam(team) {
-  if (!team) return false;
-  if (String(team.id ?? '').endsWith('-TBD')) return true;
-  return team.sport === 'mlb' && MLB_POSTSEASON_PLACEHOLDER.test(String(team.canonical_name ?? ''));
+  return placeholderReason(team) !== null;
 }
 
 /** Why a row counts as a placeholder, for a smoke detail string; null when it does not. */
 export function placeholderReason(team) {
   if (!team) return null;
   if (String(team.id ?? '').endsWith('-TBD')) return 'suffix';
-  if (team.sport === 'mlb' && MLB_POSTSEASON_PLACEHOLDER.test(String(team.canonical_name ?? ''))) return 'mlb-pattern';
+  if (team.sport !== 'mlb') return null;
+  const name = String(team.canonical_name ?? '');
+  if (MLB_POSTSEASON_PLACEHOLDER.test(name)) return 'mlb-pattern';
+  if (MLB_SLASH_PAIR_PLACEHOLDER.test(name)) return 'mlb-slash-pair';
   return null;
 }

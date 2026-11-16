@@ -16,6 +16,99 @@
     "label": "CBJ LOCAL",
     "asOf": "2026-08-31",
     "note": "Blue Jackets local carrier for 2026-27 not announced as of the research brief"
+   },
+   "channelDecision": "Joe 2026-11-16 (prompt 132, register §77): \"yes i get bluejackets too\" - the Blue Jackets' own channel, which the NHL's schedule names CBJNHL and CBJHN, is on his services. It supersedes his 2026-10-14 ruling (prompt 129, register §74: \"Blue Jackets NOT AVAILABLE\"), which predates the fact that changed it: on 2026-10-24 the NHL and DirecTV announced a multiyear deal putting the Blue Jackets Hockey Network on DirecTV (channel 660 streaming, 660-1 satellite, Choice package or higher), and Joe's provider is DIRECTV CHOICE. The availability itself lives in data/access_profile.json. THIS ENTRY'S PRIME VIDEO ROW IS UNCHANGED: the add-on stays UNAVAILABLE by the 2026-10-06 decision above; he watches through the DirecTV channel, not Prime. Because adapters/nhl.py synthesizes this entry's row only when a game has no available local row, a game the league lists on CBJNHL or CBJHN no longer carries the Prime Video row at all.",
+   "outOfMarketStations": {
+    "WWHO": "CW Columbus. Not receivable in Cleveland - OUT_OF_MARKET (prompt 132, 2026-11-16, register §77). The NHL's schedule lists it as the home feed on the Blue Jackets' CW simulcast nights (2026-11-05, 2026-11-12), where it answered UNKNOWN because the Blue Jackets are this market's club. Cleveland's station for the same games is WUAB 43, in `simulcasts` below."
+   },
+   "simulcasts": {
+    "surface": "tv",
+    "expectedCount": 10,
+    "asOf": "2026-11-02",
+    "source": "Blue Jackets announcement, 2026-11-02 (nhl.com/bluejackets/news/cbj-on-cw): ten Blue Jackets Hockey Network games simulcast over the air, Cleveland on \"Cleveland (WUAB, MyNet, 43.1)\". All 7:00 PM ET except 2027-02-08 at 7:30. Joe 2026-11-16: \"select Bluejackets games are available on WUAB 43 in Cleveland - these should surface in MySportsTV and show WUAB 43 as the broadcaster\".",
+    "note": "Hand-entered, the Cavaliers' pattern (nba.CLE.simulcasts, prompts 104 and 106): ONE ROW PER OUTLET, and the row's label keeps the station. Games are matched by ET date + opponent tricode, the pair being the key: PIT and TBL each appear twice. `side` is the announcement's own home/away and is provenance, not part of the match key. The two past games (2026-11-05, 2026-11-12) are entered on purpose so a backfill of those dates reads true. Matched 2026-11-16 against the schedule rows: every one of the ten is exactly one game (register §77 lists the ids).",
+    "games": [
+     {
+      "date": "2026-11-05",
+      "opponent": "DAL",
+      "side": "home",
+      "outlets": [
+       "WUAB 43"
+      ]
+     },
+     {
+      "date": "2026-11-12",
+      "opponent": "TBL",
+      "side": "home",
+      "outlets": [
+       "WUAB 43"
+      ]
+     },
+     {
+      "date": "2026-11-30",
+      "opponent": "PIT",
+      "side": "away",
+      "outlets": [
+       "WUAB 43"
+      ]
+     },
+     {
+      "date": "2026-12-07",
+      "opponent": "TBL",
+      "side": "away",
+      "outlets": [
+       "WUAB 43"
+      ]
+     },
+     {
+      "date": "2027-01-07",
+      "opponent": "NJD",
+      "side": "away",
+      "outlets": [
+       "WUAB 43"
+      ]
+     },
+     {
+      "date": "2027-01-21",
+      "opponent": "CGY",
+      "side": "home",
+      "outlets": [
+       "WUAB 43"
+      ]
+     },
+     {
+      "date": "2027-02-08",
+      "opponent": "TOR",
+      "side": "away",
+      "outlets": [
+       "WUAB 43"
+      ]
+     },
+     {
+      "date": "2027-02-11",
+      "opponent": "OTT",
+      "side": "home",
+      "outlets": [
+       "WUAB 43"
+      ]
+     },
+     {
+      "date": "2027-03-01",
+      "opponent": "CAR",
+      "side": "home",
+      "outlets": [
+       "WUAB 43"
+      ]
+     },
+     {
+      "date": "2027-03-22",
+      "opponent": "PIT",
+      "side": "away",
+      "outlets": [
+       "WUAB 43"
+      ]
+     }
+    ]
    }
   }
  },

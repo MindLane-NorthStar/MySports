@@ -70,20 +70,56 @@ export function showsMark(broadcast) {
  *
  * `wuab-43` ALREADY CARRIES RESN/DAZN INSIDE IT, which is why the three-service row takes the
  * two-part `cbs-wuab-43` stack rather than anything with a third tier.
+ *
+ * WIDENED TO EVERY WUAB 43 GAME (prompt 132, Joe's ruling 2026-11-16, register §77). The Blue Jackets
+ * put ten games on WUAB 43, and Joe ruled they "should surface in MySportsTV and show WUAB 43 as the
+ * broadcaster". The card could not: its pick is the primary row, which on those games is the league's
+ * club channel (CBJNHL/CBJHN, no mark), and the collapse above fired only with the Cavaliers' DAZN row
+ * present. So a game with an active WUAB 43 row and NO DAZN row now collapses too:
+ *
+ *   wuab-43 without dazn     -> wuab-43-plain  the Blue Jackets' ten, and any later WUAB package
+ *
+ * AND IT WEARS THE PLAIN LOCKUP, NOT `wuab-43`, on Joe's condition: "If the existing WUAB 43 mark is the
+ * Cavaliers' composite with RESN/DAZN inside it, mint a plain WUAB 43 mark for non-Cavaliers games." It
+ * is (verified 2026-11-16: Cleveland's 43 over the RESN wordmark), so scripts/build_web_marks.py now
+ * crops `wuab-43-plain` from it. WHICH ART IS THE PRESENCE OF THE CAVALIERS' DAZN ROW, the same fact
+ * that already defines the Cavaliers' collapse - not the sport and not data/local_rights.json - and
+ * `wuabMarkSlug` is the ONE place that decides it, for the card, the grid rail and the detail panel.
  */
 const SIM_DAZN = 'dazn';
 const SIM_WUAB = 'wuab-43';
+const SIM_WUAB_PLAIN = 'wuab-43-plain';
 const SIM_CBS = 'cbs';
+
+function activeIds(game) {
+  return new Set((game?.broadcasts || [])
+    .filter((b) => b && b.active !== false)
+    .map((b) => String(b.service_id || '').toLowerCase()));
+}
+
+/**
+ * The WUAB 43 art for a set of games airing on it: the Cavaliers' `wuab-43` (Cleveland's 43 over RESN)
+ * when ANY of them carries the Cavaliers' DAZN row, otherwise the plain lockup. One game for the card
+ * and the detail panel; every game in the row for the grid rail, so a Cavaliers game keeps its art
+ * even on a day it shares the WUAB 43 row with another.
+ */
+export function wuabMarkSlug(games) {
+  return (games || []).some((g) => activeIds(g).has(SIM_DAZN)) ? SIM_WUAB : SIM_WUAB_PLAIN;
+}
+
+/** The mark slug for one broadcast row of `game`: its own service id, except WUAB 43 (see above). */
+export function rowMarkSlug(serviceId, game) {
+  const id = String(serviceId || '').toLowerCase();
+  return id === SIM_WUAB ? wuabMarkSlug([game]) : id;
+}
 
 /**
  * The slug the LIST card should wear for this game, or null to use the ordinary single-mark path.
  * @param {{broadcasts?: Array<{service_id?: string, active?: boolean}>}} game
  */
 export function cardMarkSlug(game) {
-  const ids = new Set((game?.broadcasts || [])
-    .filter((b) => b && b.active !== false)
-    .map((b) => String(b.service_id || '').toLowerCase()));
-  if (!ids.has(SIM_DAZN)) return null;            // not a Cavaliers local game; nothing to collapse
+  const ids = activeIds(game);
+  if (!ids.has(SIM_DAZN)) return ids.has(SIM_WUAB) ? SIM_WUAB_PLAIN : null;   // prompt 132; else nothing to collapse
   if (ids.has(SIM_WUAB)) return ids.has(SIM_CBS) ? 'cbs-wuab-43' : SIM_WUAB;
   if (ids.has(SIM_CBS)) return 'cbs-dazn';
   return null;
@@ -123,10 +159,16 @@ export const LIST_ONLY_MARKS = new Set(['cbs-dazn', 'cbs-wuab-43']);
  */
 export function simulcastLanes(game) {
   if (!cardMarkSlug(game)) return [];          // not a collapsed simulcast: one block, as today
-  const ids = new Set((game?.broadcasts || [])
-    .filter((b) => b && b.active !== false)
-    .map((b) => String(b.service_id || '').toLowerCase()));
+  const ids = activeIds(game);
+  // A Blue Jackets WUAB 43 game (prompt 132) has no CBS or DAZN row, so this is ['wuab-43']: ONE block,
+  // in the WUAB 43 row - the lane Joe asked for - rather than the club channel's.
   return [SIM_CBS, SIM_WUAB, SIM_DAZN].filter((id) => ids.has(id));
+}
+
+/** The mark slug for a grid RAIL row: its service id, except WUAB 43, which asks `wuabMarkSlug`. */
+export function railRowMarkSlug(row) {
+  const id = String(row?.id || '').toLowerCase();
+  return id === SIM_WUAB ? wuabMarkSlug((row.items || []).map((it) => it.game)) : id;
 }
 
 /** The <img> props for a mark sized to a line box: 2/3 of the stack height, scaled by hf. */

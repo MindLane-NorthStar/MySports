@@ -303,6 +303,12 @@ OUTLET_ALIASES = {
     # as unavailable, and Joe ruled the same day that its games are not on his services (prompt 128).
     "NHLN": "NHL Network",
     "WUAB": "WUAB 43", "WUAB-43": "WUAB 43", "Cleveland's 43": "WUAB 43", "Cavaliers on DAZN": "DAZN", "DAZN 1": "DAZN",
+    # Joe ruled 2026-11-14 (prompt 132, register §77): "I have DAZN via DirecTV - i get all games on DAZN".
+    # ESPN began naming the Cavaliers' regional feed `DAZN CLE` on 2026-10-24; unaliased it was its own
+    # stub, `dazn-cle`, access unknown, and smoke (h) went red. It is decision 7's DAZN, which
+    # data/access_profile.json lists available. THIS ONE SPELLING ONLY: `DAZN MEM`, `DAZN YES` and the
+    # other clubs' DAZN feeds are those markets' in-market products and stay their own outlets.
+    "DAZN CLE": "DAZN",
     # WOIO IS CBS, AND THIS IS WHERE THAT RESOLVES (prompt 106). The Cavaliers' OTA simulcast package
     # names stations - thirteen of the fifteen are on WOIO - and WOIO is CBS's Cleveland affiliate
     # (data/row_order.json carries it as network CBS, station WOIO, channel 19, in three bands). It is

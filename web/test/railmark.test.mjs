@@ -34,7 +34,10 @@ test('the manifest carries published geometry for every mark, and h is PUBLISH_H
   // 600px^2 rail target below. NOTE FOR PROMPT 105: Joe ruled them LIST VIEW ONLY, and nothing in
   // the manifest records that - a mark carries no surface. If the rail must never draw them, that
   // fact needs somewhere to live.
-  assert.equal(manifest.length, 35);
+  // 35 -> 36: prompt 132 added `wuab-43-plain`, the Cleveland's 43 lockup CROPPED from `wuab-43` (which
+  // stacks it over the RESN wordmark), so a Blue Jackets WUAB 43 game does not wear the Cavaliers' art -
+  // Joe's condition of 2026-11-16. Bumped deliberately, and held to every assertion below like the rest.
+  assert.equal(manifest.length, 36);
   for (const m of manifest) {
     assert.ok(Number.isInteger(m.w) && m.w > 0, `${m.slug} has a width`);
     // build_web_marks.py PUBLISH_H = 128. Anything else means the published suite is not what the
@@ -67,8 +70,9 @@ test('every mark lands on the 600px^2 rail target except ESPN2, the one irreduci
   // 27.21 x 22.05 -> 23.52 x 25.51, all four 600.0. Re-measured rather than assumed, and they stay
   // INSIDE this assertion; if a composite ever misses the target that is a finding, not a reason to
   // except it. The exception list is the assertion that matters; the count moves with the suite.
+  // Prompt 132's `wuab-43-plain` (474 x 128, aspect 3.70) came onto the target with no code change too.
   assert.deepEqual(off.sort(), ['espn2']);
-  assert.equal(manifest.length - off.length, 34);
+  assert.equal(manifest.length - off.length, 35);
 });
 
 test('NO mark is drawn wider than the rail content box - the CSS clamp must not bind', () => {

@@ -1,5 +1,5 @@
 {
- "_about": "Viewer access profile (spec 3.2), label-based until networks_services/carriage_status exist. Provider: DIRECTV CHOICE (no Sports Pack) + ESPN Unlimited + Peacock Premium + Paramount+ + HBO Max + Prime Video + Netflix + Disney+ + Apple TV (decision 4). Adapters classify each media row's access from this file. Anything not listed classifies UNKNOWN (never assumed held or not held): YouTube is unstated as of 2026-09-01. Joe ruled 2026-10-14 (prompt 129, register §74): NBA TV (\"I get NBA TV\"; DIRECTV CHOICE channel 216) and Hulu (\"I have HULU\") are on his services; the Blue Jackets' own channel, CBJNHL and CBJHN, is not (\"Blue Jackets NOT AVAILABLE\"). MLB Network is listed available below; this note called it unstated until prompt 129 corrected it.",
+ "_about": "Viewer access profile (spec 3.2), label-based until networks_services/carriage_status exist. Provider: DIRECTV CHOICE (no Sports Pack) + ESPN Unlimited + Peacock Premium + Paramount+ + HBO Max + Prime Video + Netflix + Disney+ + Apple TV (decision 4). Adapters classify each media row's access from this file. Anything not listed classifies UNKNOWN (never assumed held or not held): YouTube is unstated as of 2026-09-01. Joe ruled 2026-10-14 (prompt 129, register §74): NBA TV (\"I get NBA TV\"; DIRECTV CHOICE channel 216) and Hulu (\"I have HULU\") are on his services; the Blue Jackets' own channel, CBJNHL and CBJHN, was not (\"Blue Jackets NOT AVAILABLE\"). SUPERSEDED 2026-11-16 (prompt 132, register §77): on 2026-10-24 the NHL and DirecTV announced a multiyear deal putting the Blue Jackets Hockey Network on DirecTV (channel 660 streaming, 660-1 satellite, Choice package or higher), which is Joe's package, and Joe confirmed on 2026-11-16 that he receives it (\"yes i get bluejackets too\"), so CBJNHL and CBJHN are listed available. The Blue Jackets' Prime Video add-on stays unavailable by his 2026-10-06 decision, which lives in data/local_rights.json nhl.CBJ, not here. MLB Network is listed available below; this note called it unstated until prompt 129 corrected it.",
  "available": [
   "ABC",
   "CBS",
@@ -35,7 +35,9 @@
   "MLB Network",
   "Guardians TV",
   "NBA TV",
-  "Hulu"
+  "Hulu",
+  "CBJNHL",
+  "CBJHN"
  ],
  "unavailable": [
   "CBS Sports Network",
@@ -48,8 +50,6 @@
   "Sportsnet",
   "TVA Sports",
   "CBC",
-  "Sportsnet+",
-  "CBJNHL",
-  "CBJHN"
+  "Sportsnet+"
  ]
 }

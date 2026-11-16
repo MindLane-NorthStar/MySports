@@ -95,6 +95,13 @@ def package_off(doc: dict) -> None:
     del doc["nhl"]["outOfMarketPackage"]
 
 
+def cbj_channel_as_at_e0c303f(doc: dict) -> None:
+    """The access profile as it stood before prompt 132: CBJNHL and CBJHN under `unavailable` (register §74)."""
+    for name in ("CBJNHL", "CBJHN"):
+        doc["available"].remove(name)
+        doc["unavailable"].append(name)
+
+
 def cbj_as_at_7b11fb1(doc: dict) -> None:
     """The Blue Jackets' entry as prompt 127's tree held it: no `access`, so the profile decided."""
     del doc["nhl"]["CBJ"]["access"]
@@ -111,12 +118,15 @@ class _Tmp(unittest.TestCase):
 # ------------------------------------------------------------------------------- the ten games
 # PROMPT 129 MOVED FOUR CELLS, by Joe's rulings of 2026-10-14 (register §74): Hulu is on his services and
 # the Blue Jackets' own channel, CBJNHL and CBJHN, is not. Prompt 128 measured all four as UNKNOWN.
+# PROMPT 132 MOVED PIT @ CBJ AGAIN, by Joe's ruling of 2026-11-16 (register §77) superseding the second half:
+# the channel IS on his services (the 2026-10-24 DirecTV deal), so CBJNHL and CBJHN read AVAILABLE - and the
+# synthesized Prime Video row is gone from this game, because adapters/nhl.py mints it only when no local
+# row is available. FLA @ CBJ and the 2027 game carry no club-channel row, so their Prime row is unchanged.
 AFTER = {
     "nhl-2026020048": [("ESPN", "AVAILABLE", "national")],
     VGK_SEA: [("Prime Video", "OUT_OF_MARKET", "local"), ("KING", "OUT_OF_MARKET", "local"),
               ("KONG", "OUT_OF_MARKET", "local"), ("SCRIPPS", "OUT_OF_MARKET", "local"), ("ESPN+", "AVAILABLE", "national")],
-    PIT_CBJ: [("CBJNHL", "UNAVAILABLE", "local"), ("CBJHN", "UNAVAILABLE", "local"), ("SN-PIT", "OUT_OF_MARKET", "local"),
-              ("Prime Video", "UNAVAILABLE", "local")],
+    PIT_CBJ: [("CBJNHL", "AVAILABLE", "local"), ("CBJHN", "AVAILABLE", "local"), ("SN-PIT", "OUT_OF_MARKET", "local")],
     PHI_DET: [("ESPN+", "AVAILABLE", "national"), ("Hulu", "AVAILABLE", "national"), ("Disney+", "AVAILABLE", "national")],
     TOR_EDM: [("ESPN+", "AVAILABLE", "national")],
     "nhl-2026020199": [("TNT", "AVAILABLE", "national"), ("truTV", "AVAILABLE", "national"),
@@ -156,7 +166,9 @@ class TenGames(unittest.TestCase):
             self.assertEqual([m["source"] for m in espn_plus], ["nhl.schedule"], gid)
 
     def test_the_blue_jackets_row_is_the_add_on(self):
-        for gid in (PIT_CBJ, FLA_CBJ, "nhl-2026021319"):
+        # PIT @ CBJ left this list in prompt 132: its club-channel rows are available, so no Prime row is minted
+        self.assertEqual([m for m in self.games[PIT_CBJ]["media"] if m["outlet"] == "Prime Video"], [])
+        for gid in (FLA_CBJ, "nhl-2026021319"):
             prime = [m for m in self.games[gid]["media"] if m["outlet"] == "Prime Video"]
             self.assertEqual(len(prime), 1, gid)
             self.assertEqual((prime[0]["access"], prime[0]["source"], prime[0]["label"]),
@@ -336,9 +348,12 @@ class TheReconciler(_Tmp):
         self.assertEqual(reason, "stream only: espn-plus")
         self.assertFalse(verdict(self.off[VGK_SEA])[0], "and it was not without the rule")
 
-    def test_pit_at_cbj_and_njd_at_vgk_are_not_eligible(self):
-        for gid in (PIT_CBJ, NJD_VGK):
-            self.assertFalse(verdict(self.games[gid])[0], gid)
+    def test_njd_at_vgk_is_not_eligible_and_pit_at_cbj_now_is(self):
+        self.assertFalse(verdict(self.games[NJD_VGK])[0], NJD_VGK)
+        # prompt 132 (register §77): the Blue Jackets' channel is on Joe's services, so PIT @ CBJ is eligible on it
+        eligible, via_net, _, _ = verdict(self.games[PIT_CBJ])
+        self.assertTrue(eligible)
+        self.assertIn(via_net, {"cbjnhl", "cbjhn"})
 
 
 # ------------------------------------------------- through the loader: retirement and an access change
@@ -366,13 +381,20 @@ class ThroughTheLoader(Harness):
         self.assertEqual(self.eligibility(VGK_SEA)["eligible"], 0)
 
     def test_the_blue_jackets_access_change_reaches_the_verdict(self):
+        # WHAT THIS PROVES is that an access change in local_rights.json reaches the verdict. It needs a game
+        # whose only receivable route is the Prime row, which PIT @ CBJ stopped being when prompt 132 put the
+        # club channel on Joe's services - so both builds pin the access profile as it stood before that
+        # ruling (`cbj_channel_as_at_e0c303f`), and the proof is the one it always was.
         with tempfile.TemporaryDirectory() as td:
-            before = build(raw(SHAPES), data_root(Path(td), local_rights=cbj_as_at_7b11fb1))[PIT_CBJ]
+            before = build(raw(SHAPES), data_root(Path(td), local_rights=cbj_as_at_7b11fb1,
+                                                  access_profile=cbj_channel_as_at_e0c303f))[PIT_CBJ]
+        with tempfile.TemporaryDirectory() as td:
+            after = build(raw(SHAPES), data_root(Path(td), access_profile=cbj_channel_as_at_e0c303f))[PIT_CBJ]
         self.assertIn(("Prime Video", "AVAILABLE", "local"), rows(before), "the premise: prompt 127's tree")
         self.load("nhl", [before])
         self.reconcile()
         self.assertEqual(self.eligibility(PIT_CBJ)["eligible"], 1)
-        self.load("nhl", [build(raw(SHAPES))[PIT_CBJ]])
+        self.load("nhl", [after])
         self.reconcile()
         self.assertEqual(self.broadcast(PIT_CBJ, "prime-video"), (1, "unavailable"))
         self.assertEqual(self.eligibility(PIT_CBJ)["eligible"], 0)

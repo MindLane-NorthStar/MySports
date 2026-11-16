@@ -261,4 +261,6 @@ def test_the_suite_still_holds_the_marks_that_were_there_before():
     `--only` truncating it is a footgun this file's own docstring records."""
     for slug in ("cbs", "dazn", "wuab-43", "espn", "fox", "nbc", "abc", "tnt"):
         assert slug in MANIFEST
-    assert len(MANIFEST) == 35, "33 published marks + the two composites"
+    # 35 -> 36: prompt 132 added `wuab-43-plain`, CROPPED from `wuab-43` for the Blue Jackets' WUAB 43 games
+    # (Joe's ruling 2026-11-16, register §77). `wuab-43` itself, the Cavaliers' art, is unchanged and above.
+    assert len(MANIFEST) == 36, "33 published marks + the two composites + the plain WUAB 43 crop"

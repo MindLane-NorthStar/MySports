@@ -1,0 +1,428 @@
+{
+ "_about": "Prompt 132 fixture: four games cut verbatim from api-web.nhle.com/v1/schedule/2026-11-12 and /2026-11-30, fetched 2026-11-16. Two are on the Blue Jackets' WUAB 43 slate (data/local_rights.json nhl.CBJ.simulcasts), one is a Blue Jackets game that is not, and one is another club's game on a slate date. 2026020304 TBL@CBJ 2026-11-12, simulcast #2 (home; WWHO listed H); 2026020319 PHI@CBJ 2026-11-14, a CBJ game NOT on the slate; 2026020432 CBJ@PIT 2026-11-30, simulcast #3 (away; WWHO listed A); 2026020430 OTT@NSH 2026-11-30, control.",
+ "gameWeek": [
+  {
+   "date": "2026-11-12",
+   "dayAbbrev": null,
+   "numberOfGames": 1,
+   "games": [
+    {
+     "id": 2026020304,
+     "season": 20262027,
+     "gameType": 2,
+     "venue": {
+      "default": "Nationwide Arena"
+     },
+     "neutralSite": false,
+     "startTimeUTC": "2026-11-13T00:00:00Z",
+     "easternUTCOffset": "-05:00",
+     "venueUTCOffset": "-05:00",
+     "venueTimezone": "US/Eastern",
+     "gameState": "OFF",
+     "gameScheduleState": "OK",
+     "tvBroadcasts": [
+      {
+       "id": 789,
+       "market": "H",
+       "countryCode": "US",
+       "network": "WWHO",
+       "sequenceNumber": 213
+      },
+      {
+       "id": 581,
+       "market": "A",
+       "countryCode": "US",
+       "network": "The Spot",
+       "sequenceNumber": 223
+      },
+      {
+       "id": 755,
+       "market": "H",
+       "countryCode": "US",
+       "network": "CBJHN",
+       "sequenceNumber": 229
+      },
+      {
+       "id": 647,
+       "market": "H",
+       "countryCode": "US",
+       "network": "CBJNHL",
+       "sequenceNumber": 435
+      }
+     ],
+     "awayTeam": {
+      "id": 14,
+      "commonName": {
+       "default": "Lightning"
+      },
+      "placeName": {
+       "default": "Tampa Bay"
+      },
+      "placeNameWithPreposition": {
+       "default": "Tampa Bay",
+       "fr": "de Tampa Bay"
+      },
+      "abbrev": "TBL",
+      "logo": "https://assets.nhle.com/logos/nhl/svg/TBL_light.svg",
+      "darkLogo": "https://assets.nhle.com/logos/nhl/svg/TBL_dark.svg",
+      "awaySplitSquad": false,
+      "score": 3
+     },
+     "homeTeam": {
+      "id": 29,
+      "commonName": {
+       "default": "Blue Jackets"
+      },
+      "placeName": {
+       "default": "Columbus"
+      },
+      "placeNameWithPreposition": {
+       "default": "Columbus",
+       "fr": "de Columbus"
+      },
+      "abbrev": "CBJ",
+      "logo": "https://assets.nhle.com/logos/nhl/svg/CBJ_light.svg",
+      "darkLogo": "https://assets.nhle.com/logos/nhl/svg/CBJ_dark.svg",
+      "homeSplitSquad": false,
+      "score": 1
+     },
+     "periodDescriptor": {
+      "number": 3,
+      "periodType": "REG",
+      "maxRegulationPeriods": 3
+     },
+     "gameOutcome": {
+      "lastPeriodType": "REG"
+     },
+     "winningGoalie": {
+      "playerId": 8483710,
+      "firstInitial": {
+       "default": "D."
+      },
+      "lastName": {
+       "default": "Hildeby"
+      }
+     },
+     "winningGoalScorer": {
+      "playerId": 8477404,
+      "firstInitial": {
+       "default": "J."
+      },
+      "lastName": {
+       "default": "Guentzel"
+      }
+     },
+     "threeMinRecap": "/video/tbl-at-cbj-recap-6408317244112",
+     "threeMinRecapFr": "/fr/video/tbl-vs-cbj-12-11-2026-resume-6408318620112",
+     "condensedGame": "/video/tbl-at-cbj-condensed-game-6408317245112",
+     "gameCenterLink": "/gamecenter/tbl-vs-cbj/2026/11/12/2026020304"
+    }
+   ]
+  },
+  {
+   "date": "2026-11-14",
+   "dayAbbrev": null,
+   "numberOfGames": 1,
+   "games": [
+    {
+     "id": 2026020319,
+     "season": 20262027,
+     "gameType": 2,
+     "venue": {
+      "default": "Nationwide Arena"
+     },
+     "neutralSite": false,
+     "startTimeUTC": "2026-11-15T00:00:00Z",
+     "easternUTCOffset": "-05:00",
+     "venueUTCOffset": "-05:00",
+     "venueTimezone": "US/Eastern",
+     "gameState": "OFF",
+     "gameScheduleState": "OK",
+     "tvBroadcasts": [
+      {
+       "id": 755,
+       "market": "H",
+       "countryCode": "US",
+       "network": "CBJHN",
+       "sequenceNumber": 229
+      },
+      {
+       "id": 322,
+       "market": "A",
+       "countryCode": "US",
+       "network": "NBCSP",
+       "sequenceNumber": 402
+      },
+      {
+       "id": 647,
+       "market": "H",
+       "countryCode": "US",
+       "network": "CBJNHL",
+       "sequenceNumber": 435
+      }
+     ],
+     "awayTeam": {
+      "id": 4,
+      "commonName": {
+       "default": "Flyers"
+      },
+      "placeName": {
+       "default": "Philadelphia",
+       "fr": "Philadelphie"
+      },
+      "placeNameWithPreposition": {
+       "default": "Philadelphia",
+       "fr": "de Philadelphie"
+      },
+      "abbrev": "PHI",
+      "logo": "https://assets.nhle.com/logos/nhl/svg/PHI_light.svg",
+      "darkLogo": "https://assets.nhle.com/logos/nhl/svg/PHI_dark.svg",
+      "awaySplitSquad": false,
+      "score": 4
+     },
+     "homeTeam": {
+      "id": 29,
+      "commonName": {
+       "default": "Blue Jackets"
+      },
+      "placeName": {
+       "default": "Columbus"
+      },
+      "placeNameWithPreposition": {
+       "default": "Columbus",
+       "fr": "de Columbus"
+      },
+      "abbrev": "CBJ",
+      "logo": "https://assets.nhle.com/logos/nhl/svg/CBJ_light.svg",
+      "darkLogo": "https://assets.nhle.com/logos/nhl/svg/CBJ_dark.svg",
+      "homeSplitSquad": false,
+      "score": 3
+     },
+     "periodDescriptor": {
+      "number": 3,
+      "periodType": "REG",
+      "maxRegulationPeriods": 3
+     },
+     "gameOutcome": {
+      "lastPeriodType": "REG"
+     },
+     "winningGoalie": {
+      "playerId": 8479361,
+      "firstInitial": {
+       "default": "J."
+      },
+      "lastName": {
+       "default": "Woll"
+      }
+     },
+     "winningGoalScorer": {
+      "playerId": 8484142,
+      "firstInitial": {
+       "default": "D."
+      },
+      "lastName": {
+       "default": "Barkey"
+      }
+     },
+     "threeMinRecap": "/video/phi-at-cbj-recap-6408401430112",
+     "threeMinRecapFr": "/fr/video/phi-vs-cbj-14-11-2026-resume-6408401728112",
+     "condensedGame": "/video/phi-at-cbj-condensed-game-6408401729112",
+     "gameCenterLink": "/gamecenter/phi-vs-cbj/2026/11/14/2026020319"
+    }
+   ]
+  },
+  {
+   "date": "2026-11-30",
+   "dayAbbrev": null,
+   "numberOfGames": 2,
+   "games": [
+    {
+     "id": 2026020432,
+     "season": 20262027,
+     "gameType": 2,
+     "venue": {
+      "default": "PPG Paints Arena"
+     },
+     "neutralSite": false,
+     "startTimeUTC": "2026-12-01T00:00:00Z",
+     "easternUTCOffset": "-05:00",
+     "venueUTCOffset": "-05:00",
+     "venueTimezone": "US/Eastern",
+     "gameState": "FUT",
+     "gameScheduleState": "OK",
+     "tvBroadcasts": [
+      {
+       "id": 281,
+       "market": "N",
+       "countryCode": "CA",
+       "network": "TVAS",
+       "sequenceNumber": 120
+      },
+      {
+       "id": 789,
+       "market": "A",
+       "countryCode": "US",
+       "network": "WWHO",
+       "sequenceNumber": 213
+      },
+      {
+       "id": 755,
+       "market": "A",
+       "countryCode": "US",
+       "network": "CBJHN",
+       "sequenceNumber": 229
+      },
+      {
+       "id": 528,
+       "market": "H",
+       "countryCode": "US",
+       "network": "SN-PIT",
+       "sequenceNumber": 397
+      },
+      {
+       "id": 647,
+       "market": "A",
+       "countryCode": "US",
+       "network": "CBJNHL",
+       "sequenceNumber": 435
+      }
+     ],
+     "awayTeam": {
+      "id": 29,
+      "commonName": {
+       "default": "Blue Jackets"
+      },
+      "placeName": {
+       "default": "Columbus"
+      },
+      "placeNameWithPreposition": {
+       "default": "Columbus",
+       "fr": "de Columbus"
+      },
+      "abbrev": "CBJ",
+      "logo": "https://assets.nhle.com/logos/nhl/svg/CBJ_light.svg",
+      "darkLogo": "https://assets.nhle.com/logos/nhl/svg/CBJ_dark.svg",
+      "awaySplitSquad": false,
+      "radioLink": "https://d2igy0yla8zi0u.cloudfront.net/CBJ/20262027/CBJ-radio.m3u8"
+     },
+     "homeTeam": {
+      "id": 5,
+      "commonName": {
+       "default": "Penguins"
+      },
+      "placeName": {
+       "default": "Pittsburgh"
+      },
+      "placeNameWithPreposition": {
+       "default": "Pittsburgh",
+       "fr": "de Pittsburgh"
+      },
+      "abbrev": "PIT",
+      "logo": "https://assets.nhle.com/logos/nhl/svg/PIT_light.svg",
+      "darkLogo": "https://assets.nhle.com/logos/nhl/svg/PIT_dark.svg",
+      "homeSplitSquad": false,
+      "radioLink": "https://d2igy0yla8zi0u.cloudfront.net/PIT/20262027/PIT-radio.m3u8"
+     },
+     "periodDescriptor": {
+      "number": 1,
+      "periodType": "REG",
+      "maxRegulationPeriods": 3
+     },
+     "ticketsLink": "https://www.ticketmaster.com/event/160064EAF5A8B8F3?brand=nhl&wt.mc_id=NHL_LEAGUE_PIT_SCHED_PG_GM13&utm_source=NHL.com&utm_medium=client&utm_campaign=NHL_LEAGUE_PIT&utm_content=SCHED_PG_GM13&camefrom=NHLPENGUINS_WEB_NHL_SCHEDULE_PG",
+     "ticketsLinkFr": "https://www.ticketmaster.com/event/160064EAF5A8B8F3?brand=nhl&wt.mc_id=NHL_LEAGUE_PIT_SCHED_PG_GM13&utm_source=NHL.com&utm_medium=client&utm_campaign=NHL_LEAGUE_PIT&utm_content=SCHED_PG_GM13&camefrom=NHLPENGUINS_WEB_NHL_SCHEDULE_PG",
+     "gameCenterLink": "/gamecenter/cbj-vs-pit/2026/11/30/2026020432"
+    },
+    {
+     "id": 2026020430,
+     "season": 20262027,
+     "gameType": 2,
+     "venue": {
+      "default": "Bridgestone Arena"
+     },
+     "neutralSite": false,
+     "startTimeUTC": "2026-11-30T18:00:00Z",
+     "easternUTCOffset": "-05:00",
+     "venueUTCOffset": "-06:00",
+     "venueTimezone": "US/Central",
+     "gameState": "FUT",
+     "gameScheduleState": "OK",
+     "tvBroadcasts": [
+      {
+       "id": 324,
+       "market": "N",
+       "countryCode": "US",
+       "network": "NHLN",
+       "sequenceNumber": 35
+      },
+      {
+       "id": 294,
+       "market": "A",
+       "countryCode": "CA",
+       "network": "TSN5",
+       "sequenceNumber": 135
+      },
+      {
+       "id": 33,
+       "market": "A",
+       "countryCode": "CA",
+       "network": "RDS",
+       "sequenceNumber": 145
+      },
+      {
+       "id": 521,
+       "market": "H",
+       "countryCode": "US",
+       "network": "SCRIPPS",
+       "sequenceNumber": 657
+      }
+     ],
+     "awayTeam": {
+      "id": 9,
+      "commonName": {
+       "default": "Senators",
+       "fr": "Sénateurs"
+      },
+      "placeName": {
+       "default": "Ottawa"
+      },
+      "placeNameWithPreposition": {
+       "default": "Ottawa",
+       "fr": "d'Ottawa"
+      },
+      "abbrev": "OTT",
+      "logo": "https://assets.nhle.com/logos/nhl/svg/OTT_light.svg",
+      "darkLogo": "https://assets.nhle.com/logos/nhl/svg/OTT_dark.svg",
+      "awaySplitSquad": false,
+      "radioLink": "https://d2igy0yla8zi0u.cloudfront.net/OTT/20262027/OTT-radio.m3u8"
+     },
+     "homeTeam": {
+      "id": 18,
+      "commonName": {
+       "default": "Predators"
+      },
+      "placeName": {
+       "default": "Nashville"
+      },
+      "placeNameWithPreposition": {
+       "default": "Nashville",
+       "fr": "de Nashville"
+      },
+      "abbrev": "NSH",
+      "logo": "https://assets.nhle.com/logos/nhl/svg/NSH_light.svg",
+      "darkLogo": "https://assets.nhle.com/logos/nhl/svg/NSH_dark.svg",
+      "homeSplitSquad": false,
+      "radioLink": "https://d2igy0yla8zi0u.cloudfront.net/NSH/20262027/NSH-radio.m3u8"
+     },
+     "periodDescriptor": {
+      "number": 1,
+      "periodType": "REG",
+      "maxRegulationPeriods": 3
+     },
+     "ticketsLink": "https://www.ticketmaster.com/event/1B006507F028E4E0?brand=nhl&wt.mc_id=NHL_LEAGUE_NSH_SCHED_PG_GM14&utm_source=NHL.com&utm_medium=client_PM&utm_campaign=NHL_LEAGUE_NSH&utm_content=SCHED_PG_GM14",
+     "ticketsLinkFr": "https://www.ticketmaster.com/event/1B006507F028E4E0?brand=nhl&wt.mc_id=NHL_LEAGUE_NSH_SCHED_PG_GM14&utm_source=NHL.com&utm_medium=client_PM&utm_campaign=NHL_LEAGUE_NSH&utm_content=SCHED_PG_GM14",
+     "gameCenterLink": "/gamecenter/ott-vs-nsh/2026/11/30/2026020430"
+    }
+   ]
+  }
+ ]
+}

@@ -452,6 +452,41 @@ COMPOSITES: dict[str, tuple[str, ...]] = {
 }
 COMPOSITE_GAP = 0.10          # transparent gap between halves, as a fraction of the taller half
 
+# ----------------------------------------------------------------------------- crops
+# THE INVERSE OF A COMPOSITE: a mark that is PART of an already-published one (prompt 132, Joe's ruling
+# 2026-11-16, register §77). `wuab-43` is the Cavaliers' art - the Cleveland's 43 lockup ABOVE the RESN
+# wordmark, because WUAB carries the RESN/DAZN simulcast (see the composites note). The Blue Jackets' ten
+# WUAB 43 games are a different package with nothing of RESN in it, and Joe ruled that a Blue Jackets card
+# must not wear the RESN half: "If the existing WUAB 43 mark is the Cavaliers' composite with RESN/DAZN
+# inside it, mint a plain WUAB 43 mark for non-Cavaliers games through the existing recipes."
+#
+# A RECIPE OVER THE PROCESSED PART, not a hand-cut PNG, for the reason the composites are one: it is
+# rebuilt from `wuab-43` whenever that mark is, so it inherits every conditioning decision `wuab-43`
+# carries and cannot drift from it. Measured on the source (959x705): two ink bands, rows 0-242 (the
+# lockup) and 273-704 (RESN), with 30 fully clear rows between - so "the first band from the top" is
+# exactly the lockup, and the crop needs no coordinate.
+CROPS: dict[str, tuple[str, Callable[[Image.Image], Image.Image]]] = {
+    "wuab-43-plain": ("wuab-43", lambda im: top_band(im)),
+}
+
+
+def top_band(im: Image.Image) -> Image.Image:
+    """The first band of ink from the top: everything down to the first FULLY clear row after ink starts.
+    Raises when the image is one band, because then there is nothing to separate and a 'crop' would
+    silently publish the whole composite under the plain mark's name."""
+    a = im.split()[3]
+    w, h = im.size
+    data = a.load()
+    inked = [any(data[x, y] > ALPHA_VISIBLE for x in range(w)) for y in range(h)]
+    top = inked.index(True)
+    try:
+        end = inked.index(False, top)
+    except ValueError:
+        raise ValueError("top_band: the mark is one band of ink; there is no band to keep") from None
+    if not any(inked[end:]):
+        raise ValueError("top_band: nothing below the first band; there is no band to separate")
+    return trim(im.crop((0, top, w, end)))
+
 
 def stack(parts: list[Image.Image], gap_frac: float = COMPOSITE_GAP) -> Image.Image:
     """Stack marks vertically, EVERY PART SCALED TO THE WIDTH OF THE BOTTOM ONE, gap between.
@@ -602,6 +637,15 @@ def build(only: list[str] | None = None, out_dir: Path | None = None,
             print(f"  warn: {slug}: parts not built ({', '.join(missing)}) - skipped")
             continue
         processed[slug] = stack([processed[p] for p in parts])
+
+    # ---- crops, likewise AFTER their part exists and from the PROCESSED part (see CROPS)
+    for slug, (part, recipe) in CROPS.items():
+        if only and slug not in only:
+            continue
+        if part not in processed:
+            print(f"  warn: {slug}: part not built ({part}) - skipped")
+            continue
+        processed[slug] = recipe(processed[part])
 
     # ---- ink-area normalization, frozen into the manifest
     areas = {s: ink_area(im) for s, im in processed.items()}

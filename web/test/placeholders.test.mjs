@@ -140,3 +140,34 @@ test('smoke.mjs uses the predicate and no longer tests the suffix itself', () =>
   assert.doesNotMatch(smoke, /endsWith\('-TBD'\)/, 'the suffix test lives in lib/placeholders.js now');
   assert.match(smoke, /proUnruled\.every\(isPlaceholderTeam\)/);
 });
+
+// THE SLASH PAIR (prompt 132, Joe's ruling 2026-11-16, register §77). `mlb-21` loaded as "TB/CLE" in all
+// three name columns and smoke (f) stayed red on it through prompt 131's commit.
+test('p132: "TB/CLE" - two club abbreviations around one slash - is a placeholder, reason mlb-slash-pair', () => {
+  const row = { id: 'mlb-21', sport: 'mlb', canonical_name: 'TB/CLE' };
+  assert.equal(isPlaceholderTeam(row), true);
+  assert.equal(placeholderReason(row), 'mlb-slash-pair');
+  assert.equal(isPlaceholderTeam({ id: 'mlb-9998', sport: 'mlb', canonical_name: 'NY/LAD' }), true, 'two and three letters');
+});
+
+test('p132: the slash rule is narrow - near-misses and slash-free names are untouched', () => {
+  const mlb = (canonical_name) => isPlaceholderTeam({ id: 'mlb-9999', sport: 'mlb', canonical_name });
+  assert.equal(mlb('TB CLE'), false, 'no slash');
+  assert.equal(mlb('TBCLE'), false, 'slash-free spelling');
+  assert.equal(mlb('Rays'), false, 'a real slash-free name');
+  assert.equal(mlb('TB/CLE/NYY'), false, 'three clubs is not the ruled form');
+  assert.equal(mlb('TB / CLE'), false, 'spaced is not the published form');
+  assert.equal(mlb('tb/cle'), false, 'lower case');
+  assert.equal(mlb('T/CLE'), false, 'a one-letter token');
+  assert.equal(mlb('TBAY/CLE'), false, 'a four-letter token');
+  assert.equal(mlb('Tampa Bay/Cleveland'), false, 'names around a slash are not abbreviations');
+  assert.equal(isPlaceholderTeam({ id: 'nhl-21', sport: 'nhl', canonical_name: 'TB/CLE' }), false, 'MLB only');
+});
+
+test('p132: smoke (f) live shape - mlb-21 lands in the exempt list, not NOT placeholders', () => {
+  // the row as the database holds it (read 2026-11-16): all three name columns are the pair
+  const row = { id: 'mlb-21', sport: 'mlb', canonical_name: 'TB/CLE', short_name: 'TB/CLE', abbreviation: 'TB/CLE' };
+  const proUnruled = [row];
+  assert.equal(proUnruled.every(isPlaceholderTeam), true);
+  assert.equal(`${row.id} "${row.canonical_name}" (${placeholderReason(row)})`, 'mlb-21 "TB/CLE" (mlb-slash-pair)');
+});

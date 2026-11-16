@@ -295,13 +295,26 @@ def _broadcast_names(comp: dict[str, Any], available: set[str] | frozenset[str] 
     THE NAME IS CANONICAL BEFORE ANYTHING DECIDES ON IT (prompt 129). ESPN began writing `Fox` for
     FOX on 2026-10-05; an exact lookup left it `Fox`, so REGIONAL_NETWORKS never matched and the
     profile answered UNKNOWN. `canonical_outlet` folds case within the alias table and the profile
-    (exact match, rule 18), so the regional rules and the access lookup both see `FOX`."""
+    (exact match, rule 18), so the regional rules and the access lookup both see `FOX`.
+
+    RADIO IS NOT A BROADCAST ROW (prompt 132, register §77). ESPN types every geoBroadcast; `type.id`
+    5, shortName `Radio`, is a radio feed - `ERADM` is ESPN Radio (callLetters ERADM, name "ESPN
+    Radio", decoded 2026-11-16 from TEX @ LSU and GSW @ SA). Loaded, it became its own outlet with
+    access `unknown` on 26+ games and smoke (h) went red. The precedent is adapters/nascar.py's: radio
+    is deliberately not loaded, because nothing in the app renders a radio row. Keyed on ESPN's own
+    TYPE, not on a call sign, so the next radio feed is excluded without a ruling; and a name seen
+    typed as radio is also skipped in the untyped flat list below, so it cannot come back that way."""
     seen: list[tuple[str, str]] = []
+    radio: set[str] = set()
     for gb in comp.get("geoBroadcasts") or []:
         if (gb.get("lang") or "en") != "en" or (gb.get("region") or "us") != "us":
             continue
         name = canonical_outlet(ESPN_OUTLETS.get((gb.get("media") or {}).get("shortName", ""), (gb.get("media") or {}).get("shortName", "")),
                                 available, unavailable)
+        if is_radio(gb):
+            if name:
+                radio.add(name)
+            continue
         mk = ((gb.get("market") or {}).get("type") or "National").lower()
         if name and (name, mk) not in seen:
             seen.append((name, mk))
@@ -309,9 +322,15 @@ def _broadcast_names(comp: dict[str, Any], available: set[str] | frozenset[str] 
         mk = (b.get("market") or "national").lower()
         for n in b.get("names") or []:
             name = canonical_outlet(ESPN_OUTLETS.get(n, n), available, unavailable)
-            if name and all(name != s[0] for s in seen):
+            if name and name not in radio and all(name != s[0] for s in seen):
                 seen.append((name, mk))
     return seen
+
+
+def is_radio(gb: dict[str, Any]) -> bool:
+    """ESPN's typed radio entry: `type.id` "5" or `type.shortName` "Radio" (both measured 2026-11-16)."""
+    t = gb.get("type") or {}
+    return str(t.get("id") or "") == "5" or (t.get("shortName") or "").strip().lower() == "radio"
 
 
 

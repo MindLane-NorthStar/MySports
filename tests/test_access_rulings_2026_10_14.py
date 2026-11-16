@@ -6,7 +6,8 @@
 "I get NBA TV" and "I have HULU": both go under `available` in data/access_profile.json.
 "Blue Jackets NOT AVAILABLE": the club's own channel, which the NHL's schedule names `CBJNHL` and
 `CBJHN` (measured in tests/fixtures/nhl_schedule_shapes_2026-10-06.json and in
-networks_services.canonical_name), goes under `unavailable`. Until now all four answered UNKNOWN,
+networks_services.canonical_name), goes under `unavailable`. SUPERSEDED 2026-11-16 by prompt 132
+(register §77): the channel is on Joe's services, and the two CBJ tests below say so. Until now all four answered UNKNOWN,
 and the reconciler filed their games as off-service: 76 of 79 NBA TV games were hidden.
 
 The two eligibility cases run the real loader and reconciler over the SQLite harness of
@@ -42,10 +43,15 @@ class TheProfile(unittest.TestCase):
             with self.subTest(label=label):
                 self.assertEqual(access(label), "AVAILABLE")
 
-    def test_the_blue_jackets_own_channel_is_unavailable(self):
+    def test_the_blue_jackets_own_channel_ruling_is_superseded_by_prompt_132(self):
+        """Ruled UNAVAILABLE here on 2026-10-14; Joe superseded it on 2026-11-16 (register §77) after the
+        2026-10-24 DirecTV deal. The profile records the supersession, and both spellings now read AVAILABLE -
+        tests/test_access_rulings_2026_11_16.py holds the new ruling itself."""
+        about = json.loads((ROOT / "data" / "access_profile.json").read_text(encoding="utf-8"))["_about"]
+        self.assertIn("SUPERSEDED 2026-11-16", about)
         for label in ("CBJNHL", "CBJHN"):
             with self.subTest(label=label):
-                self.assertEqual(access(label), "UNAVAILABLE")
+                self.assertEqual(access(label), "AVAILABLE")
 
     def test_acc_extra_is_accnx_and_available(self):
         """Joe's later ruling of 2026-10-14: "ACC Extra" is the same service as ACCNX."""
@@ -88,15 +94,16 @@ class TheVerdict(Harness):
         e = self.eligibility(g["id"])
         self.assertEqual((e["eligible"], e["market_pending"], e["via"]), (1, 0, "nba-tv"))
 
-    def test_a_blue_jackets_game_on_their_own_channel_and_the_prime_add_on_is_off_not_unknown(self):
+    def test_a_blue_jackets_game_on_their_own_channel_is_ruled_not_unknown(self):
+        # Off-service under the 10-14 ruling; eligible since prompt 132 put the channel on Joe's services
+        # (register §77). What this test was for holds either way: every row is RULED, none is unknown.
         g = cbj_game()
         self.assertEqual(sorted((m["outlet"], m["access"]) for m in g["media"]),
-                         [("CBJHN", "UNAVAILABLE"), ("CBJNHL", "UNAVAILABLE"), ("Prime Video", "UNAVAILABLE"),
-                          ("SN-PIT", "OUT_OF_MARKET")])
+                         [("CBJHN", "AVAILABLE"), ("CBJNHL", "AVAILABLE"), ("SN-PIT", "OUT_OF_MARKET")])
         self.load("nhl", [g])
         self.reconcile()
         e = self.eligibility(g["id"])
-        self.assertEqual((e["eligible"], e["market_pending"]), (0, 0))
+        self.assertEqual((e["eligible"], e["market_pending"]), (1, 0))
         stored = {r[0] for r in self.db.conn.execute(
             "select access_status from game_broadcasts where game_id = ? and active", (g["id"],))}
         self.assertNotIn("unknown", stored, "every row is ruled: off-service, not unrecognized")
