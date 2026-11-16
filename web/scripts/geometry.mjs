@@ -221,10 +221,17 @@ for (const [day, sport, wk] of CASES) {
 // last label's ~13px reach - and dividing those by pxPerMinute turns them into "minutes" that grow as
 // `widest` shrinks. A big enough `widest` drop on a day with a seam moves the span. docs/queue.md
 // item 19 describes it. Re-pinned to the measured reading.
+//
+// AND BACK, 396.4 -> 393.9, ON 2026-11-16 (prompt 132, Joe approved the re-pin that day; register §77).
+// The season's final MLB records moved `widest` back up, 75.10 -> 86.57, and the same seam pixels now
+// divide by a larger pxPerMinute: 393.85 min, sw 568, rail 60. PROVED SIDE BY SIDE the same way: this
+// prompt's tree and e0c303f's six changed web files swapped back in read 393.85 / 86.57 / 568 identically,
+// minutes apart against the same server and database. Prompt 131 shipped over this red under the one-time
+// S4 override; this clears it. The reading is now pinned near prompt 80's 393.75 at widest 87.08.
 console.log('');
 console.log("THE DAY'S SPAN - hard stop, and standings cannot move it");
 const SPAN_TOLERANCE_MIN = 2;
-const SPANS = { '2026-09-05|cfb': 1042.4, '2026-09-03|mlb': 396.4, '2026-09-13|nfl': 830.4 };
+const SPANS = { '2026-09-05|cfb': 1042.4, '2026-09-03|mlb': 393.9, '2026-09-13|nfl': 830.4 };
 for (const [d, sport] of [['2026-09-05', 'cfb'], ['2026-09-03', 'mlb'], ['2026-09-13', 'nfl']]) {
   await go(`/?day=${d}&sport=${sport}&view=grid`);
   const m = await shape();

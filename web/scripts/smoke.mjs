@@ -26,6 +26,8 @@ import { staleEligibility, FRESHNESS_DAYS, FRESHNESS_HOURS } from '../lib/freshn
 import { unknownAccessByService } from '../lib/offservice.js';
 import { todayET } from '../lib/format.js';
 import { addDays } from '../lib/weeks.js';
+import { comingSunday, sundayWindowsVerdict } from '../lib/sundaywindows.js';
+import markets from '../../data/markets.json' with { type: 'json' };
 
 let failures = 0;
 let checks = 0;
@@ -326,6 +328,35 @@ console.log(`\n(h) unknown access - the next ${FRESHNESS_DAYS} viewing days`);
          (faults.length ? `UNNAMED: ${show(faults)}` : `${start}..${end}: ${unknown.length} unknown row(s)`)
          + (reasonless.length ? ` | NO REASON: ${reasonless.map(([k]) => k).join(', ')}` : '')
          + (allowed.length ? ` | named: ${show(allowed)}` : ''));
+}
+
+// ---------------------------------------------------------------- (i) the Sunday windows
+// Prompt 132 block C (Joe approved 2026-11-16, threshold Thursday; register §77). From 2026-11-01 the
+// windows reader failed on EntitledSports' new three-window page, every regional CBS/FOX game fell to
+// UNVERIFIED, and nothing went red for nine days. THE RULE is lib/sundaywindows.js's and is unit-tested in
+// test/sundaywindows.test.mjs: from Thursday ET, the coming Sunday's regional rows - rule 1's 12:00-17:00
+// window, the market's own club's game left out because rule 3 decides it without the windows - must not
+// ALL be unverified. Monday to Wednesday is green on purpose: the maps post Tuesday or Wednesday.
+//
+// BOUNDED, RULE 19: one viewing day of one sport (16 NFL games at most), paged anyway; then CBS/FOX rows
+// on those ids, paged. web/test/restcap.test.mjs pins both call sites.
+console.log('\n(i) the Sunday windows - the coming Sunday\'s regional CBS/FOX rows');
+{
+  const today = todayET();
+  const sunday = comingSunday(today);
+  const games = await restAll(
+    `games?select=id,canonical_kickoff_at_utc,home:teams!games_home_team_id_fkey(abbreviation),away:teams!games_away_team_id_fkey(abbreviation)&sport=eq.nfl&viewing_day=eq.${sunday}&order=id.asc`);
+  const ids = games.map((g) => g.id);
+  const rows = ids.length ? await restAll(
+    `game_broadcasts?select=game_id,service_id,access_status,active&game_id=in.${inList(ids)}&service_id=in.(cbs,fox)&active=eq.true&order=id.asc`) : [];
+  const local = new Set(markets.nfl.localTeams);
+  const localIds = games.filter((g) => local.has(g.home?.abbreviation) || local.has(g.away?.abbreviation)).map((g) => g.id);
+  const v = sundayWindowsVerdict(today, games, rows, localIds);
+  assert(!v.red, `from Thursday, Sunday's regional CBS/FOX games are not ALL unverified`,
+         `${today} for Sunday ${v.sunday} (${v.past ? 'Thursday or later' : 'before Thursday, not yet expected'}): `
+         + `${v.decided} of ${v.regional} regional row(s) decided, ${v.unverified} unverified, the market's own game left out`
+         + (v.red ? ' | THE WINDOWS SOURCE HAS FAILED AGAIN. Its per-week result is refresh_runs.notes `nfl_windows`'
+                    + ' (prompt 131), which the anon key cannot read - read it through the connector' : ''));
 }
 
 console.log(`\n${failures === 0 ? 'OK' : 'FAILED'} - ${checks - failures}/${checks} checks passed`);

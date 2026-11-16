@@ -134,11 +134,23 @@ test('smoke (h), unknown access (prompt 129), pages both of its reads', () => {
   // pinned at their call sites: a 7-day viewing_day range paged, then the rows keyed by those ids in
   // chunks of 100, each paged. A bare rest() on either would cap at 1,000 rows and pass quietly.
   const smoke = readFileSync(join(HERE, '..', 'scripts', 'smoke.mjs'), 'utf8');
-  const h = region(smoke, '(h) unknown access', 'checks passed`);', 'smoke block (h)');
+  // ENDS AT (i) since prompt 132 added that block after this one; it ended at the summary line before,
+  // which would now quietly take (i)'s reads into (h)'s region.
+  const h = region(smoke, '(h) unknown access', '(i) the Sunday windows', 'smoke block (h)');
   assert.match(h, /await restAll\(\s*`games\?select=id&viewing_day=gte\.\$\{start\}&viewing_day=lte\.\$\{end\}&order=id\.asc`\)/);
   assert.match(h, /for \(let i = 0; i < ids\.length; i \+= 100\)/);
   assert.match(h, /await restAll\(\s*`game_broadcasts\?select=game_id,service_id,access_status,active&game_id=in\.\$\{inList\(ids\.slice\(i, i \+ 100\)\)\}`/);
   assert.doesNotMatch(h, /\brest\(/, 'no unpaged read in block (h)');
+});
+
+test('smoke (i), the Sunday windows (prompt 132), pages both of its reads', () => {
+  // One viewing day of one sport - at most sixteen NFL games - and then their CBS/FOX rows. Neither can
+  // reach the cap today; both page anyway, because "cannot grow" is the claim prompt 109 got wrong.
+  const smoke = readFileSync(join(HERE, '..', 'scripts', 'smoke.mjs'), 'utf8');
+  const i = region(smoke, '(i) the Sunday windows', 'checks passed`);', 'smoke block (i)');
+  assert.match(i, /await restAll\(\s*`games\?select=id,canonical_kickoff_at_utc,[^`]*&sport=eq\.nfl&viewing_day=eq\.\$\{sunday\}&order=id\.asc`\)/);
+  assert.match(i, /await restAll\(\s*`game_broadcasts\?select=game_id,service_id,access_status,active&game_id=in\.\$\{inList\(ids\)\}&service_id=in\.\(cbs,fox\)&active=eq\.true&order=id\.asc`\)/);
+  assert.doesNotMatch(i, /\brest\(/, 'no unpaged read in block (i)');
 });
 
 test('the allowlist names only functions that exist - a stale entry is a lie about the file', () => {
