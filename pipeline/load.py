@@ -509,6 +509,22 @@ def run_context() -> dict[str, Any]:
             "github_sha": (os.getenv("GITHUB_SHA") or "")[:12]}
 
 
+def windows_status() -> dict[str, Any]:
+    """`nfl_windows` for refresh_runs.notes (prompt 131): adapters/es_windows.py's per-week result, from
+    the file MYSPORTS_NFL_WINDOWS_STATUS names. The windows step dropped every week from 2026-11-01 and
+    nothing recorded it for nine days, because its one log line reached no ledger. An empty dict when
+    the variable is unset (a laptop run, bootstrap_season), so the key is left out; a set variable with
+    no readable file says so, because a step that left no result is itself the thing to see."""
+    p = os.getenv("MYSPORTS_NFL_WINDOWS_STATUS")
+    if not p:
+        return {}
+    try:
+        got = json.loads(Path(p).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        got = {"error": f"no readable status from the windows step ({type(e).__name__})"}
+    return {"nfl_windows": got}
+
+
 def fixture_files(validation_dir: Path) -> list[Path]:
     """The `--all` file set: every *_fixture.json directly under validation_dir, minus the renderer's own
     db_* feeds (which are the database speaking, not evidence - see load_fixture's mysports-db guard).
@@ -573,8 +589,9 @@ def main(argv: list[str] | None = None) -> int:
         # team_changes: every "<gid>: side old -> new" this run made (prompt 116), so a flip is
         # visible in refresh_runs and never silent. The counters beside it say how many.
         # cancellations: the same, one line per game the pass above cancelled (prompt 129).
+        # nfl_windows: the coverage-window reader's per-week result (prompt 131), when the workflow passes it.
         notes = json.dumps({**totals, **run_context(), "team_changes": list(TEAM_CHANGES),
-                            "cancellations": list(CANCELLATIONS)})
+                            "cancellations": list(CANCELLATIONS), **windows_status()})
         if run_id is not None:
             db.run("update refresh_runs set completed_at = now(), status = 'succeeded', games_checked = %s, notes = %s where run_id = %s",
                    (totals.get("games", 0), notes, run_id), tag="refresh_runs")

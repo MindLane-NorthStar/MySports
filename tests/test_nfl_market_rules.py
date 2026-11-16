@@ -321,6 +321,109 @@ class Rule4bTheCoverageWindow(unittest.TestCase):
             self.assertTrue(m["source"].startswith("entitledsports week 3"))
 
 
+def _week9_windows():
+    """The week 9 windows exactly as adapters/es_windows.py parses the saved live fixture (prompt 131)."""
+    from adapters import es_windows as es
+    p = es.parse_page((ROOT / "tests" / "fixtures" / "es_week9_cleveland.html").read_text(encoding="utf-8"))
+    return {"source": "entitledsports", "market": p["market"], "notes": [],
+            "weeks": {"9": {"updated": p["updated"], "windows": p["windows"]}}}
+
+
+# Sunday 2026-11-08 (EST): 1:00 PM ET = 18:00Z; 4:05 PM ET = 21:05Z; 4:25 PM ET = 21:25Z. ESPN's week 9 slate.
+WEEK9_SLATE = [
+    ("401873039", "2026-11-08T18:00:00Z", ("Browns", "Cleveland Browns"), ("Saints", "New Orleans Saints"), "CBS", "CLE", "NO"),
+    ("401873045", "2026-11-08T18:00:00Z", ("Jets", "New York Jets"), ("Chiefs", "Kansas City Chiefs"), "CBS", "NYJ", "KC"),
+    ("401873042", "2026-11-08T18:00:00Z", ("Lions", "Detroit Lions"), ("Dolphins", "Miami Dolphins"), "CBS", "DET", "MIA"),
+    ("401873041", "2026-11-08T18:00:00Z", ("Broncos", "Denver Broncos"), ("Panthers", "Carolina Panthers"), "CBS", "DEN", "CAR"),
+    ("401873046", "2026-11-08T21:05:00Z", ("Texans", "Houston Texans"), ("Chargers", "Los Angeles Chargers"), "CBS", "HOU", "LAC"),
+    ("401873040", "2026-11-08T18:00:00Z", ("Cowboys", "Dallas Cowboys"), ("Colts", "Indianapolis Colts"), "FOX", "DAL", "IND"),
+    ("401873044", "2026-11-08T18:00:00Z", ("Giants", "New York Giants"), ("Eagles", "Philadelphia Eagles"), "FOX", "NYG", "PHI"),
+    ("401873043", "2026-11-08T18:00:00Z", ("Rams", "Los Angeles Rams"), ("Commanders", "Washington Commanders"), "FOX", "LAR", "WSH"),
+    ("401873049", "2026-11-08T21:25:00Z", ("Packers", "Green Bay Packers"), ("Patriots", "New England Patriots"), "FOX", "GB", "NE"),
+    ("401873047", "2026-11-08T21:25:00Z", ("Raiders", "Las Vegas Raiders"), ("49ers", "San Francisco 49ers"), "FOX", "LV", "SF"),
+    ("401873048", "2026-11-08T21:25:00Z", ("Cardinals", "Arizona Cardinals"), ("Seahawks", "Seattle Seahawks"), "FOX", "ARI", "SEA"),
+]
+
+
+class Rule4bTheSingleWindow(unittest.TestCase):
+    """prompt 131: from week 9 the page gives one network a single window; it decides that network's games
+    in EITHER slot, because a network with one game in the market airs that game and no other."""
+
+    def test_week_9_three_available_and_every_other_cbs_or_fox_afternoon_game_out(self):
+        g = build([event(*s, week=9) for s in WEEK9_SLATE], listings=None, windows=_week9_windows(), week=9)
+        got = {gid: row(g[f"nfl-{gid}"]) for gid, *_ in WEEK9_SLATE}
+        self.assertEqual(got["401873039"], ("AVAILABLE", "regional", "market: local team"), "CLE @ NO: rule 3 runs first")
+        self.assertEqual(got["401873040"][:2], ("AVAILABLE", "regional"))   # DAL @ IND, FOX early on WJW 8
+        self.assertEqual(got["401873049"][:2], ("AVAILABLE", "regional"))   # GB @ NE, FOX late on WJW 8
+        self.assertEqual(got["401873040"][2], "entitledsports week 9 (updated Mon Nov 9 12:27 PM ET): WJW FOX early DAL @ IND")
+        for gid in ("401873045", "401873042", "401873041", "401873046", "401873044", "401873043", "401873047", "401873048"):
+            self.assertEqual(got[gid][:2], ("OUT_OF_MARKET", "regional"), gid)
+        self.assertNotIn("UNVERIFIED", {a for a, _, _ in got.values()}, "nothing falls to rule 6 when the page names every window")
+
+    def test_hou_at_lac_at_4_05_on_cbs_is_decided_by_the_single_window(self):
+        # a slot-exact lookup asks for CBS late, which the page no longer has - and would fall to rule 6
+        got = espn.windows_decision(_week9_windows(), "CBS", 9, "2026-11-08T21:05:00Z", "chargers", "texans")
+        self.assertEqual(got, ("OUT_OF_MARKET", "entitledsports week 9 (updated Mon Nov 9 12:27 PM ET): WOIO CBS single CLE @ NO"))
+
+    def test_rule_4b_alone_makes_cle_at_no_available_against_the_single_window(self):
+        got = espn.windows_decision(_week9_windows(), "CBS", 9, "2026-11-08T18:00:00Z", "saints", "browns")
+        self.assertEqual(got, ("AVAILABLE", "entitledsports week 9 (updated Mon Nov 9 12:27 PM ET): WOIO CBS single CLE @ NO"))
+
+    def test_a_fox_single_page_decides_a_4_05_fox_game_against_the_single_window(self):
+        w = {"weeks": {"9": {"updated": "x", "windows": [
+            {"network": "FOX", "slot": "single", "station": "WJW 8 (FOX) · 4:25 PM ET", "text": "GB Packers @ NE Patriots",
+             "away": {"abbr": "GB", "nick": "Packers"}, "home": {"abbr": "NE", "nick": "Patriots"}, "tbd": False},
+            {"network": "CBS", "slot": "early", "station": "WOIO 19 (CBS)", "text": "TBD", "away": None, "home": None, "tbd": True},
+            {"network": "CBS", "slot": "late", "station": "WOIO 19 (CBS)", "text": "TBD", "away": None, "home": None, "tbd": True}]}}}
+        acc, src = espn.windows_decision(w, "FOX", 9, "2026-11-08T21:05:00Z", "seahawks", "cardinals")
+        self.assertEqual(acc, "OUT_OF_MARKET")
+        self.assertIn("WJW FOX single GB @ NE", src)
+        self.assertEqual(espn.windows_decision(w, "FOX", 9, "2026-11-08T21:25:00Z", "patriots", "packers")[0], "AVAILABLE")
+        self.assertEqual(espn.windows_decision(w, "FOX", 9, "2026-11-08T18:00:00Z", "patriots", "packers")[0], "AVAILABLE",
+                         "the single window answers whatever slot the kickoff falls in")
+        self.assertIsNone(espn.windows_decision(w, "CBS", 9, "2026-11-08T18:00:00Z", "chiefs", "jets"), "a TBD window still falls through")
+
+    def test_an_exact_slot_wins_and_a_tbd_single_falls_through(self):
+        w = _week9_windows()
+        w["weeks"]["9"]["windows"][0].update({"tbd": True, "away": None, "home": None, "text": "TBD"})
+        self.assertIsNone(espn.windows_decision(w, "CBS", 9, "2026-11-08T18:00:00Z", "chiefs", "jets"))
+        self.assertEqual(espn.windows_decision(w, "FOX", 9, "2026-11-08T21:25:00Z", "seahawks", "cardinals")[1].split(": ")[1],
+                         "WJW FOX late GB @ NE")
+
+
+class TheLedger(unittest.TestCase):
+    """prompt 131: pipeline/load.py copies the windows step's status into refresh_runs.notes."""
+
+    def test_the_status_file_becomes_nfl_windows(self):
+        from unittest import mock
+        from pipeline import load
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "s.json"
+            p.write_text(json.dumps({"source": "entitledsports", "written": False, "weeks": {"9": "failed (PageError: x)"}}), encoding="utf-8")
+            with mock.patch.dict(load.os.environ, {"MYSPORTS_NFL_WINDOWS_STATUS": str(p)}):
+                self.assertEqual(load.windows_status(), {"nfl_windows": {"source": "entitledsports", "written": False, "weeks": {"9": "failed (PageError: x)"}}})
+            with mock.patch.dict(load.os.environ, {"MYSPORTS_NFL_WINDOWS_STATUS": str(Path(td) / "missing.json")}):
+                self.assertIn("no readable status", load.windows_status()["nfl_windows"]["error"])
+        with mock.patch.dict(load.os.environ, {}):
+            load.os.environ.pop("MYSPORTS_NFL_WINDOWS_STATUS", None)
+            self.assertEqual(load.windows_status(), {}, "unset: the key is left out")
+
+    def test_main_puts_it_in_the_notes(self):
+        src = (ROOT / "pipeline" / "load.py").read_text(encoding="utf-8")
+        self.assertIn('"cancellations": list(CANCELLATIONS), **windows_status()})', src)
+
+    def test_the_workflow_passes_the_same_status_file_to_both_steps(self):
+        import yaml
+        doc = yaml.safe_load((ROOT / ".github" / "workflows" / "schedule_refresh.yml").read_text(encoding="utf-8"))
+        steps = doc["jobs"]["refresh"]["steps"]
+        win = next(s for s in steps if "adapters.es_windows" in str(s.get("run", "")))
+        load_step = next(s for s in steps if "pipeline.load --all" in str(s.get("run", "")))
+        path = win["env"]["MYSPORTS_NFL_WINDOWS_STATUS"]
+        self.assertTrue(path.startswith("${{ runner.temp }}/"))
+        self.assertEqual(load_step["env"]["MYSPORTS_NFL_WINDOWS_STATUS"], path)
+        self.assertNotIn("${{", load_step["run"])
+
+
 class TheOrder(unittest.TestCase):
     def test_the_hand_override_is_consulted_before_the_listing_and_after_the_window(self):
         # a Thanksgiving game with a hand entry saying OUT_OF_MARKET is still NATIONAL: rule 1 first

@@ -105,8 +105,13 @@ jobs:
         # backfill of a past Sunday read the real clock's week, and every decided regional CBS or FOX
         # game without the Browns fell to rule 6. INPUT_DATE is the dispatch's own input, empty on the
         # cron and on the Worker's undated dispatch, so the nightly runs the same command as before.
+        # PROMPT 131: THE RESULT REACHES THE LEDGER. From 2026-11-01 every week failed (the page went to
+        # three windows) and the one log line was all there was, for nine days. The module writes its
+        # per-week result to MYSPORTS_NFL_WINDOWS_STATUS on every exit, and the load step below copies
+        # it into refresh_runs.notes as `nfl_windows`. Still exit 0 whatever happens.
         env:
           MYSPORTS_NFL_WINDOWS: ${{ runner.temp }}/nfl_windows.json
+          MYSPORTS_NFL_WINDOWS_STATUS: ${{ runner.temp }}/nfl_windows_status.json
           INPUT_DATE: "${{ github.event.inputs.date }}"
         run: |
           if [ -n "$INPUT_DATE" ]; then
@@ -324,6 +329,9 @@ jobs:
         # logo fails here.
         run: python scripts/sync_assets.py --push --prefix logos/ --make-dark --allow-new
       - name: Load fixtures into mysports.* (evidence only — Milestone 1 loader)
+        # PROMPT 131: the windows step's status file, recorded in refresh_runs.notes as `nfl_windows`.
+        env:
+          MYSPORTS_NFL_WINDOWS_STATUS: ${{ runner.temp }}/nfl_windows_status.json
         run: python -m pipeline.load --all --workflow schedule_refresh
       - name: CFB ranks, records + rivalry flags into games (loader-written provider facts)
         # Records move on every game day, the poll moves once a week (AP drops Sunday, the

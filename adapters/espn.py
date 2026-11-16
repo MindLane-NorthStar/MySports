@@ -28,7 +28,8 @@ names is UNVERIFIED; (5) the station has listings for the date but no game in th
 OUT_OF_MARKET; (4b) EntitledSports' weekly coverage page (adapters/es_windows.py, read through
 MYSPORTS_NFL_WINDOWS) names the game in the row's window - early before 3:00 PM ET, late otherwise -
 and the same two teams by nickname is AVAILABLE, different teams is OUT_OF_MARKET, and TBD or an
-unrecognized marker falls through; (6) otherwise UNVERIFIED, and its source says neither source
+unrecognized marker falls through - and from week 9 (prompt 131) a network with ONE game in the market
+has a single window, which decides that network's games in either slot; (6) otherwise UNVERIFIED, and its source says neither source
 decided the game. E5 stands: an UNVERIFIED game is always shown, with the "Market TBD" cue, never
 filtered.
 
@@ -168,13 +169,19 @@ def windows_decision(windows: dict[str, Any] | None, network: str | None, week: 
     if not wk or kickoff is None:
         return None
     slot = "early" if kickoff.astimezone(ET).hour < LATE_WINDOW_HOUR else "late"
-    w = next((x for x in wk.get("windows") or [] if x.get("network") == network and x.get("slot") == slot), None)
+    rows = wk.get("windows") or []
+    # The exact (network, slot) first. PROMPT 131: failing that, the network's SINGLE window, for either
+    # slot - a network with one game in the market airs that game and no other, so every other
+    # Sunday-afternoon game on it is out of market, whatever its kickoff (HOU @ LAC at 4:05 on CBS in
+    # week 9 is decided by the CBS single window's 1:00 game).
+    w = (next((x for x in rows if x.get("network") == network and x.get("slot") == slot), None)
+         or next((x for x in rows if x.get("network") == network and x.get("slot") == "single"), None))
     if w is None or w.get("tbd") or not (w.get("home") and w.get("away")):
         return None
     away, home = w["away"], w["home"]
-    call = str(w.get("station") or "").split(" ")[0] or network
+    call = str(w.get("station") or "").split(" ")[0] or network   # "WOIO 19 (CBS) · 1:00 PM ET" -> WOIO
     updated = str(wk.get("updated") or "unstamped").replace(",", "")
-    src = f"entitledsports week {week} (updated {updated}): {call} {network} {slot} {away.get('abbr')} @ {home.get('abbr')}"
+    src = f"entitledsports week {week} (updated {updated}): {call} {network} {w.get('slot')} {away.get('abbr')} @ {home.get('abbr')}"
     teams = [f"{away.get('abbr')} {away.get('nick')}", f"{home.get('abbr')} {home.get('nick')}"]
     return ("AVAILABLE" if _names_match(teams, home_nick, away_nick) else "OUT_OF_MARKET"), src
 

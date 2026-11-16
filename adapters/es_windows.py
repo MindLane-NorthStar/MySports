@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MySports adapter — Cleveland's four Sunday NFL windows from EntitledSports' weekly coverage pages.
+"""MySports adapter — Cleveland's Sunday NFL windows (three or four) from EntitledSports' weekly coverage pages.
 
     python -m adapters.es_windows --out "$RUNNER_TEMP/nfl_windows.json"
     python -m adapters.es_windows --out out.json --week 3 --week 4     # the weeks named, no calendar fetch
@@ -28,6 +28,20 @@ The same data also sits in a <table> row per market; this reads the <details> fo
 each window by name rather than by column position. A window's text is either "AAA Nick @ HHH Nick"
 or "TBD"; anything else is recorded verbatim, becomes TBD, and is noted in the output. Never guessed.
 
+THREE WINDOWS, FROM WEEK 9 (prompt 131, measured on the live week 9 and week 10 pages 2026-11-14). The
+page now gives every market three windows: the doubleheader network keeps "Early" and "Late", and the
+network with one game in the market is labelled bare, its kickoff added to the station span -
+    <div class="mw"><span class="lw">CBS</span><span class="mg">CLE Browns @ NO Saints<span class="st">WOIO 19 (CBS) · 1:00 PM ET</span></span></div>
+All 25 blocks on both pages had that shape; "CBS Early" and "CBS Late" appear nowhere. The four-window
+reader parsed two windows, raised PageError, and from 2026-11-01 every regional CBS or FOX game without
+the Browns fell to rule 6, unseen for nine days because the step's result reached no ledger. Now a bare
+label is that network's `single` window (`time` holds the kickoff, `station` keeps the whole span), and a
+block is valid in exactly two shapes: the four windows, or one network's early and late plus the other
+network's single. Anything else is still a PageError naming the labels it found. Rule 4b
+(adapters/espn.py) reads a single window for either slot. The per-week result is written to the file
+MYSPORTS_NFL_WINDOWS_STATUS names, on every exit, and pipeline/load.py copies it into
+refresh_runs.notes as `nfl_windows`.
+
 WHICH WEEKS. The NFL week containing today (Eastern) and the next one, at most two pages a run. The
 week number comes from ESPN's own calendar - `leagues[0].calendar` on the scoreboard payload the ESPN
 adapter already fetches, whose regular-season entries carry `value`, `startDate` and `endDate`
@@ -45,7 +59,7 @@ was.
 
 EACH WEEK'S PAGE STANDS ALONE (prompt 119, Joe's ruling 2026-09-23, register §64). The two pages are
 fetched and parsed independently: a week that fails - an HTTP error, a timeout, no Cleveland block,
-fewer than four windows - is left out with one note naming the week and the reason, and the file is
+a block of neither valid shape - is left out with one note naming the week and the reason, and the file is
 written whenever at least one week succeeds. In the season's last regular week the next page does not
 exist, and that must not cost the current week its decisions. Prompt 118 wrapped both weeks in one
 try, so any failure wrote nothing; that was the brief's "a failure of any kind" and it was wrong here.
@@ -57,6 +71,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from datetime import date, datetime, time, timezone
@@ -70,19 +85,36 @@ SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/sco
 USER_AGENT = "MySports/1.0 (open-source personal sports guide; +https://github.com/MindLane-NorthStar/MySports)"
 MARKET_SLUG = "cleveland-akron-canton"
 WINDOW_LABELS = (("CBS", "early"), ("FOX", "early"), ("CBS", "late"), ("FOX", "late"))
+NETWORKS = ("CBS", "FOX")
+STATUS_ENV = "MYSPORTS_NFL_WINDOWS_STATUS"   # prompt 131: where the per-week result goes for refresh_runs.notes
 
 BLOCK = re.compile(
     r'<details class="mkd"><summary><a href="/schedule/markets/' + re.escape(MARKET_SLUG) +
     r'/">(?P<name>[^<]*)</a></summary>(?P<body>.*?)</details>', re.S)
+# The slot is OPTIONAL (prompt 131): a bare "CBS" or "FOX" label is that network's single window.
 WINDOW = re.compile(
-    r'<div class="mw"><span class="lw">(?P<net>CBS|FOX) (?P<slot>Early|Late)</span>'
+    r'<div class="mw"><span class="lw">(?P<net>CBS|FOX)(?: (?P<slot>Early|Late))?</span>'
     r'<span class="mg">(?P<text>.*?)<span class="st">(?P<station>[^<]*)</span></span></div>', re.S)
 GAME = re.compile(r"^([A-Z]{2,3}) ([A-Za-z0-9]+) @ ([A-Z]{2,3}) ([A-Za-z0-9]+)$")
 STAMP = re.compile(r'<span class="upd">(?:<span class="sep">[^<]*</span>)?\s*updated (?P<when>[^<]+)</span>')
+# A single window's station span carries its kickoff: "WOIO 19 (CBS) · 1:00 PM ET" (U+00B7, measured 2026-11-14).
+STATION_TIME = re.compile(r"\s·\s(?P<time>.+)$")
 
 
 class PageError(ValueError):
-    """The page did not read as a Cleveland block with four windows."""
+    """The page did not read as a Cleveland block of one of the two valid shapes."""
+
+
+def valid_shape(seen: set[tuple[str, str]]) -> bool:
+    """The only two blocks this decides: the four windows, or one network's early and late plus the
+    other network's single window. Anything else - three windows of one network, two singles, a single
+    beside its own network's early or late - is not a page this has seen, and is never guessed at."""
+    if seen == set(WINDOW_LABELS):
+        return True
+    for double, single in (NETWORKS, NETWORKS[::-1]):
+        if seen == {(double, "early"), (double, "late"), (single, "single")}:
+            return True
+    return False
 
 
 def parse_page(html: str) -> dict[str, Any]:
@@ -93,12 +125,15 @@ def parse_page(html: str) -> dict[str, Any]:
     notes: list[str] = []
     windows: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
+    labels: list[str] = []
     for w in WINDOW.finditer(m.group("body")):
-        net, slot = w.group("net"), w.group("slot").lower()
+        net, slot = w.group("net"), (w.group("slot") or "single").lower()
+        labels.append(f"{net} {w.group('slot')}" if w.group("slot") else net)
         text = re.sub(r"\s+", " ", w.group("text")).strip()
-        station = w.group("station").strip()
-        row: dict[str, Any] = {"network": net, "slot": slot, "station": station, "text": text,
-                               "away": None, "home": None, "tbd": True}
+        station = w.group("station").strip()                 # the whole span, kickoff suffix and all
+        t = STATION_TIME.search(station)
+        row: dict[str, Any] = {"network": net, "slot": slot, "station": station, "time": t.group("time").strip() if t else None,
+                               "text": text, "away": None, "home": None, "tbd": True}
         g = GAME.match(text)
         if g:
             row["away"] = {"abbr": g.group(1), "nick": g.group(2)}
@@ -110,8 +145,9 @@ def parse_page(html: str) -> dict[str, Any]:
             raise PageError(f"the {net} {slot} window appears twice")
         seen.add((net, slot))
         windows.append(row)
-    if len(windows) < 4 or seen != set(WINDOW_LABELS):
-        raise PageError(f"{len(windows)} window(s) parsed; four are required")
+    if not valid_shape(seen):
+        raise PageError(f"{len(windows)} window(s) parsed ({', '.join(labels) or 'none'}); a block is the four windows, "
+                        f"or one network's Early and Late and the other's single window")
     s = STAMP.search(html)
     return {"market": m.group("name").strip(), "updated": s.group("when").strip() if s else None,
             "windows": windows, "notes": notes}
@@ -163,8 +199,23 @@ def build(weeks: list[int], *, fetch_text: Callable[[str], str] = default_fetch_
         out["weeks"][str(wk)] = {"url": url, "updated": page["updated"], "windows": page["windows"]}
         out["notes"] += [f"week {wk}: {n}" for n in page["notes"]]
         named = sum(1 for x in page["windows"] if not x["tbd"])
-        results[wk] = f"{named} of 4 windows named"
+        results[wk] = f"{named} of {len(page['windows'])} windows named"
     return out, results
+
+
+def write_status(status: dict[str, Any], path: str | None = None) -> None:
+    """The run's per-week result, for the load's refresh_runs.notes (prompt 131). Written on EVERY exit -
+    a failure most of all - to the file MYSPORTS_NFL_WINDOWS_STATUS names; nothing when it is unset.
+    Never raises: the step's contract is exit 0 whatever happens (prompt 118)."""
+    p = path if path is not None else os.getenv(STATUS_ENV)
+    if not p:
+        return
+    try:
+        Path(p).parent.mkdir(parents=True, exist_ok=True)
+        Path(p).write_text(json.dumps({"source": "entitledsports", **status}, ensure_ascii=False) + "\n",
+                           encoding="utf-8", newline="\n")
+    except OSError:
+        pass
 
 
 def main(argv: list[str] | None = None, *, fetch_text: Callable[[str], str] | None = None,
@@ -182,6 +233,7 @@ def main(argv: list[str] | None = None, *, fetch_text: Callable[[str], str] | No
             now = anchor_noon(args.date)
     except ValueError as e:   # a bad --date is no week to fetch: one line, no file, exit 0
         log(f"es_windows: failed (ValueError: {e}) - no windows written, refresh continues")
+        write_status({"written": False, "weeks": {}, "error": f"ValueError: {e}"})
         return 0
     now = now or datetime.now(timezone.utc)
     try:
@@ -194,15 +246,19 @@ def main(argv: list[str] | None = None, *, fetch_text: Callable[[str], str] | No
             how = "ESPN calendar"
     except Exception as e:  # noqa: BLE001 - no week to fetch: one line, no file, exit 0
         log(f"es_windows: failed ({type(e).__name__}: {e}) - no windows written, refresh continues")
+        write_status({"written": False, "weeks": {}, "error": f"{type(e).__name__}: {e}"})
         return 0
     out, results = build(weeks, fetch_text=fetch_text)   # each week on its own; never raises
     per_week = "; ".join(f"week {wk} {results[wk]}" for wk in weeks)
+    status_weeks = {str(wk): (f"ok: {results[wk]}" if str(wk) in out["weeks"] else results[wk]) for wk in weeks}
     if not out["weeks"]:
         log(f"es_windows: every week failed ({how}: {per_week}) - no windows written, refresh continues")
+        write_status({"written": False, "how": how, "weeks": status_weeks})
         return 0
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
     log(f"es_windows: {how}: {per_week}; {len(out['notes'])} note(s) -> {args.out}")
+    write_status({"written": True, "how": how, "weeks": status_weeks})
     return 0
 
 
