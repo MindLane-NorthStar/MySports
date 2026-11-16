@@ -25,6 +25,17 @@
 // the same carve-out from D4 - the season load put 529 games in it, and the app was calling every
 // one of them 'not on your services'.
 //
+// EXCEPT A BARE NBA GAME WITHOUT THE CAVALIERS (prompt 131, Joe's ruling 2026-11-09: "Count as
+// unavailable"; register §76). §9's premise - no row means a broadcaster nobody has announced yet - is
+// false for the NBA: every national game was announced on 2026-08-13, and a Cavaliers game always
+// carries the synthesized local row (adapters/nba.py, _local_row), so a bare NBA game without the
+// Cavaliers is League Pass or another club's local channel, and Joe has neither. Such a game is NOT
+// network-TBD; it falls through to the reconciler's own verdict (`eligible = false`, "no telecast
+// observed") and lands in `off` - hidden by default, counted in "not on your services", reachable from
+// the reveal, and shown again with no manual step the day a row lands. The archived grid already said
+// so (scripts/render_day.py omits it as "no national telecast · out of market"). A bare Cavaliers game,
+// and every other sport's bare game, is network-TBD exactly as §9 rules.
+//
 // AND A FIFTH (prompt 129, Joe's ruling 1 of 2026-10-14: "show the game"). UNRECOGNIZED: the game has
 // a broadcaster, but at least one of its active rows is on a channel nobody has ruled on - access
 // `unknown`, which pipeline/reconcile.py cannot count as receivable. Until now such a game fell
@@ -65,7 +76,12 @@ export function isMarketPending(game) {
  * TBD. In production that guard can never fire, because pipeline/reconcile.py derives `eligible`
  * FROM the active rows and so eligible implies at least one of them - but the two sibling states
  * must not behave differently under the same contradiction.
+ *
+ * NOT AN NBA GAME WITHOUT THE CAVALIERS (prompt 131, Joe 2026-11-09, register §76; the header above
+ * says why). That game falls through to the reconciler's verdict and lands in `off`.
  */
+export const NBA_HOME_CLUB = 'nba-CLE';
+
 export function isNetworkTbd(game) {
   if (isEligible(game)) return false;
   const rows = game?.broadcasts;
@@ -73,7 +89,24 @@ export function isNetworkTbd(game) {
   // web/lib/queries.js, but a surface that forgot would otherwise mark its whole day network-TBD -
   // the same reasoning that makes an unjudged game shown rather than hidden.
   if (!Array.isArray(rows)) return false;
-  return !rows.some((b) => b?.active !== false);
+  if (rows.some((b) => b?.active !== false)) return false;
+  return !isBareNbaWithoutTheCavaliers(game);
+}
+
+/**
+ * The prompt-131 exception, for a game already known to have no active row. The team ids are read
+ * from what GAME_SELECT returns - the `home:`/`away:` embeds, so `game.home.id` and `game.away.id`;
+ * `home_team_id` is not selected, and is read only as splitHidden reads it, for a caller that has it.
+ * TEAMS NOT SELECTED is not a claim either: with no team id at all, nobody can say the Cavaliers are
+ * not playing, so the game stays network-TBD rather than being hidden on an absence.
+ */
+function isBareNbaWithoutTheCavaliers(game) {
+  if (game?.sport !== 'nba') return false;
+  const ids = [game?.home?.id ?? game?.home_team_id, game?.away?.id ?? game?.away_team_id]
+    .filter((x) => x !== undefined && x !== null && x !== '')
+    .map(String);
+  if (!ids.length) return false;
+  return !ids.includes(NBA_HOME_CLUB);
 }
 
 /**

@@ -429,3 +429,84 @@ test('stage 4: the line and the reveal ACCOUNT FOR EVERY ROW, with nothing count
   assert.equal(pageCountLine(summary), '2 broadcasts on your services · 3 TBD');
   assert.equal(revealLabel(hidden.length), 'Show 2 not on your services');
 });
+
+// ------------------------------------------------------------------ prompt 131 (register §76)
+// Joe, 2026-11-09: an NBA game with no broadcast row is "Count as unavailable". Every national game was
+// announced 2026-08-13 and a Cavaliers game always carries its synthesized local row, so a bare NBA game
+// without the Cavaliers is League Pass or another club's channel. It is NOT network-TBD: it falls through
+// to the reconciler's `eligible = false` and lands in `off`. Every other sport's bare game is unchanged.
+//
+// The team ids are shaped as GAME_SELECT returns them (web/lib/queries.js): the `home:`/`away:` embeds.
+const bareIn = (id, sport, home, away, extra = {}) => ({
+  ...bare(id), sport, home: { id: home }, away: { id: away }, ...extra,
+});
+
+test('p131: a bare non-Cavaliers NBA game lands in off, and the unavailable segment counts it', () => {
+  const g = bareIn('nba-401', 'nba', 'nba-NYK', 'nba-CHI');
+  assert.equal(isNetworkTbd(g), false);
+  const s = offServiceSummary([game('1', true, ['ESPN']), g]);
+  assert.deepEqual(s.off.map((x) => x.id), ['nba-401']);
+  assert.equal(s.tbdCount, 0);
+  const lines = countLines(s.total, s.onCount, s.pending, s.off, s.tbd, s.unrecognized);
+  assert.equal(lines.unavailable, '1 unavailable');
+  assert.equal(countSummary(lines), '1 airing · 1 unavailable');
+  const { hidden, summary } = splitHidden([game('1', true, ['ESPN']), g], new Set());
+  assert.deepEqual(hidden.map((x) => x.id), ['nba-401'], 'hidden by default');
+  assert.equal(revealLabel(hidden.length), 'Show 1 not on your services', 'and reachable from the reveal');
+  assert.equal(pageCountLine(summary), '1 broadcast on your services', 'and no longer counted as TBD');
+});
+
+test('p131: a bare Cavaliers game stays network-TBD, home or away', () => {
+  assert.equal(isNetworkTbd(bareIn('a', 'nba', 'nba-CLE', 'nba-BOS')), true);
+  assert.equal(isNetworkTbd(bareIn('b', 'nba', 'nba-DET', 'nba-CLE')), true);
+  assert.deepEqual(offServiceSummary([bareIn('a', 'nba', 'nba-CLE', 'nba-BOS')]).tbd.map((x) => x.id), ['a']);
+});
+
+test('p131: a bare NFL game and a bare NHL game stay network-TBD', () => {
+  assert.equal(isNetworkTbd(bareIn('n', 'nfl', 'nfl-1', 'nfl-2')), true);
+  assert.equal(isNetworkTbd(bareIn('h', 'nhl', 'nhl-BOS', 'nhl-TOR')), true);
+  assert.equal(isNetworkTbd(bareIn('m', 'mlb', 'mlb-1', 'mlb-2')), true);
+  assert.equal(isNetworkTbd(bareIn('c', 'cfb', '57', '61')), true);
+});
+
+test('p131: a bare NBA game with NO eligibility row is still shown', () => {
+  // isEligible treats an unjudged game as eligible, and that test comes first
+  const g = { ...bareIn('u', 'nba', 'nba-NYK', 'nba-CHI'), eligibility: undefined };
+  const s = offServiceSummary([g]);
+  assert.deepEqual(s.on.map((x) => x.id), ['u']);
+  assert.equal(splitHidden([g], new Set()).hidden.length, 0);
+});
+
+test('p131: an NBA game with an `unknown` row stays CHANNEL ?', () => {
+  const g = { ...bareIn('k', 'nba', 'nba-NYK', 'nba-CHI'),
+              broadcasts: [{ active: true, access_status: 'unknown', network: { canonical_name: 'MSG' } }] };
+  assert.equal(isNetworkTbd(g), false);
+  assert.deepEqual(offServiceSummary([g]).unrecognized.map((x) => x.id), ['k']);
+});
+
+test('p131: a favourite\'s bare NBA game is still shown (splitHidden is unchanged)', () => {
+  const g = bareIn('f', 'nba', 'nba-NYK', 'nba-CHI');
+  const { visible, hidden } = splitHidden([g], new Set(['nba-CHI']));
+  assert.deepEqual([visible.map((x) => x.id), hidden.length], [['f'], 0]);
+});
+
+test('p131: a row landing later brings the game back with no manual step', () => {
+  const later = { ...bareIn('r', 'nba', 'nba-NYK', 'nba-CHI'),
+                  eligibility: [{ eligible: true, reason: 'linear espn' }],
+                  broadcasts: [{ active: true, access_status: 'available', network: { canonical_name: 'ESPN' } }] };
+  assert.deepEqual(offServiceSummary([later]).on.map((x) => x.id), ['r']);
+});
+
+test('p131: teams NOT SELECTED is not a claim - a bare NBA game with no team ids stays network-TBD', () => {
+  assert.equal(isNetworkTbd({ ...bare('t'), sport: 'nba' }), true);
+});
+
+test('p131: the §9 mutual exclusivity still holds with the NBA exception in play', () => {
+  const every = [bareIn('1', 'nba', 'nba-NYK', 'nba-CHI'), bareIn('2', 'nba', 'nba-CLE', 'nba-BOS'),
+                 bareIn('3', 'nfl', 'nfl-1', 'nfl-2'), pend('4', ['FOX'])];
+  for (const g of every) {
+    assert.equal(isMarketPending(g) && isNetworkTbd(g), false, 'both badges on ' + g.id);
+  }
+  const s = offServiceSummary(every);
+  assert.equal(s.onCount + s.pendingCount + s.tbdCount + s.unrecognizedCount + s.offCount, s.total);
+});

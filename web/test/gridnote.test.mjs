@@ -119,3 +119,14 @@ test('a fully unannounced slate puts every game in the note and none on the grid
   assert.equal(kickTbd.length, 0);
   assert.equal(offServiceSummary(games).offCount, 0, 'and not one of them is called off-service');
 });
+
+test('p131: the grid note stops counting a bare non-Cavaliers NBA game - it is off, so not on the grid at all', () => {
+  // Joe, 2026-11-09 (register §76): "Count as unavailable". MobileGrid.js counts `netTbd` from what the
+  // grid is handed, and a game in `off` is never handed to it.
+  const nba = (id, home, away) => ({ ...networkTbd(id), sport: 'nba', home: { id: home }, away: { id: away } });
+  const games = [eligible('1', 'espn'), nba('2', 'nba-NYK', 'nba-CHI'), nba('3', 'nba-CLE', 'nba-BOS'),
+                 { ...networkTbd('4'), sport: 'nfl', home: { id: 'nfl-1' }, away: { id: 'nfl-2' } }];
+  assert.deepEqual(gridGames(games).map((g) => g.id), ['1', '3', '4'], 'the bare non-Cavaliers game is not on the grid');
+  const { netTbd } = partition(games);
+  assert.deepEqual(netTbd.map((g) => g.id), ['3', '4'], 'the note counts the Cavaliers and NFL games only');
+});
