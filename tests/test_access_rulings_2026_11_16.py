@@ -161,5 +161,54 @@ class A3EspnRadio(unittest.TestCase):
         self.assertEqual([(m["outlet"], m["access"]) for m in g["media"]], [("Prime Video", "AVAILABLE")])
 
 
+# --------------------------------------------------------------------- A1's follow-up: DAZN's surface
+# Found by the refresh that cleared smoke (h), 2026-11-16: the `DAZN CLE` alias minted ESPN's row as LINEAR,
+# because adapters/nba.py's STREAM_ONLY lacked DAZN, so nba-401909307, -401909995 and -401910007 each gained a
+# LINEAR DAZN row beside their STREAMING "Cavaliers on DAZN (RESN)" row - DAZN twice in the detail panel and an
+# unintended DIRECTV link. pipeline/load.py keys a row's `active` on service id alone, so the loader can never
+# retire the second row; the fix has to stop it being minted.
+from adapters import espn as espn_adapter, mlb as mlb_adapter  # noqa: E402
+from tests.test_eligibility_follows_access import Harness  # noqa: E402
+
+
+class A1DaznIsStreaming(unittest.TestCase):
+    def test_espns_dazn_cle_row_is_a_streaming_row(self):
+        g = nba_game("401909995", ("Bulls", "Chicago Bulls"), ("Cavaliers", "Cleveland Cavaliers"), "CHI", "CLE",
+                     geo("DAZN CLE", "Home"))
+        self.assertEqual([(m["outlet"], m["mediaType"]) for m in g["media"]], [("DAZN", "web")])
+
+    def test_every_adapter_that_decides_a_surface_by_name_calls_dazn_streaming(self):
+        """The sweep of 2026-11-16: four adapters decide streaming-or-linear from a set of names, and the
+        `DAZN CLE` alias in adapters/common.py reaches all of them. Each set carries DAZN."""
+        for name, s in (("nba.STREAM_ONLY", nba.STREAM_ONLY), ("espn.STREAM_ONLY", espn_adapter.STREAM_ONLY),
+                        ("nhl.STREAM_ONLY", nhl.STREAM_ONLY), ("mlb.STREAMING", mlb_adapter.STREAMING)):
+            with self.subTest(name=name):
+                self.assertIn("DAZN", s)
+
+    def test_the_nhl_adapter_reads_its_named_set_not_an_inline_one(self):
+        src = (ROOT / "adapters" / "nhl.py").read_text(encoding="utf-8")
+        self.assertIn('mtype = "web" if outlet in STREAM_ONLY else "tv"', src)
+
+
+class A1OneDaznRowThroughTheLoader(Harness):
+    def test_the_dazn_cle_row_merges_into_the_cavaliers_streaming_row(self):
+        """The production sequence: the game first carries the hand-entered DAZN row (no ESPN local feed),
+        then ESPN names `DAZN CLE`. One active DAZN row must remain, and it must be STREAMING."""
+        before = nba_game("401909995", ("Bulls", "Chicago Bulls"), ("Cavaliers", "Cleveland Cavaliers"), "CHI", "CLE",
+                          geo("NBA TV"))
+        self.assertIn(("DAZN", "web", "data/local_rights.json"),
+                      [(m["outlet"], m["mediaType"], m["source"]) for m in before["media"]], "the premise")
+        self.load("nba", [before])
+        self.reconcile()
+        after = nba_game("401909995", ("Bulls", "Chicago Bulls"), ("Cavaliers", "Cleveland Cavaliers"), "CHI", "CLE",
+                         geo("DAZN CLE", "Home"), geo("NBA TV"))
+        self.load("nba", [after])
+        self.reconcile()
+        rows = self.db.conn.execute(
+            "select delivery_surface, access_status from game_broadcasts where game_id = ? and service_id = 'dazn' and active",
+            (after["id"],)).fetchall()
+        self.assertEqual([tuple(r) for r in rows], [("STREAMING", "available")])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -83,6 +83,18 @@ A REFRESH CAN CLEAR.**
   alias rewrites only when a refresh runs the committed code, and the dry run above is the proof. Joe's
   instruction is to fire the refresh after the deploy and re-run smoke, expecting 36/36; the result is recorded
   below this line when it lands. S4 stands for every later run; the override covers prompt 132's commits only.
+- **IT LANDED: SMOKE 36/36, 2026-11-16.** `de6e9ad` deployed Ready; refresh run 43947975744 on `de6e9ad`
+  succeeded (20:15-20:48Z; `refresh_runs` 875, `nfl_windows` weeks 10 and 11 "ok: 3 of 3 windows named"). Smoke
+  re-run after it: (h) 0 unknown rows over 11-16..11-22, the three `dazn-cle` rows inactive and their games
+  reading DAZN available; (f) green; (i) green, Sunday 11-22 already 10 of 10 regional rows decided. The
+  override's red is cleared, as the dry run said it would be.
+- **AND IT FOUND A DEFECT THE DRY RUN DID NOT SHOW, fixed in the same day's follow-up commit.** The alias minted
+  ESPN's DAZN row as LINEAR - adapters/nba.py's `STREAM_ONLY` lacked DAZN - so nba-401909307, -401909995 and
+  -401910007 each carry a LINEAR DAZN row beside their STREAMING one: DAZN twice in the detail panel and an
+  unintended DIRECTV link. DAZN is now streaming in all four adapters that decide a surface by name (nba, espn,
+  nhl, mlb; register §77). **The three rows are LEFT, by Joe's decision**: pipeline/load.py keys `active` on
+  service id alone, so no refresh can retire them, and removing them would be a database write; they stop
+  mattering once 11-20 is played.
 - **qa-shots was 150/151 on its first run** - the pinch 60px below the collapsed bar on 2026-09-05 CFB left
   `scrollWidth` 1356 → 1356 - **and 151/151 on the immediate re-run** against the same server and tree. Nothing
   in prompt 132 touches CFB days or the pinch handler; recorded as intermittent, not waved through.

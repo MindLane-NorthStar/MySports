@@ -47,6 +47,11 @@ from adapters.common import (access_lookup, dump_json, et_date, et_display, fetc
 from adapters.nba import _simulcast_rows
 
 API = "https://api-web.nhle.com/v1"
+# Outlets that are streaming-only, so their row is `web` / STREAMING. LIFTED from an inline set in
+# build_fixture (prompt 132's follow-up, 2026-11-16) so a test can reach it, and DAZN added: never seen on an
+# NHL game, but adapters/common.py's `DAZN CLE` alias applies to every adapter, and an outlet missing here
+# mints LINEAR - the defect adapters/nba.py hit.
+STREAM_ONLY = {"ESPN+", "Hulu", "Disney+", "Prime Video", "Peacock", "HBO Max", "DAZN"}
 # NHL abbreviations that differ from ESPN's TEAMS endpoint (/hockey/nhl/teams), which is what
 # build_teams() joins against for colours and PNG logos.
 NHL_TO_ESPN = {"LAK": "LA", "NJD": "NJ", "TBL": "TB", "SJS": "SJ", "UTA": "UTAH"}
@@ -283,7 +288,7 @@ def build_fixture(raw: dict[str, Any], root: Path, *, season: int, anchor_date: 
                     continue
                 mk = NHL_MARKET.get(b.get("market", "N"), "national")
                 acc = outlet_access(outlet, available, unavailable)
-                mtype = "web" if outlet in {"ESPN+", "Hulu", "Disney+", "Prime Video", "Peacock", "HBO Max"} else "tv"
+                mtype = "web" if outlet in STREAM_ONLY else "tv"
                 if mk == "local":
                     # the league lists BOTH clubs' RSNs; only the market's own team's local feed is receivable
                     local_side = home if b.get("market") == "H" else away

@@ -45,7 +45,9 @@ NATIONAL_CODES = {"national", "exclusive"}
 PLAYOFF_TYPES = {"F", "D", "L", "W"}
 COMPETITION_CONTEXT = {**{t: "PLAYOFF" for t in PLAYOFF_TYPES}, "R": "REGULAR"}
 # Outlets whose canonical name is a streaming service (brief 9.3 mediaType rule)
-STREAMING = {"Apple TV", "Netflix", "Peacock", "HBO Max", "Prime Video", "ESPN+", "Disney+", "Hulu", "Paramount+"}
+# DAZN added 2026-11-16 (prompt 132's follow-up): never seen on an MLB game, but an outlet missing here mints
+# LINEAR, which is the defect adapters/nba.py hit when the `DAZN CLE` alias landed.
+STREAMING = {"Apple TV", "Netflix", "Peacock", "HBO Max", "Prime Video", "ESPN+", "Disney+", "Hulu", "Paramount+", "DAZN"}
 
 
 def fetch_day(date: str, *, hydrate: str = HYDRATE) -> dict[str, Any]:

@@ -6846,3 +6846,30 @@ evidence that the next refresh clears it.
 
 **Out of scope, as briefed:** the 11-01/11-08 backfills (run 2026-11-16), E5, the FOX-late question, the CBJ
 Prime Video row, the other clubs' DAZN services, ERADM's history, and `MatchupCard`.
+
+### Follow-up, same day — committed over (h) by a one-time S4 override, cleared by the refresh, and a defect it exposed
+
+Joe approved the commit over smoke (h) as a one-time S4 override, on the ground that the commit was the cure.
+After `de6e9ad` deployed, refresh run 43947975744 ran it and smoke read **36/36**: (h) clear, (f) clear, (i)
+green with Sunday 11-22 at 10 of 10 decided.
+
+**The refresh also exposed a defect the dry run did not show.** The dry run printed outlet and access, not
+surface. `adapters/nba.py` `STREAM_ONLY` lacked DAZN, so the aliased row minted LINEAR beside the Cavaliers'
+STREAMING DAZN row: two DAZN rows per game, DAZN listed twice in the detail panel, and a DIRECTV link the panel
+draws whenever an accessible row is linear. Because `pipeline/load.py` sets `active` from an open claim on the
+SERVICE ID alone, no refresh can retire the second row - it has to not be minted.
+
+**The sweep (Joe asked that the trap have no second instance).** Every place that decides a row's surface was
+read. Four decide streaming-or-linear from a set of names - `adapters/nba.py` (both of its paths),
+`adapters/espn.py` (NFL, CFB), `adapters/nhl.py` (an inline set, now a named constant) and `adapters/mlb.py` -
+and none carried DAZN; the alias in `adapters/common.py` reaches all four. Only NBA has ever seen a DAZN row
+(read 2026-11-16: every `dazn` row is NBA). DAZN is now in all four, and
+`tests/test_access_rulings_2026_11_16.py` walks them. Already correct, and why: the hand-entered rows from
+data/local_rights.json state `surface: "web"`; `adapters/cfbd.py` takes the surface from CFBD's own type; AEW,
+WWE, IndyCar, NASCAR and UFC classify a fixed set of their own series' outlets, none of them DAZN. A loader test
+replays the production sequence - the hand-entered DAZN row first, then ESPN's `DAZN CLE` - and requires one
+active DAZN row, STREAMING; with DAZN removed from `nba.STREAM_ONLY` it fails, and so does the walk with DAZN
+removed from `nhl.STREAM_ONLY`.
+
+**The three LINEAR rows already written (nba-401909307, -401909995, -401910007; 11-16 to 11-20) are left, by
+Joe's decision** - removing them would be a database write, and they stop mattering once those games are played.

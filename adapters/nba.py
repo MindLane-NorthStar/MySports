@@ -35,7 +35,11 @@ from adapters.espn import fetch_scoreboard, fetch_teams, _odds, _broadcast_names
 ESPN_TO_TRICODE = {"NY": "NYK", "GS": "GSW", "SA": "SAS", "UTAH": "UTA", "NO": "NOP", "WSH": "WAS"}
 NATIONAL_EXCLUSIVE = {"ESPN", "ABC", "NBC", "Prime Video", "Peacock"}     # suppresses local feeds (spec §7.4)
 NATIONAL_NON_EXCLUSIVE = {"NBA TV"}                                        # co-exists with local feeds
-STREAM_ONLY = {"Peacock", "Prime Video", "ESPN+", "Netflix"}
+# DAZN IS STREAMING-ONLY (prompt 132's follow-up, 2026-11-16, register §77). It was missing here, so when the
+# `DAZN CLE` -> DAZN alias landed, ESPN's row minted as a LINEAR DAZN row beside the Cavaliers' existing
+# STREAMING one: two DAZN rows per game, DAZN listed twice in the detail panel, and a DIRECTV link that was
+# never meant. Every adapter's streaming set carries DAZN now; tests/test_access_rulings_2026_11_16.py walks them.
+STREAM_ONLY = {"Peacock", "Prime Video", "ESPN+", "Netflix", "DAZN"}
 LEAGUE_FILE = "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json"
 
 

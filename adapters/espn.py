@@ -59,7 +59,10 @@ LEAGUE_PATH = {"nfl": "football/nfl", "nhl": "hockey/nhl", "nba": "basketball/nb
 ESPN_OUTLETS = {"Prime Video": "Prime Video", "Amazon Prime": "Prime Video", "NFL Net": "NFL Network", "NFLN": "NFL Network",
                 "ESPN/ABC": "ESPN", "ABC/ESPN": "ABC", "CBS/Paramount+": "CBS", "NBC/Peacock": "NBC", "Netflix": "Netflix",
                 "YouTube": "YouTube", "YouTube TV": "YouTube"}
-STREAM_ONLY = {"Prime Video", "Netflix", "YouTube", "Peacock", "ESPN+", "Paramount+", "HBO Max", "Disney+", "Hulu", "Apple TV"}
+# DAZN added 2026-11-16 (prompt 132's follow-up): no NFL or CFB game has carried it, but adapters/common.py's
+# `DAZN CLE` alias applies to every adapter, and an outlet missing here mints LINEAR - the defect nba.py hit.
+STREAM_ONLY = {"Prime Video", "Netflix", "YouTube", "Peacock", "ESPN+", "Paramount+", "HBO Max", "Disney+", "Hulu", "Apple TV",
+               "DAZN"}
 # a "Regional" feed in ESPN's vocabulary; treated as needing a market decision
 REGIONAL_NETWORKS = {"CBS", "FOX"}
 # the listings decide a row when a game airing starts within this many minutes of the kickoff
